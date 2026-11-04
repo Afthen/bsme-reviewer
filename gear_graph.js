@@ -11,7 +11,9 @@ function fmt(n, maxDec = 3) {
   return rounded.toString();
 }
 
-const PHI_INV2_GRAPH = 0.3819660113;
+const PHI_GRAPH = (1 + Math.sqrt(5)) / 2;              // 1.6180339887...
+const PHI_INV_GRAPH = 1 / PHI_GRAPH;                   // 0.6180339887...
+const PHI_INV2_GRAPH = PHI_INV_GRAPH * PHI_INV_GRAPH;  // 0.3819660113...
 
 // ========================================================
 // 1. VARIABLE DATABASE (Clean Names, No Redundant Symbols)
