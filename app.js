@@ -887,3 +887,12 @@ function backToProblem() {
   document.getElementById("view-carousel").classList.remove("active");
   document.getElementById("view-problem").classList.add("active");
 }
+
+function toggleSidebar() {
+  const aside = document.querySelector("aside");
+  const overlay = document.getElementById("sidebar-overlay");
+  if (!aside || !overlay) return;
+  const willOpen = !aside.classList.contains("open");
+  aside.classList.toggle("open", willOpen);
+  overlay.classList.toggle("active", willOpen);
+}
