@@ -53,7 +53,7 @@ function loadStoredCounter() {
 
 function saveMastery() {
   const exportPayload = {
-    version: "3.8",
+    version: "3.9",
     updatedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -77,7 +77,7 @@ async function writeMasteryToFolder(payload) {
 
 function exportMasteryFile() {
   const payload = {
-    version: "3.8",
+    version: "3.9",
     exportedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -364,7 +364,7 @@ async function openFolderPicker() {
         globalProblemCounter = data.globalProblemCount || globalProblemCounter;
         saveMastery();
       } catch (e) {
-        writeMasteryToFolder({ version: "3.8", globalProblemCount: globalProblemCounter, history: edgeHistory });
+        writeMasteryToFolder({ version: "3.9", globalProblemCount: globalProblemCounter, history: edgeHistory });
       }
       renderLeitnerSidebar();
     } catch (e) {
@@ -764,7 +764,6 @@ function showTooltip(e, baseVarKey, displayVar) {
   let titleContent = meta.name;
 
   if (cards.length > 0) {
-    // Show the Base / Canonical textbook formula
     const primaryCard = cards.find(c => c.isBase) || cards[0];
     mathContent = primaryCard.formula;
     const isContext = cards.some(c => c.usedInProblem);

@@ -3,16 +3,17 @@
 // ========================================================
 const Units = (() => {
   const FAMS = {
-    length:   { u: { in: 1, ft: 12, mm: 1 / 25.4, cm: 1 / 2.54, m: 1000 / 25.4 } },
-    force:    { u: { lb: 1, N: 0.224808943, kN: 224.808943, kgf: 2.20462 } },
-    torque:   { u: { "lb-in": 1, "lb-ft": 12, "N-m": 8.85074579, "N-mm": 0.00885074579 } },
-    power:    { u: { hp: 1, kW: 1.34102209, W: 0.00134102209 } },
-    speed:    { u: { "ft/min": 1, "m/s": 196.850394, "m/min": 3.2808399, "in/s": 5 } },
-    angspeed: { u: { rpm: 1, "rad/s": 9.54929659, "rev/s": 60 } },
-    stress:   { u: { psi: 1, ksi: 1000, MPa: 145.037738, kPa: 0.145037738, Pa: 0.000145037738 } },
-    pitch:    { u: { "teeth/in": 1, "teeth/mm": 25.4 } },
-    angle:    { u: { deg: 1, rad: 180 / Math.PI } },
-    count:    { u: { dimless: 1, ratio: 1, teeth: 1 }, count: true }
+    length:    { u: { in: 1, ft: 12, mm: 1 / 25.4, cm: 1 / 2.54, m: 1000 / 25.4 } },
+    force:     { u: { lb: 1, N: 0.224808943, kN: 224.808943, kgf: 2.20462 } },
+    torque:    { u: { "lb-in": 1, "lb-ft": 12, "N-m": 8.85074579, "N-mm": 0.00885074579 } },
+    power:     { u: { hp: 1, kW: 1.34102209, W: 0.00134102209 } },
+    speed:     { u: { "ft/min": 1, "m/s": 196.850394, "m/min": 3.2808399, "in/s": 5 } },
+    angspeed:  { u: { rpm: 1, "rad/s": 9.54929659, "rev/s": 60 } },
+    stress:    { u: { psi: 1, ksi: 1000, MPa: 145.037738, kPa: 0.145037738, Pa: 0.000145037738 } },
+    pitch:     { u: { "teeth/in": 1, "teeth/mm": 25.4 } },
+    stiffness: { u: { "lb/in": 1, "N/mm": 5.710147, "N/m": 0.005710147 } },
+    angle:     { u: { deg: 1, rad: 180 / Math.PI } },
+    count:     { u: { dimless: 1, ratio: 1, teeth: 1 }, count: true }
   };
 
   const SYM = {};
