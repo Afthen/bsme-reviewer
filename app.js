@@ -277,7 +277,6 @@ function generateOrganicStatement(givens, targetSteps, S) {
     const u = unitOf(S, varKey);
     const val = fmt(S[varKey]);
 
-    // Format display symbol to match class notation
     let displaySym = varKey;
     if (displaySym === "phi") displaySym = "\\phi";
     else if (displaySym === "W_t") displaySym = "F_t";
@@ -292,8 +291,16 @@ function generateOrganicStatement(givens, targetSteps, S) {
     else if (displaySym === "D_P2") displaySym = "D_2";
     else displaySym = displaySym.replace(/_([a-zA-Z0-9]+)/g, "_{$1}");
 
-    const uStr = (u === "deg" || varKey === "phi") ? "^\\circ" : (Units.tex(u) ? `\\text{ ${u}}` : "");
-    return `${meta.name} ({{${displaySym}|${varKey}}}) = $${val}${uStr ? `\\,${uStr}` : ""}$`;
+    let valWithUnit = "";
+    if (u === "deg" || varKey === "phi") {
+      valWithUnit = `$${val}°$`;
+    } else if (Units.tex(u)) {
+      valWithUnit = `$${val}\\,${Units.tex(u)}$`;
+    } else {
+      valWithUnit = `$${val}$`;
+    }
+
+    return `${meta.name} ({{${displaySym}|${varKey}}}) = ${valWithUnit}`;
   });
 
   const givensText = givenPhrases.join(", ");
