@@ -269,16 +269,31 @@ function renderLeitnerSidebar() {
 }
 
 // ========================================================
-// 2. A-RES SEED SAMPLER & GENERATOR
+// 2. A-RES SEED SAMPLER & STATEMENT GENERATOR
 // ========================================================
 function generateOrganicStatement(givens, targetSteps, S) {
   const givenPhrases = givens.map(varKey => {
     const meta = GEAR_VARS_DB[varKey] || { name: varKey, unit: "" };
     const u = unitOf(S, varKey);
     const val = fmt(S[varKey]);
-    let displaySym = varKey === "phi" ? "\\phi" : varKey.replace(/_([a-zA-Z0-9]{2,})/g, "_{$1}");
-    const uStr = (u === "deg" || varKey === "phi") ? "°" : (Units.tex(u) ? `\\,${Units.tex(u)}` : "");
-    return `${meta.name} ({{${displaySym}|${varKey}}}) = $${val}${uStr}$`;
+
+    // Format display symbol to match class notation
+    let displaySym = varKey;
+    if (displaySym === "phi") displaySym = "\\phi";
+    else if (displaySym === "W_t") displaySym = "F_t";
+    else if (displaySym === "W_r") displaySym = "F_r";
+    else if (displaySym === "W") displaySym = "F_n";
+    else if (displaySym === "M_t") displaySym = "T";
+    else if (displaySym === "V_m") displaySym = "v";
+    else if (displaySym === "VR") displaySym = "SR";
+    else if (displaySym === "n_1") displaySym = "N_1";
+    else if (displaySym === "n_2") displaySym = "N_2";
+    else if (displaySym === "D_P1") displaySym = "D_1";
+    else if (displaySym === "D_P2") displaySym = "D_2";
+    else displaySym = displaySym.replace(/_([a-zA-Z0-9]+)/g, "_{$1}");
+
+    const uStr = (u === "deg" || varKey === "phi") ? "^\\circ" : (Units.tex(u) ? `\\text{ ${u}}` : "");
+    return `${meta.name} ({{${displaySym}|${varKey}}}) = $${val}${uStr ? `\\,${uStr}` : ""}$`;
   });
 
   const givensText = givenPhrases.join(", ");
@@ -412,7 +427,17 @@ function updateToggleAllVisibility() {
       if (unused.length > 0) {
         const unusedLabels = unused.map(k => {
           const m = GEAR_VARS_DB[k] || { name: k };
-          let sym = k === "phi" ? "\\phi" : k.replace(/_([a-zA-Z0-9]{2,})/g, "_{$1}");
+          let sym = k;
+          if (sym === "phi") sym = "\\phi";
+          else if (sym === "W_t") sym = "F_t";
+          else if (sym === "W_r") sym = "F_r";
+          else if (sym === "W") sym = "F_n";
+          else if (sym === "M_t") sym = "T";
+          else if (sym === "V_m") sym = "v";
+          else if (sym === "VR") sym = "SR";
+          else if (sym === "n_1") sym = "N_1";
+          else if (sym === "n_2") sym = "N_2";
+          else sym = sym.replace(/_([a-zA-Z0-9]+)/g, "_{$1}");
           return `<strong>${m.name}</strong> ($${sym}$)`;
         }).join(", ");
 
@@ -740,7 +765,8 @@ function createInteractiveVarNode(displayVar, baseVarKey) {
   const span = document.createElement("span");
   span.className = "interactive-var";
 
-  let latexExpr = displayVar === "phi" ? "\\phi" : displayVar.replace(/_([a-zA-Z0-9]{2,})/g, "_{$1}");
+  let latexExpr = (displayVar === "phi" || displayVar === "\\phi") ? "\\phi" : displayVar;
+  latexExpr = latexExpr.replace(/_([a-zA-Z0-9]+)/g, "_{$1}");
   katex.render(latexExpr, span, { throwOnError: false });
 
   span.onmouseenter = e => showTooltip(e, baseVarKey, displayVar);

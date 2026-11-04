@@ -1,6 +1,5 @@
 // ========================================================
 // gear_graph.js — SSOT Knowledge Graph & Native Unit Solvers
-// Fully Consistent with Class Video & Lecture Slides
 // ========================================================
 
 function fmt(n, maxDec = 3) {
@@ -15,47 +14,46 @@ function fmt(n, maxDec = 3) {
 const PHI_INV2_GRAPH = 0.3819660113;
 
 // ========================================================
-// 1. VARIABLE DATABASE (Aligned with Class & Reviewer Notation)
+// 1. VARIABLE DATABASE (Clean Names, No Redundant Symbols)
 // ========================================================
 const GEAR_VARS_DB = {
-  "D_P":  { name: "Pitch Diameter (D_p)", unit: "in", baseVar: "D_P" },
-  "D_P1": { name: "Pinion Pitch Diameter (D_1)", unit: "in", baseVar: "D_P" },
-  "D_P2": { name: "Gear Pitch Diameter (D_2)", unit: "in", baseVar: "D_P" },
-  "P_d":  { name: "Diametral Pitch (P_d)", unit: "teeth/in", baseVar: "P_d" },
-  "P_c":  { name: "Circular Pitch (P_c)", unit: "in", baseVar: "P_c" },
-  "C":    { name: "Center Distance (C)", unit: "in", baseVar: "C" },
-  "W_t":  { name: "Tangential Load (F_t / W_t)", unit: "lb", baseVar: "W_t" },
-  "W_r":  { name: "Radial Load (F_r / W_r)", unit: "lb", baseVar: "W_r" },
-  "W":    { name: "Normal Contact Force (F_n / W)", unit: "lb", baseVar: "W" },
-  "M_t":  { name: "Shaft Torque (T / M_t)", unit: "lb-in", baseVar: "M_t" },
-  "V_m":  { name: "Pitch Line Velocity (v / V_m)", unit: "ft/min", baseVar: "V_m" },
-  "a":    { name: "Addendum (a)", unit: "in", baseVar: "a" },
-  "d":    { name: "Dedendum (d)", unit: "in", baseVar: "d" },
-  "c":    { name: "Tooth Clearance (c)", unit: "in", baseVar: "c" },
-  "D_o":  { name: "Outside Blank Diameter (D_o)", unit: "in", baseVar: "D_o" },
-  "D_b":  { name: "Base Circle Diameter (D_b)", unit: "in", baseVar: "D_b" },
-  "s":    { name: "Bending Stress (Lewis s)", unit: "psi", baseVar: "s" },
-  "b":    { name: "Face Width (b)", unit: "in", baseVar: "b" },
-  "T":    { name: "Tooth Count (T)", unit: "teeth", baseVar: "T" },
-  "T_1":  { name: "Pinion Teeth (T_1)", unit: "teeth", baseVar: "T" },
-  "T_2":  { name: "Gear Teeth (T_2)", unit: "teeth", baseVar: "T" },
-  "n":    { name: "Rotational Speed (N / n)", unit: "rpm", baseVar: "n" },
-  "n_1":  { name: "Driver Speed (N_1 / n_1)", unit: "rpm", baseVar: "n" },
-  "n_2":  { name: "Driven Speed (N_2 / n_2)", unit: "rpm", baseVar: "n" },
-  "VR":   { name: "Speed Ratio (SR / VR)", unit: "ratio", baseVar: "VR" },
-  "P":    { name: "Transmitted Power (P)", unit: "hp", baseVar: "P" },
-  "phi":  { name: "Pressure Angle (\\phi)", unit: "deg", baseVar: "phi" },
-  "Y":    { name: "Lewis Form Factor (Y)", unit: "dimless", baseVar: "Y" },
-  "t":    { name: "Circular Tooth Thickness (t)", unit: "in", baseVar: "t" },
-  "h":    { name: "Whole Depth (h)", unit: "in", baseVar: "h" },
-  // New Video & Slide Deliverables:
-  "F_D":  { name: "Dynamic Tooth Load (Buckingham F_D)", unit: "lb", baseVar: "F_D" },
-  "C_d":  { name: "Dynamic / Deformation Factor (C)", unit: "lb/in", baseVar: "C_d" },
-  "h_k":  { name: "Working Depth (h_k)", unit: "in", baseVar: "h_k" },
-  "B":    { name: "Tooth Backlash (B)", unit: "in", baseVar: "B" },
-  "p_b":  { name: "Base Pitch (p_b)", unit: "in", baseVar: "p_b" },
-  "m":    { name: "Metric Module (m)", unit: "mm", baseVar: "m" },
-  "C_i":  { name: "Center Distance to Idler (C_i)", unit: "in", baseVar: "C_i" }
+  "D_P":  { name: "Pitch Diameter", unit: "in", baseVar: "D_P" },
+  "D_P1": { name: "Pinion Pitch Diameter", unit: "in", baseVar: "D_P" },
+  "D_P2": { name: "Gear Pitch Diameter", unit: "in", baseVar: "D_P" },
+  "P_d":  { name: "Diametral Pitch", unit: "teeth/in", baseVar: "P_d" },
+  "P_c":  { name: "Circular Pitch", unit: "in", baseVar: "P_c" },
+  "C":    { name: "Center Distance", unit: "in", baseVar: "C" },
+  "W_t":  { name: "Transmitted Load", unit: "lb", baseVar: "W_t" },
+  "W_r":  { name: "Radial Load", unit: "lb", baseVar: "W_r" },
+  "W":    { name: "Normal Contact Force", unit: "lb", baseVar: "W" },
+  "M_t":  { name: "Shaft Torque", unit: "lb-in", baseVar: "M_t" },
+  "V_m":  { name: "Pitch Line Velocity", unit: "ft/min", baseVar: "V_m" },
+  "a":    { name: "Addendum", unit: "in", baseVar: "a" },
+  "d":    { name: "Dedendum", unit: "in", baseVar: "d" },
+  "c":    { name: "Tooth Clearance", unit: "in", baseVar: "c" },
+  "D_o":  { name: "Outside Blank Diameter", unit: "in", baseVar: "D_o" },
+  "D_b":  { name: "Base Circle Diameter", unit: "in", baseVar: "D_b" },
+  "s":    { name: "Bending Stress", unit: "psi", baseVar: "s" },
+  "b":    { name: "Face Width", unit: "in", baseVar: "b" },
+  "T":    { name: "Tooth Count", unit: "teeth", baseVar: "T" },
+  "T_1":  { name: "Pinion Teeth", unit: "teeth", baseVar: "T" },
+  "T_2":  { name: "Gear Teeth", unit: "teeth", baseVar: "T" },
+  "n":    { name: "Rotational Speed", unit: "rpm", baseVar: "n" },
+  "n_1":  { name: "Driver Speed", unit: "rpm", baseVar: "n" },
+  "n_2":  { name: "Driven Speed", unit: "rpm", baseVar: "n" },
+  "VR":   { name: "Speed Ratio", unit: "ratio", baseVar: "VR" },
+  "P":    { name: "Transmitted Power", unit: "hp", baseVar: "P" },
+  "phi":  { name: "Pressure Angle", unit: "deg", baseVar: "phi" },
+  "Y":    { name: "Lewis Form Factor", unit: "dimless", baseVar: "Y" },
+  "t":    { name: "Tooth Thickness", unit: "in", baseVar: "t" },
+  "h":    { name: "Whole Depth", unit: "in", baseVar: "h" },
+  "F_D":  { name: "Dynamic Tooth Load", unit: "lb", baseVar: "F_D" },
+  "C_d":  { name: "Dynamic Deformation Factor", unit: "lb/in", baseVar: "C_d" },
+  "h_k":  { name: "Working Depth", unit: "in", baseVar: "h_k" },
+  "B":    { name: "Tooth Backlash", unit: "in", baseVar: "B" },
+  "p_b":  { name: "Base Pitch", unit: "in", baseVar: "p_b" },
+  "m":    { name: "Metric Module", unit: "mm", baseVar: "m" },
+  "C_i":  { name: "Center Distance to Idler", unit: "in", baseVar: "C_i" }
 };
 
 const dbUnit = k => (GEAR_VARS_DB[k] || {}).unit || "dimless";
@@ -87,7 +85,7 @@ const GEAR_RELATION_GRAPH = [
 
       if (target === "F_D") {
         return {
-          target: `Dynamic Tooth Load ({{F_D}})${u !== "lb" && u !== "N" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Dynamic Tooth Load ({{F_D}})",
           text: `Applying Buckingham's equation ($k = ${k}$):`,
           eq: `F_D = F_t + \\frac{${k} v (b C + F_t)}{${k} v + \\sqrt{b C + F_t}} = ${fmt(S.W_t, 0)} + \\frac{${k}(${fmt(S.V_m, 1)})[(${fmt(S.b, 2)})(${fmt(S.C_d, 0)}) + ${fmt(S.W_t, 0)}]}{${k}(${fmt(S.V_m, 1)}) + \\sqrt{(${fmt(S.b, 2)})(${fmt(S.C_d, 0)}) + ${fmt(S.W_t, 0)}}} = \\mathbf{${fmt(val, 1)}\\text{ ${u}}}`,
           val: parseFloat(val.toFixed(1))
@@ -109,10 +107,9 @@ const GEAR_RELATION_GRAPH = [
       a:   { formula: "a = \\frac{h_k}{2}", notes: "Addendum is half the working depth" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "h_k") {
         return {
-          target: `Working Depth ({{h_k}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Working Depth ({{h_k}})",
           text: "Working depth is twice the addendum ($h_k = 2a = \\frac{2}{P_d}$):",
           eq: `h_k = \\frac{2}{P_d} = \\frac{2}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.h_k, 4)}\\text{ in}}`,
           val: S.h_k
@@ -120,7 +117,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "a") {
         return {
-          target: `Addendum ({{a}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Addendum ({{a}})",
           text: "Addendum is half the working depth ($a = \\frac{h_k}{2}$):",
           eq: `a = \\frac{h_k}{2} = \\frac{${fmt(S.h_k, 4)}}{2} = \\mathbf{${fmt(S.a, 4)}\\text{ in}}`,
           val: S.a
@@ -138,14 +135,13 @@ const GEAR_RELATION_GRAPH = [
     topic: "pitch_geometry",
     termsCount: 3,
     forms: {
-      d:   { formula: "d = \\frac{1.157}{P_d} \\text{ (for } 14.5^\\circ) \\text{ or } \\frac{1.25}{P_d} \\text{ (for } 20^\\circ)", notes: "Standard dedendum proportion including tooth clearance" }
+      d: { formula: "d = \\frac{1.157}{P_d} \\text{ (for } 14.5^\\circ) \\text{ or } \\frac{1.25}{P_d} \\text{ (for } 20^\\circ)", notes: "Standard dedendum proportion including tooth clearance" }
     },
     solve: (target, S) => {
       const factor = S.phi === 14.5 ? 1.157 : 1.25;
-      const u = unitOf(S, target);
       if (target === "d") {
         return {
-          target: `Dedendum ({{d}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Dedendum ({{d}})",
           text: `Standard dedendum for ${fmt(S.phi, 1)}° teeth ($d = \\frac{${factor}}{P_d}$):`,
           eq: `d = \\frac{${factor}}{P_d} = \\frac{${factor}}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.d, 4)}\\text{ in}}`,
           val: S.d
@@ -163,13 +159,12 @@ const GEAR_RELATION_GRAPH = [
     topic: "pitch_geometry",
     termsCount: 3,
     forms: {
-      B:   { formula: "B = \\frac{0.035}{P_d}", notes: "Standard average backlash (range 0.03/P_d to 0.04/P_d)" }
+      B: { formula: "B = \\frac{0.035}{P_d}", notes: "Standard average backlash (range 0.03/P_d to 0.04/P_d)" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "B") {
         return {
-          target: `Backlash ({{B}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Tooth Backlash ({{B}})",
           text: "Standard average backlash on pitch circle ($B = \\frac{0.035}{P_d}$):",
           eq: `B = \\frac{0.035}{P_d} = \\frac{0.035}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.B, 4)}\\text{ in}}`,
           val: S.B
@@ -191,18 +186,17 @@ const GEAR_RELATION_GRAPH = [
       P_c: { formula: "P_c = \\frac{p_b}{\\cos\\phi}", notes: "Circular pitch from base pitch" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "p_b") {
         return {
-          target: `Base Pitch ({{p_b}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Base pitch along the base circle ($p_b = P_c \\cos\\phi$):",
+          target: "Base Pitch ({{p_b}})",
+          text: "Base pitch along base circle ($p_b = P_c \\cos\\phi$):",
           eq: `p_b = P_c \\cos\\phi = ${fmt(S.P_c, 4)} \\times \\cos(${fmt(S.phi, 1)}^\\circ) = \\mathbf{${fmt(S.p_b, 4)}\\text{ in}}`,
           val: S.p_b
         };
       }
       if (target === "P_c") {
         return {
-          target: `Circular Pitch ({{P_c}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Circular Pitch ({{P_c}})",
           text: "Circular pitch from base pitch ($P_c = \\frac{p_b}{\\cos\\phi}$):",
           eq: `P_c = \\frac{p_b}{\\cos\\phi} = \\frac{${fmt(S.p_b, 4)}}{\\cos(${fmt(S.phi, 1)}^\\circ)} = \\mathbf{${fmt(S.P_c, 4)}\\text{ in}}`,
           val: S.P_c
@@ -226,7 +220,7 @@ const GEAR_RELATION_GRAPH = [
     solve: (target, S) => {
       if (target === "m") {
         return {
-          target: "Metric Module ({{m}}) in mm",
+          target: "Metric Module ({{m}})",
           text: "Metric module from diametral pitch ($m = \\frac{25.4}{P_d}$):",
           eq: `m = \\frac{25.4}{P_d} = \\frac{25.4}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.m, 3)}\\text{ mm}}`,
           val: S.m
@@ -252,7 +246,7 @@ const GEAR_RELATION_GRAPH = [
         const Ri = S.C_i - R1;
         const D2 = 2 * (R1 + 2 * Ri);
         return {
-          target: "Internal Gear Diameter ({{D_{P2}|D_P}}) in in",
+          target: "Internal Gear Diameter ({{D_2|D_P2}})",
           text: `Idler radius $R_i = C_i - R_1 = ${fmt(S.C_i, 1)} - ${fmt(R1, 1)} = ${fmt(Ri, 1)}\\text{ in}$. Inside diameter ($D_2 = 2[R_1 + 2 R_i]$):`,
           eq: `D_2 = 2(${fmt(R1, 1)} + 2(${fmt(Ri, 1)})) = \\mathbf{${fmt(D2, 1)}\\text{ in}}`,
           val: D2
@@ -273,11 +267,10 @@ const GEAR_RELATION_GRAPH = [
       W: { formula: "F_n = \\sqrt{F_t^2 + F_r^2}", notes: "Resultant normal force from orthogonal vector components" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "W") {
         const val = Math.sqrt(S.W_t * S.W_t + S.W_r * S.W_r);
         return {
-          target: `Normal Contact Force ({{W}})${u !== "lb" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Normal Contact Force ({{F_n|W}})",
           text: "Total normal force from tangential and radial vectors ($F_n = \\sqrt{F_t^2 + F_r^2}$):",
           eq: `F_n = \\sqrt{F_t^2 + F_r^2} = \\sqrt{(${fmt(S.W_t, 0)})^2 + (${fmt(S.W_r, 0)})^2} = \\mathbf{${fmt(val, 0)}\\text{ lb}}`,
           val: parseFloat(val.toFixed(1))
@@ -301,7 +294,7 @@ const GEAR_RELATION_GRAPH = [
     solve: (target, S) => {
       if (target === "VR") {
         return {
-          target: "Speed Ratio (SR / VR)",
+          target: "Speed Ratio ({{SR|VR}})",
           text: "Ratio of driven to driver pitch diameter ($SR = \\frac{D_2}{D_1}$):",
           eq: `SR = \\frac{D_2}{D_1} = \\frac{${fmt(S.D_P2, 3)}}{${fmt(S.D_P1, 3)}} = \\mathbf{${fmt(S.VR, 2)}}`,
           val: S.VR
@@ -309,7 +302,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "D_P2") {
         return {
-          target: "Gear Pitch Diameter ({{D_{P2}|D_P}}) in in",
+          target: "Gear Pitch Diameter ({{D_2|D_P2}})",
           text: "Driven gear pitch diameter ($D_2 = D_1 \\cdot SR$):",
           eq: `D_2 = D_1 \\cdot SR = ${fmt(S.D_P1, 3)} \\times ${fmt(S.VR, 2)} = \\mathbf{${fmt(S.D_P2, 3)}\\text{ in}}`,
           val: S.D_P2
@@ -333,7 +326,7 @@ const GEAR_RELATION_GRAPH = [
     solve: (target, S) => {
       if (target === "n_2") {
         return {
-          target: "Driven Speed ({{n_2|n}}) in rpm",
+          target: "Driven Speed ({{N_2|n_2}})",
           text: "From speed-teeth balance ($T_1 N_1 = T_2 N_2$):",
           eq: `N_2 = \\frac{T_1 N_1}{T_2} = \\frac{${fmt(S.T_1, 0)} \\times ${fmt(S.n_1, 0)}}{${fmt(S.T_2, 0)}} = \\mathbf{${fmt(S.n_2, 1)}\\text{ rpm}}`,
           val: S.n_2
@@ -350,7 +343,7 @@ const GEAR_RELATION_GRAPH = [
     }
   },
 
-  // Existing Core Relations:
+  // 11. Pitch Reciprocal Identity
   {
     id: "eq_pitch_inv",
     name: "Pitch Reciprocal Identity",
@@ -363,10 +356,9 @@ const GEAR_RELATION_GRAPH = [
       P_c: { formula: "P_c = \\frac{\\pi}{P_d}", notes: "Circular spacing from diametral pitch" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "P_d") {
         return {
-          target: `Diametral Pitch ({{P_d}})${u !== "teeth/in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Diametral Pitch ({{P_d}})",
           text: "From pitch reciprocal relation ($P_c \\cdot P_d = \\pi$):",
           eq: `P_d = \\frac{\\pi}{P_c} = \\frac{\\pi}{${fmt(S.P_c, 4)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
           val: S.P_d
@@ -374,7 +366,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_c") {
         return {
-          target: `Circular Pitch ({{P_c}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Circular Pitch ({{P_c}})",
           text: "From diametral pitch ($P_c \\cdot P_d = \\pi$):",
           eq: `P_c = \\frac{\\pi}{P_d} = \\frac{\\pi}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.P_c, 4)}\\text{ in}}`,
           val: S.P_c
@@ -382,6 +374,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 12. Pinion Pitch Definition
   {
     id: "eq_dp1",
     name: "Pinion Pitch Definition",
@@ -390,38 +384,39 @@ const GEAR_RELATION_GRAPH = [
     topic: "pitch_geometry",
     termsCount: 3,
     forms: {
-      D_P1: { formula: "D_{P1} = \\frac{T_1}{P_d}", notes: "Pitch diameter from teeth and pitch" },
-      P_d:  { formula: "P_d = \\frac{T_1}{D_{P1}}", notes: "Pitch from diameter and teeth" },
-      T_1:  { formula: "T_1 = D_{P1} \\cdot P_d", notes: "Teeth from diameter and pitch" }
+      D_P1: { formula: "D_1 = \\frac{T_1}{P_d}", notes: "Pitch diameter from teeth and pitch" },
+      P_d:  { formula: "P_d = \\frac{T_1}{D_1}", notes: "Pitch from diameter and teeth" },
+      T_1:  { formula: "T_1 = D_1 \\cdot P_d", notes: "Teeth from diameter and pitch" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "D_P1") {
         return {
-          target: `Pinion Pitch Diameter ({{D_{P1}|D_P}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "From teeth count and diametral pitch ($D_{P1} = \\frac{T_1}{P_d}$):",
-          eq: `D_{P1} = \\frac{T_1}{P_d} = \\frac{${fmt(S.T_1, 0)}}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
+          target: "Pinion Pitch Diameter ({{D_1|D_P1}})",
+          text: "From teeth count and diametral pitch ($D_1 = \\frac{T_1}{P_d}$):",
+          eq: `D_1 = \\frac{T_1}{P_d} = \\frac{${fmt(S.T_1, 0)}}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
         };
       }
       if (target === "P_d") {
         return {
-          target: `Diametral Pitch ({{P_d}})${u !== "teeth/in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "From pitch diameter and teeth ($P_d = \\frac{T_1}{D_{P1}}$):",
-          eq: `P_d = \\frac{T_1}{D_{P1}} = \\frac{${fmt(S.T_1, 0)}}{${fmt(S.D_P1, 3)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
+          target: "Diametral Pitch ({{P_d}})",
+          text: "From pitch diameter and teeth ($P_d = \\frac{T_1}{D_1}$):",
+          eq: `P_d = \\frac{T_1}{D_1} = \\frac{${fmt(S.T_1, 0)}}{${fmt(S.D_P1, 3)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
           val: S.P_d
         };
       }
       if (target === "T_1") {
         return {
           target: "Pinion Teeth ({{T_1|T}})",
-          text: "From pitch diameter and diametral pitch ($T_1 = D_{P1} P_d$):",
-          eq: `T_1 = D_{P1} \\cdot P_d = ${fmt(S.D_P1, 3)} \\times ${fmt(S.P_d, 2)} = \\mathbf{${fmt(S.T_1, 0)}\\text{ teeth}}`,
+          text: "From pitch diameter and diametral pitch ($T_1 = D_1 P_d$):",
+          eq: `T_1 = D_1 \\cdot P_d = ${fmt(S.D_P1, 3)} \\times ${fmt(S.P_d, 2)} = \\mathbf{${fmt(S.T_1, 0)}\\text{ teeth}}`,
           val: S.T_1
         };
       }
     }
   },
+
+  // 13. Gear Pitch Definition
   {
     id: "eq_dp2",
     name: "Gear Pitch Definition",
@@ -430,109 +425,112 @@ const GEAR_RELATION_GRAPH = [
     topic: "pitch_geometry",
     termsCount: 3,
     forms: {
-      D_P2: { formula: "D_{P2} = \\frac{T_2}{P_d}", notes: "Gear pitch diameter from gear teeth" },
-      T_2:  { formula: "T_2 = D_{P2} \\cdot P_d", notes: "Gear tooth count from diameter" },
-      P_d:  { formula: "P_d = \\frac{T_2}{D_{P2}}", notes: "Pitch from gear diameter and teeth" }
+      D_P2: { formula: "D_2 = \\frac{T_2}{P_d}", notes: "Gear pitch diameter from gear teeth" },
+      T_2:  { formula: "T_2 = D_2 \\cdot P_d", notes: "Gear tooth count from diameter" },
+      P_d:  { formula: "P_d = \\frac{T_2}{D_2}", notes: "Pitch from gear diameter and teeth" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "D_P2") {
         return {
-          target: `Gear Pitch Diameter ({{D_{P2}|D_P}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "From gear teeth count and diametral pitch ($D_{P2} = \\frac{T_2}{P_d}$):",
-          eq: `D_{P2} = \\frac{T_2}{P_d} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.D_P2, 3)}\\text{ in}}`,
+          target: "Gear Pitch Diameter ({{D_2|D_P2}})",
+          text: "From gear teeth count and diametral pitch ($D_2 = \\frac{T_2}{P_d}$):",
+          eq: `D_2 = \\frac{T_2}{P_d} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.D_P2, 3)}\\text{ in}}`,
           val: S.D_P2
         };
       }
       if (target === "T_2") {
         return {
           target: "Gear Teeth ({{T_2|T}})",
-          text: "From gear diameter and diametral pitch ($T_2 = D_{P2} P_d$):",
-          eq: `T_2 = D_{P2} \\cdot P_d = ${fmt(S.D_P2, 3)} \\times ${fmt(S.P_d, 2)} = \\mathbf{${fmt(S.T_2, 0)}\\text{ teeth}}`,
+          text: "From gear diameter and diametral pitch ($T_2 = D_2 P_d$):",
+          eq: `T_2 = D_2 \\cdot P_d = ${fmt(S.D_P2, 3)} \\times ${fmt(S.P_d, 2)} = \\mathbf{${fmt(S.T_2, 0)}\\text{ teeth}}`,
           val: S.T_2
         };
       }
       if (target === "P_d") {
         return {
-          target: `Diametral Pitch ({{P_d}})${u !== "teeth/in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "From gear diameter and teeth ($P_d = \\frac{T_2}{D_{P2}}$):",
-          eq: `P_d = \\frac{T_2}{D_{P2}} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.D_P2, 3)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
+          target: "Diametral Pitch ({{P_d}})",
+          text: "From gear diameter and teeth ($P_d = \\frac{T_2}{D_2}$):",
+          eq: `P_d = \\frac{T_2}{D_2} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.D_P2, 3)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
           val: S.P_d
         };
       }
     }
   },
+
+  // 14. Center Distance (External)
   {
     id: "eq_center_dist",
     name: "Center Distance (External)",
-    baseFormula: "C = \\frac{D_{P1} + D_{P2}}{2}",
+    baseFormula: "C = \\frac{D_1 + D_2}{2}",
     nodes: ["C", "D_P1", "D_P2"],
     topic: "speed_center",
     termsCount: 4,
     forms: {
-      C:    { formula: "C = \\frac{D_{P1} + D_{P2}}{2}", notes: "Sum of pitch radii" },
-      D_P2: { formula: "D_{P2} = 2C - D_{P1}", notes: "Gear diameter from center distance" },
-      D_P1: { formula: "D_{P1} = 2C - D_{P2}", notes: "Pinion diameter from center distance" }
+      C:    { formula: "C = \\frac{D_1 + D_2}{2}", notes: "Sum of pitch radii" },
+      D_P2: { formula: "D_2 = 2C - D_1", notes: "Gear diameter from center distance" },
+      D_P1: { formula: "D_1 = 2C - D_2", notes: "Pinion diameter from center distance" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "C") {
         return {
-          target: `Center Distance ({{C}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Sum of pitch radii for external mesh ($C = \\frac{D_{P1} + D_{P2}}{2}$):",
-          eq: `C = \\frac{D_{P1} + D_{P2}}{2} = \\frac{${fmt(S.D_P1, 3)} + ${fmt(S.D_P2, 3)}}{2} = \\mathbf{${fmt(S.C, 3)}\\text{ in}}`,
+          target: "Center Distance ({{C}})",
+          text: "Sum of pitch radii for external mesh ($C = \\frac{D_1 + D_2}{2}$):",
+          eq: `C = \\frac{D_1 + D_2}{2} = \\frac{${fmt(S.D_P1, 3)} + ${fmt(S.D_P2, 3)}}{2} = \\mathbf{${fmt(S.C, 3)}\\text{ in}}`,
           val: S.C
         };
       }
       if (target === "D_P2") {
         return {
-          target: `Gear Pitch Diameter ({{D_{P2}|D_P}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "From center distance and pinion diameter ($D_{P2} = 2C - D_{P1}$):",
-          eq: `D_{P2} = 2C - D_{P1} = 2(${fmt(S.C, 3)}) - ${fmt(S.D_P1, 3)} = \\mathbf{${fmt(S.D_P2, 3)}\\text{ in}}`,
+          target: "Gear Pitch Diameter ({{D_2|D_P2}})",
+          text: "From center distance and pinion diameter ($D_2 = 2C - D_1$):",
+          eq: `D_2 = 2C - D_1 = 2(${fmt(S.C, 3)}) - ${fmt(S.D_P1, 3)} = \\mathbf{${fmt(S.D_P2, 3)}\\text{ in}}`,
           val: S.D_P2
         };
       }
       if (target === "D_P1") {
         return {
-          target: `Pinion Pitch Diameter ({{D_{P1}|D_P}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "From center distance and gear diameter ($D_{P1} = 2C - D_{P2}$):",
-          eq: `D_{P1} = 2C - D_{P2} = 2(${fmt(S.C, 3)}) - ${fmt(S.D_P2, 3)} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
+          target: "Pinion Pitch Diameter ({{D_1|D_P1}})",
+          text: "From center distance and gear diameter ($D_1 = 2C - D_2$):",
+          eq: `D_1 = 2C - D_2 = 2(${fmt(S.C, 3)}) - ${fmt(S.D_P2, 3)} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
         };
       }
     }
   },
+
+  // 15. Center Distance Ratio Formula
   {
     id: "eq_c_vr_teeth",
     name: "Center Distance Ratio Formula",
-    baseFormula: "C = \\frac{T_1 (1 + VR)}{2 P_d}",
+    baseFormula: "C = \\frac{T_1 (1 + SR)}{2 P_d}",
     nodes: ["C", "T_1", "VR", "P_d"],
     topic: "speed_center",
     termsCount: 5,
     forms: {
-      T_1: { formula: "T_1 = \\frac{2 C \\cdot P_d}{1 + VR}", notes: "Pinion teeth from center distance and ratio" },
-      C:   { formula: "C = \\frac{T_1 (1 + VR)}{2 P_d}", notes: "Center distance from pinion teeth and ratio" }
+      T_1: { formula: "T_1 = \\frac{2 C \\cdot P_d}{1 + SR}", notes: "Pinion teeth from center distance and ratio" },
+      C:   { formula: "C = \\frac{T_1 (1 + SR)}{2 P_d}", notes: "Center distance from pinion teeth and ratio" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "T_1") {
         return {
           target: "Pinion Teeth ({{T_1|T}})",
-          text: "From center distance and velocity ratio ($T_1 = \\frac{2 C P_d}{1 + VR}$):",
-          eq: `T_1 = \\frac{2 C \\cdot P_d}{1 + VR} = \\frac{2(${fmt(S.C, 3)})(${fmt(S.P_d, 2)})}{1 + ${fmt(S.VR, 2)}} = \\mathbf{${fmt(S.T_1, 0)}\\text{ teeth}}`,
+          text: "From center distance and speed ratio ($T_1 = \\frac{2 C P_d}{1 + SR}$):",
+          eq: `T_1 = \\frac{2 C \\cdot P_d}{1 + SR} = \\frac{2(${fmt(S.C, 3)})(${fmt(S.P_d, 2)})}{1 + ${fmt(S.VR, 2)}} = \\mathbf{${fmt(S.T_1, 0)}\\text{ teeth}}`,
           val: S.T_1
         };
       }
       if (target === "C") {
         return {
-          target: `Center Distance ({{C}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "From pinion teeth and velocity ratio ($C = \\frac{T_1 (1 + VR)}{2 P_d}$):",
-          eq: `C = \\frac{T_1 (1 + VR)}{2 P_d} = \\frac{${fmt(S.T_1, 0)}(1 + ${fmt(S.VR, 2)})}{2(${fmt(S.P_d, 2)})} = \\mathbf{${fmt(S.C, 3)}\\text{ in}}`,
+          target: "Center Distance ({{C}})",
+          text: "From pinion teeth and speed ratio ($C = \\frac{T_1 (1 + SR)}{2 P_d}$):",
+          eq: `C = \\frac{T_1 (1 + SR)}{2 P_d} = \\frac{${fmt(S.T_1, 0)}(1 + ${fmt(S.VR, 2)})}{2(${fmt(S.P_d, 2)})} = \\mathbf{${fmt(S.C, 3)}\\text{ in}}`,
           val: S.C
         };
       }
     }
   },
+
+  // 16. Center Distance from Teeth Sum
   {
     id: "eq_c_teeth_sum",
     name: "Center Distance from Teeth Sum",
@@ -545,10 +543,9 @@ const GEAR_RELATION_GRAPH = [
       P_d: { formula: "P_d = \\frac{T_1 + T_2}{2C}", notes: "Diametral pitch from teeth sum and distance" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "C") {
         return {
-          target: `Center Distance ({{C}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Center Distance ({{C}})",
           text: "Center distance from total teeth in mesh ($C = \\frac{T_1 + T_2}{2 P_d}$):",
           eq: `C = \\frac{T_1 + T_2}{2 P_d} = \\frac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.P_d, 2)})} = \\mathbf{${fmt(S.C, 3)}\\text{ in}}`,
           val: S.C
@@ -556,7 +553,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: `Diametral Pitch ({{P_d}})${u !== "teeth/in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Diametral Pitch ({{P_d}})",
           text: "Pitch from total teeth and center distance ($P_d = \\frac{T_1 + T_2}{2C}$):",
           eq: `P_d = \\frac{T_1 + T_2}{2C} = \\frac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 3)})} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
           val: S.P_d
@@ -564,6 +561,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 17. Speed Reduction Ratio
   {
     id: "eq_vr_speed",
     name: "Speed Reduction Ratio",
@@ -577,10 +576,9 @@ const GEAR_RELATION_GRAPH = [
       n_1: { formula: "N_1 = N_2 \\cdot SR", notes: "Driver speed from driven speed and ratio" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "VR") {
         return {
-          target: "Speed Ratio (SR / VR)",
+          target: "Speed Ratio ({{SR|VR}})",
           text: "From rotational speed ratio ($SR = \\frac{N_1}{N_2}$):",
           eq: `SR = \\frac{N_1}{N_2} = \\frac{${fmt(S.n_1, 0)}}{${fmt(S.n_2, 1)}} = \\mathbf{${fmt(S.VR, 2)}}`,
           val: S.VR
@@ -588,7 +586,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "n_2") {
         return {
-          target: `Driven Speed ({{n_2|n}})${u !== "rpm" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Driven Speed ({{N_2|n_2}})",
           text: "Driven speed through reduction ratio ($N_2 = \\frac{N_1}{SR}$):",
           eq: `N_2 = \\frac{N_1}{SR} = \\frac{${fmt(S.n_1, 0)}}{${fmt(S.VR, 2)}} = \\mathbf{${fmt(S.n_2, 1)}\\text{ rpm}}`,
           val: S.n_2
@@ -596,7 +594,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "n_1") {
         return {
-          target: `Driver Speed ({{n_1|n}})${u !== "rpm" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Driver Speed ({{N_1|n_1}})",
           text: "Driver speed from driven speed and ratio ($N_1 = N_2 \\cdot SR$):",
           eq: `N_1 = N_2 \\cdot SR = ${fmt(S.n_2, 1)} \\times ${fmt(S.VR, 2)} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
           val: S.n_1
@@ -604,6 +602,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 18. Teeth Ratio
   {
     id: "eq_vr_teeth",
     name: "Teeth Ratio",
@@ -614,13 +614,13 @@ const GEAR_RELATION_GRAPH = [
     forms: {
       T_2: { formula: "T_2 = T_1 \\cdot SR", notes: "Driven teeth from ratio" },
       T_1: { formula: "T_1 = \\frac{T_2}{SR}", notes: "Driver teeth from ratio" },
-      VR:  { formula: "SR = \\frac{T_2}{T_1}", notes: "Velocity ratio from tooth count" }
+      VR:  { formula: "SR = \\frac{T_2}{T_1}", notes: "Speed ratio from tooth count" }
     },
     solve: (target, S) => {
       if (target === "T_2") {
         return {
           target: "Gear Teeth ({{T_2|T}})",
-          text: "From velocity ratio and pinion teeth ($T_2 = T_1 \\cdot SR$):",
+          text: "From speed ratio and pinion teeth ($T_2 = T_1 \\cdot SR$):",
           eq: `T_2 = T_1 \\cdot SR = ${fmt(S.T_1, 0)} \\times ${fmt(S.VR, 2)} = \\mathbf{${fmt(S.T_2, 0)}\\text{ teeth}}`,
           val: S.T_2
         };
@@ -628,14 +628,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "T_1") {
         return {
           target: "Pinion Teeth ({{T_1|T}})",
-          text: "From gear teeth and velocity ratio ($T_1 = \\frac{T_2}{SR}$):",
+          text: "From gear teeth and speed ratio ($T_1 = \\frac{T_2}{SR}$):",
           eq: `T_1 = \\frac{T_2}{SR} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.VR, 2)}} = \\mathbf{${fmt(S.T_1, 0)}\\text{ teeth}}`,
           val: S.T_1
         };
       }
       if (target === "VR") {
         return {
-          target: "Speed Ratio (SR / VR)",
+          target: "Speed Ratio ({{SR|VR}})",
           text: "Tooth count ratio of gear to pinion ($SR = \\frac{T_2}{T_1}$):",
           eq: `SR = \\frac{T_2}{T_1} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.T_1, 0)}} = \\mathbf{${fmt(S.VR, 2)}}`,
           val: S.VR
@@ -643,10 +643,12 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 19. Pitch Line Velocity
   {
     id: "eq_pitch_vel",
     name: "Pitch Line Velocity",
-    baseFormula: "v = \\frac{\\pi D_p N}{12}",
+    baseFormula: "v = \\frac{\\pi D_1 N_1}{12}",
     nodes: ["V_m", "D_P1", "n_1"],
     topic: "speed_center",
     termsCount: 4,
@@ -656,10 +658,9 @@ const GEAR_RELATION_GRAPH = [
       n_1:  { formula: "N_1 = \\frac{12 v}{\\pi D_1}", notes: "Rotational speed from pitch speed" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "V_m") {
         return {
-          target: `Pitch Line Velocity ({{V_m}})${u !== "ft/min" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Pitch Line Velocity ({{v|V_m}})",
           text: "Linear velocity at pitch circle ($v = \\frac{\\pi D_1 N_1}{12}$):",
           eq: `v = \\frac{\\pi D_1 N_1}{12} = \\frac{\\pi (${fmt(S.D_P1, 3)})(${fmt(S.n_1, 0)})}{12} = \\mathbf{${fmt(S.V_m, 1)}\\text{ ft/min}}`,
           val: S.V_m
@@ -667,7 +668,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "D_P1") {
         return {
-          target: `Pinion Pitch Diameter ({{D_{P1}|D_P}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Pinion Pitch Diameter ({{D_1|D_P1}})",
           text: "From pitch line velocity and rpm ($D_1 = \\frac{12 v}{\\pi N_1}$):",
           eq: `D_1 = \\frac{12 v}{\\pi N_1} = \\frac{12 (${fmt(S.V_m, 1)})}{\\pi (${fmt(S.n_1, 0)})} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
@@ -675,7 +676,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "n_1") {
         return {
-          target: `Driver Speed ({{n_1|n}})${u !== "rpm" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Driver Speed ({{N_1|n_1}})",
           text: "From pitch velocity and diameter ($N_1 = \\frac{12 v}{\\pi D_1}$):",
           eq: `N_1 = \\frac{12 v}{\\pi D_1} = \\frac{12(${fmt(S.V_m, 1)})}{\\pi (${fmt(S.D_P1, 3)})} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
           val: S.n_1
@@ -683,10 +684,12 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 20. Shaft Torque-Horsepower
   {
     id: "eq_torque_power",
     name: "Shaft Torque-Horsepower",
-    baseFormula: "P = \\frac{T \\cdot N}{63025}",
+    baseFormula: "P = \\frac{T \\cdot N_1}{63025}",
     nodes: ["M_t", "P", "n_1"],
     topic: "forces_torque",
     termsCount: 4,
@@ -696,10 +699,9 @@ const GEAR_RELATION_GRAPH = [
       n_1: { formula: "N_1 = \\frac{63025 \\cdot P}{T}", notes: "Speed from torque and horsepower" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "M_t") {
         return {
-          target: `Shaft Torque ({{M_t}})${u !== "lb-in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Shaft Torque ({{T|M_t}})",
           text: "Shaft torque from horsepower ($T = \\frac{63025 P}{N_1}$):",
           eq: `T = \\frac{63025 \\cdot P}{N_1} = \\frac{63025 \\times ${fmt(S.P, 2)}}{${fmt(S.n_1, 0)}} = \\mathbf{${fmt(S.M_t, 1)}\\text{ lb}\\cdot\\text{in}}`,
           val: S.M_t
@@ -707,7 +709,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P") {
         return {
-          target: `Transmitted Power (P)${u !== "hp" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Transmitted Power ({{P}})",
           text: "Horsepower from torque and rpm ($P = \\frac{T N_1}{63025}$):",
           eq: `P = \\frac{T \\cdot N_1}{63025} = \\frac{${fmt(S.M_t, 1)} \\times ${fmt(S.n_1, 0)}}{63025} = \\mathbf{${fmt(S.P, 2)}\\text{ hp}}`,
           val: S.P
@@ -715,7 +717,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "n_1") {
         return {
-          target: `Driver Speed ({{n_1|n}})${u !== "rpm" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Driver Speed ({{N_1|n_1}})",
           text: "Rotational speed from power and torque ($N_1 = \\frac{63025 P}{T}$):",
           eq: `N_1 = \\frac{63025 P}{T} = \\frac{63025(${fmt(S.P, 2)})}{${fmt(S.M_t, 1)}} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
           val: S.n_1
@@ -723,10 +725,12 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 21. Tangential Load from Torque
   {
     id: "eq_wt_torque",
     name: "Tangential Load from Torque",
-    baseFormula: "F_t = \\frac{2T}{D_p}",
+    baseFormula: "F_t = \\frac{2T}{D_1}",
     nodes: ["W_t", "M_t", "D_P1"],
     topic: "forces_torque",
     termsCount: 3,
@@ -736,10 +740,9 @@ const GEAR_RELATION_GRAPH = [
       D_P1: { formula: "D_1 = \\frac{2T}{F_t}", notes: "Pitch diameter from torque and tangential load" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "W_t") {
         return {
-          target: `Tangential Load ({{W_t}})${u !== "lb" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Tangential Load ({{F_t|W_t}})",
           text: "Tangential force from shaft torque and pitch radius ($F_t = \\frac{2T}{D_1}$):",
           eq: `F_t = \\frac{2T}{D_1} = \\frac{2(${fmt(S.M_t, 1)})}{${fmt(S.D_P1, 3)}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
           val: S.W_t
@@ -747,7 +750,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "M_t") {
         return {
-          target: `Shaft Torque ({{M_t}})${u !== "lb-in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Shaft Torque ({{T|M_t}})",
           text: "Shaft torque from tangential tooth load and pitch radius ($T = F_t \\frac{D_1}{2}$):",
           eq: `T = F_t \\cdot \\frac{D_1}{2} = ${fmt(S.W_t, 0)} \\times \\frac{${fmt(S.D_P1, 3)}}{2} = \\mathbf{${fmt(S.M_t, 1)}\\text{ lb}\\cdot\\text{in}}`,
           val: S.M_t
@@ -755,7 +758,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "D_P1") {
         return {
-          target: `Pinion Pitch Diameter ({{D_{P1}|D_P}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Pinion Pitch Diameter ({{D_1|D_P1}})",
           text: "Pitch diameter from torque and tangential load ($D_1 = \\frac{2T}{F_t}$):",
           eq: `D_1 = \\frac{2T}{F_t} = \\frac{2(${fmt(S.M_t, 1)})}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
@@ -763,6 +766,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 22. Tangential Load from Power
   {
     id: "eq_wt_power_vel",
     name: "Tangential Load from Power",
@@ -776,10 +781,9 @@ const GEAR_RELATION_GRAPH = [
       V_m: { formula: "v = \\frac{33000 \\cdot P}{F_t}", notes: "Pitch velocity from power and load" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "W_t") {
         return {
-          target: `Tangential Load ({{W_t}})${u !== "lb" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Tangential Load ({{F_t|W_t}})",
           text: "Tangential load from horsepower and pitch speed ($F_t = \\frac{33000 P}{v}$):",
           eq: `F_t = \\frac{33000 \\cdot P}{v} = \\frac{33000 \\times ${fmt(S.P, 2)}}{${fmt(S.V_m, 1)}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
           val: S.W_t
@@ -787,7 +791,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P") {
         return {
-          target: `Power Transmitted (P)${u !== "hp" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Transmitted Power ({{P}})",
           text: "Horsepower from tangential load and pitch velocity ($P = \\frac{F_t v}{33000}$):",
           eq: `P = \\frac{F_t \\cdot v}{33000} = \\frac{${fmt(S.W_t, 0)} \\times ${fmt(S.V_m, 1)}}{33000} = \\mathbf{${fmt(S.P, 2)}\\text{ hp}}`,
           val: S.P
@@ -795,7 +799,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "V_m") {
         return {
-          target: `Pitch Line Velocity ({{V_m}})${u !== "ft/min" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Pitch Line Velocity ({{v|V_m}})",
           text: "Pitch speed from transmitted power and load ($v = \\frac{33000 P}{F_t}$):",
           eq: `v = \\frac{33000 \\cdot P}{F_t} = \\frac{33000(${fmt(S.P, 2)})}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.V_m, 1)}\\text{ ft/min}}`,
           val: S.V_m
@@ -803,6 +807,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 23. Radial Force Relation
   {
     id: "eq_wr_wt",
     name: "Radial Force Relation",
@@ -816,10 +822,9 @@ const GEAR_RELATION_GRAPH = [
       phi: { formula: "\\phi = \\tan^{-1}\\left(\\frac{F_r}{F_t}\\right)", notes: "Operating pressure angle from force vector components" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "W_r") {
         return {
-          target: `Radial Load ({{W_r}})${u !== "lb" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Radial Load ({{F_r|W_r}})",
           text: "Separating force toward shaft center ($F_r = F_t \\tan\\phi$):",
           eq: `F_r = F_t \\tan\\phi = ${fmt(S.W_t, 0)} \\times \\tan(${fmt(S.phi, 1)}^\\circ) = \\mathbf{${fmt(S.W_r, 0)}\\text{ lb}}`,
           val: S.W_r
@@ -827,7 +832,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "W_t") {
         return {
-          target: `Tangential Load ({{W_t}})${u !== "lb" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Tangential Load ({{F_t|W_t}})",
           text: "Drive force derived from radial reaction ($F_t = \\frac{F_r}{\\tan\\phi}$):",
           eq: `F_t = \\frac{F_r}{\\tan\\phi} = \\frac{${fmt(S.W_r, 0)}}{\\tan(${fmt(S.phi, 1)}^\\circ)} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
           val: S.W_t
@@ -835,7 +840,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "phi") {
         return {
-          target: "Pressure Angle (\\phi) in degrees",
+          target: "Pressure Angle ({{\\phi|phi}})",
           text: "Pressure angle from radial and tangential forces:",
           eq: `\\phi = \\tan^{-1}\\left(\\frac{F_r}{F_t}\\right) = \\tan^{-1}\\left(\\frac{${fmt(S.W_r, 0)}}{${fmt(S.W_t, 0)}}\\right) = \\mathbf{${fmt(S.phi, 1)}^\\circ}`,
           val: S.phi
@@ -843,6 +848,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 24. Normal Contact Load Vector
   {
     id: "eq_w_normal",
     name: "Normal Contact Load Vector",
@@ -856,10 +863,9 @@ const GEAR_RELATION_GRAPH = [
       phi: { formula: "\\phi = \\cos^{-1}\\left(\\frac{F_t}{F_n}\\right)", notes: "Pressure angle from normal force resolution" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "W") {
         return {
-          target: `Normal Contact Force ({{W}})${u !== "lb" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Normal Contact Force ({{F_n|W}})",
           text: "Total force transmitted along line of action ($F_n = \\frac{F_t}{\\cos\\phi}$):",
           eq: `F_n = \\frac{F_t}{\\cos\\phi} = \\frac{${fmt(S.W_t, 0)}}{\\cos(${fmt(S.phi, 1)}^\\circ)} = \\mathbf{${fmt(S.W, 0)}\\text{ lb}}`,
           val: S.W
@@ -867,7 +873,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "W_t") {
         return {
-          target: `Tangential Load ({{W_t}})${u !== "lb" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Tangential Load ({{F_t|W_t}})",
           text: "Tangential load resolved from contact normal load ($F_t = F_n \\cos\\phi$):",
           eq: `F_t = F_n \\cos\\phi = ${fmt(S.W, 0)} \\times \\cos(${fmt(S.phi, 1)}^\\circ) = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
           val: S.W_t
@@ -875,7 +881,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "phi") {
         return {
-          target: "Pressure Angle (\\phi) in degrees",
+          target: "Pressure Angle ({{\\phi|phi}})",
           text: "Pressure angle from contact normal and drive force:",
           eq: `\\phi = \\cos^{-1}\\left(\\frac{F_t}{F_n}\\right) = \\cos^{-1}\\left(\\frac{${fmt(S.W_t, 0)}}{${fmt(S.W, 0)}}\\right) = \\mathbf{${fmt(S.phi, 1)}^\\circ}`,
           val: S.phi
@@ -883,6 +889,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 25. Full-Depth Addendum
   {
     id: "eq_addendum",
     name: "Full-Depth Addendum",
@@ -895,10 +903,9 @@ const GEAR_RELATION_GRAPH = [
       P_d: { formula: "P_d = \\frac{1}{a}", notes: "Diametral pitch from measured tooth addendum" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "a") {
         return {
-          target: `Addendum ({{a}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Addendum ({{a}})",
           text: "Standard full-depth addendum proportion ($a = \\frac{1}{P_d}$):",
           eq: `a = \\frac{1}{P_d} = \\frac{1}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.a, 4)}\\text{ in}}`,
           val: S.a
@@ -906,7 +913,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: `Diametral Pitch ({{P_d}})${u !== "teeth/in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Diametral Pitch ({{P_d}})",
           text: "From standard full-depth addendum ($P_d = \\frac{1}{a}$):",
           eq: `P_d = \\frac{1}{a} = \\frac{1}{${fmt(S.a, 4)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
           val: S.P_d
@@ -914,6 +921,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 26. Tooth Clearance Proportion
   {
     id: "eq_clearance",
     name: "Tooth Clearance Proportion",
@@ -927,10 +936,9 @@ const GEAR_RELATION_GRAPH = [
     },
     solve: (target, S) => {
       const factor = S.phi === 14.5 ? 0.157 : 0.25;
-      const u = unitOf(S, target);
       if (target === "c") {
         return {
-          target: `Tooth Clearance ({{c}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Tooth Clearance ({{c}})",
           text: `Standard clearance for ${fmt(S.phi, 1)}° full-depth teeth ($c = \\frac{${factor}}{P_d}$):`,
           eq: `c = \\frac{${factor}}{P_d} = \\frac{${factor}}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.c, 4)}\\text{ in}}`,
           val: S.c
@@ -938,7 +946,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: `Diametral Pitch ({{P_d}})${u !== "teeth/in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Diametral Pitch ({{P_d}})",
           text: "Pitch from clearance proportion ($P_d = \\frac{k_c}{c}$):",
           eq: `P_d = \\frac{${factor}}{c} = \\frac{${factor}}{${fmt(S.c, 4)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
           val: S.P_d
@@ -946,46 +954,49 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 27. Outside Blank Diameter
   {
     id: "eq_do",
     name: "Outside Blank Diameter",
-    baseFormula: "D_o = D_{P1} + 2a",
+    baseFormula: "D_o = D_1 + 2a",
     nodes: ["D_o", "D_P1", "a"],
     topic: "pitch_geometry",
     termsCount: 4,
     forms: {
-      D_o:  { formula: "D_o = D_{P1} + 2a", notes: "Outside cylinder diameter adding twice the addendum" },
-      D_P1: { formula: "D_{P1} = D_o - 2a", notes: "Pitch diameter from blank outside diameter" },
-      a:    { formula: "a = \\frac{D_o - D_{P1}}{2}", notes: "Addendum from blank diameter" }
+      D_o:  { formula: "D_o = D_1 + 2a", notes: "Outside cylinder diameter adding twice the addendum" },
+      D_P1: { formula: "D_1 = D_o - 2a", notes: "Pitch diameter from blank outside diameter" },
+      a:    { formula: "a = \\frac{D_o - D_1}{2}", notes: "Addendum from blank diameter" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "D_o") {
         return {
-          target: `Outside Diameter ({{D_o}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Blank outer diameter adding twice addendum ($D_o = D_{P1} + 2a$):",
-          eq: `D_o = D_{P1} + 2a = ${fmt(S.D_P1, 3)} + 2(${fmt(S.a, 4)}) = \\mathbf{${fmt(S.D_o, 3)}\\text{ in}}`,
+          target: "Outside Diameter ({{D_o}})",
+          text: "Blank outer diameter adding twice addendum ($D_o = D_1 + 2a$):",
+          eq: `D_o = D_1 + 2a = ${fmt(S.D_P1, 3)} + 2(${fmt(S.a, 4)}) = \\mathbf{${fmt(S.D_o, 3)}\\text{ in}}`,
           val: S.D_o
         };
       }
       if (target === "D_P1") {
         return {
-          target: `Pinion Pitch Diameter ({{D_{P1}|D_P}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Pitch diameter from blank diameter ($D_{P1} = D_o - 2a$):",
-          eq: `D_{P1} = D_o - 2a = ${fmt(S.D_o, 3)} - 2(${fmt(S.a, 4)}) = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
+          target: "Pinion Pitch Diameter ({{D_1|D_P1}})",
+          text: "Pitch diameter from blank diameter ($D_1 = D_o - 2a$):",
+          eq: `D_1 = D_o - 2a = ${fmt(S.D_o, 3)} - 2(${fmt(S.a, 4)}) = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
         };
       }
       if (target === "a") {
         return {
-          target: `Addendum ({{a}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Addendum from outer and pitch diameters ($a = \\frac{D_o - D_{P1}}{2}$):",
-          eq: `a = \\frac{D_o - D_{P1}}{2} = \\frac{${fmt(S.D_o, 3)} - ${fmt(S.D_P1, 3)}}{2} = \\mathbf{${fmt(S.a, 4)}\\text{ in}}`,
+          target: "Addendum ({{a}})",
+          text: "Addendum from outer and pitch diameters ($a = \\frac{D_o - D_1}{2}$):",
+          eq: `a = \\frac{D_o - D_1}{2} = \\frac{${fmt(S.D_o, 3)} - ${fmt(S.D_P1, 3)}}{2} = \\mathbf{${fmt(S.a, 4)}\\text{ in}}`,
           val: S.a
         };
       }
     }
   },
+
+  // 28. Blank Diameter from Teeth
   {
     id: "eq_do_teeth",
     name: "Blank Diameter from Teeth",
@@ -999,10 +1010,9 @@ const GEAR_RELATION_GRAPH = [
       T_1: { formula: "T_1 = D_o \\cdot P_d - 2", notes: "Tooth count from blank diameter and pitch" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "D_o") {
         return {
-          target: `Outside Diameter ({{D_o}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Outside Diameter ({{D_o}})",
           text: "Blank outer diameter from teeth count ($D_o = \\frac{T_1 + 2}{P_d}$):",
           eq: `D_o = \\frac{T_1 + 2}{P_d} = \\frac{${fmt(S.T_1, 0)} + 2}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.D_o, 3)}\\text{ in}}`,
           val: S.D_o
@@ -1010,7 +1020,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: `Diametral Pitch ({{P_d}})${u !== "teeth/in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Diametral Pitch ({{P_d}})",
           text: "Pitch from teeth and outside blank diameter ($P_d = \\frac{T_1 + 2}{D_o}$):",
           eq: `P_d = \\frac{T_1 + 2}{D_o} = \\frac{${fmt(S.T_1, 0)} + 2}{${fmt(S.D_o, 3)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
           val: S.P_d
@@ -1026,86 +1036,90 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 29. Base Circle Diameter
   {
     id: "eq_db",
     name: "Base Circle Diameter",
-    baseFormula: "D_b = D_{P1} \\cos\\phi",
+    baseFormula: "D_b = D_1 \\cos\\phi",
     nodes: ["D_b", "D_P1", "phi"],
     topic: "pitch_geometry",
     termsCount: 3,
     forms: {
-      D_b:  { formula: "D_b = D_{P1} \\cos\\phi", notes: "Base diameter generating the tooth involute" },
-      D_P1: { formula: "D_{P1} = \\frac{D_b}{\\cos\\phi}", notes: "Pitch diameter from base diameter" }
+      D_b:  { formula: "D_b = D_1 \\cos\\phi", notes: "Base diameter generating the tooth involute" },
+      D_P1: { formula: "D_1 = \\frac{D_b}{\\cos\\phi}", notes: "Pitch diameter from base diameter" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "D_b") {
         return {
-          target: `Base Circle Diameter ({{D_b}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Base circle diameter generating the tooth involute ($D_b = D_{P1} \\cos\\phi$):",
-          eq: `D_b = D_{P1} \\cos\\phi = ${fmt(S.D_P1, 3)} \\times \\cos(${fmt(S.phi, 1)}^\\circ) = \\mathbf{${fmt(S.D_b, 3)}\\text{ in}}`,
+          target: "Base Circle Diameter ({{D_b}})",
+          text: "Base circle diameter generating the tooth involute ($D_b = D_1 \\cos\\phi$):",
+          eq: `D_b = D_1 \\cos\\phi = ${fmt(S.D_P1, 3)} \\times \\cos(${fmt(S.phi, 1)}^\\circ) = \\mathbf{${fmt(S.D_b, 3)}\\text{ in}}`,
           val: S.D_b
         };
       }
       if (target === "D_P1") {
         return {
-          target: `Pinion Pitch Diameter ({{D_{P1}|D_P}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Pitch diameter from base circle diameter ($D_{P1} = \\frac{D_b}{\\cos\\phi}$):",
-          eq: `D_{P1} = \\frac{D_b}{\\cos\\phi} = \\frac{${fmt(S.D_b, 3)}}{\\cos(${fmt(S.phi, 1)}^\\circ)} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
+          target: "Pinion Pitch Diameter ({{D_1|D_P1}})",
+          text: "Pitch diameter from base circle diameter ($D_1 = \\frac{D_b}{\\cos\\phi}$):",
+          eq: `D_1 = \\frac{D_b}{\\cos\\phi} = \\frac{${fmt(S.D_b, 3)}}{\\cos(${fmt(S.phi, 1)}^\\circ)} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
         };
       }
     }
   },
+
+  // 30. Lewis Beam Bending Strength
   {
     id: "eq_lewis",
     name: "Lewis Beam Bending Strength",
-    baseFormula: "s = \\frac{W_t \\cdot P_d}{b \\cdot Y}",
+    baseFormula: "s = \\frac{F_t \\cdot P_d}{b \\cdot Y}",
     nodes: ["s", "W_t", "P_d", "b", "Y"],
     topic: "lewis_strength",
     termsCount: 5,
     forms: {
-      s:   { formula: "s = \\frac{W_t \\cdot P_d}{b \\cdot Y}", notes: "Induced tensile bending stress at tooth root" },
-      W_t: { formula: "W_t = \\frac{s \\cdot b \\cdot Y}{P_d}", notes: "Permissible transmitted load from allowable stress" },
-      P_d: { formula: "P_d = \\frac{s \\cdot b \\cdot Y}{W_t}", notes: "Required diametral pitch to resist tooth breakage" },
-      b:   { formula: "b = \\frac{W_t \\cdot P_d}{s \\cdot Y}", notes: "Minimum required face width" }
+      s:   { formula: "s = \\frac{F_t \\cdot P_d}{b \\cdot Y}", notes: "Induced tensile bending stress at tooth root" },
+      W_t: { formula: "F_t = \\frac{s \\cdot b \\cdot Y}{P_d}", notes: "Permissible transmitted load from allowable stress" },
+      P_d: { formula: "P_d = \\frac{s \\cdot b \\cdot Y}{F_t}", notes: "Required diametral pitch to resist tooth breakage" },
+      b:   { formula: "b = \\frac{F_t \\cdot P_d}{s \\cdot Y}", notes: "Minimum required face width" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "s") {
         return {
-          target: `Induced Bending Stress ({{s}})${u !== "psi" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Applying the Lewis beam bending stress formula ($s = \\frac{W_t P_d}{b Y}$):",
-          eq: `s = \\frac{W_t \\cdot P_d}{b \\cdot Y} = \\frac{${fmt(S.W_t, 0)} \\times ${fmt(S.P_d, 2)}}{${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}} = \\mathbf{${fmt(S.s, 0)}\\text{ psi}}`,
+          target: "Induced Bending Stress ({{s}})",
+          text: "Applying the Lewis beam bending stress formula ($s = \\frac{F_t P_d}{b Y}$):",
+          eq: `s = \\frac{F_t \\cdot P_d}{b \\cdot Y} = \\frac{${fmt(S.W_t, 0)} \\times ${fmt(S.P_d, 2)}}{${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}} = \\mathbf{${fmt(S.s, 0)}\\text{ psi}}`,
           val: S.s
         };
       }
       if (target === "W_t") {
         return {
-          target: `Permissible Tangential Load ({{W_t}})${u !== "lb" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Tangential load capacity from allowable stress limit ($W_t = \\frac{s b Y}{P_d}$):",
-          eq: `W_t = \\frac{s \\cdot b \\cdot Y}{P_d} = \\frac{${fmt(S.s, 0)} \\times ${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
+          target: "Permissible Tangential Load ({{F_t|W_t}})",
+          text: "Tangential load capacity from allowable stress limit ($F_t = \\frac{s b Y}{P_d}$):",
+          eq: `F_t = \\frac{s \\cdot b \\cdot Y}{P_d} = \\frac{${fmt(S.s, 0)} \\times ${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
           val: S.W_t
         };
       }
       if (target === "b") {
         return {
-          target: `Required Face Width ({{b}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Minimum face width to sustain induced bending stress ($b = \\frac{W_t P_d}{s Y}$):",
-          eq: `b = \\frac{W_t \\cdot P_d}{s \\cdot Y} = \\frac{${fmt(S.W_t, 0)} \\times ${fmt(S.P_d, 2)}}{${fmt(S.s, 0)} \\times ${fmt(S.Y, 3)}} = \\mathbf{${fmt(S.b, 2)}\\text{ in}}`,
+          target: "Required Face Width ({{b}})",
+          text: "Minimum face width to sustain induced bending stress ($b = \\frac{F_t P_d}{s Y}$):",
+          eq: `b = \\frac{F_t \\cdot P_d}{s \\cdot Y} = \\frac{${fmt(S.W_t, 0)} \\times ${fmt(S.P_d, 2)}}{${fmt(S.s, 0)} \\times ${fmt(S.Y, 3)}} = \\mathbf{${fmt(S.b, 2)}\\text{ in}}`,
           val: S.b
         };
       }
       if (target === "P_d") {
         return {
-          target: `Diametral Pitch ({{P_d}})${u !== "teeth/in" ? ` in $${Units.tex(u)}$` : ""}`,
-          text: "Diametral pitch from Lewis stress balance ($P_d = \\frac{s b Y}{W_t}$):",
-          eq: `P_d = \\frac{s \\cdot b \\cdot Y}{W_t} = \\frac{${fmt(S.s, 0)} \\times ${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
+          target: "Diametral Pitch ({{P_d}})",
+          text: "Diametral pitch from Lewis stress balance ($P_d = \\frac{s b Y}{F_t}$):",
+          eq: `P_d = \\frac{s \\cdot b \\cdot Y}{F_t} = \\frac{${fmt(S.s, 0)} \\times ${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ in}^{-1}}`,
           val: S.P_d
         };
       }
     }
   },
+
+  // 31. Circular Tooth Thickness
   {
     id: "eq_thick",
     name: "Circular Tooth Thickness",
@@ -1118,10 +1132,9 @@ const GEAR_RELATION_GRAPH = [
       P_c: { formula: "P_c = 2t", notes: "Circular pitch from measured tooth thickness" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "t") {
         return {
-          target: `Tooth Thickness ({{t}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Tooth Thickness ({{t}})",
           text: "Tooth thickness on pitch circle is half circular pitch ($t = \\frac{P_c}{2}$):",
           eq: `t = \\frac{P_c}{2} = \\frac{${fmt(S.P_c, 4)}}{2} = \\mathbf{${fmt(S.t, 4)}\\text{ in}}`,
           val: S.t
@@ -1129,7 +1142,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_c") {
         return {
-          target: `Circular Pitch ({{P_c}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Circular Pitch ({{P_c}})",
           text: "Circular pitch from tooth thickness ($P_c = 2t$):",
           eq: `P_c = 2t = 2(${fmt(S.t, 4)}) = \\mathbf{${fmt(S.P_c, 4)}\\text{ in}}`,
           val: S.P_c
@@ -1137,6 +1150,8 @@ const GEAR_RELATION_GRAPH = [
       }
     }
   },
+
+  // 32. Whole Depth
   {
     id: "eq_whole",
     name: "Whole Depth",
@@ -1150,10 +1165,9 @@ const GEAR_RELATION_GRAPH = [
       a: { formula: "a = \\frac{h - c}{2}", notes: "Addendum from whole depth" }
     },
     solve: (target, S) => {
-      const u = unitOf(S, target);
       if (target === "h") {
         return {
-          target: `Whole Depth ({{h}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Whole Depth ({{h}})",
           text: "Total tooth depth adding twice addendum plus clearance ($h = 2a + c$):",
           eq: `h = 2a + c = 2(${fmt(S.a, 4)}) + ${fmt(S.c, 4)} = \\mathbf{${fmt(S.h, 4)}\\text{ in}}`,
           val: S.h
@@ -1161,7 +1175,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "c") {
         return {
-          target: `Tooth Clearance ({{c}})${u !== "in" ? ` in $${Units.tex(u)}$` : ""}`,
+          target: "Tooth Clearance ({{c}})",
           text: "Clearance by subtracting twice addendum from whole depth ($c = h - 2a$):",
           eq: `c = h - 2a = ${fmt(S.h, 4)} - 2(${fmt(S.a, 4)}) = \\mathbf{${fmt(S.c, 4)}\\text{ in}}`,
           val: S.c
@@ -1182,7 +1196,13 @@ function getGraphCardsForVariable(rawVarKey, activeProblem = null) {
     "D_P2": ["D_P2", "D_P", "D_P1"],
     "n":   ["n", "n_1", "n_2"],
     "n_1": ["n_1", "n"],
-    "n_2": ["n_2", "n"]
+    "n_2": ["n_2", "n"],
+    "W_t": ["W_t", "F_t"],
+    "W_r": ["W_r", "F_r"],
+    "W":   ["W", "F_n"],
+    "M_t": ["M_t", "T"],
+    "V_m": ["V_m", "v"],
+    "VR":  ["VR", "SR"]
   };
 
   const lookupKeys = familyMap[rawVarKey] || [rawVarKey];
@@ -1295,7 +1315,7 @@ function createGroundTruthSystem() {
   const W_r = parseFloat((W_t_exact * Math.tan((phi * Math.PI) / 180)).toFixed(1));
   const W = parseFloat((W_t_exact / Math.cos((phi * Math.PI) / 180)).toFixed(1));
 
-  // Buckingham System Values:
+  // Buckingham Equation Values
   const C_d = [800, 1200, 1600, 2000][Math.floor(Math.random() * 4)];
   const k_buck = 0.05;
   const num_fd = k_buck * V_m * (b * C_d + W_t_exact);
@@ -1376,7 +1396,6 @@ function solveProblemOnGraph(givensArray, S) {
 function buildCompoundDerivation(step, S, allSteps) {
   if (!S || !step || !step.parentIndices || step.parentIndices.length === 0) return null;
 
-  // Rule: Only leapfrog if at least one parent step was FADED / BYPASSED!
   const hasBypassedAncestor = step.parentIndices.some(pIdx => {
     const parentStep = allSteps[pIdx];
     return parentStep && parentStep.isFaded;
@@ -1441,7 +1460,7 @@ const ORGANIC_SEED_PATTERNS = [
   // Class Slide 5: Tooth Proportions Suite
   { name: "Tooth Proportions Suite", givens: ["P_d", "phi"], topic: "pitch_geometry", goals: ["h_k", "d", "B", "m"] },
 
-  // Standard Driver & Forces
+  // Standard Drivers & Force Vectors
   { name: "Motor Power to Shaft Torque & Load", givens: ["P", "n_1", "D_P1", "phi"], topic: "forces_torque", goals: ["M_t", "W_r", "W", "D_b"] },
   { name: "Shaft Torque and RPM to Motor Power", givens: ["M_t", "n_1", "D_P1"], topic: "forces_torque", goals: ["P", "W_t", "V_m"] },
   { name: "Reverse Dynamics: Contact Load to Power", givens: ["W", "phi", "V_m", "n_1"], topic: "forces_torque", goals: ["P", "W_r", "M_t", "D_b"] },
