@@ -53,7 +53,7 @@ function loadStoredCounter() {
 
 function saveMastery() {
   const exportPayload = {
-    version: "4.0",
+    version: "4.1",
     updatedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -77,7 +77,7 @@ async function writeMasteryToFolder(payload) {
 
 function exportMasteryFile() {
   const payload = {
-    version: "4.0",
+    version: "4.1",
     exportedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -347,7 +347,7 @@ function generateOrganicStatement(givens, targetSteps, S) {
   });
 
   const givensText = givenPhrases.join(", ");
-  const activeTargets = targetSteps.filter(s => !s.isFaded);
+  const activeTargets = targetSteps.filter(s => !s.isFaded && !s.outOfScope);
   const finalTargets = activeTargets.length > 0 ? activeTargets : [targetSteps[targetSteps.length - 1]];
   const targetText = finalTargets.map(s => s.target).join(", ");
 
@@ -410,7 +410,7 @@ function generateGraphProblem() {
 }
 
 // ========================================================
-// 4. WORKSPACE & LIFECYCLE
+// 4. WORKSPACE & REFRESH PERSISTENCE LIFECYCLE
 // ========================================================
 window.addEventListener("DOMContentLoaded", async () => {
   renderLeitnerSidebar();
@@ -420,7 +420,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     const answered = getAnsweredCount(saved);
     const total = getTotalVisibleCount(saved);
 
-    // Rule: Do not regenerate if at least 1 value answered, unless none or all are answered
+    // Rule: Do not regenerate if at least 1 value is answered, unless none or all are answered
     if (answered >= 1 && answered < total) {
       activeProblem = saved;
       loadedProblems = [activeProblem];
@@ -445,7 +445,7 @@ async function openFolderPicker() {
         globalProblemCounter = data.globalProblemCount || globalProblemCounter;
         saveMastery();
       } catch (e) {
-        writeMasteryToFolder({ version: "4.0", globalProblemCount: globalProblemCounter, history: edgeHistory });
+        writeMasteryToFolder({ version: "4.1", globalProblemCount: globalProblemCounter, history: edgeHistory });
       }
       renderLeitnerSidebar();
     } catch (e) {
@@ -471,7 +471,7 @@ function updateToggleAllVisibility() {
   const distractorBanner = document.getElementById("distractor-banner");
   if (!activeProblem) return;
 
-  const allResolved = (activeProblem.solution || []).every(s => s.isResolved || s.isFaded);
+  const allResolved = (activeProblem.solution || []).every(s => s.isResolved || s.isFaded || s.outOfScope);
 
   if (allResolved) {
     if (btn) btn.style.display = "block";
@@ -537,7 +537,7 @@ function selectProblem(id) {
   const flowEl = document.getElementById("p-solution-flow");
   flowEl.innerHTML = "";
 
-  const activeTargets = (activeProblem.solution || []).filter(s => !s.isFaded);
+  const activeTargets = (activeProblem.solution || []).filter(s => !s.isFaded && !s.outOfScope);
   const finalTargets = activeTargets.length > 0 ? activeTargets : [activeProblem.solution[activeProblem.solution.length - 1]];
 
   const neededIndices = new Set();
@@ -549,7 +549,7 @@ function selectProblem(id) {
 
   (activeProblem.solution || []).forEach((item, index) => {
     if (!neededIndices.has(index)) return;
-    if (item.isFaded) return;
+    if (item.isFaded || item.outOfScope) return;
 
     const itemEl = document.createElement("div");
     itemEl.className = "solution-item";
@@ -598,11 +598,16 @@ function selectProblem(id) {
       if (inp) inp.focus();
     };
 
+    const targetUnit = unitOf(activeProblem.S, item.targetVar);
+    const unitPlaceholder = (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio" && targetUnit !== "teeth")
+      ? (targetUnit === "deg" ? "Value in °..." : `Value in ${targetUnit}...`)
+      : "Value...";
+
     const input = document.createElement("input");
     input.type = "text";
     input.inputMode = "decimal";
     input.className = "step-ans-input";
-    input.placeholder = "Value...";
+    input.placeholder = unitPlaceholder;
     input.id = `input-step-${index}`;
     input.autocomplete = "off";
 
