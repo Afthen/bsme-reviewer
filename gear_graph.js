@@ -1,227 +1,234 @@
 // ========================================================
-// gear_graph.js — SSOT Knowledge Graph & Native Unit Solvers
+// gear_graph.js — Spur Gear Topic Definition & Formulas
 // ========================================================
 
-function fmt(n, maxDec = 3) {
-  if (n === undefined || n === null) return "";
-  if (typeof n !== "number") n = Number(n);
-  if (isNaN(n)) return "";
-  const factor = Math.pow(10, maxDec);
-  const rounded = Math.round(n * factor) / factor;
-  return rounded.toString();
-}
-
-const PHI_INV2_GRAPH = 0.3819660113;
-
-function targetLabel(name, token, unit) {
-  if (!unit || unit === "dimless" || unit === "ratio" || unit === "teeth") {
-    return `${name} (${token})`;
-  }
-  if (unit === "deg") {
-    return `${name} (${token}) in degrees`;
-  }
-  return `${name} (${token}) in ${unit}`;
-}
-
-function getVarName(S, k) {
-  if (S && S._names && S._names[k]) return S._names[k];
-  const meta = GEAR_VARS_DB[k];
-  return meta ? meta.name : k;
-}
-
 // ========================================================
-// 1. VARIABLE DATABASE & FIELD SYNONYMS / ALIASES
+// 1. VARIABLE DATABASE & FIELD SYNONYMS / METADATA
 // ========================================================
 const GEAR_VARS_DB = {
   "D_P": {
     name: "Pitch Diameter",
+    symbol: "D",
     aliases: ["Pitch Diameter", "Pitch Circle Diameter"],
     unit: "in", baseVar: "D_P"
   },
   "D_P1": {
     name: "Pinion Pitch Diameter",
+    symbol: "D_1",
     aliases: ["Pinion Pitch Diameter", "Driver Pitch Diameter", "Pinion Diameter"],
     unit: "in", baseVar: "D_P"
   },
   "D_P2": {
     name: "Gear Pitch Diameter",
+    symbol: "D_2",
     aliases: ["Gear Pitch Diameter", "Driven Pitch Diameter", "Wheel Pitch Diameter"],
     unit: "in", baseVar: "D_P"
   },
   "P_d": {
     name: "Diametral Pitch",
+    symbol: "P_d",
     aliases: ["Diametral Pitch", "DP"],
     unit: "teeth/in", baseVar: "P_d"
   },
   "P_c": {
     name: "Circular Pitch",
+    symbol: "P_c",
     aliases: ["Circular Pitch", "Tooth Spacing on Pitch Circle"],
     unit: "in", baseVar: "P_c"
   },
   "C": {
     name: "Center Distance",
+    symbol: "C",
     aliases: ["Center Distance", "Shaft Center Distance", "Operating Center Distance"],
     unit: "in", baseVar: "C"
   },
   "W_t": {
     name: "Transmitted Load",
+    symbol: "F_t",
     aliases: ["Transmitted Load", "Tangential Load", "Driving Force", "Useful Tooth Force", "Tangential Force"],
     unit: "lb", baseVar: "W_t"
   },
   "W_r": {
     name: "Radial Load",
+    symbol: "F_r",
     aliases: ["Radial Load", "Separating Force", "Radial Force", "Radial Thrust Force"],
     unit: "lb", baseVar: "W_r"
   },
   "W": {
     name: "Normal Contact Force",
+    symbol: "F_n",
     aliases: ["Normal Contact Force", "Tooth Pressure", "Total Tooth Load", "Resultant Contact Force", "Normal Force"],
     unit: "lb", baseVar: "W"
   },
   "M_t": {
     name: "Shaft Torque",
+    symbol: "T",
     aliases: ["Shaft Torque", "Twisting Moment", "Pinion Torque", "Torque", "Torsional Moment"],
     unit: "lb-in", baseVar: "M_t"
   },
   "V_m": {
     name: "Pitch Line Velocity",
+    symbol: "v",
     aliases: ["Pitch Line Velocity", "Pitch Line Speed", "Peripheral Speed", "Linear Pitch Velocity"],
     unit: "ft/min", baseVar: "V_m"
   },
   "a": {
     name: "Addendum",
+    symbol: "a",
     aliases: ["Addendum", "Radial Height Above Pitch Circle"],
     unit: "in", baseVar: "a"
   },
   "d": {
     name: "Dedendum",
+    symbol: "d",
     aliases: ["Dedendum", "Root Depth Below Pitch Circle"],
     unit: "in", baseVar: "d"
   },
   "c": {
     name: "Tooth Clearance",
+    symbol: "c",
     aliases: ["Tooth Clearance", "Radial Clearance", "Clearance"],
     unit: "in", baseVar: "c"
   },
   "D_o": {
     name: "Outside Blank Diameter",
+    symbol: "D_o",
     aliases: ["Outside Blank Diameter", "Outside Diameter", "Blank Diameter", "Tip Diameter"],
     unit: "in", baseVar: "D_o"
   },
   "D_b": {
     name: "Base Circle Diameter",
+    symbol: "D_b",
     aliases: ["Base Circle Diameter", "Base Diameter"],
     unit: "in", baseVar: "D_b"
   },
   "s": {
     name: "Bending Stress",
+    symbol: "s",
     aliases: ["Bending Stress", "Lewis Bending Stress", "Induced Root Stress", "Tooth Bending Stress"],
     unit: "psi", baseVar: "s"
   },
   "b": {
     name: "Face Width",
+    symbol: "b",
     aliases: ["Face Width", "Tooth Width"],
     unit: "in", baseVar: "b"
   },
   "T": {
     name: "Tooth Count",
+    symbol: "T",
     aliases: ["Tooth Count", "Number of Teeth"],
-    unit: "teeth", baseVar: "T"
+    unit: "teeth", baseVar: "T", isInteger: true
   },
   "T_1": {
     name: "Pinion Teeth",
+    symbol: "T_1",
     aliases: ["Pinion Teeth", "Number of Pinion Teeth", "Driver Teeth"],
-    unit: "teeth", baseVar: "T"
+    unit: "teeth", baseVar: "T", isInteger: true
   },
   "T_2": {
     name: "Gear Teeth",
+    symbol: "T_2",
     aliases: ["Gear Teeth", "Number of Gear Teeth", "Driven Teeth"],
-    unit: "teeth", baseVar: "T"
+    unit: "teeth", baseVar: "T", isInteger: true
   },
   "n": {
     name: "Rotational Speed",
+    symbol: "n",
     aliases: ["Rotational Speed", "Speed", "RPM"],
     unit: "rpm", baseVar: "n"
   },
   "n_1": {
     name: "Driver Speed",
+    symbol: "n_1",
     aliases: ["Driver Speed", "Pinion Speed", "Input Speed"],
     unit: "rpm", baseVar: "n"
   },
   "n_2": {
     name: "Driven Speed",
+    symbol: "n_2",
     aliases: ["Driven Speed", "Gear Speed", "Output Speed"],
     unit: "rpm", baseVar: "n"
   },
   "VR": {
     name: "Speed Ratio",
+    symbol: "SR",
     aliases: ["Speed Ratio", "Velocity Ratio", "Speed Reduction Ratio", "Gear Ratio"],
     unit: "ratio", baseVar: "VR"
   },
   "P": {
     name: "Transmitted Power",
+    symbol: "P",
     aliases: ["Transmitted Power", "Power Transmitted", "Motor Power", "Delivered Power"],
     unit: "hp", baseVar: "P"
   },
   "phi": {
     name: "Pressure Angle",
+    symbol: "\\phi",
     aliases: ["Pressure Angle", "Angle of Obliquity"],
     unit: "deg", baseVar: "phi"
   },
   "Y": {
     name: "Lewis Form Factor",
+    symbol: "Y",
     aliases: ["Lewis Form Factor", "Tooth Form Factor"],
     unit: "dimless", baseVar: "Y"
   },
   "t": {
     name: "Tooth Thickness",
+    symbol: "t",
     aliases: ["Tooth Thickness", "Circular Tooth Thickness", "Arc Tooth Thickness"],
     unit: "in", baseVar: "t"
   },
   "h": {
     name: "Whole Depth",
+    symbol: "h",
     aliases: ["Whole Depth", "Total Tooth Depth"],
     unit: "in", baseVar: "h"
   },
   "F_D": {
     name: "Dynamic Tooth Load",
+    symbol: "F_D",
     aliases: ["Dynamic Tooth Load", "Maximum Dynamic Load", "Buckingham Dynamic Load"],
     unit: "lb", baseVar: "F_D"
   },
   "C_d": {
     name: "Dynamic Deformation Factor",
+    symbol: "C_d",
     aliases: ["Dynamic Deformation Factor", "Deformation Factor", "Dynamic Factor C"],
     unit: "lb/in", baseVar: "C_d"
   },
   "h_k": {
     name: "Working Depth",
+    symbol: "h_k",
     aliases: ["Working Depth", "Operating Tooth Depth"],
     unit: "in", baseVar: "h_k"
   },
   "B": {
     name: "Tooth Backlash",
+    symbol: "B",
     aliases: ["Tooth Backlash", "Backlash"],
     unit: "in", baseVar: "B"
   },
   "p_b": {
     name: "Base Pitch",
+    symbol: "p_b",
     aliases: ["Base Pitch", "Normal Base Pitch"],
     unit: "in", baseVar: "p_b"
   },
   "m": {
     name: "Metric Module",
+    symbol: "m",
     aliases: ["Metric Module", "Module"],
     unit: "mm", baseVar: "m"
   },
   "C_i": {
     name: "Center Distance to Idler",
+    symbol: "C_i",
     aliases: ["Center Distance to Idler", "Idler Center Distance"],
     unit: "in", baseVar: "C_i"
   }
 };
-
-const dbUnit = k => (GEAR_VARS_DB[k] || {}).unit || "dimless";
-const unitOf = (S, k) => (S && S._u && S._u[k]) || dbUnit(k);
 
 // ========================================================
 // 2. KNOWLEDGE GRAPH WITH BASE FORMULAS & DYNAMIC ALIASES
@@ -1588,85 +1595,6 @@ const GEAR_RELATION_GRAPH = [
   }
 ];
 
-// Context Carousel Query
-function getGraphCardsForVariable(rawVarKey, activeProblem = null) {
-  const familyMap = {
-    "T":   ["T", "T_1", "T_2"],
-    "T_1": ["T_1", "T", "T_2"],
-    "T_2": ["T_2", "T", "T_1"],
-    "D_P":  ["D_P", "D_P1", "D_P2"],
-    "D_P1": ["D_P1", "D_P", "D_P2"],
-    "D_P2": ["D_P2", "D_P", "D_P1"],
-    "n":   ["n", "n_1", "n_2"],
-    "n_1": ["n_1", "n"],
-    "n_2": ["n_2", "n"],
-    "W_t": ["W_t", "F_t"],
-    "W_r": ["W_r", "F_r"],
-    "W":   ["W", "F_n"],
-    "M_t": ["M_t", "T"],
-    "V_m": ["V_m", "v"],
-    "VR":  ["VR", "SR"]
-  };
-
-  const lookupKeys = familyMap[rawVarKey] || [rawVarKey];
-  const meta = GEAR_VARS_DB[rawVarKey];
-  if (meta && meta.baseVar && !lookupKeys.includes(meta.baseVar)) {
-    lookupKeys.push(meta.baseVar);
-  }
-
-  const cards = [];
-  const visitedFormulas = new Set();
-
-  GEAR_RELATION_GRAPH.forEach(eq => {
-    const involvesVar = eq.nodes.some(n => lookupKeys.includes(n));
-    if (!involvesVar) return;
-
-    if (eq.baseFormula && !visitedFormulas.has(eq.baseFormula)) {
-      visitedFormulas.add(eq.baseFormula);
-      cards.push({
-        eqId: eq.id,
-        isBase: true,
-        targetVar: rawVarKey,
-        formula: eq.baseFormula,
-        notes: `${eq.name} (Canonical Equation)`,
-        vars: eq.nodes.filter(n => n !== rawVarKey),
-        usedInProblem: false
-      });
-    }
-
-    const matchKey = lookupKeys.find(k => eq.forms && eq.forms[k]);
-    if (matchKey && eq.forms[matchKey]) {
-      const form = eq.forms[matchKey];
-      if (!visitedFormulas.has(form.formula)) {
-        visitedFormulas.add(form.formula);
-        cards.push({
-          eqId: eq.id,
-          isBase: false,
-          targetVar: matchKey,
-          formula: form.formula,
-          notes: `${eq.name}: ${form.notes}`,
-          vars: eq.nodes.filter(n => n !== matchKey),
-          usedInProblem: false
-        });
-      }
-    }
-  });
-
-  if (activeProblem && activeProblem.solution) {
-    const directStep = activeProblem.solution.find(s => lookupKeys.includes(s.targetVar));
-    if (directStep) {
-      const idx = cards.findIndex(c => c.eqId === directStep.eqId && c.isBase);
-      if (idx >= 0) {
-        cards[idx].usedInProblem = true;
-        const [targetCard] = cards.splice(idx, 1);
-        cards.unshift(targetCard);
-      }
-    }
-  }
-
-  return cards;
-}
-
 // ========================================================
 // 3. GROUND TRUTH GENERATOR (40% US, 40% SI, 20% MIXED)
 // ========================================================
@@ -1739,7 +1667,7 @@ function createGroundTruthSystem() {
     };
 
     if (sys === "MIXED") {
-      _u["P"] = "hp"; // Give motor power in hp
+      _u["P"] = "hp"; // Motor power in hp
     }
 
     S = {
@@ -1794,7 +1722,7 @@ function createGroundTruthSystem() {
     };
 
     if (sys === "MIXED") {
-      _u["D_P1"] = "mm"; // Give diameter in mm
+      _u["D_P1"] = "mm"; // Diameter in mm
     }
 
     S = {
@@ -1809,116 +1737,7 @@ function createGroundTruthSystem() {
 }
 
 // ========================================================
-// 4. BIPARTITE DAG PROPAGATION SOLVER
-// ========================================================
-function solveProblemOnGraph(givensArray, S) {
-  const known = new Set(givensArray);
-  const solutionSteps = [];
-  const usedEquations = new Set();
-  let keepPropagating = true;
-  const producedBy = {};
-
-  while (keepPropagating) {
-    keepPropagating = false;
-    for (const eq of GEAR_RELATION_GRAPH) {
-      if (usedEquations.has(eq.id)) continue;
-      const unknowns = eq.nodes.filter(n => !known.has(n));
-      if (unknowns.length === 1) {
-        const targetVar = unknowns[0];
-        const solved = eq.solve(targetVar, S);
-        if (solved) {
-          known.add(targetVar);
-          usedEquations.add(eq.id);
-
-          const inputVars = eq.nodes.filter(n => n !== targetVar);
-          const parentStepIndices = [];
-          inputVars.forEach(v => {
-            if (producedBy[v] !== undefined) {
-              parentStepIndices.push(producedBy[v]);
-            }
-          });
-
-          const ancestorSet = new Set();
-          function traceAncestors(pIdx) {
-            ancestorSet.add(pIdx);
-            const pStep = solutionSteps[pIdx];
-            if (pStep && pStep.parentIndices) {
-              pStep.parentIndices.forEach(gpIdx => traceAncestors(gpIdx));
-            }
-          }
-          parentStepIndices.forEach(pIdx => traceAncestors(pIdx));
-
-          const newStepIndex = solutionSteps.length;
-          solutionSteps.push({
-            target: solved.target,
-            text: solved.text,
-            equation: solved.eq,
-            targetVar,
-            eqId: eq.id,
-            expectedVal: solved.val,
-            parentIndices: parentStepIndices,
-            ancestorIndices: Array.from(ancestorSet)
-          });
-
-          producedBy[targetVar] = newStepIndex;
-          keepPropagating = true;
-        }
-      }
-    }
-  }
-  return solutionSteps;
-}
-
-// ========================================================
-// 5. COMPOUND LEAPFROG DERIVATION BUILDER
-// ========================================================
-function buildCompoundDerivation(step, S, allSteps) {
-  if (!S || !step || !step.parentIndices || step.parentIndices.length === 0) return null;
-
-  const hasBypassedAncestor = step.parentIndices.some(pIdx => {
-    const parentStep = allSteps[pIdx];
-    return parentStep && parentStep.isFaded;
-  });
-
-  if (!hasBypassedAncestor) return null;
-
-  const t = step.targetVar;
-
-  if (t === "P" && step.eqId === "eq_wt_power_vel") {
-    const derivationBlock = `\\begin{alignedat}{2}
-W_t &= \\frac{33000 P}{V_m} \\\\
-W_t &= \\frac{33000 P}{\\left(\\dfrac{\\pi D_{P1} n_1}{12}\\right)}
-    &&= \\frac{12(33000) P}{\\pi D_{P1} n_1} \\\\
-    &&\\mathllap{\\frac{W_r}{\\tan\\phi}}
-    &= \\frac{12(33000) P}{\\pi D_{P1} n_1}
-\\end{alignedat}`;
-    const finalBlock = `P = \\frac{W_r \\pi D_{P1} n_1}{12(33000) \\tan(${fmt(S.phi, 1)}°)} = \\frac{(${fmt(S.W_r, 0)})\\pi(${fmt(S.D_P1, 3)})(${fmt(S.n_1, 0)})}{12(33000)\\tan(${fmt(S.phi, 1)}°)} = \\mathbf{${fmt(step.expectedVal, 2)}\\text{ hp}}`;
-    return { type: "alignedat_dual", derivationBlock, finalBlock };
-  }
-
-  if (t === "D_o" && step.eqId === "eq_do") {
-    const derivationBlock = `\\begin{aligned}
-D_o &= D_{P1} + 2a \\\\
-D_o &= \\frac{T_1}{P_d} + 2\\left(\\frac{1}{P_d}\\right) = \\frac{T_1 + 2}{P_d}
-\\end{aligned}`;
-    const finalBlock = `D_o = \\frac{${fmt(S.T_1, 0)} + 2}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(step.expectedVal, 3)}\\text{ in}}`;
-    return { type: "aligned_dual", derivationBlock, finalBlock };
-  }
-
-  if (t === "V_m" && step.eqId === "eq_pitch_vel") {
-    const derivationBlock = `\\begin{aligned}
-V_m &= \\frac{\\pi D_{P1} n_1}{12} \\\\
-V_m &= \\frac{\\pi \\left(\\dfrac{T_1}{P_d}\\right) n_1}{12} = \\frac{\\pi T_1 n_1}{12 P_d}
-\\end{aligned}`;
-    const finalBlock = `V_m = \\frac{\\pi(${fmt(S.T_1, 0)})(${fmt(S.n_1, 0)})}{12(${fmt(S.P_d, 2)})} = \\mathbf{${fmt(step.expectedVal, 1)}\\text{ ft/min}}`;
-    return { type: "aligned_dual", derivationBlock, finalBlock };
-  }
-
-  return null;
-}
-
-// ========================================================
-// 6. SEED LIBRARY & CLASS SAMPLE PROBLEM ARCHETYPES
+// 4. SEED LIBRARY & CLASS SAMPLE PROBLEM ARCHETYPES
 // ========================================================
 const ORGANIC_SEED_PATTERNS = [
   // Class Slide 1 & Video 58:10: Buckingham Dynamic Load
@@ -1948,55 +1767,14 @@ const ORGANIC_SEED_PATTERNS = [
   { name: "Center Distance to Pitch Line Speed", givens: ["C", "VR", "P_d", "n_1"], topic: "speed_center", goals: ["V_m", "D_P1", "T_2", "n_2"] }
 ];
 
-function buildGeneratedSeeds(attemptsPerTarget = 8) {
-  const S = createGroundTruthSystem();
-  const found = new Map();
-  const solversOf = v => GEAR_RELATION_GRAPH.filter(e => e.nodes.includes(v) && e.solve(v, S));
-
-  const expand = (v, depth, banned) => {
-    const opts = solversOf(v).filter(e => !banned.has(e.id));
-    if (depth <= 0 || opts.length === 0 || Math.random() < PHI_INV2_GRAPH) return [v];
-    const e2 = opts[Math.floor(Math.random() * opts.length)];
-    const nb = new Set([...banned, e2.id]);
-    return e2.nodes.filter(n => n !== v).flatMap(n => expand(n, depth - 1, nb));
-  };
-
-  GEAR_RELATION_GRAPH.forEach(eq => {
-    eq.nodes.filter(t => eq.solve(t, S)).forEach(goal => {
-      for (let k = 0; k < attemptsPerTarget; k++) {
-        const banned = new Set([eq.id]);
-        const givens = [...new Set(eq.nodes.filter(n => n !== goal).flatMap(n => expand(n, 2, banned)))].sort();
-        if (givens.includes(goal) || givens.length > 6) continue;
-        const key = `${givens.join(",")}>${goal}`;
-        if (found.has(key)) continue;
-
-        const steps = solveProblemOnGraph(givens, S);
-        const gi = steps.findIndex(s => s.targetVar === goal);
-        if (gi < 0) continue;
-        const req = [gi, ...steps[gi].ancestorIndices];
-        if (!req.some(i => steps[i].eqId === eq.id)) continue;
-        if (givens.some(g => solveProblemOnGraph(givens.filter(x => x !== g), S).some(s => s.targetVar === goal))) continue;
-
-        found.set(key, {
-          name: `${eq.name} → ${getVarName(S, goal)}`,
-          topic: eq.topic, givens, goal, key
-        });
-      }
-    });
-  });
-
-  return [...found.values()];
-}
-
-let _seedCandidates = null;
-function getSeedCandidates() {
-  if (_seedCandidates) return _seedCandidates;
-  const list = [];
-  ORGANIC_SEED_PATTERNS.forEach(p => {
-    (p.goals || []).forEach(g => {
-      list.push({ name: p.name, topic: p.topic, givens: p.givens, goal: g, key: `${p.name}>${g}` });
-    });
-  });
-  _seedCandidates = list.concat(buildGeneratedSeeds());
-  return _seedCandidates;
-}
+// ========================================================
+// 5. UNIFIED TOPIC DEFINITION (EXPORT TO ENGINE)
+// ========================================================
+window.CURRENT_TOPIC = {
+  id: "spur_gears",
+  title: "Spur Gears",
+  varsDb: GEAR_VARS_DB,
+  relations: GEAR_RELATION_GRAPH,
+  seeds: ORGANIC_SEED_PATTERNS,
+  createSystem: createGroundTruthSystem
+};
