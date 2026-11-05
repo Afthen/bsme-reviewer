@@ -53,7 +53,7 @@ function loadStoredCounter() {
 
 function saveMastery() {
   const exportPayload = {
-    version: "3.9",
+    version: "4.0",
     updatedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -77,7 +77,7 @@ async function writeMasteryToFolder(payload) {
 
 function exportMasteryFile() {
   const payload = {
-    version: "3.9",
+    version: "4.0",
     exportedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -269,7 +269,50 @@ function renderLeitnerSidebar() {
 }
 
 // ========================================================
-// 2. A-RES SEED SAMPLER & STATEMENT GENERATOR
+// 2. ACTIVE PROBLEM PERSISTENCE ACROSS REFRESH
+// ========================================================
+function saveActiveProblemState() {
+  if (!activeProblem) return;
+  try {
+    const serializable = {
+      ...activeProblem,
+      solution: (activeProblem.solution || []).map(s => ({
+        ...s,
+        triedValues: Array.from(s.triedValues || [])
+      }))
+    };
+    localStorage.setItem("spur_gear_active_problem_v2", JSON.stringify(serializable));
+  } catch (e) {}
+}
+
+function loadStoredActiveProblem() {
+  try {
+    const raw = localStorage.getItem("spur_gear_active_problem_v2");
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.solution) return null;
+    data.solution.forEach(s => {
+      s.triedValues = new Set(s.triedValues || []);
+    });
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getAnsweredCount(problem) {
+  if (!problem || !problem.solution) return 0;
+  const visibleSteps = problem.solution.filter(s => !s.isFaded && !s.outOfScope);
+  return visibleSteps.filter(s => s.isResolved).length;
+}
+
+function getTotalVisibleCount(problem) {
+  if (!problem || !problem.solution) return 0;
+  return problem.solution.filter(s => !s.isFaded && !s.outOfScope).length;
+}
+
+// ========================================================
+// 3. A-RES SEED SAMPLER & GENERATOR
 // ========================================================
 function generateOrganicStatement(givens, targetSteps, S) {
   const givenPhrases = givens.map(varKey => {
@@ -360,16 +403,32 @@ function generateGraphProblem() {
     S
   };
 
-  loadedProblems.push(newProblem);
+  loadedProblems = [newProblem];
   selectProblem(newProblem.id);
+  saveActiveProblemState();
   renderLeitnerSidebar();
 }
 
 // ========================================================
-// 3. WORKSPACE & UI CONTROLLER
+// 4. WORKSPACE & LIFECYCLE
 // ========================================================
 window.addEventListener("DOMContentLoaded", async () => {
   renderLeitnerSidebar();
+
+  const saved = loadStoredActiveProblem();
+  if (saved) {
+    const answered = getAnsweredCount(saved);
+    const total = getTotalVisibleCount(saved);
+
+    // Rule: Do not regenerate if at least 1 value answered, unless none or all are answered
+    if (answered >= 1 && answered < total) {
+      activeProblem = saved;
+      loadedProblems = [activeProblem];
+      selectProblem(activeProblem.id);
+      return;
+    }
+  }
+
   generateGraphProblem();
 });
 
@@ -386,7 +445,7 @@ async function openFolderPicker() {
         globalProblemCounter = data.globalProblemCount || globalProblemCounter;
         saveMastery();
       } catch (e) {
-        writeMasteryToFolder({ version: "3.9", globalProblemCount: globalProblemCounter, history: edgeHistory });
+        writeMasteryToFolder({ version: "4.0", globalProblemCount: globalProblemCounter, history: edgeHistory });
       }
       renderLeitnerSidebar();
     } catch (e) {
@@ -524,6 +583,7 @@ function selectProblem(id) {
           inp.placeholder = "Revealed";
           inp.disabled = true;
         }
+        saveActiveProblemState();
         updateToggleAllVisibility();
       }
     };
@@ -639,6 +699,7 @@ function checkStepAnswer(stepIndex, userStr, item) {
       inputEl.className = "step-ans-input state-revealed";
       inputEl.disabled = true;
     }
+    saveActiveProblemState();
     updateToggleAllVisibility();
     return;
   }
@@ -688,6 +749,7 @@ function checkStepAnswer(stepIndex, userStr, item) {
       }
     });
 
+    saveActiveProblemState();
     updateToggleAllVisibility();
   } else {
     const exactNumericKey = String(userVal);
@@ -703,6 +765,8 @@ function checkStepAnswer(stepIndex, userStr, item) {
     } else {
       if (inputEl) inputEl.className = "step-ans-input state-warning";
     }
+
+    saveActiveProblemState();
 
     if (inputEl) {
       inputEl.classList.remove("shake-trigger");
@@ -728,7 +792,7 @@ function toggleAllSolutions() {
 }
 
 // ========================================================
-// 4. MATH, TOOLTIP & CAROUSEL (Base Formula Shown)
+// 5. MATH, TOOLTIP & CAROUSEL
 // ========================================================
 function renderTextWithMath(container, rawText) {
   if (!container) return;
