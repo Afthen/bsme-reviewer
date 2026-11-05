@@ -23,54 +23,208 @@ function targetLabel(name, token, unit) {
   return `${name} (${token}) in ${unit}`;
 }
 
+function getVarName(S, k) {
+  if (S && S._names && S._names[k]) return S._names[k];
+  const meta = GEAR_VARS_DB[k];
+  return meta ? meta.name : k;
+}
+
 // ========================================================
-// 1. VARIABLE DATABASE
+// 1. VARIABLE DATABASE & FIELD SYNONYMS / ALIASES
 // ========================================================
 const GEAR_VARS_DB = {
-  "D_P":  { name: "Pitch Diameter", unit: "in", baseVar: "D_P" },
-  "D_P1": { name: "Pinion Pitch Diameter", unit: "in", baseVar: "D_P" },
-  "D_P2": { name: "Gear Pitch Diameter", unit: "in", baseVar: "D_P" },
-  "P_d":  { name: "Diametral Pitch", unit: "teeth/in", baseVar: "P_d" },
-  "P_c":  { name: "Circular Pitch", unit: "in", baseVar: "P_c" },
-  "C":    { name: "Center Distance", unit: "in", baseVar: "C" },
-  "W_t":  { name: "Transmitted Load", unit: "lb", baseVar: "W_t" },
-  "W_r":  { name: "Radial Load", unit: "lb", baseVar: "W_r" },
-  "W":    { name: "Normal Contact Force", unit: "lb", baseVar: "W" },
-  "M_t":  { name: "Shaft Torque", unit: "lb-in", baseVar: "M_t" },
-  "V_m":  { name: "Pitch Line Velocity", unit: "ft/min", baseVar: "V_m" },
-  "a":    { name: "Addendum", unit: "in", baseVar: "a" },
-  "d":    { name: "Dedendum", unit: "in", baseVar: "d" },
-  "c":    { name: "Tooth Clearance", unit: "in", baseVar: "c" },
-  "D_o":  { name: "Outside Blank Diameter", unit: "in", baseVar: "D_o" },
-  "D_b":  { name: "Base Circle Diameter", unit: "in", baseVar: "D_b" },
-  "s":    { name: "Bending Stress", unit: "psi", baseVar: "s" },
-  "b":    { name: "Face Width", unit: "in", baseVar: "b" },
-  "T":    { name: "Tooth Count", unit: "teeth", baseVar: "T" },
-  "T_1":  { name: "Pinion Teeth", unit: "teeth", baseVar: "T" },
-  "T_2":  { name: "Gear Teeth", unit: "teeth", baseVar: "T" },
-  "n":    { name: "Rotational Speed", unit: "rpm", baseVar: "n" },
-  "n_1":  { name: "Driver Speed", unit: "rpm", baseVar: "n" },
-  "n_2":  { name: "Driven Speed", unit: "rpm", baseVar: "n" },
-  "VR":   { name: "Speed Ratio", unit: "ratio", baseVar: "VR" },
-  "P":    { name: "Transmitted Power", unit: "hp", baseVar: "P" },
-  "phi":  { name: "Pressure Angle", unit: "deg", baseVar: "phi" },
-  "Y":    { name: "Lewis Form Factor", unit: "dimless", baseVar: "Y" },
-  "t":    { name: "Tooth Thickness", unit: "in", baseVar: "t" },
-  "h":    { name: "Whole Depth", unit: "in", baseVar: "h" },
-  "F_D":  { name: "Dynamic Tooth Load", unit: "lb", baseVar: "F_D" },
-  "C_d":  { name: "Dynamic Deformation Factor", unit: "lb/in", baseVar: "C_d" },
-  "h_k":  { name: "Working Depth", unit: "in", baseVar: "h_k" },
-  "B":    { name: "Tooth Backlash", unit: "in", baseVar: "B" },
-  "p_b":  { name: "Base Pitch", unit: "in", baseVar: "p_b" },
-  "m":    { name: "Metric Module", unit: "mm", baseVar: "m" },
-  "C_i":  { name: "Center Distance to Idler", unit: "in", baseVar: "C_i" }
+  "D_P": {
+    name: "Pitch Diameter",
+    aliases: ["Pitch Diameter", "Pitch Circle Diameter"],
+    unit: "in", baseVar: "D_P"
+  },
+  "D_P1": {
+    name: "Pinion Pitch Diameter",
+    aliases: ["Pinion Pitch Diameter", "Driver Pitch Diameter", "Pinion Diameter"],
+    unit: "in", baseVar: "D_P"
+  },
+  "D_P2": {
+    name: "Gear Pitch Diameter",
+    aliases: ["Gear Pitch Diameter", "Driven Pitch Diameter", "Wheel Pitch Diameter"],
+    unit: "in", baseVar: "D_P"
+  },
+  "P_d": {
+    name: "Diametral Pitch",
+    aliases: ["Diametral Pitch", "DP"],
+    unit: "teeth/in", baseVar: "P_d"
+  },
+  "P_c": {
+    name: "Circular Pitch",
+    aliases: ["Circular Pitch", "Tooth Spacing on Pitch Circle"],
+    unit: "in", baseVar: "P_c"
+  },
+  "C": {
+    name: "Center Distance",
+    aliases: ["Center Distance", "Shaft Center Distance", "Operating Center Distance"],
+    unit: "in", baseVar: "C"
+  },
+  "W_t": {
+    name: "Transmitted Load",
+    aliases: ["Transmitted Load", "Tangential Load", "Driving Force", "Useful Tooth Force", "Tangential Force"],
+    unit: "lb", baseVar: "W_t"
+  },
+  "W_r": {
+    name: "Radial Load",
+    aliases: ["Radial Load", "Separating Force", "Radial Force", "Radial Thrust Force"],
+    unit: "lb", baseVar: "W_r"
+  },
+  "W": {
+    name: "Normal Contact Force",
+    aliases: ["Normal Contact Force", "Tooth Pressure", "Total Tooth Load", "Resultant Contact Force", "Normal Force"],
+    unit: "lb", baseVar: "W"
+  },
+  "M_t": {
+    name: "Shaft Torque",
+    aliases: ["Shaft Torque", "Twisting Moment", "Pinion Torque", "Torque", "Torsional Moment"],
+    unit: "lb-in", baseVar: "M_t"
+  },
+  "V_m": {
+    name: "Pitch Line Velocity",
+    aliases: ["Pitch Line Velocity", "Pitch Line Speed", "Peripheral Speed", "Linear Pitch Velocity"],
+    unit: "ft/min", baseVar: "V_m"
+  },
+  "a": {
+    name: "Addendum",
+    aliases: ["Addendum", "Radial Height Above Pitch Circle"],
+    unit: "in", baseVar: "a"
+  },
+  "d": {
+    name: "Dedendum",
+    aliases: ["Dedendum", "Root Depth Below Pitch Circle"],
+    unit: "in", baseVar: "d"
+  },
+  "c": {
+    name: "Tooth Clearance",
+    aliases: ["Tooth Clearance", "Radial Clearance", "Clearance"],
+    unit: "in", baseVar: "c"
+  },
+  "D_o": {
+    name: "Outside Blank Diameter",
+    aliases: ["Outside Blank Diameter", "Outside Diameter", "Blank Diameter", "Tip Diameter"],
+    unit: "in", baseVar: "D_o"
+  },
+  "D_b": {
+    name: "Base Circle Diameter",
+    aliases: ["Base Circle Diameter", "Base Diameter"],
+    unit: "in", baseVar: "D_b"
+  },
+  "s": {
+    name: "Bending Stress",
+    aliases: ["Bending Stress", "Lewis Bending Stress", "Induced Root Stress", "Tooth Bending Stress"],
+    unit: "psi", baseVar: "s"
+  },
+  "b": {
+    name: "Face Width",
+    aliases: ["Face Width", "Tooth Width"],
+    unit: "in", baseVar: "b"
+  },
+  "T": {
+    name: "Tooth Count",
+    aliases: ["Tooth Count", "Number of Teeth"],
+    unit: "teeth", baseVar: "T"
+  },
+  "T_1": {
+    name: "Pinion Teeth",
+    aliases: ["Pinion Teeth", "Number of Pinion Teeth", "Driver Teeth"],
+    unit: "teeth", baseVar: "T"
+  },
+  "T_2": {
+    name: "Gear Teeth",
+    aliases: ["Gear Teeth", "Number of Gear Teeth", "Driven Teeth"],
+    unit: "teeth", baseVar: "T"
+  },
+  "n": {
+    name: "Rotational Speed",
+    aliases: ["Rotational Speed", "Speed", "RPM"],
+    unit: "rpm", baseVar: "n"
+  },
+  "n_1": {
+    name: "Driver Speed",
+    aliases: ["Driver Speed", "Pinion Speed", "Input Speed"],
+    unit: "rpm", baseVar: "n"
+  },
+  "n_2": {
+    name: "Driven Speed",
+    aliases: ["Driven Speed", "Gear Speed", "Output Speed"],
+    unit: "rpm", baseVar: "n"
+  },
+  "VR": {
+    name: "Speed Ratio",
+    aliases: ["Speed Ratio", "Velocity Ratio", "Speed Reduction Ratio", "Gear Ratio"],
+    unit: "ratio", baseVar: "VR"
+  },
+  "P": {
+    name: "Transmitted Power",
+    aliases: ["Transmitted Power", "Power Transmitted", "Motor Power", "Delivered Power"],
+    unit: "hp", baseVar: "P"
+  },
+  "phi": {
+    name: "Pressure Angle",
+    aliases: ["Pressure Angle", "Angle of Obliquity"],
+    unit: "deg", baseVar: "phi"
+  },
+  "Y": {
+    name: "Lewis Form Factor",
+    aliases: ["Lewis Form Factor", "Tooth Form Factor"],
+    unit: "dimless", baseVar: "Y"
+  },
+  "t": {
+    name: "Tooth Thickness",
+    aliases: ["Tooth Thickness", "Circular Tooth Thickness", "Arc Tooth Thickness"],
+    unit: "in", baseVar: "t"
+  },
+  "h": {
+    name: "Whole Depth",
+    aliases: ["Whole Depth", "Total Tooth Depth"],
+    unit: "in", baseVar: "h"
+  },
+  "F_D": {
+    name: "Dynamic Tooth Load",
+    aliases: ["Dynamic Tooth Load", "Maximum Dynamic Load", "Buckingham Dynamic Load"],
+    unit: "lb", baseVar: "F_D"
+  },
+  "C_d": {
+    name: "Dynamic Deformation Factor",
+    aliases: ["Dynamic Deformation Factor", "Deformation Factor", "Dynamic Factor C"],
+    unit: "lb/in", baseVar: "C_d"
+  },
+  "h_k": {
+    name: "Working Depth",
+    aliases: ["Working Depth", "Operating Tooth Depth"],
+    unit: "in", baseVar: "h_k"
+  },
+  "B": {
+    name: "Tooth Backlash",
+    aliases: ["Tooth Backlash", "Backlash"],
+    unit: "in", baseVar: "B"
+  },
+  "p_b": {
+    name: "Base Pitch",
+    aliases: ["Base Pitch", "Normal Base Pitch"],
+    unit: "in", baseVar: "p_b"
+  },
+  "m": {
+    name: "Metric Module",
+    aliases: ["Metric Module", "Module"],
+    unit: "mm", baseVar: "m"
+  },
+  "C_i": {
+    name: "Center Distance to Idler",
+    aliases: ["Center Distance to Idler", "Idler Center Distance"],
+    unit: "in", baseVar: "C_i"
+  }
 };
 
 const dbUnit = k => (GEAR_VARS_DB[k] || {}).unit || "dimless";
 const unitOf = (S, k) => (S && S._u && S._u[k]) || dbUnit(k);
 
 // ========================================================
-// 2. KNOWLEDGE GRAPH WITH EXPLICIT UNITS
+// 2. KNOWLEDGE GRAPH WITH BASE FORMULAS & DYNAMIC ALIASES
 // ========================================================
 const GEAR_RELATION_GRAPH = [
   // 1. Buckingham Dynamic Load
@@ -95,7 +249,7 @@ const GEAR_RELATION_GRAPH = [
 
       if (target === "F_D") {
         return {
-          target: targetLabel("Dynamic Tooth Load", "{{F_D}}", u),
+          target: targetLabel(getVarName(S, "F_D"), "{{F_D}}", u),
           text: `Applying Buckingham's equation ($k = ${k}$):`,
           eq: `F_D = F_t + \\frac{${k} v (b C + F_t)}{${k} v + \\sqrt{b C + F_t}} = ${fmt(S.W_t, 0)} + \\frac{${k}(${fmt(S.V_m, 1)})[(${fmt(S.b, 2)})(${fmt(S.C_d, 0)}) + ${fmt(S.W_t, 0)}]}{${k}(${fmt(S.V_m, 1)}) + \\sqrt{(${fmt(S.b, 2)})(${fmt(S.C_d, 0)}) + ${fmt(S.W_t, 0)}}} = \\mathbf{${fmt(val, 1)}\\text{ ${u}}}`,
           val: parseFloat(val.toFixed(1))
@@ -120,7 +274,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "h_k");
       if (target === "h_k") {
         return {
-          target: targetLabel("Working Depth", "{{h_k}}", u),
+          target: targetLabel(getVarName(S, "h_k"), "{{h_k}}", u),
           text: `Working depth is twice the addendum ($h_k = 2a$):`,
           eq: `h_k = 2a = 2(${fmt(S.a, 3)}) = \\mathbf{${fmt(S.h_k, 3)}\\text{ ${u}}}`,
           val: S.h_k
@@ -128,7 +282,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "a") {
         return {
-          target: targetLabel("Addendum", "{{a}}", u),
+          target: targetLabel(getVarName(S, "a"), "{{a}}", u),
           text: `Addendum is half the working depth ($a = \\frac{h_k}{2}$):`,
           eq: `a = \\frac{h_k}{2} = \\frac{${fmt(S.h_k, 3)}}{2} = \\mathbf{${fmt(S.a, 3)}\\text{ ${u}}}`,
           val: S.a
@@ -154,7 +308,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "d") {
         return {
-          target: targetLabel("Dedendum", "{{d}}", u),
+          target: targetLabel(getVarName(S, "d"), "{{d}}", u),
           text: `Standard dedendum for ${fmt(S.phi, 1)}° teeth:`,
           eq: isSI
             ? `d = ${factor} m = ${factor}(${fmt(S.m, 2)}) = \\mathbf{${fmt(S.d, 3)}\\text{ mm}}`
@@ -181,7 +335,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "B") {
         return {
-          target: targetLabel("Tooth Backlash", "{{B}}", u),
+          target: targetLabel(getVarName(S, "B"), "{{B}}", u),
           text: "Standard average backlash on pitch circle:",
           eq: isSI
             ? `B = 0.035 m = 0.035(${fmt(S.m, 2)}) = \\mathbf{${fmt(S.B, 3)}\\text{ mm}}`
@@ -208,7 +362,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "p_b");
       if (target === "p_b") {
         return {
-          target: targetLabel("Base Pitch", "{{p_b}}", u),
+          target: targetLabel(getVarName(S, "p_b"), "{{p_b}}", u),
           text: `Base pitch along base circle ($p_b = P_c \\cos\\phi$):`,
           eq: `p_b = P_c \\cos(${fmt(S.phi, 1)}°) = ${fmt(S.P_c, 3)} \\times \\cos(${fmt(S.phi, 1)}°) = \\mathbf{${fmt(S.p_b, 3)}\\text{ ${u}}}`,
           val: S.p_b
@@ -216,7 +370,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_c") {
         return {
-          target: targetLabel("Circular Pitch", "{{P_c}}", u),
+          target: targetLabel(getVarName(S, "P_c"), "{{P_c}}", u),
           text: `Circular pitch from base pitch ($P_c = \\frac{p_b}{\\cos\\phi}$):`,
           eq: `P_c = \\frac{p_b}{\\cos(${fmt(S.phi, 1)}°)} = \\frac{${fmt(S.p_b, 3)}}{\\cos(${fmt(S.phi, 1)}°)} = \\mathbf{${fmt(S.P_c, 3)}\\text{ ${u}}}`,
           val: S.P_c
@@ -240,7 +394,7 @@ const GEAR_RELATION_GRAPH = [
     solve: (target, S) => {
       if (target === "m") {
         return {
-          target: targetLabel("Metric Module", "{{m}}", "mm"),
+          target: targetLabel(getVarName(S, "m"), "{{m}}", "mm"),
           text: "Metric module from diametral pitch ($m = \\frac{25.4}{P_d}$):",
           eq: `m = \\frac{25.4}{P_d} = \\frac{25.4}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(S.m, 2)}\\text{ mm}}`,
           val: S.m
@@ -248,7 +402,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: "Diametral pitch from metric module ($P_d = \\frac{25.4}{m}$):",
           eq: `P_d = \\frac{25.4}{m} = \\frac{25.4}{${fmt(S.m, 2)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
@@ -275,7 +429,7 @@ const GEAR_RELATION_GRAPH = [
         const Ri = S.C_i - R1;
         const D2 = 2 * (R1 + 2 * Ri);
         return {
-          target: targetLabel("Internal Gear Diameter", "{{D_2|D_P2}}", u),
+          target: targetLabel(getVarName(S, "D_P2"), "{{D_2|D_P2}}", u),
           text: `Idler radius $R_i = C_i - R_1 = ${fmt(S.C_i, 1)} - ${fmt(R1, 1)} = ${fmt(Ri, 1)}\\text{ ${u}}$. Inside diameter ($D_2 = 4 C_i - D_1$):`,
           eq: `D_2 = 4(${fmt(S.C_i, 1)}) - ${fmt(S.D_P1, 1)} = \\mathbf{${fmt(D2, 1)}\\text{ ${u}}}`,
           val: D2
@@ -300,7 +454,7 @@ const GEAR_RELATION_GRAPH = [
       if (target === "W") {
         const val = Math.sqrt(S.W_t * S.W_t + S.W_r * S.W_r);
         return {
-          target: targetLabel("Normal Contact Force", "{{F_n|W}}", u),
+          target: targetLabel(getVarName(S, "W"), "{{F_n|W}}", u),
           text: "Total normal force from tangential and radial vectors ($F_n = \\sqrt{F_t^2 + F_r^2}$):",
           eq: `F_n = \\sqrt{F_t^2 + F_r^2} = \\sqrt{(${fmt(S.W_t, 0)})^2 + (${fmt(S.W_r, 0)})^2} = \\mathbf{${fmt(val, 0)}\\text{ ${u}}}`,
           val: parseFloat(val.toFixed(1))
@@ -325,7 +479,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "D_P1");
       if (target === "VR") {
         return {
-          target: targetLabel("Speed Ratio", "{{SR|VR}}", "ratio"),
+          target: targetLabel(getVarName(S, "VR"), "{{SR|VR}}", "ratio"),
           text: "Ratio of driven to driver pitch diameter ($SR = \\frac{D_2}{D_1}$):",
           eq: `SR = \\frac{D_2}{D_1} = \\frac{${fmt(S.D_P2, 2)}}{${fmt(S.D_P1, 2)}} = \\mathbf{${fmt(S.VR, 2)}}`,
           val: S.VR
@@ -333,7 +487,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "D_P2") {
         return {
-          target: targetLabel("Gear Pitch Diameter", "{{D_2|D_P2}}", u),
+          target: targetLabel(getVarName(S, "D_P2"), "{{D_2|D_P2}}", u),
           text: "Driven gear pitch diameter ($D_2 = D_1 \\cdot SR$):",
           eq: `D_2 = D_1 \\cdot SR = ${fmt(S.D_P1, 2)} \\times ${fmt(S.VR, 2)} = \\mathbf{${fmt(S.D_P2, 2)}\\text{ ${u}}}`,
           val: S.D_P2
@@ -357,7 +511,7 @@ const GEAR_RELATION_GRAPH = [
     solve: (target, S) => {
       if (target === "n_2") {
         return {
-          target: targetLabel("Driven Speed", "{{N_2|n_2}}", "rpm"),
+          target: targetLabel(getVarName(S, "n_2"), "{{N_2|n_2}}", "rpm"),
           text: "From speed-teeth balance ($T_1 N_1 = T_2 N_2$):",
           eq: `N_2 = \\frac{T_1 N_1}{T_2} = \\frac{${fmt(S.T_1, 0)} \\times ${fmt(S.n_1, 0)}}{${fmt(S.T_2, 0)}} = \\mathbf{${fmt(S.n_2, 1)}\\text{ rpm}}`,
           val: S.n_2
@@ -365,7 +519,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "T_2") {
         return {
-          target: targetLabel("Gear Teeth", "{{T_2|T}}", "teeth"),
+          target: targetLabel(getVarName(S, "T_2"), "{{T_2|T}}", "teeth"),
           text: "From speed-teeth balance ($T_2 = \\frac{T_1 N_1}{N_2}$):",
           eq: `T_2 = \\frac{T_1 N_1}{N_2} = \\frac{${fmt(S.T_1, 0)} \\times ${fmt(S.n_1, 0)}}{${fmt(S.n_2, 1)}} = \\mathbf{${fmt(S.T_2, 0)}\\text{ teeth}}`,
           val: S.T_2
@@ -391,7 +545,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "P_d") {
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: isSI
             ? "From circular pitch ($P_d = \\frac{25.4 \\pi}{P_c}$):"
             : "From pitch reciprocal relation ($P_c \\cdot P_d = \\pi$):",
@@ -403,7 +557,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_c") {
         return {
-          target: targetLabel("Circular Pitch", "{{P_c}}", u),
+          target: targetLabel(getVarName(S, "P_c"), "{{P_c}}", u),
           text: isSI
             ? "From diametral pitch ($P_c = \\frac{25.4 \\pi}{P_d}$):"
             : "From diametral pitch ($P_c = \\frac{\\pi}{P_d}$):",
@@ -434,7 +588,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "D_P1") {
         return {
-          target: targetLabel("Pinion Pitch Diameter", "{{D_1|D_P1}}", u),
+          target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u),
           text: isSI
             ? `From tooth count and module ($D_1 = T_1 m$):`
             : `From teeth count and diametral pitch ($D_1 = \\frac{T_1}{P_d}$):`,
@@ -446,7 +600,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: isSI
             ? "From pitch diameter and teeth ($P_d = \\frac{25.4 T_1}{D_1}$):"
             : "From pitch diameter and teeth ($P_d = \\frac{T_1}{D_1}$):",
@@ -458,7 +612,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "T_1") {
         return {
-          target: targetLabel("Pinion Teeth", "{{T_1|T}}", "teeth"),
+          target: targetLabel(getVarName(S, "T_1"), "{{T_1|T}}", "teeth"),
           text: isSI
             ? `From pitch diameter and module ($T_1 = \\frac{D_1}{m}$):`
             : `From pitch diameter and diametral pitch ($T_1 = D_1 P_d$):`,
@@ -489,7 +643,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "D_P2") {
         return {
-          target: targetLabel("Gear Pitch Diameter", "{{D_2|D_P2}}", u),
+          target: targetLabel(getVarName(S, "D_P2"), "{{D_2|D_P2}}", u),
           text: isSI
             ? `From gear teeth and module ($D_2 = T_2 m$):`
             : `From gear teeth count and pitch ($D_2 = \\frac{T_2}{P_d}$):`,
@@ -501,7 +655,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "T_2") {
         return {
-          target: targetLabel("Gear Teeth", "{{T_2|T}}", "teeth"),
+          target: targetLabel(getVarName(S, "T_2"), "{{T_2|T}}", "teeth"),
           text: isSI
             ? `From gear diameter and module ($T_2 = \\frac{D_2}{m}$):`
             : `From gear diameter and pitch ($T_2 = D_2 P_d$):`,
@@ -513,7 +667,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: "From gear diameter and teeth ($P_d = \\frac{T_2}{D_2}$):",
           eq: `P_d = \\frac{T_2}{D_2} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.D_P2, 2)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
@@ -539,7 +693,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "C");
       if (target === "C") {
         return {
-          target: targetLabel("Center Distance", "{{C}}", u),
+          target: targetLabel(getVarName(S, "C"), "{{C}}", u),
           text: "Sum of pitch radii for external mesh ($C = \\frac{D_1 + D_2}{2}$):",
           eq: `C = \\frac{D_1 + D_2}{2} = \\frac{${fmt(S.D_P1, 2)} + ${fmt(S.D_P2, 2)}}{2} = \\mathbf{${fmt(S.C, 2)}\\text{ ${u}}}`,
           val: S.C
@@ -547,7 +701,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "D_P2") {
         return {
-          target: targetLabel("Gear Pitch Diameter", "{{D_2|D_P2}}", u),
+          target: targetLabel(getVarName(S, "D_P2"), "{{D_2|D_P2}}", u),
           text: "From center distance and pinion diameter ($D_2 = 2C - D_1$):",
           eq: `D_2 = 2C - D_1 = 2(${fmt(S.C, 2)}) - ${fmt(S.D_P1, 2)} = \\mathbf{${fmt(S.D_P2, 2)}\\text{ ${u}}}`,
           val: S.D_P2
@@ -555,7 +709,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "D_P1") {
         return {
-          target: targetLabel("Pinion Pitch Diameter", "{{D_1|D_P1}}", u),
+          target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u),
           text: "From center distance and gear diameter ($D_1 = 2C - D_2$):",
           eq: `D_1 = 2C - D_2 = 2(${fmt(S.C, 2)}) - ${fmt(S.D_P2, 2)} = \\mathbf{${fmt(S.D_P1, 2)}\\text{ ${u}}}`,
           val: S.D_P1
@@ -581,7 +735,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "T_1") {
         return {
-          target: targetLabel("Pinion Teeth", "{{T_1|T}}", "teeth"),
+          target: targetLabel(getVarName(S, "T_1"), "{{T_1|T}}", "teeth"),
           text: "From center distance and speed ratio:",
           eq: isSI
             ? `T_1 = \\frac{2 C}{m(1 + SR)} = \\frac{2(${fmt(S.C, 1)})}{${fmt(S.m, 2)}(1 + ${fmt(S.VR, 2)})} = \\mathbf{${fmt(S.T_1, 0)}\\text{ teeth}}`
@@ -591,7 +745,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "C") {
         return {
-          target: targetLabel("Center Distance", "{{C}}", u),
+          target: targetLabel(getVarName(S, "C"), "{{C}}", u),
           text: "From pinion teeth and speed ratio:",
           eq: isSI
             ? `C = \\frac{m T_1 (1 + SR)}{2} = \\frac{${fmt(S.m, 2)}(${fmt(S.T_1, 0)})(1 + ${fmt(S.VR, 2)})}{2} = \\mathbf{${fmt(S.C, 1)}\\text{ mm}}`
@@ -619,7 +773,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "C") {
         return {
-          target: targetLabel("Center Distance", "{{C}}", u),
+          target: targetLabel(getVarName(S, "C"), "{{C}}", u),
           text: "Center distance from total teeth in mesh:",
           eq: isSI
             ? `C = \\frac{m(T_1 + T_2)}{2} = \\frac{${fmt(S.m, 2)}(${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)})}{2} = \\mathbf{${fmt(S.C, 1)}\\text{ mm}}`
@@ -629,7 +783,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: isSI
             ? `Pitch from teeth sum and distance ($P_d = \\frac{25.4(T_1 + T_2)}{2C}$):`
             : `Pitch from total teeth and center distance ($P_d = \\frac{T_1 + T_2}{2C}$):`,
@@ -658,7 +812,7 @@ const GEAR_RELATION_GRAPH = [
     solve: (target, S) => {
       if (target === "VR") {
         return {
-          target: targetLabel("Speed Ratio", "{{SR|VR}}", "ratio"),
+          target: targetLabel(getVarName(S, "VR"), "{{SR|VR}}", "ratio"),
           text: "From rotational speed ratio ($SR = \\frac{N_1}{N_2}$):",
           eq: `SR = \\frac{N_1}{N_2} = \\frac{${fmt(S.n_1, 0)}}{${fmt(S.n_2, 1)}} = \\mathbf{${fmt(S.VR, 2)}}`,
           val: S.VR
@@ -666,7 +820,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "n_2") {
         return {
-          target: targetLabel("Driven Speed", "{{N_2|n_2}}", "rpm"),
+          target: targetLabel(getVarName(S, "n_2"), "{{N_2|n_2}}", "rpm"),
           text: "Driven speed through reduction ratio ($N_2 = \\frac{N_1}{SR}$):",
           eq: `N_2 = \\frac{N_1}{SR} = \\frac{${fmt(S.n_1, 0)}}{${fmt(S.VR, 2)}} = \\mathbf{${fmt(S.n_2, 1)}\\text{ rpm}}`,
           val: S.n_2
@@ -674,7 +828,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "n_1") {
         return {
-          target: targetLabel("Driver Speed", "{{N_1|n_1}}", "rpm"),
+          target: targetLabel(getVarName(S, "n_1"), "{{N_1|n_1}}", "rpm"),
           text: "Driver speed from driven speed and ratio ($N_1 = N_2 \\cdot SR$):",
           eq: `N_1 = N_2 \\cdot SR = ${fmt(S.n_2, 1)} \\times ${fmt(S.VR, 2)} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
           val: S.n_1
@@ -699,7 +853,7 @@ const GEAR_RELATION_GRAPH = [
     solve: (target, S) => {
       if (target === "T_2") {
         return {
-          target: targetLabel("Gear Teeth", "{{T_2|T}}", "teeth"),
+          target: targetLabel(getVarName(S, "T_2"), "{{T_2|T}}", "teeth"),
           text: "From speed ratio and pinion teeth ($T_2 = T_1 \\cdot SR$):",
           eq: `T_2 = T_1 \\cdot SR = ${fmt(S.T_1, 0)} \\times ${fmt(S.VR, 2)} = \\mathbf{${fmt(S.T_2, 0)}\\text{ teeth}}`,
           val: S.T_2
@@ -707,7 +861,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "T_1") {
         return {
-          target: targetLabel("Pinion Teeth", "{{T_1|T}}", "teeth"),
+          target: targetLabel(getVarName(S, "T_1"), "{{T_1|T}}", "teeth"),
           text: "From gear teeth and speed ratio ($T_1 = \\frac{T_2}{SR}$):",
           eq: `T_1 = \\frac{T_2}{SR} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.VR, 2)}} = \\mathbf{${fmt(S.T_1, 0)}\\text{ teeth}}`,
           val: S.T_1
@@ -715,7 +869,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "VR") {
         return {
-          target: targetLabel("Speed Ratio", "{{SR|VR}}", "ratio"),
+          target: targetLabel(getVarName(S, "VR"), "{{SR|VR}}", "ratio"),
           text: "Tooth count ratio of gear to pinion ($SR = \\frac{T_2}{T_1}$):",
           eq: `SR = \\frac{T_2}{T_1} = \\frac{${fmt(S.T_2, 0)}}{${fmt(S.T_1, 0)}} = \\mathbf{${fmt(S.VR, 2)}}`,
           val: S.VR
@@ -744,14 +898,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "V_m") {
         if (isSI) {
           return {
-            target: targetLabel("Pitch Line Velocity", "{{v|V_m}}", u_v),
+            target: targetLabel(getVarName(S, "V_m"), "{{v|V_m}}", u_v),
             text: "Linear velocity at pitch circle ($v = \\frac{\\pi D_1 N_1}{60000}$):",
             eq: `v = \\frac{\\pi D_1 N_1}{60000} = \\frac{\\pi (${fmt(S.D_P1, 1)})(${fmt(S.n_1, 0)})}{60000} = \\mathbf{${fmt(S.V_m, 2)}\\text{ m/s}}`,
             val: S.V_m
           };
         }
         return {
-          target: targetLabel("Pitch Line Velocity", "{{v|V_m}}", u_v),
+          target: targetLabel(getVarName(S, "V_m"), "{{v|V_m}}", u_v),
           text: "Linear velocity at pitch circle ($v = \\frac{\\pi D_1 N_1}{12}$):",
           eq: `v = \\frac{\\pi D_1 N_1}{12} = \\frac{\\pi (${fmt(S.D_P1, 3)})(${fmt(S.n_1, 0)})}{12} = \\mathbf{${fmt(S.V_m, 1)}\\text{ ft/min}}`,
           val: S.V_m
@@ -760,14 +914,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "D_P1") {
         if (isSI) {
           return {
-            target: targetLabel("Pinion Pitch Diameter", "{{D_1|D_P1}}", u_D),
+            target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u_D),
             text: "Pitch diameter from pitch speed ($D_1 = \\frac{60000 v}{\\pi N_1}$):",
             eq: `D_1 = \\frac{60000 v}{\\pi N_1} = \\frac{60000 (${fmt(S.V_m, 2)})}{\\pi (${fmt(S.n_1, 0)})} = \\mathbf{${fmt(S.D_P1, 1)}\\text{ mm}}`,
             val: S.D_P1
           };
         }
         return {
-          target: targetLabel("Pinion Pitch Diameter", "{{D_1|D_P1}}", u_D),
+          target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u_D),
           text: "From pitch line velocity and rpm ($D_1 = \\frac{12 v}{\\pi N_1}$):",
           eq: `D_1 = \\frac{12 v}{\\pi N_1} = \\frac{12 (${fmt(S.V_m, 1)})}{\\pi (${fmt(S.n_1, 0)})} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
@@ -776,14 +930,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "n_1") {
         if (isSI) {
           return {
-            target: targetLabel("Driver Speed", "{{N_1|n_1}}", "rpm"),
+            target: targetLabel(getVarName(S, "n_1"), "{{N_1|n_1}}", "rpm"),
             text: "From pitch velocity and diameter ($N_1 = \\frac{60000 v}{\\pi D_1}$):",
             eq: `N_1 = \\frac{60000 v}{\\pi D_1} = \\frac{60000(${fmt(S.V_m, 2)})}{\\pi (${fmt(S.D_P1, 1)})} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
             val: S.n_1
           };
         }
         return {
-          target: targetLabel("Driver Speed", "{{N_1|n_1}}", "rpm"),
+          target: targetLabel(getVarName(S, "n_1"), "{{N_1|n_1}}", "rpm"),
           text: "From pitch velocity and diameter ($N_1 = \\frac{12 v}{\\pi D_1}$):",
           eq: `N_1 = \\frac{12 v}{\\pi D_1} = \\frac{12(${fmt(S.V_m, 1)})}{\\pi (${fmt(S.D_P1, 3)})} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
           val: S.n_1
@@ -812,14 +966,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "M_t") {
         if (isSI) {
           return {
-            target: targetLabel("Shaft Torque", "{{T|M_t}}", u_T),
+            target: targetLabel(getVarName(S, "M_t"), "{{T|M_t}}", u_T),
             text: "Shaft torque in N·m from power in kW ($T = \\frac{9549 P}{N_1}$):",
             eq: `T = \\frac{9549 \\cdot P}{N_1} = \\frac{9549 \\times ${fmt(S.P, 2)}}{${fmt(S.n_1, 0)}} = \\mathbf{${fmt(S.M_t, 1)}\\text{ N}\\cdot\\text{m}}`,
             val: S.M_t
           };
         }
         return {
-          target: targetLabel("Shaft Torque", "{{T|M_t}}", u_T),
+          target: targetLabel(getVarName(S, "M_t"), "{{T|M_t}}", u_T),
           text: "Shaft torque from horsepower ($T = \\frac{63025 P}{N_1}$):",
           eq: `T = \\frac{63025 \\cdot P}{N_1} = \\frac{63025 \\times ${fmt(S.P, 2)}}{${fmt(S.n_1, 0)}} = \\mathbf{${fmt(S.M_t, 1)}\\text{ lb}\\cdot\\text{in}}`,
           val: S.M_t
@@ -828,14 +982,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "P") {
         if (isSI) {
           return {
-            target: targetLabel("Transmitted Power", "{{P}}", u_P),
+            target: targetLabel(getVarName(S, "P"), "{{P}}", u_P),
             text: "Power in kW from torque and rpm ($P = \\frac{T N_1}{9549}$):",
             eq: `P = \\frac{T \\cdot N_1}{9549} = \\frac{${fmt(S.M_t, 1)} \\times ${fmt(S.n_1, 0)}}{9549} = \\mathbf{${fmt(S.P, 2)}\\text{ kW}}`,
             val: S.P
           };
         }
         return {
-          target: targetLabel("Transmitted Power", "{{P}}", u_P),
+          target: targetLabel(getVarName(S, "P"), "{{P}}", u_P),
           text: "Horsepower from torque and rpm ($P = \\frac{T N_1}{63025}$):",
           eq: `P = \\frac{T \\cdot N_1}{63025} = \\frac{${fmt(S.M_t, 1)} \\times ${fmt(S.n_1, 0)}}{63025} = \\mathbf{${fmt(S.P, 2)}\\text{ hp}}`,
           val: S.P
@@ -844,14 +998,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "n_1") {
         if (isSI) {
           return {
-            target: targetLabel("Driver Speed", "{{N_1|n_1}}", "rpm"),
+            target: targetLabel(getVarName(S, "n_1"), "{{N_1|n_1}}", "rpm"),
             text: "Rotational speed from power in kW and torque ($N_1 = \\frac{9549 P}{T}$):",
             eq: `N_1 = \\frac{9549 P}{T} = \\frac{9549(${fmt(S.P, 2)})}{${fmt(S.M_t, 1)}} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
             val: S.n_1
           };
         }
         return {
-          target: targetLabel("Driver Speed", "{{N_1|n_1}}", "rpm"),
+          target: targetLabel(getVarName(S, "n_1"), "{{N_1|n_1}}", "rpm"),
           text: "Rotational speed from power and torque ($N_1 = \\frac{63025 P}{T}$):",
           eq: `N_1 = \\frac{63025 P}{T} = \\frac{63025(${fmt(S.P, 2)})}{${fmt(S.M_t, 1)}} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
           val: S.n_1
@@ -881,14 +1035,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "W_t") {
         if (isSI) {
           return {
-            target: targetLabel("Tangential Load", "{{F_t|W_t}}", u_F),
+            target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u_F),
             text: "Tangential force from torque and diameter in mm ($F_t = \\frac{2000 T}{D_1}$):",
             eq: `F_t = \\frac{2000 T}{D_1} = \\frac{2000(${fmt(S.M_t, 1)})}{${fmt(S.D_P1, 1)}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ N}}`,
             val: S.W_t
           };
         }
         return {
-          target: targetLabel("Tangential Load", "{{F_t|W_t}}", u_F),
+          target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u_F),
           text: "Tangential force from shaft torque and pitch radius ($F_t = \\frac{2T}{D_1}$):",
           eq: `F_t = \\frac{2T}{D_1} = \\frac{2(${fmt(S.M_t, 1)})}{${fmt(S.D_P1, 3)}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
           val: S.W_t
@@ -897,14 +1051,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "M_t") {
         if (isSI) {
           return {
-            target: targetLabel("Shaft Torque", "{{T|M_t}}", u_T),
+            target: targetLabel(getVarName(S, "M_t"), "{{T|M_t}}", u_T),
             text: "Torque in N·m from tooth load and diameter in mm ($T = \\frac{F_t D_1}{2000}$):",
             eq: `T = \\frac{F_t \\cdot D_1}{2000} = \\frac{${fmt(S.W_t, 0)} \\times ${fmt(S.D_P1, 1)}}{2000} = \\mathbf{${fmt(S.M_t, 1)}\\text{ N}\\cdot\\text{m}}`,
             val: S.M_t
           };
         }
         return {
-          target: targetLabel("Shaft Torque", "{{T|M_t}}", u_T),
+          target: targetLabel(getVarName(S, "M_t"), "{{T|M_t}}", u_T),
           text: "Shaft torque from tooth load and pitch radius ($T = F_t \\frac{D_1}{2}$):",
           eq: `T = F_t \\cdot \\frac{D_1}{2} = ${fmt(S.W_t, 0)} \\times \\frac{${fmt(S.D_P1, 3)}}{2} = \\mathbf{${fmt(S.M_t, 1)}\\text{ lb}\\cdot\\text{in}}`,
           val: S.M_t
@@ -913,14 +1067,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "D_P1") {
         if (isSI) {
           return {
-            target: targetLabel("Pinion Pitch Diameter", "{{D_1|D_P1}}", u_D),
+            target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u_D),
             text: "Pitch diameter in mm from torque and tangential load ($D_1 = \\frac{2000 T}{F_t}$):",
             eq: `D_1 = \\frac{2000 T}{F_t} = \\frac{2000(${fmt(S.M_t, 1)})}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.D_P1, 1)}\\text{ mm}}`,
             val: S.D_P1
           };
         }
         return {
-          target: targetLabel("Pinion Pitch Diameter", "{{D_1|D_P1}}", u_D),
+          target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u_D),
           text: "Pitch diameter from torque and tangential load ($D_1 = \\frac{2T}{F_t}$):",
           eq: `D_1 = \\frac{2T}{F_t} = \\frac{2(${fmt(S.M_t, 1)})}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
@@ -950,14 +1104,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "W_t") {
         if (isSI) {
           return {
-            target: targetLabel("Tangential Load", "{{F_t|W_t}}", u_F),
+            target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u_F),
             text: "Tangential load from transmitted power ($F_t = \\frac{1000 P}{v}$):",
             eq: `F_t = \\frac{1000 \\cdot P}{v} = \\frac{1000 \\times ${fmt(S.P, 2)}}{${fmt(S.V_m, 2)}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ N}}`,
             val: S.W_t
           };
         }
         return {
-          target: targetLabel("Tangential Load", "{{F_t|W_t}}", u_F),
+          target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u_F),
           text: "Tangential load from horsepower and pitch speed ($F_t = \\frac{33000 P}{v}$):",
           eq: `F_t = \\frac{33000 \\cdot P}{v} = \\frac{33000 \\times ${fmt(S.P, 2)}}{${fmt(S.V_m, 1)}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
           val: S.W_t
@@ -966,14 +1120,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "P") {
         if (isSI) {
           return {
-            target: targetLabel("Transmitted Power", "{{P}}", u_P),
+            target: targetLabel(getVarName(S, "P"), "{{P}}", u_P),
             text: "Power in kW from tangential load and pitch velocity ($P = \\frac{F_t v}{1000}$):",
             eq: `P = \\frac{F_t \\cdot v}{1000} = \\frac{${fmt(S.W_t, 0)} \\times ${fmt(S.V_m, 2)}}{1000} = \\mathbf{${fmt(S.P, 2)}\\text{ kW}}`,
             val: S.P
           };
         }
         return {
-          target: targetLabel("Transmitted Power", "{{P}}", u_P),
+          target: targetLabel(getVarName(S, "P"), "{{P}}", u_P),
           text: "Horsepower from tangential load and pitch velocity ($P = \\frac{F_t v}{33000}$):",
           eq: `P = \\frac{F_t \\cdot v}{33000} = \\frac{${fmt(S.W_t, 0)} \\times ${fmt(S.V_m, 1)}}{33000} = \\mathbf{${fmt(S.P, 2)}\\text{ hp}}`,
           val: S.P
@@ -982,14 +1136,14 @@ const GEAR_RELATION_GRAPH = [
       if (target === "V_m") {
         if (isSI) {
           return {
-            target: targetLabel("Pitch Line Velocity", "{{v|V_m}}", u_v),
+            target: targetLabel(getVarName(S, "V_m"), "{{v|V_m}}", u_v),
             text: "Pitch speed from power and load ($v = \\frac{1000 P}{F_t}$):",
             eq: `v = \\frac{1000 \\cdot P}{F_t} = \\frac{1000(${fmt(S.P, 2)})}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.V_m, 2)}\\text{ m/s}}`,
             val: S.V_m
           };
         }
         return {
-          target: targetLabel("Pitch Line Velocity", "{{v|V_m}}", u_v),
+          target: targetLabel(getVarName(S, "V_m"), "{{v|V_m}}", u_v),
           text: "Pitch speed from power and load ($v = \\frac{33000 P}{F_t}$):",
           eq: `v = \\frac{33000 \\cdot P}{F_t} = \\frac{33000(${fmt(S.P, 2)})}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.V_m, 1)}\\text{ ft/min}}`,
           val: S.V_m
@@ -1015,7 +1169,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "W_r");
       if (target === "W_r") {
         return {
-          target: targetLabel("Radial Load", "{{F_r|W_r}}", u),
+          target: targetLabel(getVarName(S, "W_r"), "{{F_r|W_r}}", u),
           text: `Separating force toward shaft center ($F_r = F_t \\tan\\phi$):`,
           eq: `F_r = F_t \\tan(${fmt(S.phi, 1)}°) = ${fmt(S.W_t, 0)} \\times \\tan(${fmt(S.phi, 1)}°) = \\mathbf{${fmt(S.W_r, 0)}\\text{ ${u}}}`,
           val: S.W_r
@@ -1023,7 +1177,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "W_t") {
         return {
-          target: targetLabel("Tangential Load", "{{F_t|W_t}}", u),
+          target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u),
           text: `Drive force derived from radial reaction ($F_t = \\frac{F_r}{\\tan\\phi}$):`,
           eq: `F_t = \\frac{F_r}{\\tan(${fmt(S.phi, 1)}°)} = \\frac{${fmt(S.W_r, 0)}}{\\tan(${fmt(S.phi, 1)}°)} = \\mathbf{${fmt(S.W_t, 0)}\\text{ ${u}}}`,
           val: S.W_t
@@ -1031,7 +1185,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "phi") {
         return {
-          target: targetLabel("Pressure Angle", "{{\\phi|phi}}", "deg"),
+          target: targetLabel(getVarName(S, "phi"), "{{\\phi|phi}}", "deg"),
           text: "Pressure angle from radial and tangential forces:",
           eq: `\\phi = \\tan^{-1}\\left(\\frac{F_r}{F_t}\\right) = \\tan^{-1}\\left(\\frac{${fmt(S.W_r, 0)}}{${fmt(S.W_t, 0)}}\\right) = \\mathbf{${fmt(S.phi, 1)}°}`,
           val: S.phi
@@ -1057,7 +1211,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "W");
       if (target === "W") {
         return {
-          target: targetLabel("Normal Contact Force", "{{F_n|W}}", u),
+          target: targetLabel(getVarName(S, "W"), "{{F_n|W}}", u),
           text: `Total force transmitted along line of action ($F_n = \\frac{F_t}{\\cos\\phi}$):`,
           eq: `F_n = \\frac{F_t}{\\cos(${fmt(S.phi, 1)}°)} = \\frac{${fmt(S.W_t, 0)}}{\\cos(${fmt(S.phi, 1)}°)} = \\mathbf{${fmt(S.W, 0)}\\text{ ${u}}}`,
           val: S.W
@@ -1065,7 +1219,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "W_t") {
         return {
-          target: targetLabel("Tangential Load", "{{F_t|W_t}}", u),
+          target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u),
           text: `Tangential load resolved from contact normal load ($F_t = F_n \\cos\\phi$):`,
           eq: `F_t = F_n \\cos(${fmt(S.phi, 1)}°) = ${fmt(S.W, 0)} \\times \\cos(${fmt(S.phi, 1)}°) = \\mathbf{${fmt(S.W_t, 0)}\\text{ ${u}}}`,
           val: S.W_t
@@ -1073,9 +1227,9 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "phi") {
         return {
-          target: targetLabel("Pressure Angle", "{{\\phi|phi}}", "deg"),
+          target: targetLabel(getVarName(S, "phi"), "{{\\phi|phi}}", "deg"),
           text: "Pressure angle from contact normal and drive force:",
-          eq: `\\phi = \\cos^{-1}\\left(\\frac{F_t}{F_n}\\right) = \\cos^{-1}\\left(\\frac{${fmt(S.W_t, 0)}}{${fmt(S.W, 0)}}\\right) = \\mathbf{${fmt(S.phi, 1)}°}`,
+          eq: `\\phi = \\cos^{-1}\\left(\\frac{F_t}{F_n}\\right) = \\cos^{-1}\\left(\\frac{${fmt(S.W_t, 0)}}{${fmt(S.W_t, 0)}}\\right) = \\mathbf{${fmt(S.phi, 1)}°}`,
           val: S.phi
         };
       }
@@ -1099,7 +1253,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "a") {
         return {
-          target: targetLabel("Addendum", "{{a}}", u),
+          target: targetLabel(getVarName(S, "a"), "{{a}}", u),
           text: isSI
             ? `Standard full-depth addendum equals module ($a = m$):`
             : `Standard full-depth addendum proportion ($a = \\frac{1}{P_d}$):`,
@@ -1111,7 +1265,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: isSI
             ? `From metric addendum ($a = m$ and $P_d = \\frac{25.4}{m}$):`
             : `From standard full-depth addendum ($P_d = \\frac{1}{a}$):`,
@@ -1142,7 +1296,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "c") {
         return {
-          target: targetLabel("Tooth Clearance", "{{c}}", u),
+          target: targetLabel(getVarName(S, "c"), "{{c}}", u),
           text: `Standard clearance for ${fmt(S.phi, 1)}° teeth:`,
           eq: isSI
             ? `c = ${factor} m = ${factor}(${fmt(S.m, 2)}) = \\mathbf{${fmt(S.c, 3)}\\text{ mm}}`
@@ -1152,7 +1306,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: isSI
             ? `Pitch from metric clearance ($P_d = \\frac{25.4 k_c}{c}$):`
             : `Pitch from clearance proportion ($P_d = \\frac{k_c}{c}$):`,
@@ -1182,7 +1336,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "D_o");
       if (target === "D_o") {
         return {
-          target: targetLabel("Outside Diameter", "{{D_o}}", u),
+          target: targetLabel(getVarName(S, "D_o"), "{{D_o}}", u),
           text: "Blank outer diameter adding twice addendum ($D_o = D_1 + 2a$):",
           eq: `D_o = D_1 + 2a = ${fmt(S.D_P1, 2)} + 2(${fmt(S.a, 3)}) = \\mathbf{${fmt(S.D_o, 2)}\\text{ ${u}}}`,
           val: S.D_o
@@ -1190,7 +1344,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "D_P1") {
         return {
-          target: targetLabel("Pinion Pitch Diameter", "{{D_1|D_P1}}", u),
+          target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u),
           text: "Pitch diameter from blank diameter ($D_1 = D_o - 2a$):",
           eq: `D_1 = D_o - 2a = ${fmt(S.D_o, 2)} - 2(${fmt(S.a, 3)}) = \\mathbf{${fmt(S.D_P1, 2)}\\text{ ${u}}}`,
           val: S.D_P1
@@ -1198,7 +1352,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "a") {
         return {
-          target: targetLabel("Addendum", "{{a}}", u),
+          target: targetLabel(getVarName(S, "a"), "{{a}}", u),
           text: "Addendum from outer and pitch diameters ($a = \\frac{D_o - D_1}{2}$):",
           eq: `a = \\frac{D_o - D_1}{2} = \\frac{${fmt(S.D_o, 2)} - ${fmt(S.D_P1, 2)}}{2} = \\mathbf{${fmt(S.a, 3)}\\text{ ${u}}}`,
           val: S.a
@@ -1225,7 +1379,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u === "mm";
       if (target === "D_o") {
         return {
-          target: targetLabel("Outside Diameter", "{{D_o}}", u),
+          target: targetLabel(getVarName(S, "D_o"), "{{D_o}}", u),
           text: isSI
             ? `Blank outer diameter from teeth and module ($D_o = m(T_1 + 2)$):`
             : `Blank outer diameter from teeth count ($D_o = \\frac{T_1 + 2}{P_d}$):`,
@@ -1237,7 +1391,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_d") {
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: isSI
             ? `Pitch from teeth and metric blank diameter ($P_d = \\frac{25.4(T_1 + 2)}{D_o}$):`
             : `Pitch from teeth and outside blank diameter ($P_d = \\frac{T_1 + 2}{D_o}$):`,
@@ -1249,7 +1403,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "T_1") {
         return {
-          target: targetLabel("Pinion Teeth", "{{T_1|T}}", "teeth"),
+          target: targetLabel(getVarName(S, "T_1"), "{{T_1|T}}", "teeth"),
           text: isSI
             ? `Teeth count from outside blank diameter ($T_1 = \\frac{D_o}{m} - 2$):`
             : `Teeth count from outside blank diameter ($T_1 = D_o P_d - 2$):`,
@@ -1278,7 +1432,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "D_b");
       if (target === "D_b") {
         return {
-          target: targetLabel("Base Circle Diameter", "{{D_b}}", u),
+          target: targetLabel(getVarName(S, "D_b"), "{{D_b}}", u),
           text: `Base circle diameter generating tooth involute ($D_b = D_1 \\cos\\phi$):`,
           eq: `D_b = D_1 \\cos(${fmt(S.phi, 1)}°) = ${fmt(S.D_P1, 2)} \\times \\cos(${fmt(S.phi, 1)}°) = \\mathbf{${fmt(S.D_b, 2)}\\text{ ${u}}}`,
           val: S.D_b
@@ -1286,7 +1440,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "D_P1") {
         return {
-          target: targetLabel("Pinion Pitch Diameter", "{{D_1|D_P1}}", u),
+          target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u),
           text: `Pitch diameter from base circle diameter ($D_1 = \\frac{D_b}{\\cos\\phi}$):`,
           eq: `D_1 = \\frac{D_b}{\\cos(${fmt(S.phi, 1)}°)} = \\frac{${fmt(S.D_b, 2)}}{\\cos(${fmt(S.phi, 1)}°)} = \\mathbf{${fmt(S.D_P1, 2)}\\text{ ${u}}}`,
           val: S.D_P1
@@ -1316,7 +1470,7 @@ const GEAR_RELATION_GRAPH = [
       const isSI = S.sys === "SI" || u_s === "MPa";
       if (target === "s") {
         return {
-          target: targetLabel("Induced Bending Stress", "{{s}}", u_s),
+          target: targetLabel(getVarName(S, "s"), "{{s}}", u_s),
           text: isSI
             ? `Applying the Lewis formula in SI ($s = \\frac{F_t}{b \\cdot m \\cdot Y}$):`
             : `Applying the Lewis beam bending stress formula ($s = \\frac{F_t P_d}{b Y}$):`,
@@ -1328,7 +1482,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "W_t") {
         return {
-          target: targetLabel("Permissible Tangential Load", "{{F_t|W_t}}", u_F),
+          target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u_F),
           text: "Tangential load capacity from allowable stress limit:",
           eq: isSI
             ? `F_t = s \\cdot b \\cdot m \\cdot Y = ${fmt(S.s, 0)} \\times ${fmt(S.b, 1)} \\times ${fmt(S.m, 2)} \\times ${fmt(S.Y, 3)} = \\mathbf{${fmt(S.W_t, 0)}\\text{ N}}`
@@ -1338,7 +1492,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "b") {
         return {
-          target: targetLabel("Required Face Width", "{{b}}", u_b),
+          target: targetLabel(getVarName(S, "b"), "{{b}}", u_b),
           text: "Minimum face width to sustain induced bending stress:",
           eq: isSI
             ? `b = \\frac{F_t}{s \\cdot m \\cdot Y} = \\frac{${fmt(S.W_t, 0)}}{${fmt(S.s, 0)} \\times ${fmt(S.m, 2)} \\times ${fmt(S.Y, 3)}} = \\mathbf{${fmt(S.b, 1)}\\text{ mm}}`
@@ -1347,14 +1501,19 @@ const GEAR_RELATION_GRAPH = [
         };
       }
       if (target === "P_d") {
+        if (isSI) {
+          const calc_m = parseFloat((S.W_t / (S.s * S.b * S.Y)).toFixed(3));
+          return {
+            target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
+            text: `From SI Lewis balance, solve for metric module $m = \\frac{F_t}{s \\cdot b \\cdot Y}$ then convert to $P_d = \\frac{25.4}{m}$:`,
+            eq: `m = \\frac{F_t}{s \\cdot b \\cdot Y} = \\frac{${fmt(S.W_t, 0)}}{${fmt(S.s, 0)} \\times ${fmt(S.b, 1)} \\times ${fmt(S.Y, 3)}} = ${calc_m}\\text{ mm} \\implies P_d = \\frac{25.4}{${calc_m}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
+            val: S.P_d
+          };
+        }
         return {
-          target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
-          text: isSI
-            ? `Diametral pitch from SI Lewis balance ($P_d = \\frac{25.4}{m} = \\frac{25.4 F_t}{s \\cdot b \\cdot Y}$):`
-            : `Diametral pitch from Lewis stress balance ($P_d = \\frac{s \\cdot b \\cdot Y}{F_t}$):`,
-          eq: isSI
-            ? `P_d = \\frac{25.4 \\cdot s \\cdot b \\cdot Y}{F_t} = \\frac{25.4(${fmt(S.s, 0)})(${fmt(S.b, 1)})(${fmt(S.Y, 3)})}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
-            : `P_d = \\frac{s \\cdot b \\cdot Y}{F_t} = \\frac{${fmt(S.s, 0)} \\times ${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
+          target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
+          text: "Diametral pitch from Lewis stress balance ($P_d = \\frac{s b Y}{F_t}$):",
+          eq: `P_d = \\frac{s \\cdot b \\cdot Y}{F_t} = \\frac{${fmt(S.s, 0)} \\times ${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
       }
@@ -1377,7 +1536,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "t");
       if (target === "t") {
         return {
-          target: targetLabel("Tooth Thickness", "{{t}}", u),
+          target: targetLabel(getVarName(S, "t"), "{{t}}", u),
           text: "Tooth thickness on pitch circle is half circular pitch ($t = \\frac{P_c}{2}$):",
           eq: `t = \\frac{P_c}{2} = \\frac{${fmt(S.P_c, 3)}}{2} = \\mathbf{${fmt(S.t, 3)}\\text{ ${u}}}`,
           val: S.t
@@ -1385,7 +1544,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "P_c") {
         return {
-          target: targetLabel("Circular Pitch", "{{P_c}}", u),
+          target: targetLabel(getVarName(S, "P_c"), "{{P_c}}", u),
           text: "Circular pitch from tooth thickness ($P_c = 2t$):",
           eq: `P_c = 2t = 2(${fmt(S.t, 3)}) = \\mathbf{${fmt(S.P_c, 3)}\\text{ ${u}}}`,
           val: S.P_c
@@ -1411,7 +1570,7 @@ const GEAR_RELATION_GRAPH = [
       const u = unitOf(S, "h");
       if (target === "h") {
         return {
-          target: targetLabel("Whole Depth", "{{h}}", u),
+          target: targetLabel(getVarName(S, "h"), "{{h}}", u),
           text: "Total tooth depth adding twice addendum plus clearance ($h = 2a + c$):",
           eq: `h = 2a + c = 2(${fmt(S.a, 3)}) + ${fmt(S.c, 3)} = \\mathbf{${fmt(S.h, 3)}\\text{ ${u}}}`,
           val: S.h
@@ -1419,7 +1578,7 @@ const GEAR_RELATION_GRAPH = [
       }
       if (target === "c") {
         return {
-          target: targetLabel("Tooth Clearance", "{{c}}", u),
+          target: targetLabel(getVarName(S, "c"), "{{c}}", u),
           text: "Clearance by subtracting twice addendum from whole depth ($c = h - 2a$):",
           eq: `c = h - 2a = ${fmt(S.h, 3)} - 2(${fmt(S.a, 3)}) = \\mathbf{${fmt(S.c, 3)}\\text{ ${u}}}`,
           val: S.c
@@ -1486,7 +1645,7 @@ function getGraphCardsForVariable(rawVarKey, activeProblem = null) {
           targetVar: matchKey,
           formula: form.formula,
           notes: `${eq.name}: ${form.notes}`,
-          vars: eq.nodes.filter(n => n !== rawVarKey),
+          vars: eq.nodes.filter(n => n !== matchKey),
           usedInProblem: false
         });
       }
@@ -1522,6 +1681,17 @@ function createGroundTruthSystem() {
   const VR = parseFloat((T_2 / T_1).toFixed(2));
   const Y_TABLE = { 16: 0.255, 18: 0.270, 20: 0.284, 24: 0.305, 25: 0.310, 28: 0.325, 30: 0.330, 32: 0.340 };
   const Y = Y_TABLE[T_1] || 0.300;
+
+  // Roll randomized field terminologies for this problem instance
+  const _names = {};
+  Object.keys(GEAR_VARS_DB).forEach(k => {
+    const meta = GEAR_VARS_DB[k];
+    if (meta.aliases && meta.aliases.length > 0) {
+      _names[k] = meta.aliases[Math.floor(Math.random() * meta.aliases.length)];
+    } else {
+      _names[k] = meta.name;
+    }
+  });
 
   let S = {};
 
@@ -1576,7 +1746,7 @@ function createGroundTruthSystem() {
       sys, P_d, phi, T_1, T_2, VR, n_1, n_2,
       P: _u["P"] === "hp" ? parseFloat((P * 1.341).toFixed(1)) : P,
       P_c, D_P1, D_P2, C, V_m, M_t, W_t, W_r, W, a, d, c, D_o, D_b, Y, b, s, t, h,
-      F_D, C_d, h_k, B, p_b, m, C_i, _u
+      F_D, C_d, h_k, B, p_b, m, C_i, _u, _names
     };
   } else {
     // Pure or Base US Customary (in, hp, lb, ft/min, psi, lb-in)
@@ -1631,7 +1801,7 @@ function createGroundTruthSystem() {
       sys, P_d, phi, T_1, T_2, VR, n_1, n_2, P, P_c,
       D_P1: _u["D_P1"] === "mm" ? parseFloat((D_P1 * 25.4).toFixed(1)) : D_P1,
       D_P2, C, V_m, M_t, W_t, W_r, W, a, d, c, D_o, D_b, Y, b, s, t, h,
-      F_D, C_d, h_k, B, p_b, m, C_i, _u
+      F_D, C_d, h_k, B, p_b, m, C_i, _u, _names
     };
   }
 
@@ -1808,7 +1978,7 @@ function buildGeneratedSeeds(attemptsPerTarget = 8) {
         if (givens.some(g => solveProblemOnGraph(givens.filter(x => x !== g), S).some(s => s.targetVar === goal))) continue;
 
         found.set(key, {
-          name: `${eq.name} → ${(GEAR_VARS_DB[goal] || {}).name || goal}`,
+          name: `${eq.name} → ${getVarName(S, goal)}`,
           topic: eq.topic, givens, goal, key
         });
       }

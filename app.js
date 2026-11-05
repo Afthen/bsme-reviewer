@@ -53,7 +53,7 @@ function loadStoredCounter() {
 
 function saveMastery() {
   const exportPayload = {
-    version: "4.1",
+    version: "4.2",
     updatedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -77,7 +77,7 @@ async function writeMasteryToFolder(payload) {
 
 function exportMasteryFile() {
   const payload = {
-    version: "4.1",
+    version: "4.2",
     exportedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -312,13 +312,14 @@ function getTotalVisibleCount(problem) {
 }
 
 // ========================================================
-// 3. A-RES SEED SAMPLER & GENERATOR
+// 3. A-RES SEED SAMPLER & STATEMENT GENERATOR
 // ========================================================
 function generateOrganicStatement(givens, targetSteps, S) {
   const givenPhrases = givens.map(varKey => {
     const meta = GEAR_VARS_DB[varKey] || { name: varKey, unit: "" };
     const u = unitOf(S, varKey);
     const val = fmt(S[varKey]);
+    const varName = (typeof getVarName === "function") ? getVarName(S, varKey) : meta.name;
 
     let displaySym = varKey;
     if (displaySym === "phi") displaySym = "\\phi";
@@ -343,7 +344,7 @@ function generateOrganicStatement(givens, targetSteps, S) {
       valWithUnit = `$${val}$`;
     }
 
-    return `${meta.name} ({{${displaySym}|${varKey}}}) = ${valWithUnit}`;
+    return `${varName} ({{${displaySym}|${varKey}}}) = ${valWithUnit}`;
   });
 
   const givensText = givenPhrases.join(", ");
@@ -420,7 +421,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     const answered = getAnsweredCount(saved);
     const total = getTotalVisibleCount(saved);
 
-    // Rule: Do not regenerate if at least 1 value is answered, unless none or all are answered
+    // Rule: Preserve state on refresh if at least 1 value is answered, unless none or all are answered
     if (answered >= 1 && answered < total) {
       activeProblem = saved;
       loadedProblems = [activeProblem];
@@ -445,7 +446,7 @@ async function openFolderPicker() {
         globalProblemCounter = data.globalProblemCount || globalProblemCounter;
         saveMastery();
       } catch (e) {
-        writeMasteryToFolder({ version: "4.1", globalProblemCount: globalProblemCounter, history: edgeHistory });
+        writeMasteryToFolder({ version: "4.2", globalProblemCount: globalProblemCounter, history: edgeHistory });
       }
       renderLeitnerSidebar();
     } catch (e) {
@@ -863,13 +864,20 @@ function showTooltip(e, baseVarKey, displayVar) {
 
   let mathContent = "";
   let hintContent = "";
-  let titleContent = meta.name;
+
+  const currentAlias = (typeof getVarName === "function" && activeProblem)
+    ? getVarName(activeProblem.S, baseVarKey)
+    : meta.name;
+
+  let titleContent = currentAlias;
+  if (currentAlias !== meta.name) {
+    titleContent = `${currentAlias} [${meta.name}]`;
+  }
 
   if (cards.length > 0) {
     const primaryCard = cards.find(c => c.isBase) || cards[0];
     mathContent = primaryCard.formula;
     const isContext = cards.some(c => c.usedInProblem);
-    titleContent = primaryCard.notes;
     hintContent = isContext
       ? `★ Standard textbook formula (Click to explore ${cards.length} forms)`
       : `Click to explore all ${cards.length} forms`;
@@ -909,7 +917,11 @@ function openCarousel(baseVarKey) {
   document.getElementById("view-problem").classList.remove("active");
   document.getElementById("view-carousel").classList.add("active");
 
-  document.getElementById("c-var-title").textContent = meta.name;
+  const currentAlias = (typeof getVarName === "function" && activeProblem)
+    ? getVarName(activeProblem.S, baseVarKey)
+    : meta.name;
+
+  document.getElementById("c-var-title").textContent = currentAlias !== meta.name ? `${currentAlias} (${meta.name})` : meta.name;
   document.getElementById("c-unit").textContent = meta.unit ? `Unit: ${meta.unit}` : "";
 
   renderCarouselCard();
