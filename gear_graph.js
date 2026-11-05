@@ -1,5 +1,5 @@
 // ========================================================
-// gear_graph.js — SSOT Knowledge Graph, Visualizer Layout & Solvers
+// gear_graph.js — SSOT Knowledge Graph & Native Unit Solvers
 // ========================================================
 
 function fmt(n, maxDec = 3) {
@@ -30,275 +30,201 @@ function getVarName(S, k) {
 }
 
 // ========================================================
-// 1. VARIABLE DATABASE WITH SPATIAL TOPOLOGY COORDINATES
+// 1. VARIABLE DATABASE & FIELD SYNONYMS / ALIASES
 // ========================================================
 const GEAR_VARS_DB = {
-  // CLUSTER 1: TOOTH PROPORTIONS & PITCH GEOMETRY (Top-Left)
-  "P_d": {
-    name: "Diametral Pitch",
-    aliases: ["Diametral Pitch", "DP"],
-    unit: "teeth/in", baseVar: "P_d", sym: "P_d",
-    x: 180, y: 190, cluster: "pitch_geom"
-  },
-  "P_c": {
-    name: "Circular Pitch",
-    aliases: ["Circular Pitch", "Tooth Spacing on Pitch Circle"],
-    unit: "in", baseVar: "P_c", sym: "P_c",
-    x: 320, y: 160, cluster: "pitch_geom"
-  },
-  "m": {
-    name: "Metric Module",
-    aliases: ["Metric Module", "Module"],
-    unit: "mm", baseVar: "m", sym: "m",
-    x: 180, y: 90, cluster: "pitch_geom"
-  },
-  "a": {
-    name: "Addendum",
-    aliases: ["Addendum", "Radial Height Above Pitch Circle"],
-    unit: "in", baseVar: "a", sym: "a",
-    x: 320, y: 260, cluster: "pitch_geom"
-  },
-  "d": {
-    name: "Dedendum",
-    aliases: ["Dedendum", "Root Depth Below Pitch Circle"],
-    unit: "in", baseVar: "d", sym: "d",
-    x: 180, y: 310, cluster: "pitch_geom"
-  },
-  "c": {
-    name: "Tooth Clearance",
-    aliases: ["Tooth Clearance", "Radial Clearance", "Clearance"],
-    unit: "in", baseVar: "c", sym: "c",
-    x: 320, y: 360, cluster: "pitch_geom"
-  },
-  "h_k": {
-    name: "Working Depth",
-    aliases: ["Working Depth", "Operating Tooth Depth"],
-    unit: "in", baseVar: "h_k", sym: "h_k",
-    x: 440, y: 260, cluster: "pitch_geom"
-  },
-  "h": {
-    name: "Whole Depth",
-    aliases: ["Whole Depth", "Total Tooth Depth"],
-    unit: "in", baseVar: "h", sym: "h",
-    x: 230, y: 430, cluster: "pitch_geom"
-  },
-  "t": {
-    name: "Tooth Thickness",
-    aliases: ["Tooth Thickness", "Circular Tooth Thickness", "Arc Tooth Thickness"],
-    unit: "in", baseVar: "t", sym: "t",
-    x: 440, y: 160, cluster: "pitch_geom"
-  },
-  "B": {
-    name: "Tooth Backlash",
-    aliases: ["Tooth Backlash", "Backlash"],
-    unit: "in", baseVar: "B", sym: "B",
-    x: 70, y: 240, cluster: "pitch_geom"
-  },
-  "p_b": {
-    name: "Base Pitch",
-    aliases: ["Base Pitch", "Normal Base Pitch"],
-    unit: "in", baseVar: "p_b", sym: "p_b",
-    x: 440, y: 360, cluster: "pitch_geom"
-  },
-  "phi": {
-    name: "Pressure Angle",
-    aliases: ["Pressure Angle", "Angle of Obliquity"],
-    unit: "deg", baseVar: "phi", sym: "\\phi",
-    x: 360, y: 460, cluster: "pitch_geom"
-  },
-  "D_b": {
-    name: "Base Circle Diameter",
-    aliases: ["Base Circle Diameter", "Base Diameter"],
-    unit: "in", baseVar: "D_b", sym: "D_b",
-    x: 490, y: 460, cluster: "pitch_geom"
-  },
-
-  // CLUSTER 2: GEAR SIZING, TEETH & CENTER DISTANCE (Top-Center)
   "D_P": {
     name: "Pitch Diameter",
     aliases: ["Pitch Diameter", "Pitch Circle Diameter"],
-    unit: "in", baseVar: "D_P", sym: "D_p",
-    x: 770, y: 100, cluster: "sizing_center"
+    unit: "in", baseVar: "D_P"
   },
   "D_P1": {
     name: "Pinion Pitch Diameter",
     aliases: ["Pinion Pitch Diameter", "Driver Pitch Diameter", "Pinion Diameter"],
-    unit: "in", baseVar: "D_P", sym: "D_1",
-    x: 660, y: 190, cluster: "sizing_center"
+    unit: "in", baseVar: "D_P"
   },
   "D_P2": {
     name: "Gear Pitch Diameter",
     aliases: ["Gear Pitch Diameter", "Driven Pitch Diameter", "Wheel Pitch Diameter"],
-    unit: "in", baseVar: "D_P", sym: "D_2",
-    x: 880, y: 190, cluster: "sizing_center"
+    unit: "in", baseVar: "D_P"
   },
-  "T_1": {
-    name: "Pinion Teeth",
-    aliases: ["Pinion Teeth", "Number of Pinion Teeth", "Driver Teeth"],
-    unit: "teeth", baseVar: "T", sym: "T_1",
-    x: 660, y: 310, cluster: "sizing_center"
+  "P_d": {
+    name: "Diametral Pitch",
+    aliases: ["Diametral Pitch", "DP"],
+    unit: "teeth/in", baseVar: "P_d"
   },
-  "T_2": {
-    name: "Gear Teeth",
-    aliases: ["Gear Teeth", "Number of Gear Teeth", "Driven Teeth"],
-    unit: "teeth", baseVar: "T", sym: "T_2",
-    x: 880, y: 310, cluster: "sizing_center"
-  },
-  "T": {
-    name: "Tooth Count",
-    aliases: ["Tooth Count", "Number of Teeth"],
-    unit: "teeth", baseVar: "T", sym: "T",
-    x: 770, y: 380, cluster: "sizing_center"
+  "P_c": {
+    name: "Circular Pitch",
+    aliases: ["Circular Pitch", "Tooth Spacing on Pitch Circle"],
+    unit: "in", baseVar: "P_c"
   },
   "C": {
     name: "Center Distance",
     aliases: ["Center Distance", "Shaft Center Distance", "Operating Center Distance"],
-    unit: "in", baseVar: "C", sym: "C",
-    x: 770, y: 240, cluster: "sizing_center"
+    unit: "in", baseVar: "C"
   },
-  "D_o": {
-    name: "Outside Blank Diameter",
-    aliases: ["Outside Blank Diameter", "Outside Diameter", "Blank Diameter", "Tip Diameter"],
-    unit: "in", baseVar: "D_o", sym: "D_o",
-    x: 570, y: 120, cluster: "sizing_center"
-  },
-  "C_i": {
-    name: "Center Distance to Idler",
-    aliases: ["Center Distance to Idler", "Idler Center Distance"],
-    unit: "in", baseVar: "C_i", sym: "C_i",
-    x: 970, y: 110, cluster: "sizing_center"
-  },
-
-  // CLUSTER 3: KINEMATICS & SPEEDS (Top-Right)
-  "n": {
-    name: "Rotational Speed",
-    aliases: ["Rotational Speed", "Speed", "RPM"],
-    unit: "rpm", baseVar: "n", sym: "N",
-    x: 1230, y: 90, cluster: "kinematics"
-  },
-  "n_1": {
-    name: "Driver Speed",
-    aliases: ["Driver Speed", "Pinion Speed", "Input Speed"],
-    unit: "rpm", baseVar: "n", sym: "N_1",
-    x: 1150, y: 190, cluster: "kinematics"
-  },
-  "n_2": {
-    name: "Driven Speed",
-    aliases: ["Driven Speed", "Gear Speed", "Output Speed"],
-    unit: "rpm", baseVar: "n", sym: "N_2",
-    x: 1320, y: 190, cluster: "kinematics"
-  },
-  "VR": {
-    name: "Speed Ratio",
-    aliases: ["Speed Ratio", "Velocity Ratio", "Speed Reduction Ratio", "Gear Ratio"],
-    unit: "ratio", baseVar: "VR", sym: "SR",
-    x: 1230, y: 290, cluster: "kinematics"
-  },
-  "V_m": {
-    name: "Pitch Line Velocity",
-    aliases: ["Pitch Line Velocity", "Pitch Line Speed", "Peripheral Speed", "Linear Pitch Velocity"],
-    unit: "ft/min", baseVar: "V_m", sym: "v",
-    x: 980, y: 410, cluster: "kinematics"
-  },
-
-  // CLUSTER 4: FORCES, TORQUE & POWER (Center / Bottom-Left)
   "W_t": {
     name: "Transmitted Load",
     aliases: ["Transmitted Load", "Tangential Load", "Driving Force", "Useful Tooth Force", "Tangential Force"],
-    unit: "lb", baseVar: "W_t", sym: "F_t",
-    x: 770, y: 560, cluster: "forces_torque"
+    unit: "lb", baseVar: "W_t"
   },
   "W_r": {
     name: "Radial Load",
     aliases: ["Radial Load", "Separating Force", "Radial Force", "Radial Thrust Force"],
-    unit: "lb", baseVar: "W_r", sym: "F_r",
-    x: 600, y: 640, cluster: "forces_torque"
+    unit: "lb", baseVar: "W_r"
   },
   "W": {
     name: "Normal Contact Force",
     aliases: ["Normal Contact Force", "Tooth Pressure", "Total Tooth Load", "Resultant Contact Force", "Normal Force"],
-    unit: "lb", baseVar: "W", sym: "F_n",
-    x: 480, y: 730, cluster: "forces_torque"
+    unit: "lb", baseVar: "W"
   },
   "M_t": {
     name: "Shaft Torque",
     aliases: ["Shaft Torque", "Twisting Moment", "Pinion Torque", "Torque", "Torsional Moment"],
-    unit: "lb-in", baseVar: "M_t", sym: "T",
-    x: 930, y: 640, cluster: "forces_torque"
+    unit: "lb-in", baseVar: "M_t"
   },
-  "P": {
-    name: "Transmitted Power",
-    aliases: ["Transmitted Power", "Power Transmitted", "Motor Power", "Delivered Power"],
-    unit: "hp", baseVar: "P", sym: "P",
-    x: 1100, y: 560, cluster: "forces_torque"
+  "V_m": {
+    name: "Pitch Line Velocity",
+    aliases: ["Pitch Line Velocity", "Pitch Line Speed", "Peripheral Speed", "Linear Pitch Velocity"],
+    unit: "ft/min", baseVar: "V_m"
   },
-
-  // CLUSTER 5: STRESSES & BUCKINGHAM DYNAMIC RATING (Bottom-Right)
+  "a": {
+    name: "Addendum",
+    aliases: ["Addendum", "Radial Height Above Pitch Circle"],
+    unit: "in", baseVar: "a"
+  },
+  "d": {
+    name: "Dedendum",
+    aliases: ["Dedendum", "Root Depth Below Pitch Circle"],
+    unit: "in", baseVar: "d"
+  },
+  "c": {
+    name: "Tooth Clearance",
+    aliases: ["Tooth Clearance", "Radial Clearance", "Clearance"],
+    unit: "in", baseVar: "c"
+  },
+  "D_o": {
+    name: "Outside Blank Diameter",
+    aliases: ["Outside Blank Diameter", "Outside Diameter", "Blank Diameter", "Tip Diameter"],
+    unit: "in", baseVar: "D_o"
+  },
+  "D_b": {
+    name: "Base Circle Diameter",
+    aliases: ["Base Circle Diameter", "Base Diameter"],
+    unit: "in", baseVar: "D_b"
+  },
   "s": {
     name: "Bending Stress",
     aliases: ["Bending Stress", "Lewis Bending Stress", "Induced Root Stress", "Tooth Bending Stress"],
-    unit: "psi", baseVar: "s", sym: "s",
-    x: 680, y: 880, cluster: "strength_dynamic"
+    unit: "psi", baseVar: "s"
   },
   "b": {
     name: "Face Width",
     aliases: ["Face Width", "Tooth Width"],
-    unit: "in", baseVar: "b", sym: "b",
-    x: 840, y: 850, cluster: "strength_dynamic"
+    unit: "in", baseVar: "b"
+  },
+  "T": {
+    name: "Tooth Count",
+    aliases: ["Tooth Count", "Number of Teeth"],
+    unit: "teeth", baseVar: "T"
+  },
+  "T_1": {
+    name: "Pinion Teeth",
+    aliases: ["Pinion Teeth", "Number of Pinion Teeth", "Driver Teeth"],
+    unit: "teeth", baseVar: "T"
+  },
+  "T_2": {
+    name: "Gear Teeth",
+    aliases: ["Gear Teeth", "Number of Gear Teeth", "Driven Teeth"],
+    unit: "teeth", baseVar: "T"
+  },
+  "n": {
+    name: "Rotational Speed",
+    aliases: ["Rotational Speed", "Speed", "RPM"],
+    unit: "rpm", baseVar: "n"
+  },
+  "n_1": {
+    name: "Driver Speed",
+    aliases: ["Driver Speed", "Pinion Speed", "Input Speed"],
+    unit: "rpm", baseVar: "n"
+  },
+  "n_2": {
+    name: "Driven Speed",
+    aliases: ["Driven Speed", "Gear Speed", "Output Speed"],
+    unit: "rpm", baseVar: "n"
+  },
+  "VR": {
+    name: "Speed Ratio",
+    aliases: ["Speed Ratio", "Velocity Ratio", "Speed Reduction Ratio", "Gear Ratio"],
+    unit: "ratio", baseVar: "VR"
+  },
+  "P": {
+    name: "Transmitted Power",
+    aliases: ["Transmitted Power", "Power Transmitted", "Motor Power", "Delivered Power"],
+    unit: "hp", baseVar: "P"
+  },
+  "phi": {
+    name: "Pressure Angle",
+    aliases: ["Pressure Angle", "Angle of Obliquity"],
+    unit: "deg", baseVar: "phi"
   },
   "Y": {
     name: "Lewis Form Factor",
     aliases: ["Lewis Form Factor", "Tooth Form Factor"],
-    unit: "dimless", baseVar: "Y", sym: "Y",
-    x: 540, y: 880, cluster: "strength_dynamic"
+    unit: "dimless", baseVar: "Y"
+  },
+  "t": {
+    name: "Tooth Thickness",
+    aliases: ["Tooth Thickness", "Circular Tooth Thickness", "Arc Tooth Thickness"],
+    unit: "in", baseVar: "t"
+  },
+  "h": {
+    name: "Whole Depth",
+    aliases: ["Whole Depth", "Total Tooth Depth"],
+    unit: "in", baseVar: "h"
   },
   "F_D": {
     name: "Dynamic Tooth Load",
     aliases: ["Dynamic Tooth Load", "Maximum Dynamic Load", "Buckingham Dynamic Load"],
-    unit: "lb", baseVar: "F_D", sym: "F_D",
-    x: 980, y: 880, cluster: "strength_dynamic"
+    unit: "lb", baseVar: "F_D"
   },
   "C_d": {
     name: "Dynamic Deformation Factor",
     aliases: ["Dynamic Deformation Factor", "Deformation Factor", "Dynamic Factor C"],
-    unit: "lb/in", baseVar: "C_d", sym: "C_d",
-    x: 1130, y: 880, cluster: "strength_dynamic"
+    unit: "lb/in", baseVar: "C_d"
+  },
+  "h_k": {
+    name: "Working Depth",
+    aliases: ["Working Depth", "Operating Tooth Depth"],
+    unit: "in", baseVar: "h_k"
+  },
+  "B": {
+    name: "Tooth Backlash",
+    aliases: ["Tooth Backlash", "Backlash"],
+    unit: "in", baseVar: "B"
+  },
+  "p_b": {
+    name: "Base Pitch",
+    aliases: ["Base Pitch", "Normal Base Pitch"],
+    unit: "in", baseVar: "p_b"
+  },
+  "m": {
+    name: "Metric Module",
+    aliases: ["Metric Module", "Module"],
+    unit: "mm", baseVar: "m"
+  },
+  "C_i": {
+    name: "Center Distance to Idler",
+    aliases: ["Center Distance to Idler", "Idler Center Distance"],
+    unit: "in", baseVar: "C_i"
   }
 };
-
-// Visualizer Cluster Envelopes for Background Rendering
-const GRAPH_CLUSTERS = [
-  { id: "pitch_geom",       label: "Tooth Proportions & Pitch Geometry", x: 40,  y: 40,  w: 480, h: 480 },
-  { id: "sizing_center",     label: "Gear Sizing & Center Distance",      x: 540, y: 40,  w: 480, h: 420 },
-  { id: "kinematics",        label: "Kinematics & Speeds",                x: 1040, y: 40, w: 360, h: 360 },
-  { id: "forces_torque",     label: "Forces, Torque & Power Hub",         x: 430, y: 490, w: 730, h: 290 },
-  { id: "strength_dynamic",  label: "Lewis Bending Stress & Buckingham Rating", x: 480, y: 790, w: 710, h: 170 }
-];
 
 const dbUnit = k => (GEAR_VARS_DB[k] || {}).unit || "dimless";
 const unitOf = (S, k) => (S && S._u && S._u[k]) || dbUnit(k);
 
-// Extract Unique Visualizer Edges Across Equations
-function getGraphEdges() {
-  const edgeMap = new Map();
-  GEAR_RELATION_GRAPH.forEach(eq => {
-    const nodes = eq.nodes;
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const u = nodes[i], v = nodes[j];
-        if (!GEAR_VARS_DB[u] || !GEAR_VARS_DB[v]) continue;
-        const key = u < v ? `${u}--${v}` : `${v}--${u}`;
-        if (!edgeMap.has(key)) {
-          edgeMap.set(key, { u, v, eqId: eq.id });
-        }
-      }
-    }
-  });
-  return Array.from(edgeMap.values());
-}
-
 // ========================================================
-// 2. KNOWLEDGE GRAPH WITH BASE FORMULAS & TARGET LABELS
+// 2. KNOWLEDGE GRAPH WITH BASE FORMULAS & DYNAMIC ALIASES
 // ========================================================
 const GEAR_RELATION_GRAPH = [
   // 1. Buckingham Dynamic Load
@@ -1295,7 +1221,7 @@ const GEAR_RELATION_GRAPH = [
         return {
           target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u),
           text: `Tangential load resolved from contact normal load ($F_t = F_n \\cos\\phi$):`,
-          eq: `F_t = F_n \\cos(${fmt(S.phi, 1)}°) = ${fmt(S.W_t, 0)} \\times \\cos(${fmt(S.phi, 1)}°) = \\mathbf{${fmt(S.W_t, 0)}\\text{ ${u}}}`,
+          eq: `F_t = F_n \\cos(${fmt(S.phi, 1)}°) = ${fmt(S.W, 0)} \\times \\cos(${fmt(S.phi, 1)}°) = \\mathbf{${fmt(S.W_t, 0)}\\text{ ${u}}}`,
           val: S.W_t
         };
       }
@@ -1303,7 +1229,7 @@ const GEAR_RELATION_GRAPH = [
         return {
           target: targetLabel(getVarName(S, "phi"), "{{\\phi|phi}}", "deg"),
           text: "Pressure angle from contact normal and drive force:",
-          eq: `\\phi = \\cos^{-1}\\left(\\frac{F_t}{F_n}\\right) = \\cos^{-1}\\left(\\frac{${fmt(S.W_t, 0)}}{${fmt(S.W, 0)}}\\right) = \\mathbf{${fmt(S.phi, 1)}°}`,
+          eq: `\\phi = \\cos^{-1}\\left(\\frac{F_t}{F_n}\\right) = \\cos^{-1}\\left(\\frac{${fmt(S.W_t, 0)}}{${fmt(S.W_t, 0)}}\\right) = \\mathbf{${fmt(S.phi, 1)}°}`,
           val: S.phi
         };
       }
@@ -1662,7 +1588,7 @@ const GEAR_RELATION_GRAPH = [
   }
 ];
 
-// Dual-Mode Carousel Slide Query
+// Context Carousel Query
 function getGraphCardsForVariable(rawVarKey, activeProblem = null) {
   const familyMap = {
     "T":   ["T", "T_1", "T_2"],
@@ -1688,44 +1614,57 @@ function getGraphCardsForVariable(rawVarKey, activeProblem = null) {
     lookupKeys.push(meta.baseVar);
   }
 
-  const slides = [];
-  const visitedEqIds = new Set();
+  const cards = [];
+  const visitedFormulas = new Set();
 
   GEAR_RELATION_GRAPH.forEach(eq => {
     const involvesVar = eq.nodes.some(n => lookupKeys.includes(n));
-    if (!involvesVar || visitedEqIds.has(eq.id)) return;
-    visitedEqIds.add(eq.id);
+    if (!involvesVar) return;
+
+    if (eq.baseFormula && !visitedFormulas.has(eq.baseFormula)) {
+      visitedFormulas.add(eq.baseFormula);
+      cards.push({
+        eqId: eq.id,
+        isBase: true,
+        targetVar: rawVarKey,
+        formula: eq.baseFormula,
+        notes: `${eq.name} (Canonical Equation)`,
+        vars: eq.nodes.filter(n => n !== rawVarKey),
+        usedInProblem: false
+      });
+    }
 
     const matchKey = lookupKeys.find(k => eq.forms && eq.forms[k]);
-    const isolatedForm = (matchKey && eq.forms[matchKey]) ? eq.forms[matchKey].formula : eq.baseFormula;
-    const notes = (matchKey && eq.forms[matchKey]) ? eq.forms[matchKey].notes : eq.name;
-    const otherVars = eq.nodes.filter(n => n !== rawVarKey);
-
-    slides.push({
-      eqId: eq.id,
-      name: eq.name,
-      targetVar: rawVarKey,
-      canonicalFormula: eq.baseFormula,
-      isolatedFormula: isolatedForm,
-      notes: `${eq.name}: ${notes}`,
-      vars: otherVars,
-      usedInProblem: false
-    });
+    if (matchKey && eq.forms[matchKey]) {
+      const form = eq.forms[matchKey];
+      if (!visitedFormulas.has(form.formula)) {
+        visitedFormulas.add(form.formula);
+        cards.push({
+          eqId: eq.id,
+          isBase: false,
+          targetVar: matchKey,
+          formula: form.formula,
+          notes: `${eq.name}: ${form.notes}`,
+          vars: eq.nodes.filter(n => n !== matchKey),
+          usedInProblem: false
+        });
+      }
+    }
   });
 
   if (activeProblem && activeProblem.solution) {
     const directStep = activeProblem.solution.find(s => lookupKeys.includes(s.targetVar));
     if (directStep) {
-      const idx = slides.findIndex(c => c.eqId === directStep.eqId);
+      const idx = cards.findIndex(c => c.eqId === directStep.eqId && c.isBase);
       if (idx >= 0) {
-        slides[idx].usedInProblem = true;
-        const [targetSlide] = slides.splice(idx, 1);
-        slides.unshift(targetSlide);
+        cards[idx].usedInProblem = true;
+        const [targetCard] = cards.splice(idx, 1);
+        cards.unshift(targetCard);
       }
     }
   }
 
-  return slides;
+  return cards;
 }
 
 // ========================================================
