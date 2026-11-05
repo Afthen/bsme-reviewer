@@ -91,14 +91,17 @@ function solveProblemOnGraph(givensArray, S, relationGraph = null) {
 
           const newStepIndex = solutionSteps.length;
           solutionSteps.push({
+            stepIdx: newStepIndex,
             target: solved.target,
             text: solved.text,
             equation: solved.eq,
             targetVar,
             eqId: eq.id,
+            nodes: eq.nodes,
             expectedVal: solved.val,
             parentIndices: parentStepIndices,
-            ancestorIndices: Array.from(ancestorSet)
+            ancestorIndices: Array.from(ancestorSet),
+            isFaded: false
           });
 
           producedBy[targetVar] = newStepIndex;
@@ -197,55 +200,101 @@ function getGraphCardsForVariable(rawVarKey, activeProblem = null, relationGraph
 // ========================================================
 // COMPOUND LEAPFROG DERIVATION BUILDER
 // ========================================================
+/**
+ * Assembles a multi-step algebraic substitution chain when intermediate
+ * scaffolding steps have been faded due to high student mastery.
+ */
 function buildCompoundDerivation(step, S, allSteps) {
   if (!S || !step || !step.parentIndices || step.parentIndices.length === 0) return null;
 
-  // If topic has custom derivations registered, delegate first
+  // Topic-level override hook
   if (window.CURRENT_TOPIC && typeof window.CURRENT_TOPIC.buildCompoundDerivation === "function") {
     const customResult = window.CURRENT_TOPIC.buildCompoundDerivation(step, S, allSteps);
     if (customResult) return customResult;
   }
 
-  const hasBypassedAncestor = step.parentIndices.some(pIdx => {
-    const parentStep = allSteps[pIdx];
-    return parentStep && parentStep.isFaded;
-  });
-
-  if (!hasBypassedAncestor) return null;
+  // Check if any ancestor step was faded
+  const hasFadedAncestor = (step.ancestorIndices || []).some(aIdx => allSteps[aIdx] && allSteps[aIdx].isFaded);
+  if (!hasFadedAncestor) return null;
 
   const t = step.targetVar;
+  const isSI = S.sys === "SI" || unitOf(S, "V_m") === "m/s" || unitOf(S, "D_P1") === "mm";
 
-  if (t === "P" && step.eqId === "eq_wt_power_vel") {
-    const derivationBlock = `\\begin{alignedat}{2}
-W_t &= \\frac{33000 P}{V_m} \\\\
-W_t &= \\frac{33000 P}{\\left(\\dfrac{\\pi D_{P1} n_1}{12}\\right)}
-    &&= \\frac{12(33000) P}{\\pi D_{P1} n_1} \\\\
-    &&\\mathllap{\\frac{W_r}{\\tan\\phi}}
-    &= \\frac{12(33000) P}{\\pi D_{P1} n_1}
-\\end{alignedat}`;
-    const finalBlock = `P = \\frac{W_r \\pi D_{P1} n_1}{12(33000) \\tan(${fmt(S.phi, 1)}°)} = \\frac{(${fmt(S.W_r, 0)})\\pi(${fmt(S.D_P1, 3)})(${fmt(S.n_1, 0)})}{12(33000)\\tan(${fmt(S.phi, 1)}°)} = \\mathbf{${fmt(step.expectedVal, 2)}\\text{ hp}}`;
-    return { type: "alignedat_dual", derivationBlock, finalBlock };
+  // CASE 1: Pinion Teeth (T_1) from Pitch Velocity, Diameter, and Driven Speed
+  if (t === "T_1" && step.eqId === "eq_vr_teeth") {
+    const vrStep = allSteps.find(s => s.targetVar === "VR" && s.isFaded);
+    const n1Step = allSteps.find(s => s.targetVar === "n_1" && s.isFaded);
+
+    if (vrStep && n1Step) {
+      // 3-step leapfrog: v + D_1 -> n_1, n_1 + n_2 -> SR, SR + T_2 -> T_1
+      const derivationBlock = isSI
+        ? `\\begin{aligned}
+T_1 &= \\frac{T_2}{SR} = \\frac{T_2}{\\left(\\dfrac{N_1}{N_2}\\right)} = \\frac{T_2 \\cdot N_2}{N_1} \\\\[6pt]
+    &= \\frac{T_2 \\cdot N_2}{\\left(\\dfrac{60000 v}{\\pi D_1}\\right)} = \\frac{\\pi D_1 N_2 T_2}{60000 v}
+\\end{aligned}`
+        : `\\begin{aligned}
+T_1 &= \\frac{T_2}{SR} = \\frac{T_2}{\\left(\\dfrac{N_1}{N_2}\\right)} = \\frac{T_2 \\cdot N_2}{N_1} \\\\[6pt]
+    &= \\frac{T_2 \\cdot N_2}{\\left(\\dfrac{12 v}{\\pi D_1}\\right)} = \\frac{\\pi D_1 N_2 T_2}{12 v}
+\\end{aligned}`;
+
+      const finalBlock = isSI
+        ? `T_1 = \\frac{\\pi (${fmt(S.D_P1, 1)}) (${fmt(S.n_2, 1)}) (${fmt(S.T_2, 0)})}{60000 (${fmt(S.V_m, 2)})} = \\mathbf{${fmt(step.expectedVal, 0)}\\text{ teeth}}`
+        : `T_1 = \\frac{\\pi (${fmt(S.D_P1, 3)}) (${fmt(S.n_2, 1)}) (${fmt(S.T_2, 0)})}{12 (${fmt(S.V_m, 1)})} = \\mathbf{${fmt(step.expectedVal, 0)}\\text{ teeth}}`;
+
+      return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Velocity, Speed Ratio, and Tooth Balance" };
+    } else if (vrStep) {
+      // 2-step leapfrog: n_1 + n_2 -> SR, SR + T_2 -> T_1
+      const derivationBlock = `\\begin{aligned}
+T_1 &= \\frac{T_2}{SR} = \\frac{T_2}{\\left(\\dfrac{N_1}{N_2}\\right)} = \\frac{T_2 \\cdot N_2}{N_1}
+\\end{aligned}`;
+      const finalBlock = `T_1 = \\frac{(${fmt(S.T_2, 0)}) (${fmt(S.n_2, 1)})}{${fmt(S.n_1, 0)}} = \\mathbf{${fmt(step.expectedVal, 0)}\\text{ teeth}}`;
+      return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Speed Ratio definition" };
+    }
   }
 
+  // CASE 2: Power (P) from Radial Force, Diameter, and RPM
+  if (t === "P" && step.eqId === "eq_wt_power_vel") {
+    const derivationBlock = `\\begin{aligned}
+W_t &= \\frac{33000 P}{V_m} = \\frac{33000 P}{\\left(\\dfrac{\\pi D_{1} n_1}{12}\\right)} = \\frac{12(33000) P}{\\pi D_{1} n_1} \\\\[6pt]
+\\frac{F_r}{\\tan\\phi} &= \\frac{12(33000) P}{\\pi D_{1} n_1} \\implies P = \\frac{F_r \\pi D_{1} n_1}{12(33000) \\tan\\phi}
+\\end{aligned}`;
+    const finalBlock = `P = \\frac{(${fmt(S.W_r, 0)})\\pi(${fmt(S.D_P1, 3)})(${fmt(S.n_1, 0)})}{12(33000)\\tan(${fmt(S.phi, 1)}°)} = \\mathbf{${fmt(step.expectedVal, 2)}\\text{ hp}}`;
+    return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Pitch Velocity and Pressure Angle Force Vectors" };
+  }
+
+  // CASE 3: Blank Diameter (D_o) from Tooth Count and Diametral Pitch
   if (t === "D_o" && step.eqId === "eq_do") {
     const derivationBlock = `\\begin{aligned}
-D_o &= D_{P1} + 2a \\\\
-D_o &= \\frac{T_1}{P_d} + 2\\left(\\frac{1}{P_d}\\right) = \\frac{T_1 + 2}{P_d}
+D_o &= D_{1} + 2a = \\frac{T_1}{P_d} + 2\\left(\\frac{1}{P_d}\\right) = \\frac{T_1 + 2}{P_d}
 \\end{aligned}`;
     const finalBlock = `D_o = \\frac{${fmt(S.T_1, 0)} + 2}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(step.expectedVal, 3)}\\text{ in}}`;
-    return { type: "aligned_dual", derivationBlock, finalBlock };
+    return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Pitch Diameter and Addendum proportions" };
   }
 
+  // CASE 4: Pitch Line Velocity (V_m) from Teeth, Diametral Pitch, and RPM
   if (t === "V_m" && step.eqId === "eq_pitch_vel") {
     const derivationBlock = `\\begin{aligned}
-V_m &= \\frac{\\pi D_{P1} n_1}{12} \\\\
-V_m &= \\frac{\\pi \\left(\\dfrac{T_1}{P_d}\\right) n_1}{12} = \\frac{\\pi T_1 n_1}{12 P_d}
+V_m &= \\frac{\\pi D_{1} n_1}{12} = \\frac{\\pi \\left(\\dfrac{T_1}{P_d}\\right) n_1}{12} = \\frac{\\pi T_1 n_1}{12 P_d}
 \\end{aligned}`;
     const finalBlock = `V_m = \\frac{\\pi(${fmt(S.T_1, 0)})(${fmt(S.n_1, 0)})}{12(${fmt(S.P_d, 2)})} = \\mathbf{${fmt(step.expectedVal, 1)}\\text{ ft/min}}`;
-    return { type: "aligned_dual", derivationBlock, finalBlock };
+    return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Pitch Diameter definition" };
   }
 
-  return null;
+  // Generic Fallback Derivation Generator
+  const fadedNames = (step.ancestorIndices || [])
+    .map(i => allSteps[i])
+    .filter(s => s && s.isFaded)
+    .map(s => getVarName(S, s.targetVar));
+
+  return {
+    type: "compound_leapfrog",
+    derivationBlock: `\\begin{aligned}
+\\text{[Synthesized Step]} &\\quad \\text{Direct resolution substituting mastered relations (${fadedNames.join(", ")}):} \\\\[4pt]
+${step.equation}
+\\end{aligned}`,
+    finalBlock: "",
+    note: `Intermediate steps for ${fadedNames.join(", ")} were synthesized into this derivation based on your mastery profile.`
+  };
 }
 
 // ========================================================
