@@ -24,7 +24,7 @@ function targetLabel(name, token, unit) {
 }
 
 // ========================================================
-// 1. VARIABLE DATABASE (Clean Names)
+// 1. VARIABLE DATABASE
 // ========================================================
 const GEAR_VARS_DB = {
   "D_P":  { name: "Pitch Diameter", unit: "in", baseVar: "D_P" },
@@ -70,7 +70,7 @@ const dbUnit = k => (GEAR_VARS_DB[k] || {}).unit || "dimless";
 const unitOf = (S, k) => (S && S._u && S._u[k]) || dbUnit(k);
 
 // ========================================================
-// 2. KNOWLEDGE GRAPH WITH BASE FORMULAS & TARGET LABELS
+// 2. KNOWLEDGE GRAPH WITH EXPLICIT UNITS
 // ========================================================
 const GEAR_RELATION_GRAPH = [
   // 1. Buckingham Dynamic Load
@@ -151,7 +151,7 @@ const GEAR_RELATION_GRAPH = [
     solve: (target, S) => {
       const factor = S.phi === 14.5 ? 1.157 : 1.25;
       const u = unitOf(S, "d");
-      const isSI = S.sys === "SI" || unitOf(S, "d") === "mm";
+      const isSI = S.sys === "SI" || u === "mm";
       if (target === "d") {
         return {
           target: targetLabel("Dedendum", "{{d}}", u),
@@ -178,7 +178,7 @@ const GEAR_RELATION_GRAPH = [
     },
     solve: (target, S) => {
       const u = unitOf(S, "B");
-      const isSI = S.sys === "SI" || unitOf(S, "B") === "mm";
+      const isSI = S.sys === "SI" || u === "mm";
       if (target === "B") {
         return {
           target: targetLabel("Tooth Backlash", "{{B}}", u),
@@ -1349,8 +1349,12 @@ const GEAR_RELATION_GRAPH = [
       if (target === "P_d") {
         return {
           target: targetLabel("Diametral Pitch", "{{P_d}}", "teeth/in"),
-          text: "Diametral pitch from Lewis stress balance:",
-          eq: `P_d = \\frac{s \\cdot b \\cdot Y}{F_t} = \\frac{${fmt(S.s, 0)} \\times ${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
+          text: isSI
+            ? `Diametral pitch from SI Lewis balance ($P_d = \\frac{25.4}{m} = \\frac{25.4 F_t}{s \\cdot b \\cdot Y}$):`
+            : `Diametral pitch from Lewis stress balance ($P_d = \\frac{s \\cdot b \\cdot Y}{F_t}$):`,
+          eq: isSI
+            ? `P_d = \\frac{25.4 \\cdot s \\cdot b \\cdot Y}{F_t} = \\frac{25.4(${fmt(S.s, 0)})(${fmt(S.b, 1)})(${fmt(S.Y, 3)})}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            : `P_d = \\frac{s \\cdot b \\cdot Y}{F_t} = \\frac{${fmt(S.s, 0)} \\times ${fmt(S.b, 2)} \\times ${fmt(S.Y, 3)}}{${fmt(S.W_t, 0)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
       }
@@ -1482,7 +1486,7 @@ function getGraphCardsForVariable(rawVarKey, activeProblem = null) {
           targetVar: matchKey,
           formula: form.formula,
           notes: `${eq.name}: ${form.notes}`,
-          vars: eq.nodes.filter(n => n !== matchKey),
+          vars: eq.nodes.filter(n => n !== rawVarKey),
           usedInProblem: false
         });
       }
