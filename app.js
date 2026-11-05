@@ -1,5 +1,5 @@
 // ========================================================
-// app.js — Spaced Repetition Engine & UI Controller
+// app.js — Spaced Repetition Engine, Graph Visualizer & UI
 // ========================================================
 
 window.onerror = function (msg, url, line) {
@@ -30,10 +30,22 @@ let activeProblem = null;
 let currentVarKey = null;
 let cardIdx = 0;
 let activeCarouselCards = [];
+let currentFormulaMode = "canonical"; // "canonical" | "isolated"
 let currentDirHandle = null;
 let lastSeedKey = null;
 
 const INTEGER_VARS = ["T", "T_1", "T_2"];
+
+// Graph Visualizer Viewport State
+let graphView = {
+  minX: 0,
+  minY: 0,
+  width: 1520,
+  height: 1060,
+  isDragging: false,
+  startX: 0,
+  startY: 0
+};
 
 function loadStoredMastery() {
   const saved = localStorage.getItem("spur_gear_mastery_clean");
@@ -53,7 +65,7 @@ function loadStoredCounter() {
 
 function saveMastery() {
   const exportPayload = {
-    version: "4.2",
+    version: "4.3",
     updatedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -77,7 +89,7 @@ async function writeMasteryToFolder(payload) {
 
 function exportMasteryFile() {
   const payload = {
-    version: "4.2",
+    version: "4.3",
     exportedAt: new Date().toISOString(),
     globalProblemCount: globalProblemCounter,
     history: edgeHistory
@@ -415,6 +427,7 @@ function generateGraphProblem() {
 // ========================================================
 window.addEventListener("DOMContentLoaded", async () => {
   renderLeitnerSidebar();
+  initGraphVisualizerEvents();
 
   const saved = loadStoredActiveProblem();
   if (saved) {
@@ -446,7 +459,7 @@ async function openFolderPicker() {
         globalProblemCounter = data.globalProblemCount || globalProblemCounter;
         saveMastery();
       } catch (e) {
-        writeMasteryToFolder({ version: "4.2", globalProblemCount: globalProblemCounter, history: edgeHistory });
+        writeMasteryToFolder({ version: "4.3", globalProblemCount: globalProblemCounter, history: edgeHistory });
       }
       renderLeitnerSidebar();
     } catch (e) {
@@ -798,7 +811,7 @@ function toggleAllSolutions() {
 }
 
 // ========================================================
-// 5. MATH, TOOLTIP & CAROUSEL
+// 5. MATH & TOOLTIP RENDERING
 // ========================================================
 function renderTextWithMath(container, rawText) {
   if (!container) return;
@@ -875,12 +888,12 @@ function showTooltip(e, baseVarKey, displayVar) {
   }
 
   if (cards.length > 0) {
-    const primaryCard = cards.find(c => c.isBase) || cards[0];
-    mathContent = primaryCard.formula;
+    mathContent = cards[0].canonicalFormula;
     const isContext = cards.some(c => c.usedInProblem);
+    titleContent = cards[0].notes;
     hintContent = isContext
-      ? `★ Standard textbook formula (Click to explore ${cards.length} forms)`
-      : `Click to explore all ${cards.length} forms`;
+      ? `★ Standard textbook formula (Click to open visualizer)`
+      : `Click to explore in graph visualizer`;
   } else {
     mathContent = displayVar;
     hintContent = meta.unit ? `Unit: ${meta.unit}` : "Variable";
@@ -906,41 +919,310 @@ function hideTooltip() {
   if (tooltip) tooltip.style.display = "none";
 }
 
-function openCarousel(baseVarKey) {
-  const meta = GEAR_VARS_DB[baseVarKey] || { name: baseVarKey, unit: "" };
-  activeCarouselCards = getGraphCardsForVariable(baseVarKey, activeProblem);
-  if (activeCarouselCards.length === 0) return;
+// ========================================================
+// 6. SVG GRAPH VISUALIZER & DUAL-LAYER VIEWPORT CONTROLLER
+// ========================================================
+function renderGraphVisualizer() {
+  const svg = document.getElementById("graph-svg");
+  if (!svg) return;
+  svg.innerHTML = "";
 
-  currentVarKey = baseVarKey;
+  // 1. Draw Cluster Background Regions
+  GRAPH_CLUSTERS.forEach(cl => {
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("class", "graph-cluster-bg");
+    rect.setAttribute("x", cl.x);
+    rect.setAttribute("y", cl.y);
+    rect.setAttribute("width", cl.w);
+    rect.setAttribute("height", cl.h);
+    svg.appendChild(rect);
+
+    const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    txt.setAttribute("class", "graph-cluster-label");
+    txt.setAttribute("x", cl.x + 16);
+    txt.setAttribute("y", cl.y + 24);
+    txt.textContent = cl.label;
+    svg.appendChild(txt);
+  });
+
+  // 2. Draw Edges
+  const edges = (typeof getGraphEdges === "function") ? getGraphEdges() : [];
+  edges.forEach(e => {
+    const uMeta = GEAR_VARS_DB[e.u];
+    const vMeta = GEAR_VARS_DB[e.v];
+    if (!uMeta || !vMeta) return;
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("class", "graph-edge");
+    line.setAttribute("id", `edge-${e.u}-${e.v}`);
+    line.setAttribute("x1", uMeta.x);
+    line.setAttribute("y1", uMeta.y);
+    line.setAttribute("x2", vMeta.x);
+    line.setAttribute("y2", vMeta.y);
+    svg.appendChild(line);
+  });
+
+  // 3. Draw Nodes
+  Object.keys(GEAR_VARS_DB).forEach(varKey => {
+    const meta = GEAR_VARS_DB[varKey];
+    if (meta.x === undefined || meta.y === undefined) return;
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "graph-node");
+    g.setAttribute("id", `node-${varKey}`);
+    g.setAttribute("transform", `translate(${meta.x}, ${meta.y})`);
+
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("r", 20);
+    g.appendChild(circle);
+
+    const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    let displaySym = meta.sym || varKey;
+    if (displaySym === "\\phi") displaySym = "φ";
+    else displaySym = displaySym.replace(/_([0-9a-zA-Z]+)/g, "$1");
+    txt.textContent = displaySym;
+    g.appendChild(txt);
+
+    g.onclick = evt => {
+      evt.stopPropagation();
+      selectGraphNode(varKey);
+    };
+
+    svg.appendChild(g);
+  });
+
+  updateSvgViewBox();
+}
+
+function updateSvgViewBox() {
+  const svg = document.getElementById("graph-svg");
+  if (!svg) return;
+  svg.setAttribute("viewBox", `${graphView.minX} ${graphView.minY} ${graphView.width} ${graphView.height}`);
+}
+
+function centerGraphOnNode(varKey, animated = true) {
+  const meta = GEAR_VARS_DB[varKey];
+  if (!meta || meta.x === undefined || meta.y === undefined) return;
+
+  const targetW = 860;
+  const targetH = 620;
+  // Position target node in the upper 40% of the screen so it clears the bottom docked card
+  const targetMinX = meta.x - targetW / 2;
+  const targetMinY = meta.y - targetH * 0.40;
+
+  if (!animated) {
+    graphView.minX = targetMinX;
+    graphView.minY = targetMinY;
+    graphView.width = targetW;
+    graphView.height = targetH;
+    updateSvgViewBox();
+    return;
+  }
+
+  const startMinX = graphView.minX;
+  const startMinY = graphView.minY;
+  const startW = graphView.width;
+  const startH = graphView.height;
+  const startTime = performance.now();
+  const duration = 300;
+
+  function stepAnim(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(1, elapsed / duration);
+    const ease = 0.5 - Math.cos(progress * Math.PI) / 2; // Ease in-out
+
+    graphView.minX = startMinX + (targetMinX - startMinX) * ease;
+    graphView.minY = startMinY + (targetMinY - startMinY) * ease;
+    graphView.width = startW + (targetW - startW) * ease;
+    graphView.height = startH + (targetH - startH) * ease;
+    updateSvgViewBox();
+
+    if (progress < 1) {
+      requestAnimationFrame(stepAnim);
+    }
+  }
+  requestAnimationFrame(stepAnim);
+}
+
+function recenterActiveNode() {
+  if (currentVarKey) {
+    centerGraphOnNode(currentVarKey, true);
+  } else {
+    graphView = { minX: 0, minY: 0, width: 1520, height: 1060 };
+    updateSvgViewBox();
+  }
+}
+
+function highlightGraphConnections(varKey) {
+  const cards = getGraphCardsForVariable(varKey, activeProblem);
+  const neighborKeys = new Set();
+  cards.forEach(card => (card.vars || []).forEach(v => neighborKeys.add(v)));
+
+  // Reset all
+  document.querySelectorAll(".graph-node").forEach(el => {
+    el.classList.remove("selected", "neighbor", "dimmed");
+  });
+  document.querySelectorAll(".graph-edge").forEach(el => {
+    el.classList.remove("active");
+  });
+
+  // Highlight selected node
+  const selNode = document.getElementById(`node-${varKey}`);
+  if (selNode) selNode.classList.add("selected");
+
+  // Highlight neighbors and dim unrelated
+  Object.keys(GEAR_VARS_DB).forEach(k => {
+    const nodeEl = document.getElementById(`node-${k}`);
+    if (!nodeEl) return;
+    if (k === varKey) return;
+    if (neighborKeys.has(k)) {
+      nodeEl.classList.add("neighbor");
+    } else {
+      nodeEl.classList.add("dimmed");
+    }
+  });
+
+  // Highlight connecting edges
+  neighborKeys.forEach(nKey => {
+    const e1 = document.getElementById(`edge-${varKey}-${nKey}`);
+    const e2 = document.getElementById(`edge-${nKey}-${varKey}`);
+    if (e1) e1.classList.add("active");
+    if (e2) e2.classList.add("active");
+  });
+}
+
+function selectGraphNode(varKey) {
+  currentVarKey = varKey;
   cardIdx = 0;
+  currentFormulaMode = "canonical";
+  updateToggleButtons();
 
-  document.getElementById("view-problem").classList.remove("active");
-  document.getElementById("view-carousel").classList.add("active");
+  const meta = GEAR_VARS_DB[varKey] || { name: varKey, unit: "" };
+  activeCarouselCards = getGraphCardsForVariable(varKey, activeProblem);
 
   const currentAlias = (typeof getVarName === "function" && activeProblem)
-    ? getVarName(activeProblem.S, baseVarKey)
+    ? getVarName(activeProblem.S, varKey)
     : meta.name;
 
   document.getElementById("c-var-title").textContent = currentAlias !== meta.name ? `${currentAlias} (${meta.name})` : meta.name;
   document.getElementById("c-unit").textContent = meta.unit ? `Unit: ${meta.unit}` : "";
 
+  centerGraphOnNode(varKey, true);
+  highlightGraphConnections(varKey);
   renderCarouselCard();
 }
 
-function renderCarouselCard() {
-  const card = activeCarouselCards[cardIdx];
-  const badge = card.usedInProblem ? " ★ Relevant to this Problem" : "";
-  document.getElementById("c-counter").textContent = `${cardIdx + 1} / ${activeCarouselCards.length}${badge}`;
+function initGraphVisualizerEvents() {
+  const viewport = document.getElementById("graph-viewport");
+  if (!viewport) return;
 
-  katex.render(card.formula, document.getElementById("c-formula"), { displayMode: true, throwOnError: false });
+  viewport.addEventListener("pointerdown", e => {
+    // Only drag on viewport background
+    if (e.target.closest(".graph-node")) return;
+    graphView.isDragging = true;
+    graphView.startX = e.clientX;
+    graphView.startY = e.clientY;
+    viewport.setPointerCapture(e.pointerId);
+  });
+
+  viewport.addEventListener("pointermove", e => {
+    if (!graphView.isDragging) return;
+    const dx = e.clientX - graphView.startX;
+    const dy = e.clientY - graphView.startY;
+    graphView.startX = e.clientX;
+    graphView.startY = e.clientY;
+
+    const ratioX = graphView.width / viewport.clientWidth;
+    const ratioY = graphView.height / viewport.clientHeight;
+
+    graphView.minX -= dx * ratioX;
+    graphView.minY -= dy * ratioY;
+    updateSvgViewBox();
+  });
+
+  const stopDrag = e => {
+    if (graphView.isDragging) {
+      graphView.isDragging = false;
+      try { viewport.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  };
+
+  viewport.addEventListener("pointerup", stopDrag);
+  viewport.addEventListener("pointercancel", stopDrag);
+}
+
+// ========================================================
+// 7. CAROUSEL CARD CONTROLLER & TOGGLE SWITCH
+// ========================================================
+function openCarousel(baseVarKey) {
+  document.getElementById("view-problem").classList.remove("active");
+  document.getElementById("view-carousel").classList.add("active");
+
+  renderGraphVisualizer();
+  selectGraphNode(baseVarKey);
+}
+
+function setFormulaViewMode(mode) {
+  currentFormulaMode = mode;
+  updateToggleButtons();
+  renderFormulaContent();
+}
+
+function updateToggleButtons() {
+  const btnCan = document.getElementById("toggle-canonical");
+  const btnIso = document.getElementById("toggle-isolated");
+  if (!btnCan || !btnIso) return;
+
+  if (currentFormulaMode === "canonical") {
+    btnCan.classList.add("active");
+    btnIso.classList.remove("active");
+  } else {
+    btnIso.classList.add("active");
+    btnCan.classList.remove("active");
+  }
+}
+
+function renderFormulaContent() {
+  if (!activeCarouselCards.length) return;
+  const card = activeCarouselCards[cardIdx];
+  const formulaToDisplay = currentFormulaMode === "canonical" ? card.canonicalFormula : card.isolatedFormula;
+
+  const formulaEl = document.getElementById("c-formula");
+  if (formulaEl) {
+    katex.render(formulaToDisplay, formulaEl, { displayMode: true, throwOnError: false });
+  }
+}
+
+function renderCarouselCard() {
+  if (!activeCarouselCards.length) return;
+  const card = activeCarouselCards[cardIdx];
+  const badge = card.usedInProblem ? " ★ Relevant in Problem" : "";
+
+  document.getElementById("c-counter").textContent = `${cardIdx + 1} / ${activeCarouselCards.length}${badge}`;
   document.getElementById("c-notes").textContent = card.notes;
+
+  renderFormulaContent();
 
   const linkContainer = document.getElementById("c-linked-container");
   linkContainer.innerHTML = "";
   (card.vars || []).forEach(vKey => {
     if (GEAR_VARS_DB[vKey]) {
-      const vNode = createInteractiveVarNode(vKey, vKey);
-      linkContainer.appendChild(vNode);
+      const chip = document.createElement("button");
+      chip.className = "btn";
+      chip.style.padding = "0.15rem 0.5rem";
+      chip.style.fontSize = "0.72rem";
+      chip.style.borderColor = "rgba(147, 197, 253, 0.35)";
+
+      let symText = GEAR_VARS_DB[vKey].sym || vKey;
+      if (symText === "\\phi") symText = "φ";
+      else symText = symText.replace(/_([0-9a-zA-Z]+)/g, "$1");
+      chip.textContent = symText;
+
+      chip.onclick = e => {
+        e.stopPropagation();
+        selectGraphNode(vKey);
+      };
+      linkContainer.appendChild(chip);
     }
   });
 
@@ -957,11 +1239,17 @@ function renderCarouselCard() {
 }
 
 function prevCard() {
-  if (cardIdx > 0) { cardIdx--; renderCarouselCard(); }
+  if (cardIdx > 0) {
+    cardIdx--;
+    renderCarouselCard();
+  }
 }
 
 function nextCard() {
-  if (cardIdx < activeCarouselCards.length - 1) { cardIdx++; renderCarouselCard(); }
+  if (cardIdx < activeCarouselCards.length - 1) {
+    cardIdx++;
+    renderCarouselCard();
+  }
 }
 
 function backToProblem() {
