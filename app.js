@@ -86,7 +86,6 @@ function calculateDecayedMastery(eqId) {
   const h = edgeHistory[eqId];
   if (!h || !h.attempts || h.attempts.length === 0) return 0;
 
-  // 1. Harmonic attempt weighting using powers of PHI_INV
   let weightSum = 0;
   let scoreSum = 0;
   const len = h.attempts.length;
@@ -97,7 +96,6 @@ function calculateDecayedMastery(eqId) {
   }
   const baseMastery = weightSum > 0 ? scoreSum / weightSum : 0;
 
-  // 2. Discrete interference decay using e and PHI_INV7
   const currentTick = getGlobalTick();
   const lastTick = h.lastPracticedTick !== undefined ? h.lastPracticedTick : currentTick;
   const deltaTicks = Math.max(0, currentTick - lastTick);
@@ -218,6 +216,10 @@ function renderWeightBars() {
 // ========================================================
 // 4. PROBLEM GENERATION & ADAPTIVE FADING
 // ========================================================
+
+/**
+ * Generates an organic problem statement synchronized with visible scaffolding steps.
+ */
 function generateOrganicStatement(cand, S, visibleDeliverables = null) {
   const parts = [];
   cand.givens.forEach(v => {
@@ -239,8 +241,7 @@ function generateOrganicStatement(cand, S, visibleDeliverables = null) {
     parts.push(`${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${displaySym}$</span> = ${valWithUnit})</span>`);
   });
 
-  // Strict Deliverable Synthesis: If scaffolding is active, announce visible intermediate deliverables.
-  // When intermediate steps are faded, only the final goal appears.
+  // Announce only the active deliverables (faded steps are absorbed algebraically)
   const goalsToAnnounce = (visibleDeliverables && visibleDeliverables.length > 0)
     ? visibleDeliverables
     : [cand.goal];
@@ -298,7 +299,7 @@ function generateGraphProblem() {
   const requiredStepIndices = new Set([goalIdx, ...solSteps[goalIdx].ancestorIndices]);
   const allPathSteps = solSteps.filter((_, idx) => requiredStepIndices.has(idx));
 
-  // Determine fading based strictly on student mastery
+  // Determine which intermediate steps to fade based on student mastery
   allPathSteps.forEach(st => {
     if (st.targetVar === cand.goal) {
       st.isFaded = false; 
@@ -373,7 +374,7 @@ function renderProblemView() {
     chevron.className = "chevron";
     chevron.textContent = "▶";
 
-    // Clean step label — Compound Leapfrog badge permanently removed
+    // Clean step title — Compound Leapfrog badge removed
     const targetSpan = document.createElement("span");
     targetSpan.innerHTML = `Step ${idx + 1}: ${renderStepTargetText(step.target)}`;
 
@@ -429,7 +430,7 @@ function renderProblemView() {
     const mathDiv = document.createElement("div");
     mathDiv.className = "solution-math-display";
 
-    // Build dynamic derivation (canonical formula on top, no hardcoded synthetic notes)
+    // Dynamic derivation: canonical equation on top, automated graph substitution
     const derivation = buildStepDerivation(
       step,
       activeProblem.system,
@@ -566,7 +567,6 @@ function updateToggleVisibility() {
   }
 }
 
-// Ensure the button isn't accidentally wiping out click events. We make it a standard delegate function.
 window.performToggle = function(action) {
   const items = document.querySelectorAll(".solution-item");
   items.forEach((it, idx) => {
@@ -778,9 +778,7 @@ async function openFolderPicker() {
 // 8. INITIALIZATION
 // ========================================================
 window.addEventListener("DOMContentLoaded", () => {
-  // Bind standard collapse/expand all toggles to the global window
-  // in case inline onclick handlers require it to be easily accessible
-  window.toggleAllSolutions = function() {}; // stub to override previous HTML button onclick
+  window.toggleAllSolutions = function() {};
 
   loadMastery();
   generateGraphProblem();
