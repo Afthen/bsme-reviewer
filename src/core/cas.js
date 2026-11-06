@@ -293,10 +293,13 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     }
   }
 
-  // 2. Length Matching (e.g. u_mm -> u_m for velocity, torque, or power)
+  // 2. // Length Matching (e.g. u_mm -> u_m, u_in -> u_mm, or u_mm -> u_in)
   const hasMm = allActiveUnits.some(u => u.hasLength === "u_mm" || u.sym === "u_mm");
+  const hasInch = allActiveUnits.some(u => u.hasLength === "u_in" || u.sym === "u_in");
+
   const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m" || targetUnit === "kW" || targetUnit === "W";
   const targetNeedsInch  = targetInfo.hasLength === "u_in" || targetUnit === "teeth/in";
+  const targetNeedsMm    = targetInfo.hasLength === "u_mm" || targetUnit === "mm";
 
   if (hasMm && targetNeedsMeter) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_mm" && c.to === "u_m");
@@ -309,6 +312,12 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     if (conv) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
+    }
+  } else if (hasInch && targetNeedsMm) {
+    // When dividing by Pd (teeth/in) to compute diameter in mm
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_mm");
+    if (conv) {
+      selectedConversions.push(conv);
     }
   }
 
