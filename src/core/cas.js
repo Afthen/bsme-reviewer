@@ -30,9 +30,6 @@ export const SYMBOL_TO_KEY = Object.freeze({
   "c": "c", "h": "h", "a": "a", "s": "s", "b": "b", "Y": "Y", "C": "C", "P": "P", "phi": "phi", "m": "m", "t": "t"
 });
 
-/**
- * Returns all possible CAS string representations for a given variable key.
- */
 export function getPossibleTokens(varKey) {
   const matches = [];
   for (const [sym, k] of Object.entries(SYMBOL_TO_KEY)) {
@@ -61,7 +58,8 @@ export function casToTex(exprStr, varsDb = {}) {
     let tex = nerdamer(sanitizeExpr(exprStr)).toTeX();
 
     tex = tex.replace(/\bphi\b/g, "\\phi");
-    tex = tex.replace(/\bpi\b/g, "\\pi");
+    // Universal pi match (matches pi even when touching parentheses or symbols)
+    tex = tex.replace(/(?<![a-zA-Z\\])pi(?![a-zA-Z])/g, "\\pi");
 
     tex = tex.replace(/\bhk\b/g, "h_k");
     tex = tex.replace(/\bPd\b/g, "P_d");
@@ -84,6 +82,12 @@ export function casToTex(exprStr, varsDb = {}) {
     tex = tex.replace(/\bn_?2\b/g, "N_2");
     tex = tex.replace(/\b([A-Za-z])(\d+)\b/g, "$1_{$2}");
 
+    // Replace raw atan/acos with clean textbook inverse notation
+    tex = tex.replace(/\\text\{atan\}\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
+    tex = tex.replace(/\\text\{acos\}\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
+    tex = tex.replace(/atan\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
+    tex = tex.replace(/acos\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
+
     // Strip multiplication symbols
     tex = tex.replace(/\\cdot/g, " ");
     tex = tex.replace(/\*/g, " ");
@@ -96,7 +100,7 @@ export function casToTex(exprStr, varsDb = {}) {
 }
 
 // ========================================================
-// 3. CAS OPERATIONS (SIMPLIFY, SUBSTITUTE, EVALUATE)
+// 3. CAS OPERATIONS
 // ========================================================
 
 export function simplifyExpression(exprStr) {
@@ -113,7 +117,12 @@ export function substituteExpression(exprStr, subsObj = {}) {
   try {
     const cleanSubs = {};
     for (const [k, v] of Object.entries(subsObj)) {
+      // Add both the raw key and all possible formula tokens (e.g. M_t and T)
       cleanSubs[toCasToken(k)] = sanitizeExpr(v);
+      const tokens = getPossibleTokens(k);
+      tokens.forEach(tok => {
+        cleanSubs[toCasToken(tok)] = sanitizeExpr(v);
+      });
     }
     return nerdamer(sanitizeExpr(exprStr), cleanSubs).text();
   } catch {
@@ -125,10 +134,6 @@ export function substituteExpression(exprStr, subsObj = {}) {
   }
 }
 
-/**
- * Numerically evaluates an algebraic expression against system values.
- * Injects aliases so tokens like 'v', 'D1', 'n1' resolve to 'V_m', 'D_P1', 'n_1'.
- */
 export function evaluateExpression(exprStr, values = {}) {
   if (typeof nerdamer === "undefined" || !exprStr) return NaN;
   try {
@@ -138,7 +143,6 @@ export function evaluateExpression(exprStr, values = {}) {
         cleanVals[toCasToken(k)] = v;
       }
     }
-    // Also inject formula symbol aliases from SYMBOL_TO_KEY
     for (const [sym, key] of Object.entries(SYMBOL_TO_KEY)) {
       if (values[key] !== undefined && typeof values[key] === "number" && !isNaN(values[key])) {
         cleanVals[toCasToken(sym)] = values[key];
@@ -152,7 +156,7 @@ export function evaluateExpression(exprStr, values = {}) {
 }
 
 // ========================================================
-// 4. DYNAMIC VARIABLE ISOLATION WITH SYMBOL ALIASING
+// 4. DYNAMIC VARIABLE ISOLATION (WITH TRIG INVERSION)
 // ========================================================
 
 export function isolateVariable(eqStr, targetVar, varsDb = {}) {
@@ -160,22 +164,47 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   const rawLhs = parts[0]?.trim() || "";
   const rawRhs = parts[1]?.trim() || "";
 
+  const targetKey = SYMBOL_TO_KEY[targetVar] || targetVar;
+  const targetTex = varsDb[targetKey]?.symbol || targetVar;
+
+  // 1. Intercept Standard Trigonometric Inversions (Prevents Nerdamer half-angle ^2 quadratic bugs)
+  if (targetKey === "phi") {
+    // Fr = Ft * tan(phi) => phi = tan^-1(Fr / Ft)
+    if (rawRhs.includes("tan(phi)") || rawRhs.includes("tan(phi)")) {
+      const coeff = rawRhs.replace(/(\*|\s)?tan\(phi\)/g, "").trim() || "1";
+      const isolatedRhs = `atan((${rawLhs}) / (${coeff}))`;
+      return {
+        targetVar,
+        isolatedRhs,
+        texEquation: `\\phi = \\tan^{-1}\\left(\\frac{${casToTex(rawLhs, varsDb)}}{${casToTex(coeff, varsDb)}}\\right)`
+      };
+    }
+    // Ft = Fn * cos(phi) => phi = cos^-1(Ft / Fn)
+    if (rawRhs.includes("cos(phi)")) {
+      const coeff = rawRhs.replace(/(\*|\s)?cos\(phi\)/g, "").trim() || "1";
+      const isolatedRhs = `acos((${rawLhs}) / (${coeff}))`;
+      return {
+        targetVar,
+        isolatedRhs,
+        texEquation: `\\phi = \\cos^{-1}\\left(\\frac{${casToTex(rawLhs, varsDb)}}{${casToTex(coeff, varsDb)}}\\right)`
+      };
+    }
+  }
+
+  // 2. Standard CAS Algebraic Isolation
   const possibleTokens = getPossibleTokens(targetVar);
   const sanitizedLhs = sanitizeExpr(rawLhs);
   const sanitizedRhs = sanitizeExpr(rawRhs);
   const sanitizedEq = `${sanitizedLhs} = ${sanitizedRhs}`;
 
-  // Find the exact token representation used in this equation
   const tokenInEq = possibleTokens.find(tok => {
     const clean = toCasToken(tok);
     const regex = new RegExp(`\\b${clean}\\b`);
     return regex.test(sanitizedLhs) || regex.test(sanitizedRhs);
   }) || toCasToken(targetVar);
 
-  // If already isolated on LHS
   if (toCasToken(rawLhs) === toCasToken(tokenInEq)) {
     const cleanRhs = simplifyExpression(rawRhs);
-    const targetTex = varsDb[targetVar]?.symbol || targetVar;
     return {
       targetVar,
       isolatedRhs: cleanRhs,
@@ -183,7 +212,6 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
     };
   }
 
-  // Use Nerdamer to isolate the token
   if (typeof nerdamer !== "undefined") {
     try {
       const cleanToken = toCasToken(tokenInEq);
@@ -193,7 +221,6 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
         if (typeof solText.text === "function") solText = solText.text();
         solText = simplifyExpression(solText.toString());
 
-        const targetTex = varsDb[targetVar]?.symbol || targetVar;
         return {
           targetVar,
           isolatedRhs: solText,
@@ -208,6 +235,6 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   return {
     targetVar,
     isolatedRhs: rawRhs,
-    texEquation: `${targetVar} = ${casToTex(rawRhs, varsDb)}`
+    texEquation: `${targetTex} = ${casToTex(rawRhs, varsDb)}`
   };
 }
