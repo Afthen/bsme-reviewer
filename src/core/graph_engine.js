@@ -5,9 +5,10 @@
 const PHI_INV2_GRAPH = 0.3819660113;
 
 /**
- * Universal numerical formatter for KaTeX strings and explanations
+ * Universal numerical formatter for KaTeX strings and explanations.
+ * Defaults to 2 decimal places to maintain consistency with standard calculations.
  */
-function fmt(n, maxDec = 3) {
+function fmt(n, maxDec = 2) {
   if (n === undefined || n === null) return "";
   if (typeof n !== "number") n = Number(n);
   if (isNaN(n)) return "";
@@ -17,7 +18,7 @@ function fmt(n, maxDec = 3) {
 }
 
 /**
- * Resolves localized / randomized variable name from system state or database
+ * Resolves localized / randomized variable name from system state or database.
  */
 function getVarName(S, k, varsDb = null) {
   if (S && S._names && S._names[k]) return S._names[k];
@@ -36,7 +37,7 @@ function unitOf(S, k, varsDb = null) {
 }
 
 // ========================================================
-// BIPARTITE DAG PROPAGATION SOLVER
+// 1. BIPARTITE DAG PROPAGATION SOLVER
 // ========================================================
 function solveProblemOnGraph(givensArray, S, relationGraph = null) {
   const graph = relationGraph || (window.CURRENT_TOPIC && window.CURRENT_TOPIC.relations) || (typeof GEAR_RELATION_GRAPH !== "undefined" ? GEAR_RELATION_GRAPH : []);
@@ -101,7 +102,7 @@ function solveProblemOnGraph(givensArray, S, relationGraph = null) {
 }
 
 // ========================================================
-// CONTEXT CAROUSEL QUERY
+// 2. CONTEXT CAROUSEL QUERY
 // ========================================================
 function getGraphCardsForVariable(rawVarKey, activeProblem = null, relationGraph = null, varsDb = null) {
   const graph = relationGraph || (window.CURRENT_TOPIC && window.CURRENT_TOPIC.relations) || (typeof GEAR_RELATION_GRAPH !== "undefined" ? GEAR_RELATION_GRAPH : []);
@@ -185,14 +186,14 @@ function getGraphCardsForVariable(rawVarKey, activeProblem = null, relationGraph
 }
 
 // ========================================================
-// CAS & KNOWLEDGE GRAPH DERIVATION ENGINE
+// 3. DYNAMIC CAS & KNOWLEDGE GRAPH DERIVATION ENGINE
 // ========================================================
 
 /**
  * Normalizes variable tokens for Nerdamer processing.
  */
 function toCasToken(v) {
-  return v.replace(/[^a-zA-Z0-9]/g, "");
+  return (v || "").replace(/[^a-zA-Z0-9]/g, "");
 }
 
 /**
@@ -200,20 +201,20 @@ function toCasToken(v) {
  */
 function toLatexToken(token, varsDb = null) {
   const db = varsDb || (window.CURRENT_TOPIC && window.CURRENT_TOPIC.varsDb) || (typeof GEAR_VARS_DB !== "undefined" ? GEAR_VARS_DB : {});
-  // Check direct DB match
   if (db[token] && db[token].symbol) return db[token].symbol;
 
-  // Standard Greek & subscripts
   if (token === "phi") return "\\phi";
   if (token === "pi") return "\\pi";
   if (token === "Pd" || token === "P_d") return "P_d";
   if (token === "Ft" || token === "F_t" || token === "Wt" || token === "W_t") return "F_t";
-  if (token === "Fn" || token === "F_n") return "F_n";
+  if (token === "Fn" || token === "F_n" || token === "W") return "F_n";
   if (token === "Fr" || token === "F_r" || token === "Wr" || token === "W_r") return "F_r";
   if (token === "Do" || token === "D_o") return "D_o";
   if (token === "VR" || token === "SR") return "\\text{VR}";
+  if (token === "Vm" || token === "V_m") return "v";
+  if (token === "Mt" || token === "M_t") return "T";
 
-  const m = token.match(/^([A-Za-z]+)(\d+)$/);
+  const m = token.match(/^([A-Za-z]+)_?(\d+)$/);
   if (m) return `${m[1]}_{${m[2]}}`;
 
   return token;
@@ -226,7 +227,6 @@ function casToLatex(exprStr, varsDb = null) {
   if (typeof nerdamer !== "undefined") {
     try {
       let tex = nerdamer(exprStr).toTeX();
-      // Restore subscripts and greek letters
       tex = tex.replace(/\b([A-Za-z]+)(\d+)\b/g, "$1_{$2}");
       tex = tex.replace(/\bPd\b/g, "P_d");
       tex = tex.replace(/\bFt\b/g, "F_t");
@@ -282,9 +282,10 @@ function casIsolateVariable(lhsStr, rhsStr, targetVar) {
 }
 
 /**
- * Dynamic Step Derivation Generator:
- * Generates canonical equations on top, followed by alternating Graph substitutions
- * and CAS simplifications, then value substitution and unit cancellation.
+ * Universal Step Derivation Engine:
+ * Always puts the canonical equation on top, applies Graph substitution and CAS
+ * simplification for faded ancestor variables, isolates the target variable,
+ * and renders clean numerical substitution with unit cancellations.
  */
 function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic = null) {
   const top = currentTopic || window.CURRENT_TOPIC || {
@@ -298,15 +299,6 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
   const targetVar = step.targetVar;
   const isSI = S.sys === "SI" || unitOf(S, "V_m", varsDb) === "m/s" || unitOf(S, "D_P1", varsDb) === "mm";
 
-  // Identify known variables (givens + visible prior step outputs)
-  const knowns = new Set(givens);
-  allSteps.forEach(s => {
-    if (!s.isFaded && s.stepIdx < step.stepIdx) {
-      knowns.add(s.targetVar);
-    }
-  });
-
-  // Identify faded ancestor relations in this branch
   const fadedAncestors = (step.ancestorIndices || [])
     .map(i => allSteps[i])
     .filter(s => s && s.isFaded);
@@ -337,12 +329,10 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
   let currentLhs = canonicalLhs;
 
   if (fadedAncestors.length > 0) {
-    // Process each faded ancestor in topological order
     fadedAncestors.forEach(fStep => {
       const fVar = fStep.targetVar;
       const fToken = toCasToken(fVar);
 
-      // Determine graph formula for the faded ancestor
       const fEq = relations.find(r => r.id === fStep.eqId);
       let subFormula = null;
       let subLatex = null;
@@ -351,7 +341,7 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
         if (fEq && fEq.id === "eq_pitch_vel") {
           subFormula = isSI ? "(60000*v)/(pi*n1)" : "(12*Vm)/(pi*n1)";
           subLatex = isSI ? "\\frac{60000 v}{\\pi n_1}" : "\\frac{12 V_m}{\\pi n_1}";
-        } else if (fEq && (fEq.id === "eq_dp_teeth_1" || fEq.id === "eq_pd")) {
+        } else if (fEq && (fEq.id === "eq_dp_teeth_1" || fEq.id === "eq_dp1" || fEq.id === "eq_pd")) {
           subFormula = "T1/Pd";
           subLatex = "\\frac{T_1}{P_d}";
         }
@@ -359,15 +349,13 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
         subFormula = "T2/Pd";
         subLatex = "\\frac{T_2}{P_d}";
       } else if (fVar === "W_t" || fVar === "F_t") {
-        if (fEq && fEq.id === "eq_fn_ft") {
+        if (fEq && (fEq.id === "eq_fn_ft" || fEq.id === "eq_w_normal")) {
           subFormula = "Fn*cos(phi)";
           subLatex = "F_n \\cos\\phi";
         }
       }
 
       if (subFormula) {
-        // Graph substitution step
-        const prevExpr = currentExpr;
         if (typeof nerdamer !== "undefined") {
           try {
             const subsObj = {};
@@ -380,7 +368,6 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
           currentExpr = currentExpr.split(fToken).join(`(${subFormula})`);
         }
 
-        // CAS simplification step
         currentExpr = casSimplifyExpression(currentExpr);
 
         substitutionHistory.push({
@@ -392,7 +379,7 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
     });
   }
 
-  // 3. Isolate the target variable if needed
+  // 3. Isolate the target variable using CAS
   let isolatedFormulaLatex = "";
   if (toCasToken(currentLhs) !== toCasToken(targetVar)) {
     const isolated = casIsolateVariable(currentLhs, currentExpr, targetVar);
@@ -401,15 +388,13 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
     isolatedFormulaLatex = `${toLatexToken(targetVar, varsDb)} = ${casToLatex(currentExpr, varsDb)}`;
   }
 
-  // 4. Construct Clean KaTeX Derivation Blocks
-  // Top: Canonical equation
-  let algebraicBlock = `\\text{Canonical Equation:}\\quad ${canonicalTex}`;
+  // 4. Construct Clean KaTeX Derivation Blocks (Canonical always on top)
+  let derivationBlock = canonicalTex;
 
   if (substitutionHistory.length > 0) {
-    const stepsTex = substitutionHistory.map(h => `${canonicalTex.split("=")[0].trim()} = ${h.simplifiedLatex}`).join(" \\\\[4pt]\n");
-    algebraicBlock += ` \\\\[6pt]\n\\text{Direct Resolution:}\\quad ${isolatedFormulaLatex}`;
+    derivationBlock += ` \\\\[4pt]\n\\implies ${isolatedFormulaLatex}`;
   } else if (canonicalTex !== isolatedFormulaLatex && isolatedFormulaLatex !== "") {
-    algebraicBlock += ` \\\\[4pt]\n\\implies ${isolatedFormulaLatex}`;
+    derivationBlock += ` \\\\[4pt]\n\\implies ${isolatedFormulaLatex}`;
   }
 
   // 5. Numerical Substitution & Unit Cancellation (using units.js helpers)
@@ -417,19 +402,21 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
   const unitStr = unitOf(S, targetVar, varsDb);
   const targetMeta = varsDb[targetVar] || {};
   const isInteger = !!targetMeta.isInteger;
-  const prec = isInteger ? 0 : (unitStr === "N-m" || unitStr === "teeth/in" || unitStr === "in" ? 2 : 2);
+  const prec = isInteger ? 0 : 2;
   const finalValStr = fmt(step.expectedVal, prec);
 
-  // High-fidelity substitution block according to relation
   if (targetVar === "P_d" && (S.T_1 !== undefined && S.T_2 !== undefined && S.C !== undefined)) {
     numericalBlock = `P_d = \\frac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 1)}\\,${cancelUnit("mm")})} \\cdot ${window.formatConversionWithCancellation("in_to_mm_cancel_mm")} = \\mathbf{${finalValStr}\\text{ teeth/in}}`;
   } else if ((targetVar === "D_P1" || targetVar === "D_1") && S.V_m !== undefined && S.n_1 !== undefined) {
-    numericalBlock = `D_1 = \\frac{60(${fmt(S.V_m, 2)}\\,${cancelUnit("m")}/\\cancel{\\text{s}})}{\\pi (${fmt(S.n_1, 0)}\\,\\text{rev}/\\cancel{\\text{min}} \\cdot \\frac{1\\,\\cancel{\\text{min}}}{60\\,\\cancel{\\text{s}}})} \\cdot ${window.formatConversionWithCancellation("m_to_mm_cancel_m")} = \\mathbf{${finalValStr}\\text{ mm}}`;
-  } else if ((targetVar === "T" || targetVar === "M_t") && S.F_n !== undefined && S.phi !== undefined) {
+    if (isSI) {
+      numericalBlock = `D_1 = \\frac{60(${fmt(S.V_m, 2)}\\,${cancelUnit("m")}/\\cancel{\\text{s}})}{\\pi (${fmt(S.n_1, 0)}\\,\\text{rev}/\\cancel{\\text{min}} \\cdot \\frac{1\\,\\cancel{\\text{min}}}{60\\,\\cancel{\\text{s}}})} \\cdot ${window.formatConversionWithCancellation("m_to_mm_cancel_m")} = \\mathbf{${finalValStr}\\text{ mm}}`;
+    } else {
+      numericalBlock = `D_1 = \\frac{${fmt(S.V_m, 1)}\\,${cancelUnit("ft")}/\\cancel{\\text{min}}}{\\pi (${fmt(S.n_1, 0)}\\,\\text{rev}/\\cancel{\\text{min}})} \\cdot ${window.formatConversionWithCancellation("ft_to_in_cancel_ft")} = \\mathbf{${finalValStr}\\text{ in}}`;
+    }
+  } else if ((targetVar === "M_t" || targetVar === "T") && S.W !== undefined && S.phi !== undefined) {
     const dVal = S.D_P1 || S.D_1 || 60;
-    numericalBlock = `T = (${fmt(S.F_n, 0)}\\text{ N})\\cos(${fmt(S.phi, 0)}^\\circ) \\times \\frac{${fmt(dVal, 0)}\\,${cancelUnit("mm")} \\cdot ${window.formatConversionWithCancellation("mm_to_m_cancel_mm")}}{2} = \\mathbf{${finalValStr}\\text{ N}\\cdot\\text{m}}`;
+    numericalBlock = `T = (${fmt(S.W, 0)}\\text{ N})\\cos(${fmt(S.phi, 0)}^\\circ) \\times \\frac{${fmt(dVal, 0)}\\,${cancelUnit("mm")} \\cdot ${window.formatConversionWithCancellation("mm_to_m_cancel_mm")}}{2} = \\mathbf{${finalValStr}\\text{ N}\\cdot\\text{m}}`;
   } else if (step.equation && step.equation.includes("=")) {
-    // Standard numerical fallback from step equation with cancel sanitization
     let cleanEq = step.equation.replace(/cancel\s*mm/g, `\\,${cancelUnit("mm")}`);
     cleanEq = cleanEq.replace(/\\cancel\s*mm/g, `\\,${cancelUnit("mm")}`);
     numericalBlock = cleanEq;
@@ -437,25 +424,25 @@ function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic =
     numericalBlock = `${toLatexToken(targetVar, varsDb)} = \\mathbf{${finalValStr}\\text{ ${unitStr}}}`;
   }
 
-  const fullMathHtml = `\\[ \\begin{aligned} ${algebraicBlock} \\\\[6pt] ${numericalBlock} \\end{aligned} \\]`;
+  const fullMathHtml = `\\[ \\begin{aligned} ${derivationBlock} \\\\[6pt] ${numericalBlock} \\end{aligned} \\]`;
 
   return {
     title: step.text || `Calculation for ${getVarName(S, targetVar, varsDb)}`,
     mathHtml: fullMathHtml,
-    derivationBlock: algebraicBlock,
+    derivationBlock,
     finalBlock: numericalBlock
   };
 }
 
 /**
- * Backward-compatible wrapper delegating directly to buildStepDerivation.
+ * Backward-compatible wrapper delegating to buildStepDerivation.
  */
 function buildCompoundDerivation(step, S, allSteps) {
   return buildStepDerivation(step, S, allSteps, [], window.CURRENT_TOPIC);
 }
 
 // ========================================================
-// SEED LIBRARY & TOPIC PROBLEM GENERATOR
+// 4. SEED LIBRARY & TOPIC PROBLEM GENERATOR
 // ========================================================
 function buildGeneratedSeeds(topic = null, attemptsPerTarget = 8) {
   const currentTopic = topic || window.CURRENT_TOPIC || {
