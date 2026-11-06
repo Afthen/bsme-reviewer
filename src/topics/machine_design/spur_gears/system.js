@@ -65,7 +65,8 @@ export function createGroundTruthSystem() {
       D_P1: "mm", D_P2: "mm", C: "mm", a: "mm", d: "mm", c: "mm", h: "mm", h_k: "mm",
       D_o: "mm", D_b: "mm", b: "mm", p_b: "mm", P_c: "mm", t: "mm", m: "mm",
       V_m: "m/s", P: "kW", M_t: "N-m", W_t: "N", W_r: "N", W: "N", s: "MPa",
-      phi: "deg", n_1: "rpm", n_2: "rpm", P_d: "teeth/in"
+      phi: "deg", n_1: "rpm", n_2: "rpm", P_d: "teeth/in",
+      T_1: "teeth", T_2: "teeth", T: "teeth"
     };
 
     S = {
