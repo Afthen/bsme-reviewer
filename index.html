@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mechanical Engineering Reviewer & Graph Solver</title>
   
-  <!-- Math & Symbolic Dependencies (KaTeX + Cancel Extension) -->
+  <!-- Math & Symbolic Dependencies (KaTeX has \cancel built-in) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/cancel.min.js"></script>
 
   <!-- Client-Side Computer Algebra System (Nerdamer CAS) -->
   <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js"></script>
@@ -139,7 +138,6 @@
     
     .problem-header h2 { font-size: 1.35rem; font-weight: 600; margin-bottom: 0.75rem; color: #fff; }
     
-    /* UNIFIED TYPOGRAPHY SCALE */
     .problem-statement,
     .solution-text,
     .solution-summary {
@@ -148,13 +146,11 @@
       line-height: 1.7;
     }
 
-    /* PREVENT HANGING PARENTHESES ON LINE WRAPS */
     .math-token {
       display: inline-block;
       white-space: nowrap;
     }
 
-    /* MATCH LATEX FONT SIZE 1:1 WITH HOST TEXT */
     .katex {
       font-size: 1.15em !important;
       text-rendering: auto;
@@ -186,7 +182,6 @@
     .chevron { font-size: 0.75rem; color: var(--text-dim); transition: transform 0.2s ease; }
     .solution-item.open .chevron { transform: rotate(90deg); color: var(--text); }
     
-    /* INPUT BOX — ARROWS STRICTLY REMOVED */
     .step-input-wrap { display: flex; align-items: center; padding: 2px; }
     .step-ans-input {
       background: #141517;
@@ -204,7 +199,6 @@
       -moz-appearance: textfield !important;
       appearance: textfield !important;
     }
-    /* Chrome, Safari, Edge, Opera: disable inner/outer stepper arrows */
     .step-ans-input::-webkit-outer-spin-button,
     .step-ans-input::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button,
