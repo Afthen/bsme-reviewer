@@ -97,10 +97,16 @@ function renderCurrentCard() {
     dot.className = `dot ${i === currentCardIdx ? "active" : ""}`;
     dotsCont.appendChild(dot);
   });
-
+  
   if (window.renderMathInElement) {
     window.renderMathInElement(document.getElementById("view-carousel"), {
-      delimiters: [{ left: "\\[", right: "\\]", display: true }, { left: "$", right: "$", display: false }]
+      delimiters: [
+        { left: "\\[", right: "\\]", display: true },
+        { left: "$", right: "$", display: false }
+      ],
+      output: "html",
+      strict: false,
+      throwOnError: false
     });
   }
 }
@@ -133,7 +139,15 @@ export function attachTooltips(activeSystem = null, currentSteps = []) {
       tooltip.style.display = "block";
 
       if (window.renderMathInElement) {
-        window.renderMathInElement(tooltip, { delimiters: [{ left: "$", right: "$", display: false }, { left: "\\[", right: "\\]", display: true }] });
+        window.renderMathInElement(tooltip, {
+          delimiters: [
+            { left: "$", right: "$", display: false },
+            { left: "\\[", right: "\\]", display: true }
+          ],
+          output: "html",
+          strict: false,
+          throwOnError: false
+        });
       }
     });
 
