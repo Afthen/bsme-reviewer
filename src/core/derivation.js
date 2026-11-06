@@ -50,8 +50,26 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
     }
     return `\\,\\frac{\\text{rev}}{\\text{min}}`;
   }
+  
+  // 2. Tooth counts and tooth pitch
+  if (unitKey === "teeth") {
+    // If teeth is in numerator and denominator (e.g. T2 / Pd or T2 / T1)
+    const hasToothCancellation = factors.length > 0 || isFullyCanceled;
+    if (hasToothCancellation) {
+      return `\\,\\cancel{\\text{teeth}}`;
+    }
+    return `\\text{ teeth}`;
+  }
 
-  // 2. Length units
+  if (unitKey === "teeth/in") {
+    const cancelsIn = factors.some(f => f.from === "u_in" || f.to === "u_in");
+    if (cancelsIn) {
+      return `\\,\\frac{\\cancel{\\text{teeth}}}{\\cancel{\\text{in}}}`;
+    }
+    return `\\,\\frac{\\text{teeth}}{\\text{in}}`;
+  }
+  
+  // 3. Length units
   if (unitKey === "mm" && (cancelsMm || isFullyCanceled)) {
     return `\\,\\cancel{\\text{mm}}`;
   }
@@ -59,7 +77,7 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
     return `\\,\\cancel{\\text{in}}`;
   }
 
-  // 3. Fully canceled entity units (e.g. teeth in T2 / T1)
+  // 4. Fully canceled entity units (e.g. teeth in T2 / T1)
   if (isFullyCanceled) {
     return `\\,\\cancel{\\text{${unitKey}}}`;
   }
