@@ -1,5 +1,5 @@
 /**
- * src/topics/spur_gears/relations.js
+ * src/topics/machine_design/spur_gears/relations.js
  * Declarative Knowledge Graph relations based on first-principles physics.
  */
 
@@ -107,7 +107,7 @@ export const GEAR_RELATION_GRAPH = [
   {
     id: "eq_wt_torque",
     name: "Tangential Load from Torque",
-    canonicalTex: "T = F_t \\cdot \\frac{D_1}{2}",
+    canonicalTex: "T = \\frac{F_t D_1}{2}",
     baseFormula: "T = Ft * D1 / 2",
     nodes: ["M_t", "W_t", "D_P1"]
   },
@@ -206,7 +206,7 @@ export const GEAR_RELATION_GRAPH = [
   {
     id: "eq_pitch_inv",
     name: "Pitch Reciprocal Identity",
-    canonicalTex: "P_c \\cdot P_d = \\pi",
+    canonicalTex: "P_c P_d = \\pi",
     baseFormula: "Pc * Pd = pi",
     nodes: ["P_c", "P_d"]
   },
