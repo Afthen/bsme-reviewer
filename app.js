@@ -218,7 +218,7 @@ function renderWeightBars() {
 // ========================================================
 // 4. PROBLEM GENERATION & ADAPTIVE FADING
 // ========================================================
-function generateOrganicStatement(cand, S) {
+function generateOrganicStatement(cand, S, visibleDeliverables = null) {
   const parts = [];
   cand.givens.forEach(v => {
     const val = S[v];
@@ -239,17 +239,28 @@ function generateOrganicStatement(cand, S) {
     parts.push(`${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${displaySym}$</span> = ${valWithUnit})</span>`);
   });
 
-  const goalMeta = topic.varsDb[cand.goal] || {};
-  const goalSym = goalMeta.symbol || cand.goal;
-  const goalName = getVarName(S, cand.goal, topic.varsDb);
-  const goalU = unitOf(S, cand.goal, topic.varsDb);
-  
-  let goalUStr = "";
-  if (goalU && goalU !== "dimless" && goalU !== "ratio" && goalU !== "teeth") {
-    goalUStr = goalU === "deg" ? " in °" : ` in $\\text{${goalU}}$`;
-  }
+  // Strict Deliverable Synthesis: If scaffolding is active, announce visible intermediate deliverables.
+  // When intermediate steps are faded, only the final goal appears.
+  const goalsToAnnounce = (visibleDeliverables && visibleDeliverables.length > 0)
+    ? visibleDeliverables
+    : [cand.goal];
 
-  return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: <strong>${goalName}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${cand.goal}">$${goalSym}$</span>)</span>${goalUStr}.`;
+  const goalStrings = goalsToAnnounce.map((gVar, idx) => {
+    const meta = topic.varsDb[gVar] || {};
+    const sym = meta.symbol || gVar;
+    const name = getVarName(S, gVar, topic.varsDb);
+    const u = unitOf(S, gVar, topic.varsDb);
+    let uStr = "";
+    if (u && u !== "dimless" && u !== "ratio" && u !== "teeth") {
+      uStr = u === "deg" ? " in °" : ` in $\\text{${u}}$`;
+    }
+    const prefix = goalsToAnnounce.length > 1 ? `(${idx + 1}) ` : "";
+    return `${prefix}<strong>${name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${sym}$</span>)</span>${uStr}`;
+  });
+
+  const deliverablePhrase = goalStrings.join(", and ");
+
+  return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: ${deliverablePhrase}.`;
 }
 
 function generateGraphProblem() {
@@ -287,6 +298,7 @@ function generateGraphProblem() {
   const requiredStepIndices = new Set([goalIdx, ...solSteps[goalIdx].ancestorIndices]);
   const allPathSteps = solSteps.filter((_, idx) => requiredStepIndices.has(idx));
 
+  // Determine fading based strictly on student mastery
   allPathSteps.forEach(st => {
     if (st.targetVar === cand.goal) {
       st.isFaded = false; 
@@ -317,7 +329,10 @@ function generateGraphProblem() {
     };
   });
 
-  const statement = generateOrganicStatement(cand, S);
+  // Statement deliverables match visible steps 1:1
+  const visibleDeliverables = finalVisibleSteps.map(s => s.targetVar);
+  const statement = generateOrganicStatement(cand, S, visibleDeliverables);
+
   activeProblem = {
     title: cand.name,
     statement,
@@ -358,9 +373,9 @@ function renderProblemView() {
     chevron.className = "chevron";
     chevron.textContent = "▶";
 
-    const badge = step.isCompound ? ` <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 3px; background: rgba(147, 197, 253, 0.15); color: var(--accent-math);">Compound Leapfrog</span>` : "";
+    // Clean step label — Compound Leapfrog badge permanently removed
     const targetSpan = document.createElement("span");
-    targetSpan.innerHTML = `Step ${idx + 1}: ${renderStepTargetText(step.target)}${badge}`;
+    targetSpan.innerHTML = `Step ${idx + 1}: ${renderStepTargetText(step.target)}`;
 
     labelWrap.appendChild(chevron);
     labelWrap.appendChild(targetSpan);
@@ -414,14 +429,17 @@ function renderProblemView() {
     const mathDiv = document.createElement("div");
     mathDiv.className = "solution-math-display";
 
-    const compound = buildCompoundDerivation(step, activeProblem.system, activeProblem.allPathSteps);
-    if (compound && compound.derivationBlock) {
-      textP.innerHTML = compound.note || step.text;
-      mathDiv.innerHTML = `\\[ ${compound.derivationBlock} \\]\n\\[ ${compound.finalBlock} \\]`;
-    } else {
-      textP.innerHTML = step.text;
-      mathDiv.innerHTML = `\\[ ${step.equation} \\]`;
-    }
+    // Build dynamic derivation (canonical formula on top, no hardcoded synthetic notes)
+    const derivation = buildStepDerivation(
+      step,
+      activeProblem.system,
+      activeProblem.allPathSteps,
+      activeProblem.givens,
+      topic
+    );
+
+    textP.innerHTML = step.text || derivation.title;
+    mathDiv.innerHTML = derivation.mathHtml;
 
     body.appendChild(textP);
     body.appendChild(mathDiv);
