@@ -16,12 +16,30 @@ import { initSidebarView, renderMasteryBars } from "./src/ui/sidebar_view.js";
 import { initCarouselView } from "./src/ui/carousel_view.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
 
-const TOPIC = Object.freeze({
-  id: "spur_gears",
-  title: "Spur Gears",
-  varsDb: GEAR_VARS_DB,
-  relations: GEAR_RELATION_GRAPH,
-  createSystem: createGroundTruthSystem
+const TOPICS = {
+  spur_gears: {
+    id: "spur_gears",
+    title: "Spur Gears",
+    varsDb: GEAR_VARS_DB,
+    relations: GEAR_RELATION_GRAPH,
+    createSystem: createGroundTruthSystem
+  },
+  helical_gears: {
+    id: "helical_gears",
+    title: "Helical Gears",
+    varsDb: HELICAL_VARS_DB,
+    relations: HELICAL_RELATION_GRAPH,
+    createSystem: createGroundTruthHelicalSystem
+  }
+};
+
+let currentTopic = TOPICS.spur_gears;
+
+document.getElementById("topic-selector")?.addEventListener("change", (e) => {
+  currentTopic = TOPICS[e.target.value];
+  initSidebarView(currentTopic.relations, getDecayedMastery);
+  initCarouselView(currentTopic.relations);
+  generateNewProblem();
 });
 
 let activeProblem = null;
