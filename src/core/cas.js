@@ -280,9 +280,18 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { sym: targetUnit, dim: "custom", tex: targetUnit };
   const allActiveUnits = Object.values(activeVarUnits);
 
-  // 1. Time Matching (e.g. u_min in rpm -> u_s in m/s, kW, N-m)
+  // Unit Flags declared ONCE
   const hasMin = allActiveUnits.some(u => u.hasTime === "u_min" || u.sym === "u_min");
+  const hasMm = allActiveUnits.some(u => u.hasLength === "u_mm" || u.sym === "u_mm");
+  const hasInch = allActiveUnits.some(u => u.hasLength === "u_in" || u.sym === "u_in");
+
   const targetNeedsSec = targetInfo.hasTime === "u_s" || targetUnit === "kW" || targetUnit === "W" || targetUnit === "N-m";
+  const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m" || targetUnit === "kW" || targetUnit === "W";
+  const targetNeedsInch = targetInfo.hasLength === "u_in" || targetUnit === "teeth/in";
+  const targetNeedsMm = targetInfo.hasLength === "u_mm" || targetUnit === "mm";
+  const targetNeedsFt = targetInfo.hasLength === "u_ft" || targetUnit === "hp";
+
+  // 1. Time Matching
   if (hasMin && targetNeedsSec) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_min" && c.to === "u_s");
     if (conv) {
@@ -293,14 +302,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     }
   }
 
-  // 2. // Length Matching (e.g. u_mm -> u_m, u_in -> u_mm, or u_mm -> u_in)
-  const hasMm = allActiveUnits.some(u => u.hasLength === "u_mm" || u.sym === "u_mm");
-  const hasInch = allActiveUnits.some(u => u.hasLength === "u_in" || u.sym === "u_in");
-
-  const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m" || targetUnit === "kW" || targetUnit === "W";
-  const targetNeedsInch  = targetInfo.hasLength === "u_in" || targetUnit === "teeth/in";
-  const targetNeedsMm    = targetInfo.hasLength === "u_mm" || targetUnit === "mm";
-
+  // 2. Length Matching
   if (hasMm && targetNeedsMeter) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_mm" && c.to === "u_m");
     if (conv) {
@@ -314,16 +316,11 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
       varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
     }
   } else if (hasInch && targetNeedsMm) {
-    // When dividing by Pd (teeth/in) to compute diameter in mm
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_mm");
     if (conv) {
       selectedConversions.push(conv);
     }
-  }
-
-  const hasInch = allActiveUnits.some(u => u.hasLength === "u_in" || u.sym === "u_in");
-  const targetNeedsFt = targetInfo.hasLength === "u_ft" || targetUnit === "hp";
-  if (hasInch && targetNeedsFt) {
+  } else if (hasInch && targetNeedsFt) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_ft");
     if (conv) {
       selectedConversions.push(conv);
@@ -331,7 +328,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     }
   }
 
-  // 3. Power Matching (W -> kW or hp -> ft*lb/min)
+  // 3. Power Matching
   if (targetUnit === "kW" && (hasMin || hasMm || allActiveUnits.some(u => u.sym === "u_N" || u.dim === "torque"))) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_W" && c.to === "u_kW");
     if (conv && !selectedConversions.includes(conv)) selectedConversions.push(conv);
