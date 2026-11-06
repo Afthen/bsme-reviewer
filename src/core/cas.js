@@ -1,7 +1,6 @@
 /**
  * src/core/cas.js
  * Universal Computer Algebra System (CAS) with Semantic & Physical Unit Algebra.
- * Semantic units (su_teeth, su_rad, su_rev) are treated as distinct algebraic variables.
  */
 
 // ========================================================
@@ -200,19 +199,12 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
 // 2. CAS UNIT REGISTRY: SEMANTIC (su_) & PHYSICAL (u_)
 // ========================================================
 
-/**
- * Universal Unit Dictionary.
- * All semantic/counting entities use the prefix "su_".
- * All physical dimensions use the prefix "u_".
- */
 export const UNIT_ALGEBRA_DB = Object.freeze({
-  // Semantic / Counting units (protected from cross-contamination)
   "teeth":    { sym: "su_teeth", dim: "entity", tex: "\\text{teeth}" },
   "rad":      { sym: "su_rad",   dim: "angular", tex: "\\text{rad}" },
   "rev":      { sym: "su_rev",   dim: "angular", tex: "\\text{rev}" },
   "deg":      { sym: "su_deg",   dim: "angular", tex: "^\\circ" },
 
-  // Base physical dimensions
   "mm":       { sym: "u_mm",     dim: "length",  base: "length", tex: "\\text{mm}" },
   "m":        { sym: "u_m",      dim: "length",  base: "length", tex: "\\text{m}" },
   "in":       { sym: "u_in",     dim: "length",  base: "length", tex: "\\text{in}" },
@@ -224,7 +216,6 @@ export const UNIT_ALGEBRA_DB = Object.freeze({
   "N":        { sym: "u_N",      dim: "force",   base: "force",  tex: "\\text{N}" },
   "lb":       { sym: "u_lb",     dim: "force",   base: "force",  tex: "\\text{lb}" },
 
-  // Decomposed / Compound units
   "rpm":      { sym: "(su_rev / u_min)", dim: "rot_speed", hasTime: "u_min", hasSemantic: "su_rev", tex: "\\frac{\\text{rev}}{\\text{min}}" },
   "rev/min":  { sym: "(su_rev / u_min)", dim: "rot_speed", hasTime: "u_min", hasSemantic: "su_rev", tex: "\\frac{\\text{rev}}{\\text{min}}" },
   "teeth/in": { sym: "(su_teeth / u_in)", dim: "pitch", hasLength: "u_in", hasSemantic: "su_teeth", tex: "\\frac{\\text{teeth}}{\\text{in}}" },
@@ -251,7 +242,6 @@ export const UNIT_ALGEBRA_DB = Object.freeze({
 // ========================================================
 
 export const ATOMIC_CONVERSIONS = Object.freeze([
-  // Length
   { from: "u_mm", to: "u_m",  factor: 1 / 1000, latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" },
   { from: "u_m",  to: "u_mm", factor: 1000,     latex: "\\frac{1000\\text{ mm}}{1\\,\\cancel{\\text{m}}}" },
   { from: "u_in", to: "u_ft", factor: 1 / 12,   latex: "\\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}" },
@@ -259,31 +249,23 @@ export const ATOMIC_CONVERSIONS = Object.freeze([
   { from: "u_mm", to: "u_in", factor: 1 / 25.4, latex: "\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}" },
   { from: "u_in", to: "u_mm", factor: 25.4,     latex: "\\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}" },
 
-  // Time
   { from: "u_min", to: "u_s", factor: 1 / 60,   latex: "\\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}" },
   { from: "u_s",   to: "u_min", factor: 60,     latex: "\\frac{60\\,\\cancel{\\text{s}}}{1\\text{ min}}" },
 
-  // Power
   { from: "u_W",   to: "u_kW", factor: 1 / 1000, latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" },
   { from: "u_kW",  to: "u_W",  factor: 1000,     latex: "\\frac{1000\\,\\cancel{\\text{W}}}{1\\,\\cancel{\\text{kW}}}" },
   { from: "u_hp",  to: "u_ftlb_min", factor: 33000, latex: "\\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}}" }
 ]);
 
 // ========================================================
-// 4. GENERAL CAS UNIT SOLVER (NO HARDCODED FORMULA BRANCHES)
+// 4. GENERAL CAS UNIT SOLVER
 // ========================================================
 
-/**
- * Universal Unit Solver.
- * Evaluates algebraic unit cancellation in Nerdamer, resolves mismatches
- * against the atomic conversion dictionary, and preserves semantic units.
- */
 export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}) {
   const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
   const mathConstants = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "log", "exp"]);
   const varTokens = Array.from(new Set(tokens.filter(t => !mathConstants.has(t))));
 
-  // Map each active variable to its unit info
   const activeVarUnits = {};
   varTokens.forEach(tok => {
     const k = SYMBOL_TO_KEY[tok] || tok;
@@ -295,50 +277,12 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const subTokenCancellations = {};
   const selectedConversions = [];
 
-  // 1. Algebraic Internal Cancellation Test via Nerdamer
-  // Substitute each variable's unit symbol into the expression
-  const unitSubs = {};
-  varTokens.forEach(tok => {
-    unitSubs[toCasToken(tok)] = activeVarUnits[tok].sym;
-  });
-
-  let rawUnitExpr = sanitizeExpr(exprStr);
-  for (const [v, uSym] of Object.entries(unitSubs)) {
-    rawUnitExpr = rawUnitExpr.split(v).join(`(${uSym})`);
-  }
-
-  // Remove numerical coefficients to inspect pure unit behavior
-  const pureUnitExpr = rawUnitExpr.replace(/\b\d+(\.\d+)?\b/g, "1");
-  const simplifiedUnits = simplifyExpression(pureUnitExpr);
-
-  // If a semantic unit (e.g., su_teeth, su_rev) was present but is absent in simplifiedUnits,
-  // it canceled algebraically (e.g., su_teeth / su_teeth = 1)
-  const isTargetDimless = !targetUnit || targetUnit === "dimless" || targetUnit === "ratio";
-  if (isTargetDimless) {
-    varTokens.forEach(tok => canceledTokens.add(tok));
-  } else {
-    // Check internal ratio cancellations
-    varTokens.forEach(t1 => {
-      const u1 = activeVarUnits[t1];
-      if (!u1 || u1.dim === "dimensionless" || u1.dim === "angular") return;
-      varTokens.forEach(t2 => {
-        if (t1 !== t2 && u1.sym === activeVarUnits[t2]?.sym) {
-          if (!simplifiedUnits.includes(u1.sym.replace(/[()]/g, ""))) {
-            canceledTokens.add(t1);
-            canceledTokens.add(t2);
-          }
-        }
-      });
-    });
-  }
-
-  // 2. General Dimensional Matching (Length, Time, Power)
   const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { sym: targetUnit, dim: "custom", tex: targetUnit };
   const allActiveUnits = Object.values(activeVarUnits);
 
-  // Time Dimension Matching (e.g. u_min in rpm -> u_s in m/s, kW, N-m)
+  // 1. Time Matching (e.g. u_min in rpm -> u_s in m/s, kW, N-m)
   const hasMin = allActiveUnits.some(u => u.hasTime === "u_min" || u.sym === "u_min");
-  const targetNeedsSec = targetInfo.hasTime === "u_s" || targetUnit === "kW" || targetUnit === "N-m";
+  const targetNeedsSec = targetInfo.hasTime === "u_s" || targetUnit === "kW" || targetUnit === "W" || targetUnit === "N-m";
   if (hasMin && targetNeedsSec) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_min" && c.to === "u_s");
     if (conv) {
@@ -349,10 +293,10 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     }
   }
 
-  // Length Dimension Matching (e.g. u_mm -> u_m for velocity/torque, or u_mm -> u_in for Pd)
+  // 2. Length Matching (e.g. u_mm -> u_m for velocity, torque, or power)
   const hasMm = allActiveUnits.some(u => u.hasLength === "u_mm" || u.sym === "u_mm");
-  const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m";
-  const targetNeedsInch = targetInfo.hasLength === "u_in" || targetUnit === "teeth/in";
+  const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m" || targetUnit === "kW" || targetUnit === "W";
+  const targetNeedsInch  = targetInfo.hasLength === "u_in" || targetUnit === "teeth/in";
 
   if (hasMm && targetNeedsMeter) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_mm" && c.to === "u_m");
@@ -378,8 +322,8 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     }
   }
 
-  // Power Dimension Matching (e.g. W -> kW, or hp -> ft*lb/min)
-  if (targetUnit === "kW" && (hasMin || allActiveUnits.some(u => u.sym === "u_N" || u.dim === "torque"))) {
+  // 3. Power Matching (W -> kW or hp -> ft*lb/min)
+  if (targetUnit === "kW" && (hasMin || hasMm || allActiveUnits.some(u => u.sym === "u_N" || u.dim === "torque"))) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_W" && c.to === "u_kW");
     if (conv && !selectedConversions.includes(conv)) selectedConversions.push(conv);
   } else if (targetUnit === "N-m" && allActiveUnits.some(u => u.sym === "u_kW")) {
@@ -390,6 +334,12 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_ftlb_min" && c.to === "u_hp") ||
                  { latex: "\\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}" };
     selectedConversions.push(conv);
+  }
+
+  // 4. Dimensionless Ratio Full Cancellation
+  const isTargetDimless = !targetUnit || targetUnit === "dimless" || targetUnit === "ratio";
+  if (isTargetDimless) {
+    varTokens.forEach(tok => canceledTokens.add(tok));
   }
 
   return {
