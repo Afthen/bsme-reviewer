@@ -11,19 +11,22 @@ import { isolateVariable } from "./cas.js";
 
 /**
  * Propagates forward from givensArray through the relation graph.
- * Dynamically uses CAS to isolate target variables and evaluate numerical values.
+ * Prioritizes equations with lower mastery to ensure balanced topic density.
  */
-export function solveDAG(givensArray, S, relations = [], varsDb = {}) {
+export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery = () => 0) {
   const known = new Set(givensArray);
   const steps = [];
   const usedEquations = new Set();
   const producedBy = {};
   let keepPropagating = true;
 
+  // Sort relations so that lower mastery equations fire first
+  const sortedRelations = [...relations].sort((a, b) => getMastery(a.id) - getMastery(b.id));
+
   while (keepPropagating) {
     keepPropagating = false;
 
-    for (const eq of relations) {
+    for (const eq of sortedRelations) {
       if (usedEquations.has(eq.id)) continue;
 
       const unknowns = eq.nodes.filter(n => !known.has(n));
@@ -31,14 +34,10 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}) {
         const targetVar = unknowns[0];
         const inputVars = eq.nodes.filter(n => n !== targetVar);
 
-        // Derive isolated formula via CAS from canonical definition
         const baseFormula = eq.baseFormula || (eq.canonical ? `${eq.canonical.lhs} = ${eq.canonical.rhs}` : "");
         const isolated = isolateVariable(baseFormula, targetVar, varsDb);
-
-        // Resolve ground truth value
         const expectedVal = S[targetVar] !== undefined ? S[targetVar] : S[targetVar.replace(/_/g, "")];
 
-        // Trace immediate parents and transitive ancestors
         const parentIndices = inputVars
           .map(v => producedBy[v])
           .filter(idx => idx !== undefined);
@@ -85,17 +84,16 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}) {
 // 2. REACHABILITY CHECK & PATH PRUNING
 // ========================================================
 
-/**
- * Lightweight reachability test (returns true if givens can determine targetVar).
- */
-export function canSolveTarget(givensArray, targetVar, relations = []) {
+export function canSolveTarget(givensArray, targetVar, relations = [], getMastery = () => 0) {
   const known = new Set(givensArray);
   const used = new Set();
   let keepPropagating = true;
 
+  const sortedRelations = [...relations].sort((a, b) => getMastery(a.id) - getMastery(b.id));
+
   while (keepPropagating) {
     keepPropagating = false;
-    for (const eq of relations) {
+    for (const eq of sortedRelations) {
       if (used.has(eq.id)) continue;
       const unknowns = eq.nodes.filter(n => !known.has(n));
       if (unknowns.length === 1) {
@@ -111,9 +109,6 @@ export function canSolveTarget(givensArray, targetVar, relations = []) {
   return known.has(targetVar);
 }
 
-/**
- * Filters solution steps down to only those required to calculate the goal variable.
- */
 export function pruneSolutionPath(steps = [], goalVar) {
   const goalIdx = steps.findIndex(s => s.targetVar === goalVar);
   if (goalIdx < 0) return [];
