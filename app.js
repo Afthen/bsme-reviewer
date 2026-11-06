@@ -7,9 +7,9 @@ import {
   loadMastery, exportMasteryJSON, importMasteryJSON,
   getDecayedMastery, FADING_THRESHOLD
 } from "./src/repetition/mastery.js";
-import { GEAR_VARS_DB } from "./src/topics/spur_gears/schema.js";
-import { GEAR_RELATION_GRAPH } from "./src/topics/spur_gears/relations.js";
-import { createGroundTruthSystem } from "./src/topics/spur_gears/system.js";
+import { GEAR_VARS_DB } from "./src/topics/machine_design/spur_gears/schema.js";
+import { GEAR_RELATION_GRAPH } from "./src/topics/machine_design/spur_gears/relations.js";
+import { createGroundTruthSystem } from "./src/topics/machine_design/spur_gears/system.js";
 import { generateAutonomousProblem, buildProblemStatement } from "./src/core/problem_gen.js";
 import { solveDAG, pruneSolutionPath } from "./src/core/graph_solver.js";
 import { initSidebarView, renderMasteryBars } from "./src/ui/sidebar_view.js";
