@@ -19,14 +19,14 @@ function fmt(n, maxDec = 3) {
 /**
  * Target label formatting with unit awareness
  */
-function targetLabel(name, token, unit) {
-  if (!unit || unit === "dimless" || unit === "ratio" || unit === "teeth") {
+function targetLabel(name, token, u) {
+  if (!u || u === "dimless" || u === "ratio" || u === "teeth") {
     return `${name} (${token})`;
   }
-  if (unit === "deg") {
-    return `${name} (${token}) in degrees`;
+  if (u === "deg") {
+    return `${name} (${token}) in °`;
   }
-  return `${name} (${token}) in ${unit}`;
+  return `${name} (${token}) in $\\text{${u}}$`;
 }
 
 /**
