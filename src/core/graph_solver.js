@@ -3,7 +3,7 @@
  * Universal Bipartite DAG propagation solver, topological dependency tracer, and path pruner.
  */
 
-import { isolateVariable, evaluateExpression } from "./cas.js";
+import { isolateVariable } from "./cas.js";
 
 // ========================================================
 // 1. FORWARD DAG PROPAGATION SOLVER
@@ -36,10 +36,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}) {
         const isolated = isolateVariable(baseFormula, targetVar, varsDb);
 
         // Resolve ground truth value
-        let expectedVal = S[targetVar];
-        if (expectedVal === undefined || isNaN(expectedVal)) {
-          expectedVal = evaluateExpression(isolated.isolatedRhs, S);
-        }
+        const expectedVal = S[targetVar] !== undefined ? S[targetVar] : S[targetVar.replace(/_/g, "")];
 
         // Trace immediate parents and transitive ancestors
         const parentIndices = inputVars
