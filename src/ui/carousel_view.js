@@ -4,7 +4,7 @@
  */
 
 import { isolateVariable } from "../core/cas.js";
-import { getVarMeta } from "../topics/spur_gears/schema.js";
+import { getVarMeta } from "../topics/machine_design/spur_gears/schema.js";
 
 let currentCards = [];
 let currentCardIdx = 0;
