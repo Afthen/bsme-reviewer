@@ -38,6 +38,17 @@ export const SYMBOL_TO_KEY = Object.freeze({
   "FD": "F_D", "F_D": "F_D",
   "Cd": "C_d", "C_d": "C_d",
   "yform": "y_form", "y_form": "y_form",
+  "Fs": "F_s", "F_s": "F_s",
+  "Fw": "F_w", "F_w": "F_w",
+  "Nsf": "N_sf", "N_sf": "N_sf",
+  "Kw": "K_w", "K_w": "K_w", "kg": "K_w",
+  "kf": "k_f", "k_f": "k_f",
+  "Q": "Q",
+  "Sn": "S_n", "S_n": "S_n",
+  "Tv": "T_v", "T_v": "T_v", "Nev": "T_v",
+  "Llead": "L_lead", "L_lead": "L_lead",
+  "mF": "m_F", "m_F": "m_F",
+  "Sspace": "S_space", "S_space": "S_space",
 });
 
 export function getPossibleTokens(varKey) {
