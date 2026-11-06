@@ -1,41 +1,50 @@
 /**
  * src/core/problem_gen.js
- * Autonomous graph-walk problem generator and dynamic statement formatter.
+ * Dual-constrained adaptive problem generator (Mastery-Scaled Difficulty + Budget-Bounded DAG Depth).
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
+import { PHI_INV2, FADING_THRESHOLD } from "../repetition/mastery.js";
 
 // ========================================================
-// 1. ORGANIC GRAPH-WALK PROBLEM SYNTHESIS
+// 1. DUAL-CONSTRAINED AUTONOMOUS PROBLEM GENERATION
 // ========================================================
 
 /**
- * Autonomously discovers a valid, non-redundant (givens -> goal) problem directly from the DAG.
+ * Generates an organic problem with depth and breadth governed simultaneously
+ * by user mastery and given budget constraints.
  * @param {Array} relations - Topic relation graph.
  * @param {Object} S - Ground truth system state.
  * @param {Object} varsDb - Topic variable metadata.
  * @param {Function} getMastery - (eqId) => score in [0, 1].
  */
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
-  const allVars = Array.from(new Set(relations.flatMap(r => r.nodes)));
-  
-  // Weight target variables by lowest mastery of relations that can determine them
-  const scoredTargets = allVars.map(v => {
-    const solvingEqs = relations.filter(r => r.nodes.includes(v));
-    if (solvingEqs.length === 0) return { v, weight: 0 };
-    const avgMastery = solvingEqs.reduce((sum, eq) => sum + getMastery(eq.id), 0) / solvingEqs.length;
-    return { v, weight: Math.max(0.05, 1 - avgMastery) };
-  }).filter(t => t.weight > 0);
+  // 1. Calculate Aggregate Global Mastery
+  const allEqIds = relations.map(r => r.id);
+  const totalMastery = allEqIds.reduce((sum, id) => sum + getMastery(id), 0);
+  const avgMastery = allEqIds.length > 0 ? totalMastery / allEqIds.length : 0;
 
-  scoredTargets.sort((a, b) => Math.pow(Math.random(), 1 / a.weight) - Math.pow(Math.random(), 1 / b.weight));
+  // 2. Score Relations Prioritizing Unmastered Equations (0% mastery = highest priority)
+  const scoredRelations = relations.map(eq => {
+    const mastery = getMastery(eq.id);
+    const weight = Math.max(0.05, Math.pow(1 - mastery, 1.618));
+    return { eq, weight };
+  });
 
-  // Try top candidate targets
-  for (const { v: goalVar } of scoredTargets) {
-    const candidate = synthesizePathForGoal(goalVar, relations, S, 3);
-    if (candidate) return candidate;
+  // Roulette wheel selection based on lowest mastery
+  scoredRelations.sort((a, b) => Math.pow(Math.random(), 1 / a.weight) - Math.pow(Math.random(), 1 / b.weight));
+
+  for (const { eq: targetEq } of scoredRelations) {
+    // Pick an unknown goal node from the target relation
+    const candidateGoals = [...targetEq.nodes].sort(() => Math.random() - 0.5);
+
+    for (const goalVar of candidateGoals) {
+      const problem = buildAdaptivePath(targetEq, goalVar, relations, S, avgMastery);
+      if (problem) return problem;
+    }
   }
 
-  // Fallback to arbitrary 1-step relation
+  // Fallback to random 1-step relation
   const fallbackEq = relations[Math.floor(Math.random() * relations.length)];
   const goalVar = fallbackEq.nodes[0];
   const givens = fallbackEq.nodes.filter(n => n !== goalVar);
@@ -43,69 +52,104 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
 }
 
 /**
- * Backward graph walk to find a minimal given set for a target variable.
+ * Chains backwards through the DAG constrained simultaneously by
+ * maximum hop depth and target given budget.
  */
-function synthesizePathForGoal(goalVar, relations, S, maxDepth = 3) {
-  const solversOf = v => relations.filter(r => r.nodes.includes(v));
+function buildAdaptivePath(targetEq, goalVar, relations, S, avgMastery) {
+  let givens = targetEq.nodes.filter(n => n !== goalVar);
 
-  function expand(v, depth, bannedEqs) {
-    const candidates = solversOf(v).filter(e => !bannedEqs.has(e.id));
-    if (depth <= 0 || candidates.length === 0 || Math.random() < 0.382) {
-      return [v];
-    }
-    const chosenEq = candidates[Math.floor(Math.random() * candidates.length)];
-    const nextBanned = new Set([...bannedEqs, chosenEq.id]);
-    return chosenEq.nodes.filter(n => n !== v).flatMap(n => expand(n, depth - 1, nextBanned));
+  // 1. Set Difficulty Profile based on Golden Ratio mastery milestones
+  let maxHops;
+  let minGivens;
+  let maxGivens;
+  let distractorProb;
+
+  if (avgMastery < PHI_INV2) {
+    // Tier 1 (Beginner < 38.2%): 1 to 2 hops, 2 to 3 givens
+    maxHops = Math.random() < 0.6 ? 1 : 2;
+    minGivens = 2;
+    maxGivens = 3;
+    distractorProb = 0.15;
+  } else if (avgMastery < FADING_THRESHOLD) {
+    // Tier 2 (Intermediate 38.2% - 76.4%): 2 to 3 hops, 3 to 5 givens
+    maxHops = Math.floor(Math.random() * 2) + 2; // 2 or 3 hops
+    minGivens = 3;
+    maxGivens = 5;
+    distractorProb = 0.35;
+  } else {
+    // Tier 3 (Advanced / Exam-Ready >= 76.4%): 3 to 5 hops, 4 to 6 givens
+    maxHops = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5 hops
+    minGivens = 4;
+    maxGivens = 6;
+    distractorProb = 0.45;
   }
 
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const rawGivens = Array.from(new Set(expand(goalVar, maxDepth, new Set())));
-    if (rawGivens.includes(goalVar) || rawGivens.length < 1 || rawGivens.length > 5) continue;
+  // Pick specific target given budget for this problem instance
+  const targetBudget = Math.floor(Math.random() * (maxGivens - minGivens + 1)) + minGivens;
 
-    // Verify solvability
-    if (!canSolveTarget(rawGivens, goalVar, relations)) continue;
+  let hops = 0;
+  let attempts = 0;
 
-    // Minimize: strip any given that isn't strictly necessary
-    const minimalGivens = rawGivens.filter(g => {
-      const reduced = rawGivens.filter(x => x !== g);
-      return !canSolveTarget(reduced, goalVar, relations);
-    });
+  // 2. Dual-Constrained Backward DAG Walk (bounded by both hops and budget)
+  while (hops < maxHops && givens.length < targetBudget && attempts < 15) {
+    attempts++;
 
-    if (minimalGivens.length === 0 || !canSolveTarget(minimalGivens, goalVar, relations)) continue;
-
-    // Select optional distractor variable (present in system but unused in solution)
-    const steps = solveDAG(minimalGivens, S, relations);
-    const requiredSteps = pruneSolutionPath(steps, goalVar);
-    const usedVars = new Set(requiredSteps.flatMap(s => s.nodes || [s.targetVar]));
-    minimalGivens.forEach(g => usedVars.add(g));
-
-    const candidateDistractors = Object.keys(S).filter(k => 
-      !k.startsWith("_") && !usedVars.has(k) && S[k] !== undefined && typeof S[k] === "number"
+    // Find all current givens that can be produced by another relation
+    const expandableGivens = givens.filter(g =>
+      relations.some(r => r.id !== targetEq.id && r.nodes.includes(g))
     );
+    if (expandableGivens.length === 0) break;
 
-    const distractors = candidateDistractors.length > 0 && Math.random() < 0.45
-      ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
-      : [];
+    const expandVar = expandableGivens[Math.floor(Math.random() * expandableGivens.length)];
+    const producerEqs = relations.filter(r => r.id !== targetEq.id && r.nodes.includes(expandVar));
+    const chosenProducer = producerEqs[Math.floor(Math.random() * producerEqs.length)];
+    const subGivens = chosenProducer.nodes.filter(n => n !== expandVar);
 
-    return {
-      goalVar,
-      givens: [...minimalGivens, ...distractors].sort(),
-      distractors,
-      requiredSteps
-    };
+    // Prevent circular references to the goal
+    if (!subGivens.includes(goalVar)) {
+      const candidateSet = Array.from(new Set([
+        ...givens.filter(g => g !== expandVar),
+        ...subGivens
+      ]));
+
+      // Check budget ceiling and solvability
+      if (candidateSet.length <= maxGivens + 1 && canSolveTarget(candidateSet, goalVar, relations)) {
+        givens = candidateSet;
+        hops++;
+      }
+    }
   }
 
-  return null;
+  // Ensure path solvability on the ground truth system
+  if (!canSolveTarget(givens, goalVar, relations)) return null;
+
+  // 3. Add Optional Distractor Parameter (scaled by mastery tier)
+  const steps = solveDAG(givens, S, relations);
+  const required = pruneSolutionPath(steps, goalVar);
+  const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
+  givens.forEach(g => usedVars.add(g));
+
+  const candidateDistractors = Object.keys(S).filter(k => 
+    !k.startsWith("_") && !usedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
+  );
+
+  const distractors = candidateDistractors.length > 0 && Math.random() < distractorProb
+    ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
+    : [];
+
+  return {
+    goalVar,
+    givens: Array.from(new Set([...givens, ...distractors])).sort(),
+    distractors,
+    targetEqId: targetEq.id,
+    hopDepth: hops + 1
+  };
 }
 
 // ========================================================
 // 2. DYNAMIC STATEMENT FORMATTER
 // ========================================================
 
-/**
- * Builds the natural-language problem statement.
- * Synchronizes visible goals with scaffolding state (faded intermediate steps are omitted).
- */
 export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}) {
   const parts = givens.map(v => {
     const val = S[v];
