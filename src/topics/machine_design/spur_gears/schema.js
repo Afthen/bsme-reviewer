@@ -28,9 +28,9 @@ export const GEAR_VARS_DB = Object.freeze({
   "C_i":  { name: "Center Distance to Idler", symbol: "C_i", dimension: DIMENSIONS.LENGTH, baseVar: "C_i" },
 
   // Tooth Counts & Kinematics
-  "T":    { name: "Tooth Count", symbol: "T", dimension: DIMENSIONS.COUNT, isInteger: true, baseVar: "T" },
-  "T_1":  { name: "Pinion Teeth", symbol: "T_1", dimension: DIMENSIONS.COUNT, isInteger: true, baseVar: "T", aliases: ["Pinion Teeth", "Driver Teeth"] },
-  "T_2":  { name: "Gear Teeth", symbol: "T_2", dimension: DIMENSIONS.COUNT, isInteger: true, baseVar: "T", aliases: ["Gear Teeth", "Driven Teeth"] },
+  "T":    { name: "Tooth Count", symbol: "T", dimension: DIMENSIONS.COUNT, isInteger: true, baseVar: "T", unit: "teeth" },
+  "T_1":  { name: "Pinion Teeth", symbol: "T_1", dimension: DIMENSIONS.COUNT, isInteger: true, baseVar: "T", unit: "teeth", aliases: ["Pinion Teeth", "Driver Teeth"] },
+  "T_2":  { name: "Gear Teeth", symbol: "T_2", dimension: DIMENSIONS.COUNT, isInteger: true, baseVar: "T", unit: "teeth", aliases: ["Gear Teeth", "Driven Teeth"] },
   "n":    { name: "Rotational Speed", symbol: "n", dimension: DIMENSIONS.ROT_SPEED, baseVar: "n", unit: "rpm" },
   "n_1":  { name: "Driver Speed", symbol: "n_1", dimension: DIMENSIONS.ROT_SPEED, baseVar: "n", unit: "rpm", aliases: ["Driver Speed", "Pinion Speed"] },
   "n_2":  { name: "Driven Speed", symbol: "n_2", dimension: DIMENSIONS.ROT_SPEED, baseVar: "n", unit: "rpm", aliases: ["Driven Speed", "Gear Speed"] },
