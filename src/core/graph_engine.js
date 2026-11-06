@@ -185,103 +185,273 @@ function getGraphCardsForVariable(rawVarKey, activeProblem = null, relationGraph
 }
 
 // ========================================================
-// COMPOUND LEAPFROG DERIVATION BUILDER
+// CAS & KNOWLEDGE GRAPH DERIVATION ENGINE
 // ========================================================
+
 /**
- * Assembles a multi-step algebraic substitution chain when intermediate
- * scaffolding steps have been faded due to high student mastery.
+ * Normalizes variable tokens for Nerdamer processing.
  */
-function buildCompoundDerivation(step, S, allSteps) {
-  if (!S || !step || !step.parentIndices || step.parentIndices.length === 0) return null;
+function toCasToken(v) {
+  return v.replace(/[^a-zA-Z0-9]/g, "");
+}
 
-  // Topic-level override hook
-  if (window.CURRENT_TOPIC && typeof window.CURRENT_TOPIC.buildCompoundDerivation === "function") {
-    const customResult = window.CURRENT_TOPIC.buildCompoundDerivation(step, S, allSteps);
-    if (customResult) return customResult;
-  }
+/**
+ * Formats variable tokens back into standard KaTeX notation.
+ */
+function toLatexToken(token, varsDb = null) {
+  const db = varsDb || (window.CURRENT_TOPIC && window.CURRENT_TOPIC.varsDb) || (typeof GEAR_VARS_DB !== "undefined" ? GEAR_VARS_DB : {});
+  // Check direct DB match
+  if (db[token] && db[token].symbol) return db[token].symbol;
 
-  // Check if any ancestor step was faded
-  const hasFadedAncestor = (step.ancestorIndices || []).some(aIdx => allSteps[aIdx] && allSteps[aIdx].isFaded);
-  if (!hasFadedAncestor) return null;
+  // Standard Greek & subscripts
+  if (token === "phi") return "\\phi";
+  if (token === "pi") return "\\pi";
+  if (token === "Pd" || token === "P_d") return "P_d";
+  if (token === "Ft" || token === "F_t" || token === "Wt" || token === "W_t") return "F_t";
+  if (token === "Fn" || token === "F_n") return "F_n";
+  if (token === "Fr" || token === "F_r" || token === "Wr" || token === "W_r") return "F_r";
+  if (token === "Do" || token === "D_o") return "D_o";
+  if (token === "VR" || token === "SR") return "\\text{VR}";
 
-  const t = step.targetVar;
-  const isSI = S.sys === "SI" || unitOf(S, "V_m") === "m/s" || unitOf(S, "D_P1") === "mm";
+  const m = token.match(/^([A-Za-z]+)(\d+)$/);
+  if (m) return `${m[1]}_{${m[2]}}`;
 
-  // CASE 1: Pinion Teeth (T_1) from Pitch Velocity, Diameter, and Driven Speed
-  if (t === "T_1" && step.eqId === "eq_vr_teeth") {
-    const vrStep = allSteps.find(s => s.targetVar === "VR" && s.isFaded);
-    const n1Step = allSteps.find(s => s.targetVar === "n_1" && s.isFaded);
+  return token;
+}
 
-    if (vrStep && n1Step) {
-      // 3-step leapfrog: v + D_1 -> n_1, n_1 + n_2 -> SR, SR + T_2 -> T_1
-      const derivationBlock = isSI
-        ? `\\begin{aligned}
-T_1 &= \\frac{T_2}{SR} = \\frac{T_2}{\\left(\\dfrac{N_1}{N_2}\\right)} = \\frac{T_2 \\cdot N_2}{N_1} \\\\[6pt]
-    &= \\frac{T_2 \\cdot N_2}{\\left(\\dfrac{60000 v}{\\pi D_1}\\right)} = \\frac{\\pi D_1 N_2 T_2}{60000 v}
-\\end{aligned}`
-        : `\\begin{aligned}
-T_1 &= \\frac{T_2}{SR} = \\frac{T_2}{\\left(\\dfrac{N_1}{N_2}\\right)} = \\frac{T_2 \\cdot N_2}{N_1} \\\\[6pt]
-    &= \\frac{T_2 \\cdot N_2}{\\left(\\dfrac{12 v}{\\pi D_1}\\right)} = \\frac{\\pi D_1 N_2 T_2}{12 v}
-\\end{aligned}`;
-
-      const finalBlock = isSI
-        ? `T_1 = \\frac{\\pi (${fmt(S.D_P1, 1)}) (${fmt(S.n_2, 1)}) (${fmt(S.T_2, 0)})}{60000 (${fmt(S.V_m, 2)})} = \\mathbf{${fmt(step.expectedVal, 0)}\\text{ teeth}}`
-        : `T_1 = \\frac{\\pi (${fmt(S.D_P1, 3)}) (${fmt(S.n_2, 1)}) (${fmt(S.T_2, 0)})}{12 (${fmt(S.V_m, 1)})} = \\mathbf{${fmt(step.expectedVal, 0)}\\text{ teeth}}`;
-
-      return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Velocity, Speed Ratio, and Tooth Balance" };
-    } else if (vrStep) {
-      // 2-step leapfrog: n_1 + n_2 -> SR, SR + T_2 -> T_1
-      const derivationBlock = `\\begin{aligned}
-T_1 &= \\frac{T_2}{SR} = \\frac{T_2}{\\left(\\dfrac{N_1}{N_2}\\right)} = \\frac{T_2 \\cdot N_2}{N_1}
-\\end{aligned}`;
-      const finalBlock = `T_1 = \\frac{(${fmt(S.T_2, 0)}) (${fmt(S.n_2, 1)})}{${fmt(S.n_1, 0)}} = \\mathbf{${fmt(step.expectedVal, 0)}\\text{ teeth}}`;
-      return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Speed Ratio definition" };
+/**
+ * Converts a symbolic CAS expression to formatted KaTeX.
+ */
+function casToLatex(exprStr, varsDb = null) {
+  if (typeof nerdamer !== "undefined") {
+    try {
+      let tex = nerdamer(exprStr).toTeX();
+      // Restore subscripts and greek letters
+      tex = tex.replace(/\b([A-Za-z]+)(\d+)\b/g, "$1_{$2}");
+      tex = tex.replace(/\bPd\b/g, "P_d");
+      tex = tex.replace(/\bFt\b/g, "F_t");
+      tex = tex.replace(/\bFn\b/g, "F_n");
+      tex = tex.replace(/\bFr\b/g, "F_r");
+      tex = tex.replace(/\bDo\b/g, "D_o");
+      tex = tex.replace(/\\cdot/g, " ");
+      return tex;
+    } catch (e) {
+      // Fallback
     }
   }
+  return exprStr;
+}
 
-  // CASE 2: Power (P) from Radial Force, Diameter, and RPM
-  if (t === "P" && step.eqId === "eq_wt_power_vel") {
-    const derivationBlock = `\\begin{aligned}
-W_t &= \\frac{33000 P}{V_m} = \\frac{33000 P}{\\left(\\dfrac{\\pi D_{1} n_1}{12}\\right)} = \\frac{12(33000) P}{\\pi D_{1} n_1} \\\\[6pt]
-\\frac{F_r}{\\tan\\phi} &= \\frac{12(33000) P}{\\pi D_{1} n_1} \\implies P = \\frac{F_r \\pi D_{1} n_1}{12(33000) \\tan\\phi}
-\\end{aligned}`;
-    const finalBlock = `P = \\frac{(${fmt(S.W_r, 0)})\\pi(${fmt(S.D_P1, 3)})(${fmt(S.n_1, 0)})}{12(33000)\\tan(${fmt(S.phi, 1)}°)} = \\mathbf{${fmt(step.expectedVal, 2)}\\text{ hp}}`;
-    return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Pitch Velocity and Pressure Angle Force Vectors" };
+/**
+ * Simplifies a symbolic expression using Nerdamer CAS.
+ */
+function casSimplifyExpression(exprStr) {
+  if (typeof nerdamer !== "undefined") {
+    try {
+      return nerdamer(`simplify(${exprStr})`).text();
+    } catch (e) {
+      return exprStr;
+    }
+  }
+  return exprStr;
+}
+
+/**
+ * Isolates a target variable from an equation string using Nerdamer CAS.
+ */
+function casIsolateVariable(lhsStr, rhsStr, targetVar) {
+  const tToken = toCasToken(targetVar);
+  if (toCasToken(lhsStr) === tToken) {
+    return { isolatedLhs: targetVar, isolatedRhs: rhsStr };
   }
 
-  // CASE 3: Blank Diameter (D_o) from Tooth Count and Diametral Pitch
-  if (t === "D_o" && step.eqId === "eq_do") {
-    const derivationBlock = `\\begin{aligned}
-D_o &= D_{1} + 2a = \\frac{T_1}{P_d} + 2\\left(\\frac{1}{P_d}\\right) = \\frac{T_1 + 2}{P_d}
-\\end{aligned}`;
-    const finalBlock = `D_o = \\frac{${fmt(S.T_1, 0)} + 2}{${fmt(S.P_d, 2)}} = \\mathbf{${fmt(step.expectedVal, 3)}\\text{ in}}`;
-    return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Pitch Diameter and Addendum proportions" };
+  if (typeof nerdamer !== "undefined") {
+    try {
+      const eqStr = `${lhsStr} = ${rhsStr}`;
+      const solutions = nerdamer.solveEquations(eqStr, tToken);
+      if (solutions && solutions.length > 0) {
+        let sol = solutions[0];
+        if (typeof sol.text === "function") sol = sol.text();
+        return { isolatedLhs: targetVar, isolatedRhs: sol.toString() };
+      }
+    } catch (e) {
+      // Fallback
+    }
   }
+  return { isolatedLhs: targetVar, isolatedRhs: rhsStr };
+}
 
-  // CASE 4: Pitch Line Velocity (V_m) from Teeth, Diametral Pitch, and RPM
-  if (t === "V_m" && step.eqId === "eq_pitch_vel") {
-    const derivationBlock = `\\begin{aligned}
-V_m &= \\frac{\\pi D_{1} n_1}{12} = \\frac{\\pi \\left(\\dfrac{T_1}{P_d}\\right) n_1}{12} = \\frac{\\pi T_1 n_1}{12 P_d}
-\\end{aligned}`;
-    const finalBlock = `V_m = \\frac{\\pi(${fmt(S.T_1, 0)})(${fmt(S.n_1, 0)})}{12(${fmt(S.P_d, 2)})} = \\mathbf{${fmt(step.expectedVal, 1)}\\text{ ft/min}}`;
-    return { type: "compound_leapfrog", derivationBlock, finalBlock, note: "Synthesized from Pitch Diameter definition" };
-  }
+/**
+ * Dynamic Step Derivation Generator:
+ * Generates canonical equations on top, followed by alternating Graph substitutions
+ * and CAS simplifications, then value substitution and unit cancellation.
+ */
+function buildStepDerivation(step, S, allSteps = [], givens = [], currentTopic = null) {
+  const top = currentTopic || window.CURRENT_TOPIC || {
+    relations: typeof GEAR_RELATION_GRAPH !== "undefined" ? GEAR_RELATION_GRAPH : [],
+    varsDb: typeof GEAR_VARS_DB !== "undefined" ? GEAR_VARS_DB : {}
+  };
+  const relations = top.relations || [];
+  const varsDb = top.varsDb || {};
 
-  // Generic Fallback Derivation Generator
-  const fadedNames = (step.ancestorIndices || [])
+  const eq = relations.find(r => r.id === step.eqId);
+  const targetVar = step.targetVar;
+  const isSI = S.sys === "SI" || unitOf(S, "V_m", varsDb) === "m/s" || unitOf(S, "D_P1", varsDb) === "mm";
+
+  // Identify known variables (givens + visible prior step outputs)
+  const knowns = new Set(givens);
+  allSteps.forEach(s => {
+    if (!s.isFaded && s.stepIdx < step.stepIdx) {
+      knowns.add(s.targetVar);
+    }
+  });
+
+  // Identify faded ancestor relations in this branch
+  const fadedAncestors = (step.ancestorIndices || [])
     .map(i => allSteps[i])
-    .filter(s => s && s.isFaded)
-    .map(s => getVarName(S, s.targetVar));
+    .filter(s => s && s.isFaded);
+
+  // 1. Resolve Canonical Equation for this relation
+  let canonicalLhs = "";
+  let canonicalRhs = "";
+  let canonicalTex = "";
+
+  if (eq && eq.canonical) {
+    canonicalLhs = eq.canonical.lhs;
+    canonicalRhs = eq.canonical.rhs;
+    canonicalTex = eq.canonical.tex || `${toLatexToken(canonicalLhs, varsDb)} = ${casToLatex(canonicalRhs, varsDb)}`;
+  } else if (eq && eq.baseFormula) {
+    canonicalTex = eq.baseFormula;
+    const parts = eq.baseFormula.split("=");
+    canonicalLhs = (parts[0] || "").trim();
+    canonicalRhs = (parts[1] || "").trim();
+  } else {
+    canonicalTex = step.equation ? step.equation.split("=")[0].trim() : `${toLatexToken(targetVar, varsDb)}`;
+    canonicalLhs = targetVar;
+    canonicalRhs = targetVar;
+  }
+
+  // 2. Alternating Graph Substitution -> CAS Simplification
+  const substitutionHistory = [];
+  let currentExpr = canonicalRhs;
+  let currentLhs = canonicalLhs;
+
+  if (fadedAncestors.length > 0) {
+    // Process each faded ancestor in topological order
+    fadedAncestors.forEach(fStep => {
+      const fVar = fStep.targetVar;
+      const fToken = toCasToken(fVar);
+
+      // Determine graph formula for the faded ancestor
+      const fEq = relations.find(r => r.id === fStep.eqId);
+      let subFormula = null;
+      let subLatex = null;
+
+      if (fVar === "D_P1" || fVar === "D_1") {
+        if (fEq && fEq.id === "eq_pitch_vel") {
+          subFormula = isSI ? "(60000*v)/(pi*n1)" : "(12*Vm)/(pi*n1)";
+          subLatex = isSI ? "\\frac{60000 v}{\\pi n_1}" : "\\frac{12 V_m}{\\pi n_1}";
+        } else if (fEq && (fEq.id === "eq_dp_teeth_1" || fEq.id === "eq_pd")) {
+          subFormula = "T1/Pd";
+          subLatex = "\\frac{T_1}{P_d}";
+        }
+      } else if (fVar === "D_P2" || fVar === "D_2") {
+        subFormula = "T2/Pd";
+        subLatex = "\\frac{T_2}{P_d}";
+      } else if (fVar === "W_t" || fVar === "F_t") {
+        if (fEq && fEq.id === "eq_fn_ft") {
+          subFormula = "Fn*cos(phi)";
+          subLatex = "F_n \\cos\\phi";
+        }
+      }
+
+      if (subFormula) {
+        // Graph substitution step
+        const prevExpr = currentExpr;
+        if (typeof nerdamer !== "undefined") {
+          try {
+            const subsObj = {};
+            subsObj[fToken] = subFormula;
+            currentExpr = nerdamer(currentExpr, subsObj).text();
+          } catch (e) {
+            currentExpr = currentExpr.split(fToken).join(`(${subFormula})`);
+          }
+        } else {
+          currentExpr = currentExpr.split(fToken).join(`(${subFormula})`);
+        }
+
+        // CAS simplification step
+        currentExpr = casSimplifyExpression(currentExpr);
+
+        substitutionHistory.push({
+          replacedVar: fVar,
+          subLatex,
+          simplifiedLatex: casToLatex(currentExpr, varsDb)
+        });
+      }
+    });
+  }
+
+  // 3. Isolate the target variable if needed
+  let isolatedFormulaLatex = "";
+  if (toCasToken(currentLhs) !== toCasToken(targetVar)) {
+    const isolated = casIsolateVariable(currentLhs, currentExpr, targetVar);
+    isolatedFormulaLatex = `${toLatexToken(targetVar, varsDb)} = ${casToLatex(isolated.isolatedRhs, varsDb)}`;
+  } else {
+    isolatedFormulaLatex = `${toLatexToken(targetVar, varsDb)} = ${casToLatex(currentExpr, varsDb)}`;
+  }
+
+  // 4. Construct Clean KaTeX Derivation Blocks
+  // Top: Canonical equation
+  let algebraicBlock = `\\text{Canonical Equation:}\\quad ${canonicalTex}`;
+
+  if (substitutionHistory.length > 0) {
+    const stepsTex = substitutionHistory.map(h => `${canonicalTex.split("=")[0].trim()} = ${h.simplifiedLatex}`).join(" \\\\[4pt]\n");
+    algebraicBlock += ` \\\\[6pt]\n\\text{Direct Resolution:}\\quad ${isolatedFormulaLatex}`;
+  } else if (canonicalTex !== isolatedFormulaLatex && isolatedFormulaLatex !== "") {
+    algebraicBlock += ` \\\\[4pt]\n\\implies ${isolatedFormulaLatex}`;
+  }
+
+  // 5. Numerical Substitution & Unit Cancellation (using units.js helpers)
+  let numericalBlock = "";
+  const unitStr = unitOf(S, targetVar, varsDb);
+  const targetMeta = varsDb[targetVar] || {};
+  const isInteger = !!targetMeta.isInteger;
+  const prec = isInteger ? 0 : (unitStr === "N-m" || unitStr === "teeth/in" || unitStr === "in" ? 2 : 2);
+  const finalValStr = fmt(step.expectedVal, prec);
+
+  // High-fidelity substitution block according to relation
+  if (targetVar === "P_d" && (S.T_1 !== undefined && S.T_2 !== undefined && S.C !== undefined)) {
+    numericalBlock = `P_d = \\frac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 1)}\\,${cancelUnit("mm")})} \\cdot ${window.formatConversionWithCancellation("in_to_mm_cancel_mm")} = \\mathbf{${finalValStr}\\text{ teeth/in}}`;
+  } else if ((targetVar === "D_P1" || targetVar === "D_1") && S.V_m !== undefined && S.n_1 !== undefined) {
+    numericalBlock = `D_1 = \\frac{60(${fmt(S.V_m, 2)}\\,${cancelUnit("m")}/\\cancel{\\text{s}})}{\\pi (${fmt(S.n_1, 0)}\\,\\text{rev}/\\cancel{\\text{min}} \\cdot \\frac{1\\,\\cancel{\\text{min}}}{60\\,\\cancel{\\text{s}}})} \\cdot ${window.formatConversionWithCancellation("m_to_mm_cancel_m")} = \\mathbf{${finalValStr}\\text{ mm}}`;
+  } else if ((targetVar === "T" || targetVar === "M_t") && S.F_n !== undefined && S.phi !== undefined) {
+    const dVal = S.D_P1 || S.D_1 || 60;
+    numericalBlock = `T = (${fmt(S.F_n, 0)}\\text{ N})\\cos(${fmt(S.phi, 0)}^\\circ) \\times \\frac{${fmt(dVal, 0)}\\,${cancelUnit("mm")} \\cdot ${window.formatConversionWithCancellation("mm_to_m_cancel_mm")}}{2} = \\mathbf{${finalValStr}\\text{ N}\\cdot\\text{m}}`;
+  } else if (step.equation && step.equation.includes("=")) {
+    // Standard numerical fallback from step equation with cancel sanitization
+    let cleanEq = step.equation.replace(/cancel\s*mm/g, `\\,${cancelUnit("mm")}`);
+    cleanEq = cleanEq.replace(/\\cancel\s*mm/g, `\\,${cancelUnit("mm")}`);
+    numericalBlock = cleanEq;
+  } else {
+    numericalBlock = `${toLatexToken(targetVar, varsDb)} = \\mathbf{${finalValStr}\\text{ ${unitStr}}}`;
+  }
+
+  const fullMathHtml = `\\[ \\begin{aligned} ${algebraicBlock} \\\\[6pt] ${numericalBlock} \\end{aligned} \\]`;
 
   return {
-    type: "compound_leapfrog",
-    derivationBlock: `\\begin{aligned}
-\\text{[Synthesized Step]} &\\quad \\text{Direct resolution substituting mastered relations (${fadedNames.join(", ")}):} \\\\[4pt]
-${step.equation}
-\\end{aligned}`,
-    finalBlock: "",
-    note: `Intermediate steps for ${fadedNames.join(", ")} were synthesized into this derivation based on your mastery profile.`
+    title: step.text || `Calculation for ${getVarName(S, targetVar, varsDb)}`,
+    mathHtml: fullMathHtml,
+    derivationBlock: algebraicBlock,
+    finalBlock: numericalBlock
   };
+}
+
+/**
+ * Backward-compatible wrapper delegating directly to buildStepDerivation.
+ */
+function buildCompoundDerivation(step, S, allSteps) {
+  return buildStepDerivation(step, S, allSteps, [], window.CURRENT_TOPIC);
 }
 
 // ========================================================
