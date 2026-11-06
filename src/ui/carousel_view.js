@@ -1,16 +1,20 @@
 /**
  * src/ui/carousel_view.js
- * Flashcard carousel with in-place dynamic CAS isolation and contextual tooltips.
+ * Flashcard carousel with dynamic CAS isolation and topic-aware tooltips.
  */
 
 import { isolateVariable } from "../core/cas.js";
-import { getVarMeta } from "../topics/machine_design/spur_gears/schema.js";
 
 let currentCards = [];
 let currentCardIdx = 0;
-let isolatedVarMap = {}; // eqId -> currently isolated variable
+let isolatedVarMap = {};
 let globalRelations = [];
 let activeSystemRef = null;
+let activeVarsDbRef = {};
+
+function resolveMeta(varKey) {
+  return activeVarsDbRef[varKey] || { name: varKey, symbol: varKey, dimension: "Dimensionless" };
+}
 
 export function initCarouselView(relations = []) {
   globalRelations = relations;
@@ -41,12 +45,12 @@ export function openCarouselForVariable(varKey, system = null) {
   if (currentCards.length === 0) return;
 
   currentCardIdx = 0;
-  isolatedVarMap = {}; // Reset local isolations
+  isolatedVarMap = {};
 
   document.getElementById("view-problem").classList.remove("active");
   document.getElementById("view-carousel").classList.add("active");
 
-  const meta = getVarMeta(varKey);
+  const meta = resolveMeta(varKey);
   document.getElementById("c-var-title").textContent = meta.name || varKey;
   renderCurrentCard();
 }
@@ -59,24 +63,22 @@ function renderCurrentCard() {
 
   document.getElementById("c-counter").textContent = `${currentCardIdx + 1} / ${currentCards.length}`;
 
-  const isolatedMeta = getVarMeta(currentIsolated);
+  const isolatedMeta = resolveMeta(currentIsolated);
   document.getElementById("c-dimension").textContent = `[${isolatedMeta.dimension}]`;
 
-  // Dynamic formula display: canonical vs. isolated via CAS
   let displayLatex = card.canonicalTex;
   if (currentIsolated !== canonicalLhs) {
-    const isolated = isolateVariable(card.baseFormula, currentIsolated);
+    const isolated = isolateVariable(card.baseFormula, currentIsolated, activeVarsDbRef);
     displayLatex = isolated.texEquation;
   }
   document.getElementById("c-formula").innerHTML = `\\[ ${displayLatex} \\]`;
   document.getElementById("c-notes").textContent = `${card.name} (Canonical Equation)`;
 
-  // In-place isolation variable pill buttons
   const pillsCont = document.getElementById("c-vars-container");
   pillsCont.innerHTML = "";
 
   card.nodes.forEach(nodeVar => {
-    const nodeMeta = getVarMeta(nodeVar);
+    const nodeMeta = resolveMeta(nodeVar);
     const pill = document.createElement("button");
     pill.className = `var-pill ${nodeVar === currentIsolated ? "active" : ""}`;
     pill.innerHTML = `$${nodeMeta.symbol || nodeVar}$`;
@@ -89,7 +91,6 @@ function renderCurrentCard() {
     pillsCont.appendChild(pill);
   });
 
-  // Dots navigation
   const dotsCont = document.getElementById("c-dots");
   dotsCont.innerHTML = "";
   currentCards.forEach((_, i) => {
@@ -97,7 +98,7 @@ function renderCurrentCard() {
     dot.className = `dot ${i === currentCardIdx ? "active" : ""}`;
     dotsCont.appendChild(dot);
   });
-  
+
   if (window.renderMathInElement) {
     window.renderMathInElement(document.getElementById("view-carousel"), {
       delimiters: [
@@ -111,16 +112,14 @@ function renderCurrentCard() {
   }
 }
 
-// ========================================================
-// CONTEXTUAL TOOLTIP CONTROLLER
-// ========================================================
-export function attachTooltips(activeSystem = null, currentSteps = []) {
+export function attachTooltips(activeSystem = null, currentSteps = [], varsDb = {}) {
+  activeVarsDbRef = varsDb;
   const tooltip = document.getElementById("tooltip");
   const varEls = document.querySelectorAll(".interactive-var");
 
   varEls.forEach(el => {
     const varKey = el.dataset.var;
-    const meta = getVarMeta(varKey);
+    const meta = resolveMeta(varKey);
     const unit = activeSystem?._u?.[varKey] || meta.unit || "dimless";
 
     el.addEventListener("mouseenter", () => {

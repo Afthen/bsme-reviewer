@@ -5,7 +5,20 @@
 
 import { FADING_THRESHOLD, PHI_INV2 } from "../repetition/mastery.js";
 
+let activeRelations = [];
+let activeGetMastery = () => 0;
+let isInitialized = false;
+
 export function initSidebarView(relations = [], getMastery = () => 0) {
+  activeRelations = relations;
+  activeGetMastery = getMastery;
+
+  // Always re-render the bars with the new topic relations
+  renderMasteryBars(activeRelations, activeGetMastery);
+
+  // Only bind the click event listeners ONCE to prevent instant-close bugs
+  if (isInitialized) return;
+
   const drawer = document.getElementById("sidebar-drawer");
   const overlay = document.getElementById("sidebar-overlay");
   const btnHamburger = document.getElementById("btn-hamburger");
@@ -19,7 +32,7 @@ export function initSidebarView(relations = [], getMastery = () => 0) {
     } else {
       drawer.classList.add("open");
       overlay.classList.add("active");
-      renderMasteryBars(relations, getMastery);
+      renderMasteryBars(activeRelations, activeGetMastery);
     }
   }
 
@@ -31,6 +44,8 @@ export function initSidebarView(relations = [], getMastery = () => 0) {
   btnHamburger?.addEventListener("click", toggle);
   btnClose?.addEventListener("click", close);
   overlay?.addEventListener("click", close);
+
+  isInitialized = true;
 }
 
 export function renderMasteryBars(relations = [], getMastery = () => 0) {

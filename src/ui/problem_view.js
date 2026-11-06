@@ -1,10 +1,10 @@
 /**
  * src/ui/problem_view.js
  * Interactive problem presenter, step input validator, and derivation renderer.
+ * Dynamically resolves metadata from the active topic schema.
  */
 
 import { buildAlignedDerivation } from "../core/derivation.js";
-import { getVarMeta } from "../topics/machine_design/spur_gears/schema.js";
 import { targetLabel } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
@@ -12,6 +12,10 @@ import {
 } from "../repetition/mastery.js";
 import { attachTooltips } from "./carousel_view.js";
 import { renderMasteryBars } from "./sidebar_view.js";
+
+function resolveMeta(varKey, varsDb = {}) {
+  return varsDb[varKey] || { name: varKey, symbol: varKey, unit: "" };
+}
 
 export function renderProblemView(activeProblem, relations = [], topicId = "spur_gears") {
   if (!activeProblem) return;
@@ -37,7 +41,8 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     chevron.className = "chevron";
     chevron.textContent = "▶";
 
-    const meta = getVarMeta(step.targetVar);
+    // Dynamic schema resolution from active problem
+    const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
     const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
     const rawTarget = targetLabel(meta.name, `{{${meta.symbol || step.targetVar}|${step.targetVar}}}`, unit);
 
@@ -112,7 +117,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     });
   }
 
-  attachTooltips(activeProblem.system, activeProblem.solution);
+  attachTooltips(activeProblem.system, activeProblem.solution, activeProblem.varsDb);
 }
 
 function refreshStepDerivations(activeProblem, relations) {
@@ -130,7 +135,7 @@ function refreshStepDerivations(activeProblem, relations) {
         activeProblem.varsDb,
         relations,
         answeredVars,
-        activeProblem.givens // Passed here so givens are recognized as known
+        activeProblem.givens
       );
     }
   });
@@ -158,7 +163,7 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
   const val = parseFloat(raw);
   if (isNaN(val)) return;
 
-  const meta = getVarMeta(step.targetVar);
+  const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
   const expected = step.expectedVal;
   const tol = meta.isInteger ? 0.5 : Math.max(PHI_INV8 * Math.abs(expected), 0.05);
   const isCorrect = Math.abs(val - expected) <= tol;
@@ -205,18 +210,17 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
   updateToggleAllButton(activeProblem);
 }
 
-// ========================================================
-// DISTRACTOR BANNER (ONLY SHOWN AFTER COMPLETION)
-// ========================================================
 function renderDistractorBanner(activeProblem) {
   const banner = document.getElementById("distractor-banner");
   if (!banner) return;
 
   const allCompleted = activeProblem.solution.every(s => s.isAnswered);
 
-  // Strictly hidden until ALL solution steps are finished
   if (allCompleted && activeProblem.distractors && activeProblem.distractors.length > 0) {
-    const list = activeProblem.distractors.map(v => `<strong>${getVarMeta(v).name} ($${getVarMeta(v).symbol}$)</strong>`).join(", ");
+    const list = activeProblem.distractors.map(v => {
+      const meta = resolveMeta(v, activeProblem.varsDb);
+      return `<strong>${meta.name} ($${meta.symbol}$)</strong>`;
+    }).join(", ");
     banner.style.display = "block";
     banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that ${list} was given in the specifications but was not needed in the solution path. Exams often supply extra parameters to test whether you choose the correct relations.`;
   } else {
@@ -224,9 +228,6 @@ function renderDistractorBanner(activeProblem) {
   }
 }
 
-// ========================================================
-// STRICT EXPAND / COLLAPSE ALL CONTROLS
-// ========================================================
 function updateToggleAllButton(activeProblem) {
   const btn = document.getElementById("btn-toggle-all");
   const items = document.querySelectorAll(".solution-item");
@@ -236,10 +237,8 @@ function updateToggleAllButton(activeProblem) {
   const openCount = Array.from(items).filter(it => it.classList.contains("open")).length;
 
   if (openCount === 0 && !allCompleted) {
-    // 0 steps open: button is hidden
     btn.style.display = "none";
   } else if (!allCompleted) {
-    // At least 1 step open, but problem not finished: only allow Collapse All
     btn.style.display = "inline-flex";
     btn.innerHTML = `<span style="cursor: pointer; border-bottom: 1px dotted var(--text-muted);">Collapse All</span>`;
     btn.onclick = () => {
@@ -247,7 +246,6 @@ function updateToggleAllButton(activeProblem) {
       updateToggleAllButton(activeProblem);
     };
   } else {
-    // All steps completed: show full Expand / Collapse controls
     btn.style.display = "inline-flex";
     const allOpen = openCount === items.length;
     btn.innerHTML = allOpen
