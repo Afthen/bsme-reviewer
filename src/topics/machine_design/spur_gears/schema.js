@@ -3,7 +3,7 @@
  * Spur gear variable dictionary, canonical symbols, and physical dimensions.
  */
 
-import { DIMENSIONS } from "../../core/dimensions.js";
+import { DIMENSIONS } from "../../../core/dimensions.js";
 
 export const GEAR_VARS_DB = Object.freeze({
   // Geometry & Tooth Proportions
