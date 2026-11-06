@@ -101,7 +101,14 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
 
   if (window.renderMathInElement) {
     window.renderMathInElement(document.getElementById("view-problem"), {
-      delimiters: [{ left: "$$", right: "$$", display: true }, { left: "\\[", right: "\\]", display: true }, { left: "$", right: "$", display: false }]
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "$", right: "$", display: false }
+      ],
+      output: "html",
+      strict: false,
+      throwOnError: false
     });
   }
 
@@ -130,7 +137,14 @@ function refreshStepDerivations(activeProblem, relations) {
 
   if (window.renderMathInElement) {
     window.renderMathInElement(document.getElementById("p-solution-flow"), {
-      delimiters: [{ left: "$$", right: "$$", display: true }, { left: "\\[", right: "\\]", display: true }, { left: "$", right: "$", display: false }]
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "$", right: "$", display: false }
+      ],
+      output: "html",
+      strict: false,
+      throwOnError: false
     });
   }
 }
