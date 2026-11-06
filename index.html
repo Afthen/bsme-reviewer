@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spur Gear Reviewer & Graph Solver</title>
+  <title>Mechanical Engineering Reviewer & Graph Solver</title>
   
-  <!-- Math & Symbolic Dependencies (KaTeX) -->
+  <!-- Math & Symbolic Dependencies (KaTeX + Cancel Extension) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/cancel.min.js"></script>
 
   <!-- Client-Side Computer Algebra System (Nerdamer CAS) -->
   <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js"></script>
@@ -30,6 +31,7 @@
       --success: #22c55e;
       --danger: #ef4444;
       --warning: #f59e0b;
+      --font-base: 0.95rem;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -136,7 +138,31 @@
     .article-container { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem; }
     
     .problem-header h2 { font-size: 1.35rem; font-weight: 600; margin-bottom: 0.75rem; color: #fff; }
-    .problem-statement { font-size: 1rem; color: #d1d2d5; line-height: 1.7; }
+    
+    /* UNIFIED TYPOGRAPHY SCALE */
+    .problem-statement,
+    .solution-text,
+    .solution-summary {
+      font-size: var(--font-base);
+      color: #d1d2d5;
+      line-height: 1.7;
+    }
+
+    /* PREVENT HANGING PARENTHESES ON LINE WRAPS */
+    .math-token {
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    /* MATCH LATEX FONT SIZE 1:1 WITH HOST TEXT */
+    .katex {
+      font-size: 1em !important;
+      text-rendering: auto;
+    }
+    .katex-display {
+      font-size: 1.1em !important;
+      margin: 0.85rem 0 !important;
+    }
     
     .solution-section { border-top: 1px solid var(--border); padding-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
     .solution-top { display: flex; justify-content: space-between; align-items: center; min-height: 24px; }
@@ -148,7 +174,6 @@
     .solution-summary {
       padding: 0.6rem 0.9rem;
       cursor: pointer;
-      font-size: 0.875rem;
       font-weight: 500;
       display: flex;
       justify-content: space-between;
@@ -161,12 +186,13 @@
     .chevron { font-size: 0.75rem; color: var(--text-dim); transition: transform 0.2s ease; }
     .solution-item.open .chevron { transform: rotate(90deg); color: var(--text); }
     
+    /* INPUT BOX — ARROWS STRICTLY REMOVED */
     .step-input-wrap { display: flex; align-items: center; padding: 2px; }
     .step-ans-input {
       background: #141517;
       border: 1.5px solid var(--border);
       color: #fff;
-      font-size: 0.875rem;
+      font-size: var(--font-base);
       font-weight: 500;
       padding: 0.35rem 0.8rem;
       border-radius: 5px;
@@ -174,14 +200,20 @@
       outline: none;
       transition: all 0.15s;
       text-align: right;
-      -webkit-appearance: none;
-      appearance: none;
+      -webkit-appearance: none !important;
+      -moz-appearance: textfield !important;
+      appearance: textfield !important;
     }
+    /* Chrome, Safari, Edge, Opera: disable inner/outer stepper arrows */
     .step-ans-input::-webkit-outer-spin-button,
-    .step-ans-input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
+    .step-ans-input::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none !important;
+      display: none !important;
+      margin: 0 !important;
     }
+
     .step-ans-input:focus { border-color: var(--accent-math); }
     .step-ans-input.state-correct {
       border-color: var(--success) !important;
@@ -207,7 +239,6 @@
     .shake-trigger {
       animation: shake 0.35s ease;
     }
-
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
       20%, 60% { transform: translateX(-5px); }
@@ -223,7 +254,6 @@
       background: #17181a;
     }
     .solution-item.open .solution-body { display: flex; }
-    .solution-text { font-size: 0.925rem; color: var(--text-muted); line-height: 1.6; }
     .solution-math-display {
       padding: 0.75rem 1rem;
       background: var(--bg);
@@ -340,7 +370,6 @@
 </head>
 <body>
 
-  <!-- HEADER WITH HAMBURGER BUTTON -->
   <header>
     <div style="display: flex; align-items: center; gap: 0.6rem;">
       <button class="btn" id="btn-hamburger" onclick="toggleSidebar()">☰ Mastery</button>
@@ -354,7 +383,6 @@
     </div>
   </header>
 
-  <!-- BACKDROP OVERLAY FOR CLOSING DRAWER -->
   <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
   <div class="workspace">
@@ -431,7 +459,7 @@
   <!-- MODULAR SCRIPTS -->
   <script src="src/core/units.js"></script>
   <script src="src/core/graph_engine.js"></script>
-  <script src="src/topics/machine_design/spur_gears.js"></script>
+  <script src="src/topics/spur_gears.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

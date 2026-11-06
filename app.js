@@ -23,7 +23,7 @@ const PHI_INV7 = Math.pow(PHI_INV, 7);           // 0.0344418537... (Tick decay 
 const PHI_INV8 = Math.pow(PHI_INV, 8);           // 0.0212862363... (Relative error tolerance)
 const E = Math.E;                                // 2.7182818284...
 
-// Pedagogical derived parameters
+// Derived pedagogical parameters
 const FADING_MASTERY_THRESHOLD = 1 - PHI_INV3;   // 1 - φ⁻³ ≈ 0.7639 (Golden Fading Threshold)
 const HISTORY_WINDOW_SIZE = 8;                   // F_6 = 8 (Fibonacci attempt buffer)
 const TICK_DECAY_LAMBDA = PHI_INV7;              // Half-life = ln(2)/φ⁻⁷ ≈ 20.13 ≈ 21 ticks (F_8)
@@ -107,7 +107,7 @@ function calculateDecayedMastery(eqId) {
 }
 
 function recordEquationAttempt(eqId, success) {
-  const currentTick = incrementGlobalTick(); // Advance tick on actual cognitive action!
+  const currentTick = getGlobalTick();
   if (!edgeHistory[eqId]) {
     edgeHistory[eqId] = { attempts: [], lastPracticedTick: currentTick };
   }
@@ -121,9 +121,7 @@ function recordEquationAttempt(eqId, success) {
 }
 
 /**
- * Backpropagates blame to faded ancestor equations when a compound step is failed.
- * Pushing a failure immediately knocks mastery down by a factor of PHI_INV,
- * bringing it below the 0.7639 threshold so scaffolding un-fades on the next problem!
+ * Backpropagates diagnostic blame to faded ancestors when a compound step is failed.
  */
 function penalizeBlameEquation(eqId) {
   const currentTick = getGlobalTick();
@@ -139,12 +137,12 @@ function penalizeBlameEquation(eqId) {
 }
 
 /**
- * Reinforces faded ancestors when a learner successfully completes a compound leapfrog.
+ * Reinforces decay timers of faded ancestors on successful compound execution.
  */
 function reinforceEquationAttempt(eqId) {
   const currentTick = getGlobalTick();
   if (edgeHistory[eqId]) {
-    edgeHistory[eqId].lastPracticedTick = currentTick; // Resets decay timer
+    edgeHistory[eqId].lastPracticedTick = currentTick;
     saveMastery();
   }
 }
@@ -229,7 +227,8 @@ function generateOrganicStatement(cand, S) {
     const displaySym = meta.symbol || v;
     const name = getVarName(S, v, topic.varsDb);
     const uStr = (u && u !== "dimless" && u !== "ratio" && u !== "teeth") ? `\\text{ ${u}}` : (u === "deg" ? "^\\circ" : "");
-    parts.push(`${name} ($${displaySym} = ${fmt(val, 2)}${uStr}$)`);
+    // Wrapped in .math-token to prevent orphaned '(' on line breaks:
+    parts.push(`${name}&nbsp;<span class="math-token">($${displaySym} = ${fmt(val, 2)}${uStr}$)</span>`);
   });
 
   const goalMeta = topic.varsDb[cand.goal] || {};
@@ -238,11 +237,11 @@ function generateOrganicStatement(cand, S) {
   const goalU = unitOf(S, cand.goal, topic.varsDb);
   const goalUStr = (goalU && goalU !== "dimless" && goalU !== "ratio" && goalU !== "teeth") ? ` in $\\text{${goalU}}$` : "";
 
-  return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: <strong>${goalName}</strong> ($${goalSym}$)${goalUStr}.`;
+  return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: <strong>${goalName}</strong>&nbsp;<span class="math-token">($${goalSym}$)</span>${goalUStr}.`;
 }
 
 function generateGraphProblem() {
-  // Don't tick here — generating a question shouldn't cause memory decay!
+  // NOTE: Does NOT advance global tick. Ticks only advance upon active student problem-solving!
   const S = topic.createSystem();
   const candidates = getSeedCandidates(topic);
 
@@ -365,7 +364,7 @@ function renderProblemView() {
 
     const input = document.createElement("input");
     input.type = "number";
-    input.step = "any";
+    input.inputMode = "decimal";
     input.className = "step-ans-input";
     input.placeholder = "Enter value...";
     input.dataset.stepIdx = idx;
@@ -445,10 +444,15 @@ function renderStepTargetText(targetStr) {
 function checkStepAnswer(idx, inputEl) {
   const step = activeProblem.solution[idx];
   const raw = inputEl.value.trim();
+
+  // If empty, user chose to reveal without solving
   if (raw === "") {
     revealStepAnswer(idx, inputEl);
     return;
   }
+
+  // Active cognitive attempt: increment global interference clock
+  incrementGlobalTick();
 
   const val = parseFloat(raw);
   if (isNaN(val)) return;
@@ -475,14 +479,14 @@ function checkStepAnswer(idx, inputEl) {
     step.isRevealed = false;
     recordEquationAttempt(step.eqId, true);
     
-    // Reinforce faded ancestors
+    // Reinforce decay timers of ancestors
     (step.fadedAncestorEqIds || []).forEach(ancId => reinforceEquationAttempt(ancId));
     document.getElementById(`step-item-${idx}`).classList.add("open");
   } else {
     inputEl.classList.add("state-wrong", "shake-trigger");
     recordEquationAttempt(step.eqId, false);
     
-    // Backpropagate blame: knock ancestors below 0.7639 so next problem un-fades them!
+    // Backpropagate blame: knocks ancestors below 0.7639 so next problem un-fades scaffolding!
     (step.fadedAncestorEqIds || []).forEach(ancId => penalizeBlameEquation(ancId));
 
     setTimeout(() => {
@@ -495,15 +499,19 @@ function checkStepAnswer(idx, inputEl) {
 
 function revealStepAnswer(idx, inputEl) {
   const step = activeProblem.solution[idx];
+
+  // NOTE: Revealing does NOT increment the global tick.
   step.isAnswered = true;
   step.isRevealed = true;
   step.userVal = step.expectedVal;
   inputEl.value = step.expectedVal;
   inputEl.classList.add("state-revealed");
   inputEl.disabled = true;
+  
+  // Local equation fail:
   recordEquationAttempt(step.eqId, false);
   
-  // Faded ancestors receive diagnostic blame
+  // Diagnostic reset on ancestors:
   (step.fadedAncestorEqIds || []).forEach(ancId => penalizeBlameEquation(ancId));
 
   document.getElementById(`step-item-${idx}`).classList.add("open");
@@ -540,7 +548,7 @@ function checkDistractors() {
   if (distractors.length > 0) {
     const dList = distractors.map(v => {
       const sym = (topic.varsDb[v] && topic.varsDb[v].symbol) || v;
-      return `${getVarName(activeProblem.system, v, topic.varsDb)} ($${sym}$)`;
+      return `${getVarName(activeProblem.system, v, topic.varsDb)} <span class="math-token">($${sym}$)</span>`;
     }).join(", ");
     banner.style.display = "block";
     banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that <em>${dList}</em> was provided in the specifications but is not needed in the solution path. Exams often supply extra parameters to test whether you choose the correct relations.`;
