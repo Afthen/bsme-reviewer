@@ -8,7 +8,7 @@
 // ========================================================
 
 /**
- * Normalizes variable tokens for Nerdamer processing (removes underscores).
+ * Normalizes a single variable token for Nerdamer (removes underscores).
  * e.g., "D_P1" -> "DP1", "h_k" -> "hk", "P_d" -> "Pd"
  */
 export function toCasToken(v) {
@@ -17,7 +17,17 @@ export function toCasToken(v) {
 }
 
 /**
+ * Sanitizes an algebraic expression string by removing underscores from variable tokens
+ * while preserving arithmetic operators (+, -, *, /, parentheses).
+ */
+export function sanitizeExpr(exprStr) {
+  if (!exprStr) return "";
+  return exprStr.replace(/([a-zA-Z]+)_(\w+)/g, "$1$2");
+}
+
+/**
  * Restores raw CAS tokens into standard KaTeX notation with subscripts & Greek letters.
+ * Strictly eliminates any '*' or '\cdot' multiplication symbols.
  */
 export function casToTex(exprStr, varsDb = {}) {
   if (typeof nerdamer === "undefined" || !exprStr) return exprStr || "";
@@ -48,12 +58,16 @@ export function casToTex(exprStr, varsDb = {}) {
     // Restore numbered subscripts: D1 -> D_1, T2 -> T_2, n1 -> N_1
     tex = tex.replace(/\b([A-Za-z])(\d+)\b/g, "$1_{$2}");
 
-    // Clean multiplication dots between simple variables
+    // Eliminate ugly multiplication symbols completely
     tex = tex.replace(/\\cdot/g, " ");
+    tex = tex.replace(/\*/g, " ");
+
+    // Remove unnecessary spaces between coefficient numbers and variables (e.g., "2 a" -> "2a")
+    tex = tex.replace(/(\d+)\s+([a-zA-Z_\\])/g, "$1$2");
 
     return tex;
-  } catch (err) {
-    return exprStr;
+  } catch {
+    return (exprStr || "").replace(/\*/g, " ");
   }
 }
 
@@ -61,30 +75,24 @@ export function casToTex(exprStr, varsDb = {}) {
 // 2. CAS OPERATIONS (SIMPLIFY, SUBSTITUTE, EVALUATE)
 // ========================================================
 
-/**
- * Symbolically simplifies an algebraic expression.
- */
 export function simplifyExpression(exprStr) {
   if (typeof nerdamer === "undefined" || !exprStr) return exprStr;
   try {
-    return nerdamer(`simplify(${exprStr})`).text();
-  } catch (err) {
+    return nerdamer(`simplify(${sanitizeExpr(exprStr)})`).text();
+  } catch {
     return exprStr;
   }
 }
 
-/**
- * Symbolically substitutes variable expressions into a host expression.
- */
 export function substituteExpression(exprStr, subsObj = {}) {
   if (typeof nerdamer === "undefined" || !exprStr) return exprStr;
   try {
     const cleanSubs = {};
     for (const [k, v] of Object.entries(subsObj)) {
-      cleanSubs[toCasToken(k)] = v;
+      cleanSubs[toCasToken(k)] = sanitizeExpr(v);
     }
-    return nerdamer(exprStr, cleanSubs).text();
-  } catch (err) {
+    return nerdamer(sanitizeExpr(exprStr), cleanSubs).text();
+  } catch {
     let result = exprStr;
     for (const [k, v] of Object.entries(subsObj)) {
       result = result.split(toCasToken(k)).join(`(${v})`);
@@ -93,9 +101,6 @@ export function substituteExpression(exprStr, subsObj = {}) {
   }
 }
 
-/**
- * Numerically evaluates an expression against a system values object.
- */
 export function evaluateExpression(exprStr, values = {}) {
   if (typeof nerdamer === "undefined" || !exprStr) return NaN;
   try {
@@ -103,9 +108,9 @@ export function evaluateExpression(exprStr, values = {}) {
     for (const [k, v] of Object.entries(values)) {
       if (typeof v === "number") cleanVals[toCasToken(k)] = v;
     }
-    const evaluated = nerdamer(exprStr, cleanVals).evaluate().text();
+    const evaluated = nerdamer(sanitizeExpr(exprStr), cleanVals).evaluate().text();
     return parseFloat(evaluated);
-  } catch (err) {
+  } catch {
     return NaN;
   }
 }
@@ -115,8 +120,7 @@ export function evaluateExpression(exprStr, values = {}) {
 // ========================================================
 
 /**
- * Symbolically isolates targetVar from an equation (e.g., "h_k = 2*a", "a" -> "h_k / 2").
- * Returns { targetVar, isolatedRhs, texEquation }.
+ * Symbolically isolates targetVar from an equation (e.g. "h = 2*a + c", "a" -> "(h - c)/2").
  */
 export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   const parts = eqStr.split("=");
@@ -126,7 +130,7 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   const targetToken = toCasToken(targetVar);
   const lhsToken = toCasToken(rawLhs);
 
-  // Already isolated on LHS
+  // If already isolated on LHS
   if (lhsToken === targetToken) {
     const cleanRhs = simplifyExpression(rawRhs);
     const targetTex = varsDb[targetVar]?.symbol || targetVar;
@@ -137,11 +141,11 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
     };
   }
 
-  // Use Nerdamer to isolate symbolically
+  // Use Nerdamer to solve for targetVar
   if (typeof nerdamer !== "undefined") {
     try {
-      const nerdEq = `${toCasToken(rawLhs)} = ${toCasToken(rawRhs)}`;
-      const solutions = nerdamer.solveEquations(nerdEq, targetToken);
+      const sanitizedEq = `${sanitizeExpr(rawLhs)} = ${sanitizeExpr(rawRhs)}`;
+      const solutions = nerdamer.solveEquations(sanitizedEq, targetToken);
       if (solutions && solutions.length > 0) {
         let solText = solutions[0];
         if (typeof solText.text === "function") solText = solText.text();
@@ -159,10 +163,9 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
     }
   }
 
-  // Fallback
   return {
     targetVar,
     isolatedRhs: rawRhs,
-    texEquation: `${targetVar} = ${rawRhs}`
+    texEquation: `${targetVar} = ${casToTex(rawRhs, varsDb)}`
   };
 }
