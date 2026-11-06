@@ -238,6 +238,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_buckingham",
     name: "Buckingham Dynamic Load",
+    canonical: { lhs: "F_D", rhs: "F_t + (k*v*(b*C_d + F_t))/(k*v + sqrt(b*C_d + F_t))", tex: "F_D = F_t + \\cfrac{k v (b C_d + F_t)}{k v + \\sqrt{b C_d + F_t}}" },
     baseFormula: "F_D = F_t + \\cfrac{k v (b C_d + F_t)}{k v + \\sqrt{b C_d + F_t}}",
     nodes: ["F_D", "W_t", "V_m", "b", "C_d"],
     topic: "forces_torque",
@@ -269,10 +270,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_working_depth",
     name: "Working Depth",
+    canonical: { lhs: "h_k", rhs: "2*a", tex: "h_k = 2a" },
     baseFormula: "h_k = 2a",
-    nodes: ["h_k", "a", "P_d"],
+    nodes: ["h_k", "a"],
     topic: "pitch_geometry",
-    termsCount: 3,
+    termsCount: 2,
     forms: {
       h_k: { formula: "h_k = 2a", notes: "Working depth is twice the addendum" },
       a:   { formula: "a = \\cfrac{h_k}{2}", notes: "Addendum is half the working depth" }
@@ -302,6 +304,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_dedendum",
     name: "Dedendum Proportion",
+    canonical: { lhs: "d", rhs: "(1 + k_c)/P_d", tex: "d = \\cfrac{1 + k_c}{P_d}" },
     baseFormula: "d = \\cfrac{1 + k_c}{P_d}",
     nodes: ["d", "P_d", "phi"],
     topic: "pitch_geometry",
@@ -330,10 +333,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_backlash",
     name: "Tooth Backlash",
+    canonical: { lhs: "B", rhs: "0.035 / P_d", tex: "B = \\cfrac{0.035}{P_d}" },
     baseFormula: "B = \\cfrac{0.035}{P_d}",
     nodes: ["B", "P_d"],
     topic: "pitch_geometry",
-    termsCount: 3,
+    termsCount: 2,
     forms: {
       B: { formula: "B = 0.035 m \\quad\\text{or}\\quad \\cfrac{0.035}{P_d}", notes: "Average backlash on pitch circle" }
     },
@@ -357,6 +361,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_base_pitch",
     name: "Base Pitch",
+    canonical: { lhs: "p_b", rhs: "P_c * cos(phi)", tex: "p_b = P_c \\cos\\phi" },
     baseFormula: "p_b = P_c \\cos\\phi",
     nodes: ["p_b", "P_c", "phi"],
     topic: "pitch_geometry",
@@ -390,10 +395,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_module",
     name: "Module & Pitch Dimensional Identity",
+    canonical: { lhs: "m", rhs: "25.4 / P_d", tex: "m \\cdot P_d = 25.4" },
     baseFormula: "m \\cdot P_d = 25.4",
     nodes: ["m", "P_d"],
     topic: "pitch_geometry",
-    termsCount: 3,
+    termsCount: 2,
     forms: {
       m:   { formula: "m = \\cfrac{25.4}{P_d}", notes: "Module in mm from diametral pitch" },
       P_d: { formula: "P_d = \\cfrac{25.4}{m}", notes: "Diametral pitch from module" }
@@ -422,6 +428,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_internal_idler",
     name: "Internal Gear with Idler",
+    canonical: { lhs: "D_2", rhs: "4*C_i - D_1", tex: "D_2 = 4 C_i - D_1" },
     baseFormula: "D_2 = 4 C_i - D_1",
     nodes: ["D_P2", "D_P1", "C_i"],
     topic: "speed_center",
@@ -449,6 +456,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_resultant_vector",
     name: "Vector Resultant Tooth Force",
+    canonical: { lhs: "F_n", rhs: "sqrt(F_t^2 + F_r^2)", tex: "F_n = \\sqrt{F_t^2 + F_r^2}" },
     baseFormula: "F_n = \\sqrt{F_t^2 + F_r^2}",
     nodes: ["W", "W_t", "W_r"],
     topic: "forces_torque",
@@ -474,6 +482,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_vr_diameters",
     name: "Speed Ratio from Pitch Diameters",
+    canonical: { lhs: "SR", rhs: "D_2 / D_1", tex: "SR = \\cfrac{D_2}{D_1}" },
     baseFormula: "SR = \\cfrac{D_2}{D_1}",
     nodes: ["VR", "D_P1", "D_P2"],
     topic: "speed_center",
@@ -507,6 +516,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_speed_teeth_direct",
     name: "Tooth-Speed Balance",
+    canonical: { lhs: "T_1 * N_1", rhs: "T_2 * N_2", tex: "T_1 N_1 = T_2 N_2" },
     baseFormula: "T_1 N_1 = T_2 N_2",
     nodes: ["T_1", "n_1", "T_2", "n_2"],
     topic: "speed_center",
@@ -539,10 +549,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_pitch_inv",
     name: "Pitch Reciprocal Identity",
+    canonical: { lhs: "P_c * P_d", rhs: "pi", tex: "P_c \\cdot P_d = \\pi" },
     baseFormula: "P_c \\cdot P_d = \\pi",
     nodes: ["P_c", "P_d"],
     topic: "pitch_geometry",
-    termsCount: 3,
+    termsCount: 2,
     forms: {
       P_d: { formula: "P_d = \\cfrac{\\pi}{P_c}", notes: "Diametral pitch from circular pitch" },
       P_c: { formula: "P_c = \\cfrac{\\pi}{P_d}", notes: "Circular spacing from diametral pitch" }
@@ -581,6 +592,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_dp1",
     name: "Pinion Pitch Definition",
+    canonical: { lhs: "D_1", rhs: "T_1 / P_d", tex: "D_1 = \\cfrac{T_1}{P_d}" },
     baseFormula: "D_{P1} = \\cfrac{T_1}{P_d}",
     nodes: ["D_P1", "T_1", "P_d"],
     topic: "pitch_geometry",
@@ -636,6 +648,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_dp2",
     name: "Gear Pitch Definition",
+    canonical: { lhs: "D_2", rhs: "T_2 / P_d", tex: "D_2 = \\cfrac{T_2}{P_d}" },
     baseFormula: "D_{P2} = \\cfrac{T_2}{P_d}",
     nodes: ["D_P2", "T_2", "P_d"],
     topic: "pitch_geometry",
@@ -691,10 +704,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_center_dist",
     name: "Center Distance (External)",
+    canonical: { lhs: "C", rhs: "(D_1 + D_2) / 2", tex: "C = \\cfrac{D_1 + D_2}{2}" },
     baseFormula: "C = \\cfrac{D_1 + D_2}{2}",
     nodes: ["C", "D_P1", "D_P2"],
     topic: "speed_center",
-    termsCount: 4,
+    termsCount: 3,
     forms: {
       C:    { formula: "C = \\cfrac{D_1 + D_2}{2}", notes: "Sum of pitch radii" },
       D_P2: { formula: "D_2 = 2C - D_1", notes: "Gear diameter from center distance" },
@@ -733,10 +747,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_c_vr_teeth",
     name: "Center Distance Ratio Formula",
+    canonical: { lhs: "C", rhs: "(T_1 * (1 + SR))/(2 * P_d)", tex: "C = \\cfrac{T_1 (1 + SR)}{2 P_d}" },
     baseFormula: "C = \\cfrac{T_1 (1 + SR)}{2 P_d}",
     nodes: ["C", "T_1", "VR", "P_d"],
     topic: "speed_center",
-    termsCount: 5,
+    termsCount: 4,
     forms: {
       T_1: { formula: "T_1 = \\cfrac{2 C \\cdot P_d}{1 + SR}", notes: "Pinion teeth from center distance and ratio" },
       C:   { formula: "C = \\cfrac{T_1 (1 + SR)}{2 P_d}", notes: "Center distance from pinion teeth and ratio" }
@@ -771,6 +786,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_c_teeth_sum",
     name: "Center Distance from Teeth Sum",
+    canonical: { lhs: "C", rhs: "(T_1 + T_2)/(2 * P_d)", tex: "C = \\cfrac{T_1 + T_2}{2 P_d}" },
     baseFormula: "C = \\cfrac{T_1 + T_2}{2 P_d}",
     nodes: ["C", "T_1", "T_2", "P_d"],
     topic: "speed_center",
@@ -799,7 +815,7 @@ const GEAR_RELATION_GRAPH = [
             ? `Pitch from teeth sum and distance with dimensional conversion:`
             : `Pitch from total teeth and center distance:`,
           eq: isSI
-            ? `P_d = \\cfrac{T_1 + T_2}{2C} = \\cfrac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 1)})\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            ? `P_d = \\cfrac{T_1 + T_2}{2C} = \\cfrac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 1)})\\,\\cancel{\\text{mm}}} \\cdot \\cfrac{25.4\\,\\cancel{\\text{mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
             : `P_d = \\cfrac{T_1 + T_2}{2C} = \\cfrac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 3)})} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
@@ -811,6 +827,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_vr_speed",
     name: "Speed Reduction Ratio",
+    canonical: { lhs: "SR", rhs: "N_1 / N_2", tex: "SR = \\cfrac{N_1}{N_2}" },
     baseFormula: "SR = \\cfrac{N_1}{N_2}",
     nodes: ["VR", "n_1", "n_2"],
     topic: "speed_center",
@@ -852,6 +869,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_vr_teeth",
     name: "Teeth Ratio",
+    canonical: { lhs: "SR", rhs: "T_2 / T_1", tex: "SR = \\cfrac{T_2}{T_1}" },
     baseFormula: "SR = \\cfrac{T_2}{T_1}",
     nodes: ["VR", "T_1", "T_2"],
     topic: "speed_center",
@@ -893,6 +911,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_pitch_vel",
     name: "Pitch Line Velocity",
+    canonical: { lhs: "v", rhs: "(pi * D_1 * n_1) / 60000", tex: "v = \\pi D_1 N_1" },
     baseFormula: "v = \\pi D_1 N_1",
     nodes: ["V_m", "D_P1", "n_1"],
     topic: "speed_center",
@@ -962,6 +981,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_torque_power",
     name: "Rotational Power & Torque",
+    canonical: { lhs: "P", rhs: "2 * pi * N_1 * T", tex: "P = 2\\pi N_1 T" },
     baseFormula: "P = 2\\pi N_1 T",
     nodes: ["M_t", "P", "n_1"],
     topic: "forces_torque",
@@ -981,14 +1001,14 @@ const GEAR_RELATION_GRAPH = [
           return {
             target: targetLabel(getVarName(S, "M_t"), "{{T|M_t}}", u_T),
             text: "Shaft torque from physical power definition ($T = \\cfrac{P}{\\omega} = \\cfrac{P}{2\\pi N_1}$) with unit analysis:",
-            eq: `T = \\cfrac{P}{2\\pi N_1} = \\cfrac{${fmt(S.P, 2)}\\cancel{\\text{ kW}} \\cdot \\cfrac{1000\\text{ N}\\cdot\\text{m}}{\\cancel{\\text{s}}\\cdot 1\\cancel{\\text{ kW}}}}{2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}} \\cdot \\cfrac{1\\cancel{\\text{ min}}}{60\\cancel{\\text{ s}}}} = \\mathbf{${fmt(S.M_t, 1)}\\text{ N}\\cdot\\text{m}}`,
+            eq: `T = \\cfrac{P}{2\\pi N_1} = \\cfrac{${fmt(S.P, 2)}\\cancel{\\text{ kW}} \\cdot \\cfrac{1000\\text{ N}\\cdot\\text{m}}{\\cancel{\\text{s}}\\cdot 1\\cancel{\\text{ kW}}}}{2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}} \\cdot \\cfrac{1\\cancel{\\text{ min}}}{60\\cancel{\\text{ s}}}} = \\mathbf{${fmt(S.M_t, 2)}\\text{ N}\\cdot\\text{m}}`,
             val: S.M_t
           };
         }
         return {
           target: targetLabel(getVarName(S, "M_t"), "{{T|M_t}}", u_T),
           text: "Shaft torque from horsepower ($T = \\cfrac{P}{2\\pi N_1}$) using dimensional analysis:",
-          eq: `T = \\cfrac{P}{2\\pi N_1} = \\cfrac{${fmt(S.P, 2)}\\cancel{\\text{ hp}} \\cdot \\left(\\cfrac{33000\\cancel{\\text{ ft}}\\cdot\\text{lb}}{\\cancel{\\text{min}}\\cdot 1\\cancel{\\text{ hp}}}\\right) \\cdot \\left(\\cfrac{12\\text{ in}}{1\\cancel{\\text{ ft}}}\\right)}{2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\text{rev}}{\\cancel{\\text{min}}}} = \\mathbf{${fmt(S.M_t, 1)}\\text{ lb}\\cdot\\text{in}}`,
+          eq: `T = \\cfrac{P}{2\\pi N_1} = \\cfrac{${fmt(S.P, 2)}\\cancel{\\text{ hp}} \\cdot \\left(\\cfrac{33000\\cancel{\\text{ ft}}\\cdot\\text{lb}}{\\cancel{\\text{min}}\\cdot 1\\cancel{\\text{ hp}}}\\right) \\cdot \\left(\\cfrac{12\\text{ in}}{1\\cancel{\\text{ ft}}}\\right)}{2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\text{rev}}{\\cancel{\\text{min}}}} = \\mathbf{${fmt(S.M_t, 2)}\\text{ lb}\\cdot\\text{in}}`,
           val: S.M_t
         };
       }
@@ -997,14 +1017,14 @@ const GEAR_RELATION_GRAPH = [
           return {
             target: targetLabel(getVarName(S, "P"), "{{P}}", u_P),
             text: "Transmitted power from torque and angular speed ($P = T \\cdot \\omega = 2\\pi N_1 T$):",
-            eq: `P = 2\\pi N_1 T = \\left(2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}} \\cdot \\cfrac{1\\cancel{\\text{ min}}}{60\\text{ s}}\\right) (${fmt(S.M_t, 1)}\\text{ N}\\cdot\\text{m}) \\cdot \\cfrac{1\\text{ kW}}{1000\\text{ N}\\cdot\\text{m/s}} = \\mathbf{${fmt(S.P, 2)}\\text{ kW}}`,
+            eq: `P = 2\\pi N_1 T = \\left(2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}} \\cdot \\cfrac{1\\cancel{\\text{ min}}}{60\\text{ s}}\\right) (${fmt(S.M_t, 2)}\\text{ N}\\cdot\\text{m}) \\cdot \\cfrac{1\\text{ kW}}{1000\\text{ N}\\cdot\\text{m/s}} = \\mathbf{${fmt(S.P, 2)}\\text{ kW}}`,
             val: S.P
           };
         }
         return {
           target: targetLabel(getVarName(S, "P"), "{{P}}", u_P),
           text: "Horsepower from torque and rpm ($P = 2\\pi N_1 T$):",
-          eq: `P = 2\\pi N_1 T = \\left(2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\text{rev}}{\\cancel{\\text{min}}}\\right) \\left(${fmt(S.M_t, 1)}\\cancel{\\text{ lb}}\\cdot\\cancel{\\text{in}} \\cdot \\cfrac{1\\cancel{\\text{ ft}}}{12\\cancel{\\text{ in}}}\\right) \\cdot \\cfrac{1\\text{ hp}}{33000\\cancel{\\text{ ft}}\\cdot\\cancel{\\text{lb}}/\\cancel{\\text{min}}} = \\mathbf{${fmt(S.P, 2)}\\text{ hp}}`,
+          eq: `P = 2\\pi N_1 T = \\left(2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\text{rev}}{\\cancel{\\text{min}}}\\right) \\left(${fmt(S.M_t, 2)}\\cancel{\\text{ lb}}\\cdot\\cancel{\\text{in}} \\cdot \\cfrac{1\\cancel{\\text{ ft}}}{12\\cancel{\\text{ in}}}\\right) \\cdot \\cfrac{1\\text{ hp}}{33000\\cancel{\\text{ ft}}\\cdot\\cancel{\\text{lb}}/\\cancel{\\text{min}}} = \\mathbf{${fmt(S.P, 2)}\\text{ hp}}`,
           val: S.P
         };
       }
@@ -1013,14 +1033,14 @@ const GEAR_RELATION_GRAPH = [
           return {
             target: targetLabel(getVarName(S, "n_1"), "{{N_1|n_1}}", "rpm"),
             text: "Rotational speed from power and torque ($N_1 = \\cfrac{P}{2\\pi T}$):",
-            eq: `N_1 = \\cfrac{P}{2\\pi T} = \\cfrac{${fmt(S.P, 2)}\\cancel{\\text{ kW}} \\cdot \\cfrac{1000\\cancel{\\text{ N}\\cdot\\text{m}}}{\\cancel{\\text{s}}\\cdot 1\\cancel{\\text{ kW}}}}{2\\pi \\cdot ${fmt(S.M_t, 1)}\\cancel{\\text{ N}\\cdot\\text{m}}} \\cdot \\cfrac{60\\cancel{\\text{ s}}}{1\\text{ min}} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
+            eq: `N_1 = \\cfrac{P}{2\\pi T} = \\cfrac{${fmt(S.P, 2)}\\cancel{\\text{ kW}} \\cdot \\cfrac{1000\\cancel{\\text{ N}\\cdot\\text{m}}}{\\cancel{\\text{s}}\\cdot 1\\cancel{\\text{ kW}}}}{2\\pi \\cdot ${fmt(S.M_t, 2)}\\cancel{\\text{ N}\\cdot\\text{m}}} \\cdot \\cfrac{60\\cancel{\\text{ s}}}{1\\text{ min}} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
             val: S.n_1
           };
         }
         return {
           target: targetLabel(getVarName(S, "n_1"), "{{N_1|n_1}}", "rpm"),
           text: "Rotational speed from power and torque ($N_1 = \\cfrac{P}{2\\pi T}$):",
-          eq: `N_1 = \\cfrac{P}{2\\pi T} = \\cfrac{${fmt(S.P, 2)}\\cancel{\\text{ hp}} \\cdot \\left(\\cfrac{33000\\cancel{\\text{ ft}}\\cdot\\cancel{\\text{lb}}}{\\text{min}\\cdot 1\\cancel{\\text{ hp}}}\\right) \\cdot \\left(\\cfrac{12\\cancel{\\text{ in}}}{1\\cancel{\\text{ ft}}}\\right)}{2\\pi (${fmt(S.M_t, 1)}\\cancel{\\text{ lb}}\\cdot\\cancel{\\text{in}})} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
+          eq: `N_1 = \\cfrac{P}{2\\pi T} = \\cfrac{${fmt(S.P, 2)}\\cancel{\\text{ hp}} \\cdot \\left(\\cfrac{33000\\cancel{\\text{ ft}}\\cdot\\cancel{\\text{lb}}}{\\text{min}\\cdot 1\\cancel{\\text{ hp}}}\\right) \\cdot \\left(\\cfrac{12\\cancel{\\text{ in}}}{1\\cancel{\\text{ ft}}}\\right)}{2\\pi (${fmt(S.M_t, 2)}\\cancel{\\text{ lb}}\\cdot\\cancel{\\text{in}})} = \\mathbf{${fmt(S.n_1, 0)}\\text{ rpm}}`,
           val: S.n_1
         };
       }
@@ -1031,6 +1051,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_wt_torque",
     name: "Tangential Load from Torque",
+    canonical: { lhs: "T", rhs: "F_t * (D_1 / 2)", tex: "T = F_t \\cdot \\cfrac{D_1}{2}" },
     baseFormula: "F_t = \\cfrac{2T}{D_1}",
     nodes: ["W_t", "M_t", "D_P1"],
     topic: "forces_torque",
@@ -1051,14 +1072,14 @@ const GEAR_RELATION_GRAPH = [
           return {
             target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u_F),
             text: "Tangential force from torque and pitch radius ($F_t = \\cfrac{2T}{D_1}$) with unit conversion:",
-            eq: `F_t = \\cfrac{2T}{D_1} = \\cfrac{2(${fmt(S.M_t, 1)}\\text{ N}\\cdot\\cancel{\\text{m}})}{${fmt(S.D_P1, 1)}\\cancel{\\text{ mm}} \\cdot \\cfrac{1\\cancel{\\text{ m}}}{1000\\cancel{\\text{ mm}}}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ N}}`,
+            eq: `F_t = \\cfrac{2T}{D_1} = \\cfrac{2(${fmt(S.M_t, 2)}\\text{ N}\\cdot\\cancel{\\text{m}})}{${fmt(S.D_P1, 1)}\\cancel{\\text{ mm}} \\cdot \\cfrac{1\\cancel{\\text{ m}}}{1000\\cancel{\\text{ mm}}}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ N}}`,
             val: S.W_t
           };
         }
         return {
           target: targetLabel(getVarName(S, "W_t"), "{{F_t|W_t}}", u_F),
           text: "Tangential force from shaft torque and pitch radius ($F_t = \\cfrac{2T}{D_1}$):",
-          eq: `F_t = \\cfrac{2T}{D_1} = \\cfrac{2(${fmt(S.M_t, 1)}\\text{ lb}\\cdot\\cancel{\\text{in}})}{${fmt(S.D_P1, 3)}\\cancel{\\text{ in}}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
+          eq: `F_t = \\cfrac{2T}{D_1} = \\cfrac{2(${fmt(S.M_t, 2)}\\text{ lb}\\cdot\\cancel{\\text{in}})}{${fmt(S.D_P1, 3)}\\cancel{\\text{ in}}} = \\mathbf{${fmt(S.W_t, 0)}\\text{ lb}}`,
           val: S.W_t
         };
       }
@@ -1067,14 +1088,14 @@ const GEAR_RELATION_GRAPH = [
           return {
             target: targetLabel(getVarName(S, "M_t"), "{{T|M_t}}", u_T),
             text: "Torque from tooth load and pitch radius ($T = F_t \\cdot \\cfrac{D_1}{2}$) converting mm to m:",
-            eq: `T = F_t \\cdot \\cfrac{D_1}{2} = ${fmt(S.W_t, 0)}\\text{ N} \\times \\cfrac{${fmt(S.D_P1, 1)}\\cancel{\\text{ mm}} \\cdot \\cfrac{1\\text{ m}}{1000\\cancel{\\text{ mm}}}}{2} = \\mathbf{${fmt(S.M_t, 1)}\\text{ N}\\cdot\\text{m}}`,
+            eq: `T = F_t \\cdot \\cfrac{D_1}{2} = ${fmt(S.W_t, 0)}\\text{ N} \\times \\cfrac{${fmt(S.D_P1, 1)}\\cancel{\\text{ mm}} \\cdot \\cfrac{1\\text{ m}}{1000\\cancel{\\text{ mm}}}}{2} = \\mathbf{${fmt(S.M_t, 2)}\\text{ N}\\cdot\\text{m}}`,
             val: S.M_t
           };
         }
         return {
           target: targetLabel(getVarName(S, "M_t"), "{{T|M_t}}", u_T),
           text: "Shaft torque from tooth load and pitch radius ($T = F_t \\cdot \\cfrac{D_1}{2}$):",
-          eq: `T = F_t \\cdot \\cfrac{D_1}{2} = ${fmt(S.W_t, 0)}\\text{ lb} \\times \\cfrac{${fmt(S.D_P1, 3)}\\text{ in}}{2} = \\mathbf{${fmt(S.M_t, 1)}\\text{ lb}\\cdot\\text{in}}`,
+          eq: `T = F_t \\cdot \\cfrac{D_1}{2} = ${fmt(S.W_t, 0)}\\text{ lb} \\times \\cfrac{${fmt(S.D_P1, 3)}\\text{ in}}{2} = \\mathbf{${fmt(S.M_t, 2)}\\text{ lb}\\cdot\\text{in}}`,
           val: S.M_t
         };
       }
@@ -1083,14 +1104,14 @@ const GEAR_RELATION_GRAPH = [
           return {
             target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u_D),
             text: "Pitch diameter from torque and tangential load ($D_1 = \\cfrac{2T}{F_t}$) in mm:",
-            eq: `D_1 = \\cfrac{2T}{F_t} = \\cfrac{2(${fmt(S.M_t, 1)}\\cancel{\\text{ N}}\\cdot\\text{m})}{${fmt(S.W_t, 0)}\\cancel{\\text{ N}}} \\cdot \\cfrac{1000\\text{ mm}}{1\\text{ m}} = \\mathbf{${fmt(S.D_P1, 1)}\\text{ mm}}`,
+            eq: `D_1 = \\cfrac{2T}{F_t} = \\cfrac{2(${fmt(S.M_t, 2)}\\cancel{\\text{ N}}\\cdot\\text{m})}{${fmt(S.W_t, 0)}\\cancel{\\text{ N}}} \\cdot \\cfrac{1000\\text{ mm}}{1\\text{ m}} = \\mathbf{${fmt(S.D_P1, 1)}\\text{ mm}}`,
             val: S.D_P1
           };
         }
         return {
           target: targetLabel(getVarName(S, "D_P1"), "{{D_1|D_P1}}", u_D),
           text: "Pitch diameter from torque and tangential load ($D_1 = \\cfrac{2T}{F_t}$):",
-          eq: `D_1 = \\cfrac{2T}{F_t} = \\cfrac{2(${fmt(S.M_t, 1)}\\cancel{\\text{ lb}}\\cdot\\text{in})}{${fmt(S.W_t, 0)}\\cancel{\\text{ lb}}} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
+          eq: `D_1 = \\cfrac{2T}{F_t} = \\cfrac{2(${fmt(S.M_t, 2)}\\cancel{\\text{ lb}}\\cdot\\text{in})}{${fmt(S.W_t, 0)}\\cancel{\\text{ lb}}} = \\mathbf{${fmt(S.D_P1, 3)}\\text{ in}}`,
           val: S.D_P1
         };
       }
@@ -1101,6 +1122,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_wt_power_vel",
     name: "Tangential Load from Power & Speed",
+    canonical: { lhs: "P", rhs: "F_t * v", tex: "P = F_t \\cdot v" },
     baseFormula: "P = F_t \\cdot v",
     nodes: ["W_t", "P", "V_m"],
     topic: "forces_torque",
@@ -1171,6 +1193,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_wr_wt",
     name: "Radial Force Relation",
+    canonical: { lhs: "F_r", rhs: "F_t * tan(phi)", tex: "F_r = F_t \\tan\\phi" },
     baseFormula: "F_r = F_t \\tan\\phi",
     nodes: ["W_r", "W_t", "phi"],
     topic: "forces_torque",
@@ -1213,6 +1236,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_w_normal",
     name: "Normal Contact Load Vector",
+    canonical: { lhs: "F_t", rhs: "F_n * cos(phi)", tex: "F_t = F_n \\cos\\phi" },
     baseFormula: "F_n = \\cfrac{F_t}{\\cos\\phi}",
     nodes: ["W", "W_t", "phi"],
     topic: "forces_torque",
@@ -1255,10 +1279,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_addendum",
     name: "Full-Depth Addendum",
+    canonical: { lhs: "a", rhs: "1 / P_d", tex: "a = \\cfrac{1}{P_d}" },
     baseFormula: "a = \\cfrac{1}{P_d}",
     nodes: ["a", "P_d"],
     topic: "pitch_geometry",
-    termsCount: 3,
+    termsCount: 2,
     forms: {
       a:   { formula: "a = m \\quad\\text{or}\\quad \\cfrac{1}{P_d}", notes: "Standard full-depth tooth addendum" },
       P_d: { formula: "P_d = \\cfrac{1}{a}", notes: "Diametral pitch from tooth addendum" }
@@ -1297,6 +1322,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_clearance",
     name: "Tooth Clearance Proportion",
+    canonical: { lhs: "c", rhs: "k_c / P_d", tex: "c = \\cfrac{k_c}{P_d}" },
     baseFormula: "c = \\cfrac{k_c}{P_d}",
     nodes: ["c", "P_d", "phi"],
     topic: "pitch_geometry",
@@ -1338,10 +1364,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_do",
     name: "Outside Blank Diameter",
+    canonical: { lhs: "D_o", rhs: "D_1 + 2*a", tex: "D_o = D_1 + 2a" },
     baseFormula: "D_o = D_1 + 2a",
     nodes: ["D_o", "D_P1", "a"],
     topic: "pitch_geometry",
-    termsCount: 4,
+    termsCount: 3,
     forms: {
       D_o:  { formula: "D_o = D_1 + 2a", notes: "Outside cylinder diameter adding twice addendum" },
       D_P1: { formula: "D_1 = D_o - 2a", notes: "Pitch diameter from blank outside diameter" },
@@ -1380,6 +1407,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_do_teeth",
     name: "Blank Diameter from Teeth",
+    canonical: { lhs: "D_o", rhs: "(T_1 + 2)/P_d", tex: "D_o = \\cfrac{T_1 + 2}{P_d}" },
     baseFormula: "D_o = \\cfrac{T_1 + 2}{P_d}",
     nodes: ["D_o", "T_1", "P_d"],
     topic: "pitch_geometry",
@@ -1435,6 +1463,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_db",
     name: "Base Circle Diameter",
+    canonical: { lhs: "D_b", rhs: "D_1 * cos(phi)", tex: "D_b = D_1 \\cos\\phi" },
     baseFormula: "D_b = D_1 \\cos\\phi",
     nodes: ["D_b", "D_P1", "phi"],
     topic: "pitch_geometry",
@@ -1468,6 +1497,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_lewis",
     name: "Lewis Beam Bending Strength",
+    canonical: { lhs: "s", rhs: "(F_t * P_d) / (b * Y)", tex: "s = \\cfrac{F_t P_d}{b Y}" },
     baseFormula: "s = \\cfrac{F_t}{b \\cdot m \\cdot Y}",
     nodes: ["s", "W_t", "P_d", "b", "Y"],
     topic: "lewis_strength",
@@ -1540,10 +1570,11 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_thick",
     name: "Circular Tooth Thickness",
+    canonical: { lhs: "t", rhs: "P_c / 2", tex: "t = \\cfrac{P_c}{2}" },
     baseFormula: "t = \\cfrac{P_c}{2} = \\cfrac{\\pi}{2 P_d}",
     nodes: ["t", "P_c"],
     topic: "pitch_geometry",
-    termsCount: 3,
+    termsCount: 2,
     forms: {
       t:   { formula: "t = \\cfrac{P_c}{2}", notes: "Tooth thickness on pitch circle" },
       P_c: { formula: "P_c = 2t", notes: "Circular pitch from tooth thickness" }
@@ -1573,6 +1604,7 @@ const GEAR_RELATION_GRAPH = [
   {
     id: "eq_whole",
     name: "Whole Depth",
+    canonical: { lhs: "h", rhs: "2*a + c", tex: "h = 2a + c" },
     baseFormula: "h = 2a + c",
     nodes: ["h", "a", "c"],
     topic: "pitch_geometry",
@@ -1656,7 +1688,7 @@ function createGroundTruthSystem() {
     const V_m = parseFloat(((Math.PI * (D_P1 / 1000) * n_1) / 60).toFixed(2)); // m/s
     const P = [5, 10, 15, 20, 25, 30, 45, 55, 75][Math.floor(Math.random() * 9)]; // kW
     const W_t = Math.round((1000 * P) / V_m); // N
-    const M_t = parseFloat(((W_t * (D_P1 / 1000)) / 2).toFixed(1)); // N*m
+    const M_t = parseFloat(((W_t * (D_P1 / 1000)) / 2).toFixed(2)); // N*m (Standard 2 decimals)
     const W_r = parseFloat((W_t * Math.tan((phi * Math.PI) / 180)).toFixed(1));
     const W = parseFloat((W_t / Math.cos((phi * Math.PI) / 180)).toFixed(1));
     const s = Math.round(W_t / (b * m * Y)); // MPa
@@ -1710,7 +1742,7 @@ function createGroundTruthSystem() {
     const raw_s = (W_t_seed * P_d) / (b * Y);
     const s = Math.round(raw_s / 25) * 25;
     const W_t = parseFloat(((s * b * Y) / P_d).toFixed(1)); // lb
-    const M_t = parseFloat(((W_t * D_P1) / 2).toFixed(1)); // lb-in
+    const M_t = parseFloat(((W_t * D_P1) / 2).toFixed(2)); // lb-in (Standard 2 decimals)
     const P = parseFloat(((W_t * V_m) / 33000).toFixed(2)); // hp
     const W_r = parseFloat((W_t * Math.tan((phi * Math.PI) / 180)).toFixed(1));
     const W = parseFloat((W_t / Math.cos((phi * Math.PI) / 180)).toFixed(1));
