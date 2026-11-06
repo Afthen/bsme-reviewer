@@ -227,8 +227,7 @@ function generateOrganicStatement(cand, S) {
     const displaySym = meta.symbol || v;
     const name = getVarName(S, v, topic.varsDb);
     const uStr = (u && u !== "dimless" && u !== "ratio" && u !== "teeth") ? `\\text{ ${u}}` : (u === "deg" ? "^\\circ" : "");
-    // Wrapped in .math-token to prevent orphaned '(' on line breaks:
-    parts.push(`${name}&nbsp;<span class="math-token">($${displaySym} = ${fmt(val, 2)}${uStr}$)</span>`);
+    parts.push(`${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${displaySym}$</span> = ${val}${uStr})</span>`);
   });
 
   const goalMeta = topic.varsDb[cand.goal] || {};
@@ -237,15 +236,13 @@ function generateOrganicStatement(cand, S) {
   const goalU = unitOf(S, cand.goal, topic.varsDb);
   const goalUStr = (goalU && goalU !== "dimless" && goalU !== "ratio" && goalU !== "teeth") ? ` in $\\text{${goalU}}$` : "";
 
-  return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: <strong>${goalName}</strong>&nbsp;<span class="math-token">($${goalSym}$)</span>${goalUStr}.`;
+  return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: <strong>${goalName}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${cand.goal}">$${goalSym}$</span>)</span>${goalUStr}.`;
 }
 
 function generateGraphProblem() {
-  // NOTE: Does NOT advance global tick. Ticks only advance upon active student problem-solving!
   const S = topic.createSystem();
   const candidates = getSeedCandidates(topic);
 
-  // Score candidate problems using harmonic spaced repetition weights
   const scored = candidates.map(cand => {
     const steps = solveProblemOnGraph(cand.givens, S, topic.relations);
     const goalStep = steps.find(s => s.targetVar === cand.goal);
@@ -263,7 +260,6 @@ function generateGraphProblem() {
 
   if (scored.length === 0) return;
 
-  // A-RES weighted sampling
   scored.sort((a, b) => {
     const rA = Math.pow(Math.random(), 1 / a.weight);
     const rB = Math.pow(Math.random(), 1 / b.weight);
@@ -275,21 +271,18 @@ function generateGraphProblem() {
   const solSteps = chosen.steps;
   const goalIdx = solSteps.findIndex(s => s.targetVar === cand.goal);
 
-  // Collect all topological steps required to reach the goal
   const requiredStepIndices = new Set([goalIdx, ...solSteps[goalIdx].ancestorIndices]);
   const allPathSteps = solSteps.filter((_, idx) => requiredStepIndices.has(idx));
 
-  // Determine Fading: Intermediate steps fade if decayed mastery >= 0.7639
   allPathSteps.forEach(st => {
     if (st.targetVar === cand.goal) {
-      st.isFaded = false; // Goal is always active
+      st.isFaded = false; 
     } else {
       const mastery = calculateDecayedMastery(st.eqId);
       st.isFaded = mastery >= FADING_MASTERY_THRESHOLD;
     }
   });
 
-  // Attach faded ancestors to the goal step for compound algebraic derivation and blame tracking
   const finalVisibleSteps = allPathSteps.filter(st => !st.isFaded).map(st => {
     const fadedAncestors = (st.ancestorIndices || [])
       .map(i => solSteps[i])
@@ -383,8 +376,16 @@ function renderProblemView() {
     });
 
     summary.addEventListener("click", e => {
-      if (e.target === input) return;
-      item.classList.toggle("open");
+      if (e.target === input || e.target.closest('.interactive-var')) return;
+      
+      const wasOpen = item.classList.contains("open");
+      
+      if (!wasOpen && !step.isAnswered) {
+        revealStepAnswer(idx, input);
+      } else {
+        item.classList.toggle("open");
+      }
+      updateToggleVisibility();
     });
 
     inputWrap.appendChild(input);
@@ -400,7 +401,6 @@ function renderProblemView() {
     const mathDiv = document.createElement("div");
     mathDiv.className = "solution-math-display";
 
-    // Build compound algebraic derivation if ancestors were faded
     const compound = buildCompoundDerivation(step, activeProblem.system, activeProblem.allPathSteps);
     if (compound && compound.derivationBlock) {
       textP.innerHTML = compound.note || step.text;
@@ -429,6 +429,7 @@ function renderProblemView() {
     throwOnError: false
   });
   attachInteractiveVars();
+  updateToggleVisibility();
 }
 
 function renderStepTargetText(targetStr) {
@@ -445,13 +446,11 @@ function checkStepAnswer(idx, inputEl) {
   const step = activeProblem.solution[idx];
   const raw = inputEl.value.trim();
 
-  // If empty, user chose to reveal without solving
   if (raw === "") {
     revealStepAnswer(idx, inputEl);
     return;
   }
 
-  // Active cognitive attempt: increment global interference clock
   incrementGlobalTick();
 
   const val = parseFloat(raw);
@@ -464,7 +463,6 @@ function checkStepAnswer(idx, inputEl) {
   if (isInteger) {
     correct = Math.round(val) === Math.round(expected);
   } else {
-    // Relative tolerance using PHI_INV8 (≈ 2.1%) and absolute floor PHI_INV6 (≈ 0.056)
     const tol = Math.max(PHI_INV8 * Math.abs(expected), PHI_INV6);
     correct = Math.abs(val - expected) <= tol;
   }
@@ -479,14 +477,13 @@ function checkStepAnswer(idx, inputEl) {
     step.isRevealed = false;
     recordEquationAttempt(step.eqId, true);
     
-    // Reinforce decay timers of ancestors
     (step.fadedAncestorEqIds || []).forEach(ancId => reinforceEquationAttempt(ancId));
     document.getElementById(`step-item-${idx}`).classList.add("open");
+    updateToggleVisibility();
   } else {
     inputEl.classList.add("state-wrong", "shake-trigger");
     recordEquationAttempt(step.eqId, false);
     
-    // Backpropagate blame: knocks ancestors below 0.7639 so next problem un-fades scaffolding!
     (step.fadedAncestorEqIds || []).forEach(ancId => penalizeBlameEquation(ancId));
 
     setTimeout(() => {
@@ -499,8 +496,6 @@ function checkStepAnswer(idx, inputEl) {
 
 function revealStepAnswer(idx, inputEl) {
   const step = activeProblem.solution[idx];
-
-  // NOTE: Revealing does NOT increment the global tick.
   step.isAnswered = true;
   step.isRevealed = true;
   step.userVal = step.expectedVal;
@@ -508,28 +503,57 @@ function revealStepAnswer(idx, inputEl) {
   inputEl.classList.add("state-revealed");
   inputEl.disabled = true;
   
-  // Local equation fail:
   recordEquationAttempt(step.eqId, false);
-  
-  // Diagnostic reset on ancestors:
   (step.fadedAncestorEqIds || []).forEach(ancId => penalizeBlameEquation(ancId));
 
   document.getElementById(`step-item-${idx}`).classList.add("open");
+  updateToggleVisibility();
   localStorage.setItem(STORAGE_KEY_ACTIVE, JSON.stringify(activeProblem));
 }
 
-function toggleAllSolutions() {
+function updateToggleVisibility() {
+  const btn = document.getElementById("btn-toggle-all");
   const items = document.querySelectorAll(".solution-item");
-  const anyOpen = Array.from(items).some(it => it.classList.contains("open"));
-  items.forEach(it => {
-    if (anyOpen) it.classList.remove("open");
-    else it.classList.add("open");
-  });
+  if (!btn || items.length === 0) return;
+
+  const allCompleted = activeProblem.solution.every(s => s.isAnswered);
+  const openCount = Array.from(items).filter(it => it.classList.contains("open")).length;
+
+  btn.style.display = "flex";
+  btn.style.gap = "0.5rem";
+
+  if (openCount === 0 && !allCompleted) {
+    btn.style.display = "none";
+  } else if (!allCompleted) {
+    btn.innerHTML = `<span onclick="performToggle('collapse')" style="cursor:pointer; border-bottom:1px dotted var(--text-muted);">Collapse All</span>`;
+  } else {
+    btn.innerHTML = `
+      <span onclick="performToggle('collapse')" style="cursor:pointer; border-bottom:1px dotted var(--text-muted);">Collapse All</span>
+      <span>/</span>
+      <span onclick="performToggle('expand')" style="cursor:pointer; border-bottom:1px dotted var(--text-muted);">Expand All</span>
+    `;
+  }
 }
 
-/**
- * Distractor classifier: considers BOTH active visible steps AND faded ancestor steps!
- */
+// Ensure the button isn't accidentally wiping out click events. We make it a standard delegate function.
+window.performToggle = function(action) {
+  const items = document.querySelectorAll(".solution-item");
+  items.forEach((it, idx) => {
+    if (action === 'collapse') {
+      it.classList.remove("open");
+    } else if (action === 'expand') {
+      const step = activeProblem.solution[idx];
+      const inputEl = it.querySelector('.step-ans-input');
+      if (!step.isAnswered) {
+        revealStepAnswer(idx, inputEl);
+      } else {
+        it.classList.add("open");
+      }
+    }
+  });
+  updateToggleVisibility();
+};
+
 function checkDistractors() {
   const banner = document.getElementById("distractor-banner");
   if (!banner || !activeProblem) return;
@@ -537,7 +561,6 @@ function checkDistractors() {
   const givens = activeProblem.givens;
   const usedVars = new Set();
   
-  // Inspect the entire derivation tree (both visible and faded)
   (activeProblem.allPathSteps || activeProblem.solution).forEach(s => {
     const eq = (topic.relations || []).find(e => e.id === s.eqId);
     if (eq) eq.nodes.forEach(n => usedVars.add(n));
@@ -548,7 +571,7 @@ function checkDistractors() {
   if (distractors.length > 0) {
     const dList = distractors.map(v => {
       const sym = (topic.varsDb[v] && topic.varsDb[v].symbol) || v;
-      return `${getVarName(activeProblem.system, v, topic.varsDb)} <span class="math-token">($${sym}$)</span>`;
+      return `${getVarName(activeProblem.system, v, topic.varsDb)} <span class="math-token">(<span class="interactive-var" data-var="${v}">$${sym}$</span>)</span>`;
     }).join(", ");
     banner.style.display = "block";
     banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that <em>${dList}</em> was provided in the specifications but is not needed in the solution path. Exams often supply extra parameters to test whether you choose the correct relations.`;
@@ -724,6 +747,10 @@ async function openFolderPicker() {
 // 8. INITIALIZATION
 // ========================================================
 window.addEventListener("DOMContentLoaded", () => {
+  // Bind standard collapse/expand all toggles to the global window
+  // in case inline onclick handlers require it to be easily accessible
+  window.toggleAllSolutions = function() {}; // stub to override previous HTML button onclick
+
   loadMastery();
   generateGraphProblem();
 });
