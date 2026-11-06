@@ -3,7 +3,7 @@
  * Unit formatting, conversion factors, and KaTeX cancellation renderer.
  */
 
-export const CONVERSIONS = {
+const CONVERSIONS = {
   mm_to_in: { factor: 1 / 25.4, latex: '\\frac{1\\text{ in}}{25.4\\text{ mm}}' },
   in_to_mm: { factor: 25.4, latex: '\\frac{25.4\\text{ mm}}{1\\text{ in}}' },
   m_to_mm: { factor: 1000, latex: '\\frac{1000\\text{ mm}}{1\\text{ m}}' },
@@ -15,24 +15,23 @@ export const CONVERSIONS = {
 /**
  * Returns a KaTeX string with proper double-escaped \cancel macro.
  */
-export function cancelUnit(unitStr) {
+function cancelUnit(unitStr) {
   return `\\cancel{\\text{${unitStr}}}`;
 }
 
 /**
  * Formats a unit nicely wrapped in KaTeX \text{...}
  */
-export function textUnit(unitStr) {
+function textUnit(unitStr) {
   return `\\text{${unitStr}}`;
 }
 
 /**
  * Formats standard dimensional conversion fractions with canceled tokens.
  */
-export function formatConversionWithCancellation(type) {
+function formatConversionWithCancellation(type) {
   switch (type) {
     case 'in_to_mm_cancel_mm':
-      // Cancels mm in numerator with mm in denominator
       return `\\frac{25.4\\,\\cancel{\\text{mm}}}{1\\text{ in}}`;
     case 'mm_to_in_cancel_mm':
       return `\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}`;
@@ -45,4 +44,16 @@ export function formatConversionWithCancellation(type) {
     default:
       return '';
   }
+}
+
+// Global scope export for non-module index.html scripts
+if (typeof window !== 'undefined') {
+  window.CONVERSIONS = CONVERSIONS;
+  window.cancelUnit = cancelUnit;
+  window.textUnit = textUnit;
+  window.formatConversionWithCancellation = formatConversionWithCancellation;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { CONVERSIONS, cancelUnit, textUnit, formatConversionWithCancellation };
 }
