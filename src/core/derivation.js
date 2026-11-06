@@ -1,7 +1,8 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * Dynamic expression-tree numerical substitution with synchronized unit cancellations.
+ * Displays explicit formula substitution steps before simplification,
+ * followed by numerical substitution with synchronized unit cancellations.
  */
 
 import {
@@ -27,7 +28,6 @@ function extractVariableTokens(exprStr) {
 
 /**
  * Synchronizes substituted variable units with active conversion factors.
- * Ensures that if a conversion factor cancels mm or min, the substituted value reflects it.
  */
 function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   if (!unitKey || unitKey === "dimless" || unitKey === "ratio") return "";
@@ -35,19 +35,17 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
 
   const factors = unitAnalysis?.conversionFactors || [];
 
-  // Check active conversion identities
   const cancelsMin = factors.some(f => f.from === "u_min" || f.to === "u_min");
   const cancelsMm  = factors.some(f => f.from === "u_mm"  || f.to === "u_mm");
   const cancelsIn  = factors.some(f => f.from === "u_in"  || f.to === "u_in");
   const isFullyCanceled = unitAnalysis?.canceledTokens?.has(tok);
 
-  // 1. Deconstruct rotational speed: rpm = rev / min
+  // 1. Rotational speed: rpm = rev / min
   if (unitKey === "rpm" || unitKey === "rev/min") {
     if (isFullyCanceled) {
       return `\\,\\frac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}}`;
     }
     if (cancelsMin || unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) {
-      // min cancels against the time conversion factor (1 min / 60 s)
       return `\\,\\frac{\\text{rev}}{\\cancel{\\text{min}}}`;
     }
     return `\\,\\frac{\\text{rev}}{\\text{min}}`;
@@ -66,13 +64,12 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
     return `\\,\\cancel{\\text{${unitKey}}}`;
   }
 
-  // 4. Default uncancelled unit
   const meta = UNIT_ALGEBRA_DB[unitKey];
   return meta?.tex ? `\\,${meta.tex}` : `\\text{ ${unitKey}}`;
 }
 
 /**
- * Substitutes numeric values and physical units into the algebraic expression tree.
+ * Substitutes numeric values and units into the algebraic expression tree.
  */
 function substituteValuesAndUnits(exprStr, S, varsDb, unitAnalysis) {
   let tex = casToTex(exprStr, varsDb);
@@ -135,9 +132,11 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     lines.push(`\\text{Canonical:} \\quad & ${canonicalTex}`);
   }
 
-  // 2. Symbolic Graph Substitution for Unmastered Ancestors
+  // 2. Symbolic Graph Substitution with Explicit Intermediate Steps
   let maxSubstitutions = 5;
   let didSubstitute = false;
+  let substitutionStepTex = "";
+  let currentRhsTex = canonicalTex.includes("=") ? canonicalTex.split("=")[1].trim() : casToTex(currentRhs, varsDb);
 
   while (maxSubstitutions-- > 0) {
     const currentVars = extractVariableTokens(currentRhs);
@@ -154,31 +153,52 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
     if (parentEq?.baseFormula) {
       const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedToken, varsDb);
+      const parentFormulaTex = casToTex(isolatedParent.isolatedRhs, varsDb);
+      const parentSymbolTex = casToTex(varsDb[unresolvedKey]?.symbol || unresolvedToken, varsDb);
+
+      // Construct unsimplified LaTeX showing the exact substituted expression in parentheses
+      const escapedToken = parentSymbolTex.replace(/\\/g, "\\\\").replace(/\{/g, "\\{").replace(/\}/g, "\\}");
+      const unsimplifiedTex = currentRhsTex.replace(
+        new RegExp(`(?<![a-zA-Z0-9_])${escapedToken}(?![a-zA-Z0-9_])`, "g"),
+        `\\left(${parentFormulaTex}\\right)`
+      );
+
+      // Compute algebraic reduction via CAS
       currentRhs = substituteExpression(currentRhs, { [unresolvedToken]: `(${isolatedParent.isolatedRhs})` });
       currentRhs = simplifyExpression(currentRhs);
+      const simplifiedTex = casToTex(currentRhs, varsDb);
+
+      // Display: &= 2\pi N_1 \left(\frac{F_t D_1}{2}\right) = \pi D_1 F_t N_1
+      if (unsimplifiedTex !== simplifiedTex) {
+        substitutionStepTex = `${unsimplifiedTex} = ${simplifiedTex}`;
+      } else {
+        substitutionStepTex = unsimplifiedTex;
+      }
+
+      currentRhsTex = simplifiedTex;
       didSubstitute = true;
     } else {
       break;
     }
   }
 
-  // 3. Symbolic Target Isolation via CAS
-  let isolatedRhsExpr = currentRhs;
-  const currentLhsKey = SYMBOL_TO_KEY[currentLhs] || currentLhs;
-  if (currentLhsKey !== targetKey || didSubstitute) {
+  // Add the explicit intermediate substitution line
+  if (didSubstitute && substitutionStepTex) {
+    lines.push(`&= ${substitutionStepTex}`);
+  } else if (SYMBOL_TO_KEY[currentLhs] !== targetKey) {
     const isolatedTarget = isolateVariable(`${currentLhs} = ${currentRhs}`, targetVar, varsDb);
-    isolatedRhsExpr = isolatedTarget.isolatedRhs;
-    lines.push(`\\implies ${targetSym} &= ${casToTex(isolatedRhsExpr, varsDb)}`);
+    currentRhs = isolatedTarget.isolatedRhs;
+    lines.push(`\\implies ${targetSym} &= ${casToTex(currentRhs, varsDb)}`);
   }
 
-  // 4. General CAS Unit Solver (Algebraic & Semantic)
-  const unitAnalysis = solveUnitAlgebra(isolatedRhsExpr, S, targetVar, targetUnit, varsDb);
-  const substitutedTex = substituteValuesAndUnits(isolatedRhsExpr, S, varsDb, unitAnalysis);
+  // 3. General CAS Unit Solver (Algebraic & Semantic)
+  const unitAnalysis = solveUnitAlgebra(currentRhs, S, targetVar, targetUnit, varsDb);
+  const substitutedTex = substituteValuesAndUnits(currentRhs, S, varsDb, unitAnalysis);
 
-  // 5. Conversion Factor Fraction Rendering
+  // 4. Conversion Factor Fraction Rendering
   const conversionFactorTex = unitAnalysis.conversionFactorTex;
 
-  // Final substitution line with fully synchronized unit cancellations
+  // 5. Final Numerical Substitution Line
   lines.push(`&= ${substitutedTex}${conversionFactorTex} = \\mathbf{${formattedVal}${targetUnit ? `\\text{ ${targetUnit}}` : ""}}`);
 
   return `\\[ \\begin{aligned} ${lines.join(" \\\\[6pt]\n")} \\end{aligned} \\]`;
