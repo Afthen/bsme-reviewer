@@ -1,7 +1,7 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * Dynamic expression-tree numerical substitution with algebraic unit cancellations.
+ * Dynamic expression-tree numerical substitution with synchronized unit cancellations.
  */
 
 import {
@@ -26,37 +26,53 @@ function extractVariableTokens(exprStr) {
 }
 
 /**
- * Pedagogical Unit Formatter.
- * Respects semantic unit containers (su_teeth, su_rev, su_rad) and formats cancellations.
+ * Synchronizes substituted variable units with active conversion factors.
+ * Ensures that if a conversion factor cancels mm or min, the substituted value reflects it.
  */
 function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   if (!unitKey || unitKey === "dimless" || unitKey === "ratio") return "";
   if (unitKey === "deg") return "^\\circ";
 
-  const isFullyCanceled = unitAnalysis?.canceledTokens?.has(tok);
-  const subCancel = unitAnalysis?.subTokenCancellations?.[tok];
+  const factors = unitAnalysis?.conversionFactors || [];
 
-  // Deconstruct rpm into rev/min so min is canceled directly
+  // Check active conversion identities
+  const cancelsMin = factors.some(f => f.from === "u_min" || f.to === "u_min");
+  const cancelsMm  = factors.some(f => f.from === "u_mm"  || f.to === "u_mm");
+  const cancelsIn  = factors.some(f => f.from === "u_in"  || f.to === "u_in");
+  const isFullyCanceled = unitAnalysis?.canceledTokens?.has(tok);
+
+  // 1. Deconstruct rotational speed: rpm = rev / min
   if (unitKey === "rpm" || unitKey === "rev/min") {
     if (isFullyCanceled) {
       return `\\,\\frac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}}`;
     }
-    if (subCancel?.cancelMin) {
+    if (cancelsMin || unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) {
+      // min cancels against the time conversion factor (1 min / 60 s)
       return `\\,\\frac{\\text{rev}}{\\cancel{\\text{min}}}`;
     }
     return `\\,\\frac{\\text{rev}}{\\text{min}}`;
   }
 
-  if (isFullyCanceled) {
-    return `\\,${cancelUnit(unitKey)}`;
+  // 2. Length units
+  if (unitKey === "mm" && (cancelsMm || isFullyCanceled)) {
+    return `\\,\\cancel{\\text{mm}}`;
+  }
+  if (unitKey === "in" && (cancelsIn || isFullyCanceled)) {
+    return `\\,\\cancel{\\text{in}}`;
   }
 
+  // 3. Fully canceled entity units (e.g. teeth in T2 / T1)
+  if (isFullyCanceled) {
+    return `\\,\\cancel{\\text{${unitKey}}}`;
+  }
+
+  // 4. Default uncancelled unit
   const meta = UNIT_ALGEBRA_DB[unitKey];
   return meta?.tex ? `\\,${meta.tex}` : `\\text{ ${unitKey}}`;
 }
 
 /**
- * Substitutes numeric values and units into the algebraic expression tree.
+ * Substitutes numeric values and physical units into the algebraic expression tree.
  */
 function substituteValuesAndUnits(exprStr, S, varsDb, unitAnalysis) {
   let tex = casToTex(exprStr, varsDb);
@@ -119,7 +135,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     lines.push(`\\text{Canonical:} \\quad & ${canonicalTex}`);
   }
 
-  // 2. Symbolic Graph Substitution for Unmastered Faded Ancestors
+  // 2. Symbolic Graph Substitution for Unmastered Ancestors
   let maxSubstitutions = 5;
   let didSubstitute = false;
 
@@ -162,7 +178,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
   // 5. Conversion Factor Fraction Rendering
   const conversionFactorTex = unitAnalysis.conversionFactorTex;
 
-  // Final substitution line
+  // Final substitution line with fully synchronized unit cancellations
   lines.push(`&= ${substitutedTex}${conversionFactorTex} = \\mathbf{${formattedVal}${targetUnit ? `\\text{ ${targetUnit}}` : ""}}`);
 
   return `\\[ \\begin{aligned} ${lines.join(" \\\\[6pt]\n")} \\end{aligned} \\]`;
