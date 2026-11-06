@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spur Gear Reviewer & Graph Solver</title>
+  <title>Mechanical Engineering Reviewer & Graph Solver</title>
   
-  <!-- Math & Symbolic Dependencies (KaTeX) -->
+  <!-- Math & Symbolic Dependencies (KaTeX + Cancel Extension) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/cancel.min.js"></script>
 
   <!-- Client-Side Computer Algebra System (Nerdamer CAS) -->
   <script src="https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/nerdamer.core.js"></script>
@@ -30,6 +31,7 @@
       --success: #22c55e;
       --danger: #ef4444;
       --warning: #f59e0b;
+      --font-base: 0.95rem;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -77,7 +79,6 @@
       position: relative;
     }
 
-    /* SLIDE-OUT MASTERY DRAWER */
     aside {
       position: fixed;
       top: 0;
@@ -125,7 +126,6 @@
     .weight-row { display: flex; flex-direction: column; gap: 0.2rem; }
     .weight-label-bar { display: flex; justify-content: space-between; gap: 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; align-items: center; }
     
-    /* CENTERED MAIN COLUMN */
     main {
       width: 100%;
       max-width: 860px;
@@ -138,19 +138,42 @@
     .article-container { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem; }
     
     .problem-header h2 { font-size: 1.35rem; font-weight: 600; margin-bottom: 0.75rem; color: #fff; }
-    .problem-statement { font-size: 1rem; color: #d1d2d5; line-height: 1.7; }
+    
+    /* UNIFIED TYPOGRAPHY SCALE */
+    .problem-statement,
+    .solution-text,
+    .solution-summary {
+      font-size: var(--font-base);
+      color: #d1d2d5;
+      line-height: 1.7;
+    }
+
+    /* PREVENT HANGING PARENTHESES ON LINE WRAPS */
+    .math-token {
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    /* MATCH LATEX FONT SIZE 1:1 WITH HOST TEXT */
+    .katex {
+      font-size: 1.15em !important;
+      text-rendering: auto;
+    }
+    .katex-display {
+      font-size: 1.2em !important;
+      margin: 0.85rem 0 !important;
+    }
     
     .solution-section { border-top: 1px solid var(--border); padding-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
     .solution-top { display: flex; justify-content: space-between; align-items: center; min-height: 24px; }
     .solution-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--text-dim); }
-    .solution-toggle-all { font-size: 0.75rem; color: var(--text-muted); cursor: pointer; background: none; border: none; display: none; }
+    .solution-toggle-all { font-size: 0.75rem; color: var(--text-muted); cursor: pointer; background: none; border: none; display: flex; }
     .solution-toggle-all:hover { color: var(--text); }
     
     .solution-item { border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--panel); overflow: hidden; }
     .solution-summary {
       padding: 0.6rem 0.9rem;
       cursor: pointer;
-      font-size: 0.875rem;
       font-weight: 500;
       display: flex;
       justify-content: space-between;
@@ -163,13 +186,13 @@
     .chevron { font-size: 0.75rem; color: var(--text-dim); transition: transform 0.2s ease; }
     .solution-item.open .chevron { transform: rotate(90deg); color: var(--text); }
     
-    /* INPUT BOX */
+    /* INPUT BOX — ARROWS STRICTLY REMOVED */
     .step-input-wrap { display: flex; align-items: center; padding: 2px; }
     .step-ans-input {
       background: #141517;
       border: 1.5px solid var(--border);
       color: #fff;
-      font-size: 0.875rem;
+      font-size: var(--font-base);
       font-weight: 500;
       padding: 0.35rem 0.8rem;
       border-radius: 5px;
@@ -177,14 +200,20 @@
       outline: none;
       transition: all 0.15s;
       text-align: right;
-      -webkit-appearance: none;
-      appearance: none;
+      -webkit-appearance: none !important;
+      -moz-appearance: textfield !important;
+      appearance: textfield !important;
     }
+    /* Chrome, Safari, Edge, Opera: disable inner/outer stepper arrows */
     .step-ans-input::-webkit-outer-spin-button,
-    .step-ans-input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
+    .step-ans-input::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none !important;
+      display: none !important;
+      margin: 0 !important;
     }
+
     .step-ans-input:focus { border-color: var(--accent-math); }
     .step-ans-input.state-correct {
       border-color: var(--success) !important;
@@ -210,7 +239,6 @@
     .shake-trigger {
       animation: shake 0.35s ease;
     }
-
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
       20%, 60% { transform: translateX(-5px); }
@@ -226,7 +254,6 @@
       background: #17181a;
     }
     .solution-item.open .solution-body { display: flex; }
-    .solution-text { font-size: 0.925rem; color: var(--text-muted); line-height: 1.6; }
     .solution-math-display {
       padding: 0.75rem 1rem;
       background: var(--bg);
@@ -236,7 +263,6 @@
       text-align: left;
     }
     
-    /* EXAM DISTRACTOR CHECK BANNER */
     .distractor-banner {
       background: rgba(16, 185, 129, 0.07);
       border: 1px solid rgba(16, 185, 129, 0.28);
@@ -249,7 +275,6 @@
       margin-top: 0.5rem;
     }
 
-    /* BOTTOM GENERATE BUTTON */
     .problem-footer-actions {
       display: flex;
       justify-content: flex-end;
@@ -312,7 +337,6 @@
     .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
     .dot.active { background: #fff; width: 14px; border-radius: 3px; }
 
-    /* RESPONSIVE ADAPTATION */
     @media (max-width: 768px) {
       body {
         height: 100dvh;
@@ -334,7 +358,7 @@
       }
       .step-ans-input {
         width: 120px;
-        font-size: 16px; /* Prevents auto-zoom in iOS Safari */
+        font-size: 16px;
         padding: 0.4rem 0.6rem;
       }
       .solution-summary {
@@ -346,7 +370,6 @@
 </head>
 <body>
 
-  <!-- HEADER WITH HAMBURGER BUTTON -->
   <header>
     <div style="display: flex; align-items: center; gap: 0.6rem;">
       <button class="btn" id="btn-hamburger" onclick="toggleSidebar()">☰ Mastery</button>
@@ -360,11 +383,9 @@
     </div>
   </header>
 
-  <!-- BACKDROP OVERLAY FOR CLOSING DRAWER -->
   <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
   <div class="workspace">
-    <!-- SLIDING ASIDE DRAWER -->
     <aside>
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span class="sidebar-title">Formula Mastery (Harmonic)</span>
@@ -376,7 +397,6 @@
     </aside>
 
     <main>
-      <!-- PROBLEM VIEW -->
       <section id="view-problem" class="panel-view active">
         <div class="article-container">
           <div class="problem-header">
@@ -392,17 +412,14 @@
             <div id="p-solution-flow" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
           </div>
 
-          <!-- DISTRACTOR CHECK BANNER -->
           <div id="distractor-banner" class="distractor-banner"></div>
 
-          <!-- GENERATE BUTTON ON THE BOTTOM RIGHT -->
           <div class="problem-footer-actions">
             <button class="btn-generate-next" onclick="generateGraphProblem()">⚡ Generate Next Problem</button>
           </div>
         </div>
       </section>
 
-      <!-- CAROUSEL VIEW -->
       <section id="view-carousel" class="panel-view">
         <div class="carousel-container">
           <div class="carousel-top-bar">
@@ -439,9 +456,10 @@
 
   <div id="tooltip"></div>
 
-  <!-- SCRIPTS IN SAME FOLDER -->
-  <script src="units.js"></script>
-  <script src="gear_graph.js"></script>
+  <!-- MODULAR SCRIPTS -->
+  <script src="src/core/units.js"></script>
+  <script src="src/core/graph_engine.js"></script>
+  <script src="src/topics/machine_design/spur_gears.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

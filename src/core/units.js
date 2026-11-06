@@ -55,7 +55,17 @@ const Units = (() => {
     return `${fmtSig(v)}\\,${tex(from)} \\times \\frac{${fmtSig(factor, 5)}\\,${tex(to)}}{1\\,${tex(from)}} = ${fmtSig(convert(v, from, to))}\\,${tex(to)}`;
   };
 
+  function targetLabel(name, token, u) {
+    if (!u || u === "dimless" || u === "ratio" || u === "teeth") {
+      return `${name} (${token})`;
+    }
+    if (u === "deg") {
+      return `${name} (${token}) in °`;
+    }
+    return `${name} (${token}) in $\\text{${u}}$`;
+  }
+  
   return {
-    FAMS, convert, isCount, compatible, tex, fmtSig, factorTex
+    FAMS, convert, isCount, compatible, tex, fmtSig, factorTex, targetLabel
   };
 })();

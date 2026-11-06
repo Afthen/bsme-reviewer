@@ -1,967 +1,702 @@
 // ========================================================
-// app.js — Spaced Repetition Engine & UI Controller
+// app.js — Universal Reviewer & Spaced Repetition Engine
 // ========================================================
 
-window.onerror = function (msg, url, line) {
-  console.error("Reviewer Error:", msg, "at line", line);
-  const container = document.getElementById("p-statement");
-  if (container) {
-    container.innerHTML = `<div style="color: #f87171; background: #261616; padding: 1rem; border-radius: 4px; border: 1px solid #7f1d1d;">
-      <strong>JavaScript Error:</strong> ${msg} (Line ${line})<br>
-      <small style="color: #94a3b8;">Check Developer Tools console for full trace.</small>
-    </div>`;
-  }
+const topic = window.CURRENT_TOPIC || {
+  id: "spur_gears",
+  title: "Spur Gears",
+  varsDb: typeof GEAR_VARS_DB !== "undefined" ? GEAR_VARS_DB : {},
+  relations: typeof GEAR_RELATION_GRAPH !== "undefined" ? GEAR_RELATION_GRAPH : [],
+  seeds: typeof ORGANIC_SEED_PATTERNS !== "undefined" ? ORGANIC_SEED_PATTERNS : [],
+  createSystem: typeof createGroundTruthSystem !== "undefined" ? createGroundTruthSystem : () => ({})
 };
 
 // ========================================================
-// 1. PHI HARMONIC ENGINE
+// 1. MATHEMATICAL CONSTANTS & GOLDEN SYSTEM (Φ & e)
 // ========================================================
-const PHI = (1 + Math.sqrt(5)) / 2;     // 1.6180339887...
-const PHI_INV = 1 / PHI;                // 0.6180339887...
-const PHI_INV2 = PHI_INV * PHI_INV;     // 0.3819660113...
-const PHI_INV3 = Math.pow(PHI_INV, 3);  // 0.2360679774...
-const PHI_INV6 = Math.pow(PHI_INV, 6);  // 0.0557280900...
-const DECAY_WINDOW = 13;                // Fibonacci window
+const PHI = (1 + Math.sqrt(5)) / 2;             // 1.6180339887...
+const PHI_INV = 1 / PHI;                         // 0.6180339887... (Harmonic discount)
+const PHI_INV2 = PHI_INV * PHI_INV;              // 0.3819660113...
+const PHI_INV3 = PHI_INV2 * PHI_INV;             // 0.2360679775...
+const PHI_INV6 = Math.pow(PHI_INV, 6);           // 0.0557280900... (Min selection floor)
+const PHI_INV7 = Math.pow(PHI_INV, 7);           // 0.0344418537... (Tick decay constant λ)
+const PHI_INV8 = Math.pow(PHI_INV, 8);           // 0.0212862363... (Relative error tolerance)
+const E = Math.E;                                // 2.7182818284...
 
-let edgeHistory = loadStoredMastery();
-let globalProblemCounter = loadStoredCounter();
-let loadedProblems = [];
+// Derived pedagogical parameters
+const FADING_MASTERY_THRESHOLD = 1 - PHI_INV3;   // 1 - φ⁻³ ≈ 0.7639 (Golden Fading Threshold)
+const HISTORY_WINDOW_SIZE = 8;                   // F_6 = 8 (Fibonacci attempt buffer)
+const TICK_DECAY_LAMBDA = PHI_INV7;              // Half-life = ln(2)/φ⁻⁷ ≈ 20.13 ≈ 21 ticks (F_8)
+
+// Storage Keys
+const STORAGE_KEY_GLOBAL_TICK = "me_global_problem_tick";
+const STORAGE_KEY_MASTERY = `${topic.id}_mastery_clean`;
+const STORAGE_KEY_COUNT = `${topic.id}_problem_count`;
+const STORAGE_KEY_ACTIVE = `${topic.id}_active_problem_v4`;
+
+let edgeHistory = {};
+let fileHandle = null;
 let activeProblem = null;
-let currentVarKey = null;
-let cardIdx = 0;
-let activeCarouselCards = [];
-let currentDirHandle = null;
-let lastSeedKey = null;
 
-const INTEGER_VARS = ["T", "T_1", "T_2"];
-
-function loadStoredMastery() {
-  const saved = localStorage.getItem("spur_gear_mastery_clean");
-  if (saved) {
-    try {
-      const data = JSON.parse(saved);
-      return data.history || data;
-    } catch (e) {}
-  }
-  return {};
+// ========================================================
+// 2. TICK-BASED FORGETTING & HARMONIC MASTERY
+// ========================================================
+function getGlobalTick() {
+  return parseInt(localStorage.getItem(STORAGE_KEY_GLOBAL_TICK) || "0", 10);
 }
 
-function loadStoredCounter() {
-  const saved = localStorage.getItem("spur_gear_problem_count");
-  return saved ? parseInt(saved, 10) || 0 : 0;
+function incrementGlobalTick() {
+  const t = getGlobalTick() + 1;
+  localStorage.setItem(STORAGE_KEY_GLOBAL_TICK, t.toString());
+  return t;
+}
+
+function loadMastery() {
+  const raw = localStorage.getItem(STORAGE_KEY_MASTERY);
+  if (raw) {
+    try {
+      edgeHistory = JSON.parse(raw);
+    } catch (e) {
+      edgeHistory = {};
+    }
+  }
 }
 
 function saveMastery() {
-  const exportPayload = {
-    version: "4.2",
-    updatedAt: new Date().toISOString(),
-    globalProblemCount: globalProblemCounter,
-    history: edgeHistory
-  };
-  localStorage.setItem("spur_gear_mastery_clean", JSON.stringify(exportPayload));
-  localStorage.setItem("spur_gear_problem_count", String(globalProblemCounter));
-  writeMasteryToFolder(exportPayload);
+  localStorage.setItem(STORAGE_KEY_MASTERY, JSON.stringify(edgeHistory));
+  syncToFile();
 }
 
-async function writeMasteryToFolder(payload) {
-  if (!currentDirHandle) return;
+async function syncToFile() {
+  if (!fileHandle) return;
   try {
-    const fileHandle = await currentDirHandle.getFileHandle("mastery.json", { create: true });
     const writable = await fileHandle.createWritable();
-    await writable.write(JSON.stringify(payload, null, 2));
+    await writable.write(JSON.stringify(edgeHistory, null, 2));
     await writable.close();
-  } catch (e) {
-    console.log("Could not auto-write mastery.json to folder", e);
+  } catch (err) {
+    console.warn("Auto-sync to file failed:", err);
   }
 }
 
-function exportMasteryFile() {
-  const payload = {
-    version: "4.2",
-    exportedAt: new Date().toISOString(),
-    globalProblemCount: globalProblemCounter,
-    history: edgeHistory
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "mastery.json";
-  a.click();
-}
+/**
+ * Calculates decayed mastery using harmonic attempt weighting and
+ * tick-based exponential interference: M = M_base * e^(-λ * Δticks)
+ */
+function calculateDecayedMastery(eqId) {
+  const h = edgeHistory[eqId];
+  if (!h || !h.attempts || h.attempts.length === 0) return 0;
 
-function triggerImportMastery() {
-  document.getElementById("mastery-file-input").click();
-}
-
-function handleMasteryImport(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = evt => {
-    try {
-      const data = JSON.parse(evt.target.result);
-      edgeHistory = data.history || data;
-      globalProblemCounter = data.globalProblemCount || globalProblemCounter;
-      saveMastery();
-      renderLeitnerSidebar();
-      if (activeProblem) selectProblem(activeProblem.id);
-      alert("Mastery progress restored from mastery.json!");
-    } catch (err) {
-      alert("Invalid mastery.json file format");
-    }
-  };
-  reader.readAsText(file);
-}
-
-function ensureEdgeHistoryItem(eqId) {
-  if (!edgeHistory || typeof edgeHistory !== "object") edgeHistory = {};
-  if (!edgeHistory[eqId] || typeof edgeHistory[eqId] !== "object") {
-    edgeHistory[eqId] = { c: 0, w: 0, u: 0, lastTested: globalProblemCounter, recent: [] };
-    return edgeHistory[eqId];
+  // 1. Harmonic attempt weighting using powers of PHI_INV
+  let weightSum = 0;
+  let scoreSum = 0;
+  const len = h.attempts.length;
+  for (let i = 0; i < len; i++) {
+    const w = Math.pow(PHI_INV, len - 1 - i);
+    weightSum += w;
+    scoreSum += (h.attempts[i] ? 1 : 0) * w;
   }
-  if (Array.isArray(edgeHistory[eqId])) {
-    const arr = edgeHistory[eqId];
-    const c = arr.filter(x => x === '✓').length;
-    const w = arr.filter(x => x === '✕').length;
-    edgeHistory[eqId] = { c, w, u: 0, lastTested: globalProblemCounter, recent: [...arr] };
-    return edgeHistory[eqId];
-  }
-  if (!Array.isArray(edgeHistory[eqId].recent)) edgeHistory[eqId].recent = [];
-  if (typeof edgeHistory[eqId].c !== "number") edgeHistory[eqId].c = 0;
-  if (typeof edgeHistory[eqId].w !== "number") edgeHistory[eqId].w = 0;
-  if (typeof edgeHistory[eqId].u !== "number") edgeHistory[eqId].u = 0;
-  if (typeof edgeHistory[eqId].lastTested !== "number") edgeHistory[eqId].lastTested = globalProblemCounter;
-  return edgeHistory[eqId];
+  const baseMastery = weightSum > 0 ? scoreSum / weightSum : 0;
+
+  // 2. Discrete interference decay using e and PHI_INV7
+  const currentTick = getGlobalTick();
+  const lastTick = h.lastPracticedTick !== undefined ? h.lastPracticedTick : currentTick;
+  const deltaTicks = Math.max(0, currentTick - lastTick);
+  const decayMultiplier = Math.pow(E, -TICK_DECAY_LAMBDA * deltaTicks);
+
+  return baseMastery * decayMultiplier;
 }
 
-function getFormulaStats(eqId) {
-  const record = ensureEdgeHistoryItem(eqId);
-  const c = record.c, w = record.w, u = record.u;
-  const S_eff = (PHI * c) + (PHI_INV * u) + (PHI_INV3 * w);
-  const urgency = Math.exp(-S_eff / PHI);
-  return { c, w, u, S_eff, urgency, recent: record.recent, lastTested: record.lastTested };
+function recordEquationAttempt(eqId, success) {
+  const currentTick = getGlobalTick();
+  if (!edgeHistory[eqId]) {
+    edgeHistory[eqId] = { attempts: [], lastPracticedTick: currentTick };
+  }
+  edgeHistory[eqId].attempts.push(success);
+  if (edgeHistory[eqId].attempts.length > HISTORY_WINDOW_SIZE) {
+    edgeHistory[eqId].attempts.shift();
+  }
+  edgeHistory[eqId].lastPracticedTick = currentTick;
+  saveMastery();
+  renderWeightBars();
 }
 
-function getEdgeTierInfo(eqId) {
-  const eq = GEAR_RELATION_GRAPH.find(e => e.id === eqId);
-  const targetWins = eq?.termsCount || 3;
-  const stats = getFormulaStats(eqId);
-  const recent = stats.recent;
-
-  if (recent.length === 0) {
-    return { tier: 2, label: "New", weight: 1.0, recent, targetWins };
+/**
+ * Backpropagates diagnostic blame to faded ancestors when a compound step is failed.
+ */
+function penalizeBlameEquation(eqId) {
+  const currentTick = getGlobalTick();
+  if (!edgeHistory[eqId]) {
+    edgeHistory[eqId] = { attempts: [], lastPracticedTick: currentTick };
   }
+  edgeHistory[eqId].attempts.push(false);
+  if (edgeHistory[eqId].attempts.length > HISTORY_WINDOW_SIZE) {
+    edgeHistory[eqId].attempts.shift();
+  }
+  edgeHistory[eqId].lastPracticedTick = currentTick;
+  saveMastery();
+}
 
-  const deltaN = globalProblemCounter - stats.lastTested;
-  if (deltaN > DECAY_WINDOW && recent.length >= targetWins && recent.every(x => x === '✓')) {
-    recent.shift();
-    ensureEdgeHistoryItem(eqId).lastTested = globalProblemCounter;
+/**
+ * Reinforces decay timers of faded ancestors on successful compound execution.
+ */
+function reinforceEquationAttempt(eqId) {
+  const currentTick = getGlobalTick();
+  if (edgeHistory[eqId]) {
+    edgeHistory[eqId].lastPracticedTick = currentTick;
     saveMastery();
   }
-
-  const consecutiveWins = recent.slice(-targetWins).filter(x => x === '✓').length;
-  const isMastered = (recent.length >= targetWins && consecutiveWins === targetWins);
-
-  if (isMastered) {
-    return { tier: 3, label: "Mastered", weight: Math.max(PHI_INV6, stats.urgency), recent, targetWins };
-  }
-
-  const isNeedsWork = (recent[recent.length - 1] === '✕' || stats.w > stats.c);
-  if (isNeedsWork) {
-    return { tier: 1, label: "Needs Practice", weight: Math.max(PHI, stats.urgency * PHI * PHI), recent, targetWins };
-  }
-
-  return { tier: 2, label: "In Progress", weight: stats.urgency, recent, targetWins };
 }
 
-function recordStepResult(eqId, isCorrect) {
-  if (!eqId) return;
-  const eq = GEAR_RELATION_GRAPH.find(e => e.id === eqId);
-  const targetWins = eq?.termsCount || 3;
-  const record = ensureEdgeHistoryItem(eqId);
-
-  record.lastTested = globalProblemCounter;
-  if (isCorrect) {
-    record.c += 1;
-    record.recent.push('✓');
+// ========================================================
+// 3. SIDEBAR MASTERY VISUALIZATION
+// ========================================================
+function toggleSidebar() {
+  const aside = document.querySelector("aside");
+  const overlay = document.getElementById("sidebar-overlay");
+  const isOpen = aside.classList.contains("open");
+  if (isOpen) {
+    aside.classList.remove("open");
+    overlay.classList.remove("active");
   } else {
-    record.w += 1;
-    record.recent.push('✕');
-  }
-
-  if (record.recent.length > targetWins) record.recent.shift();
-  saveMastery();
-  renderLeitnerSidebar();
-}
-
-function recordPassiveExposure(eqId) {
-  if (!eqId) return;
-  const record = ensureEdgeHistoryItem(eqId);
-  record.u += 1;
-  saveMastery();
-}
-
-function resetProgress() {
-  if (confirm("Reset all formula mastery history and practice dots?")) {
-    edgeHistory = {};
-    saveMastery();
-    renderLeitnerSidebar();
-    if (activeProblem) selectProblem(activeProblem.id);
+    aside.classList.add("open");
+    overlay.classList.add("active");
+    renderWeightBars();
   }
 }
 
-function renderLeitnerSidebar() {
-  const container = document.getElementById("weight-bars-el");
-  if (!container) return;
-  container.innerHTML = "";
+function renderWeightBars() {
+  const el = document.getElementById("weight-bars-el");
+  if (!el) return;
+  el.innerHTML = "";
 
-  const items = GEAR_RELATION_GRAPH.map(eq => {
-    const info = getEdgeTierInfo(eq.id);
-    return { eqId: eq.id, name: eq.name, ...info };
+  const relations = topic.relations || [];
+  relations.forEach(eq => {
+    const mastery = calculateDecayedMastery(eq.id);
+    const pct = Math.round(mastery * 100);
+
+    const row = document.createElement("div");
+    row.className = "weight-row";
+
+    const labelBar = document.createElement("div");
+    labelBar.className = "weight-label-bar";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.style.overflow = "hidden";
+    nameSpan.style.textOverflow = "ellipsis";
+    nameSpan.style.whiteSpace = "nowrap";
+    nameSpan.title = eq.name;
+    nameSpan.textContent = eq.name;
+
+    const pctSpan = document.createElement("span");
+    pctSpan.style.fontFamily = "monospace";
+    pctSpan.textContent = `${pct}%`;
+
+    labelBar.appendChild(nameSpan);
+    labelBar.appendChild(pctSpan);
+
+    const barBg = document.createElement("div");
+    barBg.style.height = "4px";
+    barBg.style.background = "var(--border-subtle)";
+    barBg.style.borderRadius = "2px";
+    barBg.style.overflow = "hidden";
+
+    const barFill = document.createElement("div");
+    barFill.style.height = "100%";
+    barFill.style.width = `${pct}%`;
+    barFill.style.background = mastery >= FADING_MASTERY_THRESHOLD
+      ? "var(--success)"
+      : (mastery >= PHI_INV2 ? "var(--warning)" : "var(--accent-math)");
+    barFill.style.transition = "width 0.3s ease";
+
+    barBg.appendChild(barFill);
+    row.appendChild(labelBar);
+    row.appendChild(barBg);
+    el.appendChild(row);
   });
+}
 
-  items.sort((a, b) => a.tier - b.tier);
-
-  const tierSections = [
-    { tier: 1, title: "🔴 Needs Practice", list: items.filter(i => i.tier === 1) },
-    { tier: 2, title: "🟡 In Progress", list: items.filter(i => i.tier === 2) },
-    { tier: 3, title: "🟢 Mastered", list: items.filter(i => i.tier === 3) }
-  ];
-
-  tierSections.forEach(sec => {
-    if (sec.list.length === 0) return;
-    const secTitle = document.createElement("div");
-    secTitle.style.fontSize = "0.72rem";
-    secTitle.style.fontWeight = "600";
-    secTitle.style.color = "var(--text)";
-    secTitle.style.marginTop = "0.4rem";
-    secTitle.textContent = `${sec.title} (${sec.list.length})`;
-    container.appendChild(secTitle);
-
-    sec.list.forEach(item => {
-      const row = document.createElement("div");
-      row.className = "weight-row";
-
-      let dotsHtml = "";
-      const rec = item.recent;
-      for (let i = 0; i < item.targetWins; i++) {
-        const sym = rec[i];
-        if (sym === '✓') dotsHtml += `<span style="color:#22c55e;">●</span>`;
-        else if (sym === '✕') dotsHtml += `<span style="color:#ef4444;">●</span>`;
-        else dotsHtml += `<span style="color:#3f3f46;">○</span>`;
+// ========================================================
+// 4. PROBLEM GENERATION & ADAPTIVE FADING
+// ========================================================
+function generateOrganicStatement(cand, S) {
+  const parts = [];
+  cand.givens.forEach(v => {
+    const val = S[v];
+    const u = unitOf(S, v, topic.varsDb);
+    const meta = topic.varsDb[v] || {};
+    const displaySym = meta.symbol || v;
+    const name = getVarName(S, v, topic.varsDb);
+    
+    let valWithUnit = `$${val}$`;
+    if (u && u !== "dimless" && u !== "ratio" && u !== "teeth") {
+      if (u === "deg") {
+        valWithUnit = `$${val}$°`;
+      } else {
+        valWithUnit = `$${val}\\text{ ${u}}$`;
       }
-
-      row.innerHTML = `
-        <div class="weight-label-bar">
-          <span title="${item.name}">${item.name}</span>
-          <span style="font-size: 0.8rem; letter-spacing: 2px;">${dotsHtml}</span>
-        </div>
-      `;
-      container.appendChild(row);
-    });
-  });
-
-  const resetDiv = document.createElement("div");
-  resetDiv.style.textAlign = "right";
-  resetDiv.style.marginTop = "0.75rem";
-  resetDiv.innerHTML = `<button onclick="resetProgress()" style="background:none; border:none; color:var(--text-dim); font-size:0.68rem; cursor:pointer; text-decoration:underline;">Reset Mastery</button>`;
-  container.appendChild(resetDiv);
-}
-
-// ========================================================
-// 2. ACTIVE PROBLEM PERSISTENCE ACROSS REFRESH
-// ========================================================
-function saveActiveProblemState() {
-  if (!activeProblem) return;
-  try {
-    const serializable = {
-      ...activeProblem,
-      solution: (activeProblem.solution || []).map(s => ({
-        ...s,
-        triedValues: Array.from(s.triedValues || [])
-      }))
-    };
-    localStorage.setItem("spur_gear_active_problem_v2", JSON.stringify(serializable));
-  } catch (e) {}
-}
-
-function loadStoredActiveProblem() {
-  try {
-    const raw = localStorage.getItem("spur_gear_active_problem_v2");
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (!data || !data.solution) return null;
-    data.solution.forEach(s => {
-      s.triedValues = new Set(s.triedValues || []);
-    });
-    return data;
-  } catch (e) {
-    return null;
-  }
-}
-
-function getAnsweredCount(problem) {
-  if (!problem || !problem.solution) return 0;
-  const visibleSteps = problem.solution.filter(s => !s.isFaded && !s.outOfScope);
-  return visibleSteps.filter(s => s.isResolved).length;
-}
-
-function getTotalVisibleCount(problem) {
-  if (!problem || !problem.solution) return 0;
-  return problem.solution.filter(s => !s.isFaded && !s.outOfScope).length;
-}
-
-// ========================================================
-// 3. A-RES SEED SAMPLER & STATEMENT GENERATOR
-// ========================================================
-function generateOrganicStatement(givens, targetSteps, S) {
-  const givenPhrases = givens.map(varKey => {
-    const meta = GEAR_VARS_DB[varKey] || { name: varKey, unit: "" };
-    const u = unitOf(S, varKey);
-    const val = fmt(S[varKey]);
-    const varName = (typeof getVarName === "function") ? getVarName(S, varKey) : meta.name;
-
-    let displaySym = varKey;
-    if (displaySym === "phi") displaySym = "\\phi";
-    else if (displaySym === "W_t") displaySym = "F_t";
-    else if (displaySym === "W_r") displaySym = "F_r";
-    else if (displaySym === "W") displaySym = "F_n";
-    else if (displaySym === "M_t") displaySym = "T";
-    else if (displaySym === "V_m") displaySym = "v";
-    else if (displaySym === "VR") displaySym = "SR";
-    else if (displaySym === "n_1") displaySym = "N_1";
-    else if (displaySym === "n_2") displaySym = "N_2";
-    else if (displaySym === "D_P1") displaySym = "D_1";
-    else if (displaySym === "D_P2") displaySym = "D_2";
-    else displaySym = displaySym.replace(/_([a-zA-Z0-9]+)/g, "_{$1}");
-
-    let valWithUnit = "";
-    if (u === "deg" || varKey === "phi") {
-      valWithUnit = `$${val}°$`;
-    } else if (Units.tex(u)) {
-      valWithUnit = `$${val}\\,${Units.tex(u)}$`;
-    } else {
-      valWithUnit = `$${val}$`;
     }
-
-    return `${varName} ({{${displaySym}|${varKey}}}) = ${valWithUnit}`;
+    
+    parts.push(`${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${displaySym}$</span> = ${valWithUnit})</span>`);
   });
 
-  const givensText = givenPhrases.join(", ");
-  const activeTargets = targetSteps.filter(s => !s.isFaded && !s.outOfScope);
-  const finalTargets = activeTargets.length > 0 ? activeTargets : [targetSteps[targetSteps.length - 1]];
-  const targetText = finalTargets.map(s => s.target).join(", ");
+  const goalMeta = topic.varsDb[cand.goal] || {};
+  const goalSym = goalMeta.symbol || cand.goal;
+  const goalName = getVarName(S, cand.goal, topic.varsDb);
+  const goalU = unitOf(S, cand.goal, topic.varsDb);
+  
+  let goalUStr = "";
+  if (goalU && goalU !== "dimless" && goalU !== "ratio" && goalU !== "teeth") {
+    goalUStr = goalU === "deg" ? " in °" : ` in $\\text{${goalU}}$`;
+  }
 
-  return `A spur gear drive operates with the following specifications: ${givensText}. Determine: ${targetText}.`;
+  return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: <strong>${goalName}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${cand.goal}">$${goalSym}$</span>)</span>${goalUStr}.`;
 }
 
 function generateGraphProblem() {
-  globalProblemCounter += 1;
-  const S = createGroundTruthSystem();
+  const S = topic.createSystem();
+  const candidates = getSeedCandidates(topic);
 
-  const W = {};
-  GEAR_RELATION_GRAPH.forEach(eq => { W[eq.id] = getEdgeTierInfo(eq.id); });
+  const scored = candidates.map(cand => {
+    const steps = solveProblemOnGraph(cand.givens, S, topic.relations);
+    const goalStep = steps.find(s => s.targetVar === cand.goal);
+    if (!goalStep) return { cand, steps: null, weight: 0 };
 
-  let pick = null, bestKey = -1;
-  getSeedCandidates().forEach(cand => {
-    const steps = solveProblemOnGraph(cand.givens, S);
-    const gi = steps.findIndex(s => s.targetVar === cand.goal);
-    if (gi < 0) return;
-    const req = new Set([gi, ...steps[gi].ancestorIndices]);
-    let score = 0;
-    req.forEach(i => { score += W[steps[i].eqId].weight; });
-    if (cand.key === lastSeedKey) score *= PHI_INV3;
-    const key = Math.pow(Math.random(), 1 / Math.pow(score, PHI));
-    if (key > bestKey) { bestKey = key; pick = { cand }; }
+    const ancestors = [goalStep, ...goalStep.ancestorIndices.map(i => steps[i])];
+    let totalMastery = 0;
+    ancestors.forEach(s => {
+      totalMastery += calculateDecayedMastery(s.eqId);
+    });
+    const avgMastery = ancestors.length > 0 ? totalMastery / ancestors.length : 0;
+    const weight = Math.max(PHI_INV6, 1 - avgMastery);
+    return { cand, steps, weight };
+  }).filter(c => c.steps !== null);
+
+  if (scored.length === 0) return;
+
+  scored.sort((a, b) => {
+    const rA = Math.pow(Math.random(), 1 / a.weight);
+    const rB = Math.pow(Math.random(), 1 / b.weight);
+    return rB - rA;
   });
 
-  if (!pick) {
-    const p = ORGANIC_SEED_PATTERNS[0];
-    pick = { cand: { name: p.name, topic: p.topic, givens: p.givens, goal: p.goals[0], key: `${p.name}>${p.goals[0]}` } };
-  }
+  const chosen = scored[0];
+  const cand = chosen.cand;
+  const solSteps = chosen.steps;
+  const goalIdx = solSteps.findIndex(s => s.targetVar === cand.goal);
 
-  const cand = pick.cand;
-  const steps = solveProblemOnGraph(cand.givens, S);
-  const gi = steps.findIndex(s => s.targetVar === cand.goal);
-  if (gi >= 0) {
-    const req = new Set([gi, ...steps[gi].ancestorIndices]);
-    steps.forEach((step, idx) => {
-      step.outOfScope = !req.has(idx);
-      step.isFaded = step.outOfScope || (W[step.eqId].tier === 3 && idx !== gi);
-    });
-  }
+  const requiredStepIndices = new Set([goalIdx, ...solSteps[goalIdx].ancestorIndices]);
+  const allPathSteps = solSteps.filter((_, idx) => requiredStepIndices.has(idx));
 
-  lastSeedKey = cand.key;
-  const statement = generateOrganicStatement(cand.givens, steps, S);
+  allPathSteps.forEach(st => {
+    if (st.targetVar === cand.goal) {
+      st.isFaded = false; 
+    } else {
+      const mastery = calculateDecayedMastery(st.eqId);
+      st.isFaded = mastery >= FADING_MASTERY_THRESHOLD;
+    }
+  });
 
-  const newProblem = {
-    id: `graph_${Date.now()}`,
-    archetype: cand.topic,
+  const finalVisibleSteps = allPathSteps.filter(st => !st.isFaded).map(st => {
+    const fadedAncestors = (st.ancestorIndices || [])
+      .map(i => solSteps[i])
+      .filter(s => s && s.isFaded);
+
+    return {
+      targetVar: st.targetVar,
+      eqId: st.eqId,
+      text: st.text,
+      equation: st.equation,
+      expectedVal: st.expectedVal,
+      target: st.target,
+      parentIndices: st.parentIndices,
+      ancestorIndices: st.ancestorIndices,
+      fadedAncestorEqIds: fadedAncestors.map(s => s.eqId),
+      isCompound: fadedAncestors.length > 0,
+      isAnswered: false,
+      isRevealed: false
+    };
+  });
+
+  const statement = generateOrganicStatement(cand, S);
+  activeProblem = {
     title: cand.name,
     statement,
     givens: cand.givens,
-    solution: steps,
-    S
+    goal: cand.goal,
+    system: S,
+    allPathSteps,
+    solution: finalVisibleSteps
   };
 
-  loadedProblems = [newProblem];
-  selectProblem(newProblem.id);
-  saveActiveProblemState();
-  renderLeitnerSidebar();
+  localStorage.setItem(STORAGE_KEY_ACTIVE, JSON.stringify(activeProblem));
+  renderProblemView();
 }
 
 // ========================================================
-// 4. WORKSPACE & REFRESH PERSISTENCE LIFECYCLE
+// 5. SOLUTION RENDERING & INTERACTIVE INPUTS
 // ========================================================
-window.addEventListener("DOMContentLoaded", async () => {
-  renderLeitnerSidebar();
-
-  const saved = loadStoredActiveProblem();
-  if (saved) {
-    const answered = getAnsweredCount(saved);
-    const total = getTotalVisibleCount(saved);
-
-    // Rule: Preserve state on refresh if at least 1 value is answered, unless none or all are answered
-    if (answered >= 1 && answered < total) {
-      activeProblem = saved;
-      loadedProblems = [activeProblem];
-      selectProblem(activeProblem.id);
-      return;
-    }
-  }
-
-  generateGraphProblem();
-});
-
-async function openFolderPicker() {
-  if (window.showDirectoryPicker) {
-    try {
-      currentDirHandle = await window.showDirectoryPicker();
-      try {
-        const masteryFileHandle = await currentDirHandle.getFileHandle("mastery.json");
-        const file = await masteryFileHandle.getFile();
-        const text = await file.text();
-        const data = JSON.parse(text);
-        edgeHistory = data.history || data;
-        globalProblemCounter = data.globalProblemCount || globalProblemCounter;
-        saveMastery();
-      } catch (e) {
-        writeMasteryToFolder({ version: "4.2", globalProblemCount: globalProblemCounter, history: edgeHistory });
-      }
-      renderLeitnerSidebar();
-    } catch (e) {
-      console.log("Folder sync canceled", e);
-    }
-  }
-}
-
-function getExpectedValue(item) {
-  if (!item) return null;
-  if (typeof item.expectedVal === "number" && !isNaN(item.expectedVal)) {
-    return item.expectedVal;
-  }
-  if (item.equation) {
-    const m = item.equation.match(/\\mathbf\{([0-9.]+)/);
-    if (m) return parseFloat(m[1]);
-  }
-  return null;
-}
-
-function updateToggleAllVisibility() {
-  const btn = document.getElementById("btn-toggle-all");
-  const distractorBanner = document.getElementById("distractor-banner");
+function renderProblemView() {
   if (!activeProblem) return;
-
-  const allResolved = (activeProblem.solution || []).every(s => s.isResolved || s.isFaded || s.outOfScope);
-
-  if (allResolved) {
-    if (btn) btn.style.display = "block";
-
-    if (activeProblem.givens && distractorBanner) {
-      const usedGivens = new Set();
-      activeProblem.solution.forEach(step => {
-        if (step.isResolved) {
-          const eq = GEAR_RELATION_GRAPH.find(e => e.id === step.eqId);
-          if (eq) {
-            eq.nodes.forEach(n => {
-              if (activeProblem.givens.includes(n)) usedGivens.add(n);
-            });
-          }
-        }
-      });
-
-      const unused = activeProblem.givens.filter(g => !usedGivens.has(g));
-      if (unused.length > 0) {
-        const unusedLabels = unused.map(k => {
-          const m = GEAR_VARS_DB[k] || { name: k };
-          let sym = k;
-          if (sym === "phi") sym = "\\phi";
-          else if (sym === "W_t") sym = "F_t";
-          else if (sym === "W_r") sym = "F_r";
-          else if (sym === "W") sym = "F_n";
-          else if (sym === "M_t") sym = "T";
-          else if (sym === "V_m") sym = "v";
-          else if (sym === "VR") sym = "SR";
-          else if (sym === "n_1") sym = "N_1";
-          else if (sym === "n_2") sym = "N_2";
-          else sym = sym.replace(/_([a-zA-Z0-9]+)/g, "_{$1}");
-          return `<strong>${m.name}</strong> ($${sym}$)`;
-        }).join(", ");
-
-        const verb = unused.length > 1 ? "were distractor specifications" : "was a distractor specification";
-        distractorBanner.innerHTML = `💡 <strong>Exam Sharpness Check:</strong> You correctly identified that ${unusedLabels} ${verb} not needed for your solution path!`;
-        distractorBanner.style.display = "block";
-
-        if (window.renderMathInElement) {
-          renderMathInElement(distractorBanner, {
-            delimiters: [{ left: "$", right: "$", display: false }],
-            throwOnError: false
-          });
-        }
-      } else {
-        distractorBanner.style.display = "none";
-      }
-    }
-  } else {
-    if (btn) btn.style.display = "none";
-    if (distractorBanner) distractorBanner.style.display = "none";
-  }
-}
-
-function selectProblem(id) {
-  activeProblem = loadedProblems.find(p => p.id === id);
-  if (!activeProblem) return;
-
   document.getElementById("p-title").textContent = activeProblem.title;
-  renderTextWithMath(document.getElementById("p-statement"), activeProblem.statement);
+  document.getElementById("p-statement").innerHTML = activeProblem.statement;
 
   const flowEl = document.getElementById("p-solution-flow");
   flowEl.innerHTML = "";
 
-  const activeTargets = (activeProblem.solution || []).filter(s => !s.isFaded && !s.outOfScope);
-  const finalTargets = activeTargets.length > 0 ? activeTargets : [activeProblem.solution[activeProblem.solution.length - 1]];
-
-  const neededIndices = new Set();
-  finalTargets.forEach(targetStep => {
-    const tIdx = activeProblem.solution.indexOf(targetStep);
-    if (tIdx >= 0) neededIndices.add(tIdx);
-    (targetStep.ancestorIndices || []).forEach(aIdx => neededIndices.add(aIdx));
-  });
-
-  (activeProblem.solution || []).forEach((item, index) => {
-    if (!neededIndices.has(index)) return;
-    if (item.isFaded || item.outOfScope) return;
-
-    const itemEl = document.createElement("div");
-    itemEl.className = "solution-item";
-    itemEl.id = `step-item-${index}`;
-
-    item.isResolved = item.isResolved || false;
-    item.triedValues = item.triedValues || new Set();
+  activeProblem.solution.forEach((step, idx) => {
+    const item = document.createElement("div");
+    item.className = "solution-item";
+    item.id = `step-item-${idx}`;
 
     const summary = document.createElement("div");
     summary.className = "solution-summary";
 
     const labelWrap = document.createElement("div");
     labelWrap.className = "step-label-wrap";
-    labelWrap.innerHTML = `<span class="chevron">▸</span><span id="sum-text-${index}"></span>`;
 
-    labelWrap.onclick = e => {
-      e.stopPropagation();
-      const willOpen = !itemEl.classList.contains("open");
-      itemEl.classList.toggle("open");
+    const chevron = document.createElement("span");
+    chevron.className = "chevron";
+    chevron.textContent = "▶";
 
-      if (willOpen && !item.isResolved) {
-        item.isResolved = true;
-        if (!item.penalized) {
-          item.penalized = true;
-          recordStepResult(item.eqId, false);
-        }
-        const inp = document.getElementById(`input-step-${index}`);
-        if (inp) {
-          inp.className = "step-ans-input state-revealed";
-          inp.value = "";
-          inp.placeholder = "Revealed";
-          inp.disabled = true;
-        }
-        saveActiveProblemState();
-        updateToggleAllVisibility();
-      }
-    };
+    const badge = step.isCompound ? ` <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 3px; background: rgba(147, 197, 253, 0.15); color: var(--accent-math);">Compound Leapfrog</span>` : "";
+    const targetSpan = document.createElement("span");
+    targetSpan.innerHTML = `Step ${idx + 1}: ${renderStepTargetText(step.target)}${badge}`;
 
-    summary.appendChild(labelWrap);
+    labelWrap.appendChild(chevron);
+    labelWrap.appendChild(targetSpan);
 
     const inputWrap = document.createElement("div");
     inputWrap.className = "step-input-wrap";
-    inputWrap.onclick = e => {
-      e.stopPropagation();
-      const inp = document.getElementById(`input-step-${index}`);
-      if (inp) inp.focus();
-    };
-
-    const targetUnit = unitOf(activeProblem.S, item.targetVar);
-    const unitPlaceholder = (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio" && targetUnit !== "teeth")
-      ? (targetUnit === "deg" ? "Value in °..." : `Value in ${targetUnit}...`)
-      : "Value...";
 
     const input = document.createElement("input");
-    input.type = "text";
+    input.type = "number";
     input.inputMode = "decimal";
     input.className = "step-ans-input";
-    input.placeholder = unitPlaceholder;
-    input.id = `input-step-${index}`;
-    input.autocomplete = "off";
+    input.placeholder = "Enter value...";
+    input.dataset.stepIdx = idx;
 
-    if (item.isResolved) {
-      if (item.isCorrect) {
-        input.className = "step-ans-input state-correct";
-        input.value = `${fmt(getExpectedValue(item))}  ✓`;
-        input.disabled = true;
-        itemEl.classList.add("open");
-      } else {
-        input.className = "step-ans-input state-revealed";
-        input.placeholder = "Revealed";
-        input.disabled = true;
-      }
+    if (step.isAnswered) {
+      input.value = step.userVal !== undefined ? step.userVal : step.expectedVal;
+      input.classList.add(step.isRevealed ? "state-revealed" : "state-correct");
+      input.disabled = true;
+      item.classList.add("open");
     }
 
-    input.oninput = () => input.classList.remove("state-wrong", "state-warning");
-    input.onkeydown = e => {
+    input.addEventListener("keydown", e => {
       if (e.key === "Enter") {
-        e.preventDefault();
-        e.stopPropagation();
-        checkStepAnswer(index, input.value.trim(), item);
+        checkStepAnswer(idx, input);
       }
-    };
+    });
+
+    summary.addEventListener("click", e => {
+      if (e.target === input || e.target.closest('.interactive-var')) return;
+      
+      const wasOpen = item.classList.contains("open");
+      
+      if (!wasOpen && !step.isAnswered) {
+        revealStepAnswer(idx, input);
+      } else {
+        item.classList.toggle("open");
+      }
+      updateToggleVisibility();
+    });
 
     inputWrap.appendChild(input);
+    summary.appendChild(labelWrap);
     summary.appendChild(inputWrap);
-    itemEl.appendChild(summary);
 
     const body = document.createElement("div");
     body.className = "solution-body";
 
-    if (item.text) {
-      const txt = document.createElement("div");
-      txt.className = "solution-text";
-      renderTextWithMath(txt, item.text);
-      body.appendChild(txt);
+    const textP = document.createElement("p");
+    textP.className = "solution-text";
+
+    const mathDiv = document.createElement("div");
+    mathDiv.className = "solution-math-display";
+
+    const compound = buildCompoundDerivation(step, activeProblem.system, activeProblem.allPathSteps);
+    if (compound && compound.derivationBlock) {
+      textP.innerHTML = compound.note || step.text;
+      mathDiv.innerHTML = `\\[ ${compound.derivationBlock} \\]\n\\[ ${compound.finalBlock} \\]`;
+    } else {
+      textP.innerHTML = step.text;
+      mathDiv.innerHTML = `\\[ ${step.equation} \\]`;
     }
 
-    const compound = buildCompoundDerivation(item, activeProblem.S, activeProblem.solution);
-    if (compound) {
-      const derivBox = document.createElement("div");
-      derivBox.className = "solution-math-display";
-      renderMathOnly(derivBox, compound.derivationBlock);
-      body.appendChild(derivBox);
+    body.appendChild(textP);
+    body.appendChild(mathDiv);
 
-      const finalBox = document.createElement("div");
-      finalBox.className = "solution-math-display";
-      finalBox.style.marginTop = "0.5rem";
-      renderMathOnly(finalBox, compound.finalBlock);
-      body.appendChild(finalBox);
-    } else if (item.equation) {
-      const eq = document.createElement("div");
-      eq.className = "solution-math-display";
-      renderMathOnly(eq, item.equation);
-      body.appendChild(eq);
-    }
-
-    itemEl.appendChild(body);
-    flowEl.appendChild(itemEl);
-
-    const label = item.target ? `Solve for ${item.target}` : `Step ${index + 1}`;
-    renderTextWithMath(document.getElementById(`sum-text-${index}`), label);
+    item.appendChild(summary);
+    item.appendChild(body);
+    flowEl.appendChild(item);
   });
 
-  updateToggleAllVisibility();
-  backToProblem();
+  checkDistractors();
+  renderMathInElement(document.getElementById("view-problem"), {
+    delimiters: [
+      { left: "$$", right: "$$", display: true },
+      { left: "\\[", right: "\\]", display: true },
+      { left: "$", right: "$", display: false },
+      { left: "\\(", right: "\\)", display: false }
+    ],
+    throwOnError: false
+  });
+  attachInteractiveVars();
+  updateToggleVisibility();
 }
 
-function checkStepAnswer(stepIndex, userStr, item) {
-  const itemEl = document.getElementById(`step-item-${stepIndex}`);
-  const inputEl = document.getElementById(`input-step-${stepIndex}`);
+function renderStepTargetText(targetStr) {
+  if (!targetStr) return "";
+  return targetStr.replace(/\{\{([^}]+)\}\}/g, (match, p1) => {
+    const parts = p1.split("|");
+    const sym = parts[0];
+    const key = parts[1] || sym;
+    return `<span class="interactive-var" data-var="${key}">$${sym}$</span>`;
+  });
+}
 
-  if (!userStr) {
-    if (inputEl) inputEl.focus();
+function checkStepAnswer(idx, inputEl) {
+  const step = activeProblem.solution[idx];
+  const raw = inputEl.value.trim();
+
+  if (raw === "") {
+    revealStepAnswer(idx, inputEl);
     return;
   }
 
-  const cleanStr = userStr.replace(',', '.');
-  const userVal = parseFloat(cleanStr);
-  if (isNaN(userVal) || !/^-?\d*(\.\d+)?$/.test(cleanStr)) {
-    if (inputEl) {
-      inputEl.classList.add("shake-trigger");
-      inputEl.focus();
-    }
-    return;
-  }
+  incrementGlobalTick();
 
-  const expected = getExpectedValue(item);
-  if (expected === null || isNaN(expected)) {
-    item.isResolved = true;
-    itemEl.classList.add("open");
-    if (inputEl) {
-      inputEl.className = "step-ans-input state-revealed";
-      inputEl.disabled = true;
-    }
-    saveActiveProblemState();
-    updateToggleAllVisibility();
-    return;
-  }
+  const val = parseFloat(raw);
+  if (isNaN(val)) return;
 
-  const relDiff = Math.abs(userVal - expected) / Math.max(Math.abs(expected), 1e-4);
-  const maxAbsAllowed = Math.max(0.0005, Math.abs(expected) * 0.025);
-  const absDiff = Math.abs(userVal - expected);
-  const isCorrect = INTEGER_VARS.includes(item.targetVar)
-    ? absDiff < 1e-9
-    : (relDiff < 0.025 || absDiff <= maxAbsAllowed);
+  const expected = step.expectedVal;
+  const isInteger = !!(topic.varsDb[step.targetVar] && topic.varsDb[step.targetVar].isInteger);
 
-  if (isCorrect) {
-    item.isResolved = true;
-    item.isCorrect = true;
-    recordStepResult(item.eqId, true);
-
-    if (inputEl) {
-      inputEl.value = `${userStr}  ✓`;
-      inputEl.className = "step-ans-input state-correct";
-      inputEl.disabled = true;
-    }
-    itemEl.classList.add("open");
-
-    const ancestors = item.ancestorIndices || [];
-    ancestors.forEach(prevIndex => {
-      const prevItem = activeProblem.solution[prevIndex];
-      if (prevItem && !prevItem.isResolved) {
-        prevItem.isResolved = true;
-        prevItem.isCorrect = true;
-        recordStepResult(prevItem.eqId, true);
-
-        const prevItemEl = document.getElementById(`step-item-${prevIndex}`);
-        const prevInputEl = document.getElementById(`input-step-${prevIndex}`);
-        if (prevInputEl) {
-          prevInputEl.value = `${fmt(getExpectedValue(prevItem))}  ✓`;
-          prevInputEl.className = "step-ans-input state-correct";
-          prevInputEl.disabled = true;
-        }
-        if (prevItemEl) prevItemEl.classList.add("open");
-      }
-    });
-
-    activeProblem.solution.forEach(st => {
-      if (!st.isResolved && !st.outOfScope && !st.exposed && !ancestors.includes(activeProblem.solution.indexOf(st))) {
-        st.exposed = true;
-        recordPassiveExposure(st.eqId);
-      }
-    });
-
-    saveActiveProblemState();
-    updateToggleAllVisibility();
+  let correct = false;
+  if (isInteger) {
+    correct = Math.round(val) === Math.round(expected);
   } else {
-    const exactNumericKey = String(userVal);
-    const alreadyTried = item.triedValues.has(exactNumericKey);
+    const tol = Math.max(PHI_INV8 * Math.abs(expected), PHI_INV6);
+    correct = Math.abs(val - expected) <= tol;
+  }
 
-    if (!alreadyTried) {
-      item.triedValues.add(exactNumericKey);
-      if (!item.penalized) {
-        item.penalized = true;
-        recordStepResult(item.eqId, false);
-      }
-      if (inputEl) inputEl.className = "step-ans-input state-wrong";
-    } else {
-      if (inputEl) inputEl.className = "step-ans-input state-warning";
-    }
+  inputEl.classList.remove("state-correct", "state-wrong", "state-warning", "shake-trigger");
 
-    saveActiveProblemState();
+  if (correct) {
+    inputEl.classList.add("state-correct");
+    inputEl.disabled = true;
+    step.isAnswered = true;
+    step.userVal = val;
+    step.isRevealed = false;
+    recordEquationAttempt(step.eqId, true);
+    
+    (step.fadedAncestorEqIds || []).forEach(ancId => reinforceEquationAttempt(ancId));
+    document.getElementById(`step-item-${idx}`).classList.add("open");
+    updateToggleVisibility();
+  } else {
+    inputEl.classList.add("state-wrong", "shake-trigger");
+    recordEquationAttempt(step.eqId, false);
+    
+    (step.fadedAncestorEqIds || []).forEach(ancId => penalizeBlameEquation(ancId));
 
-    if (inputEl) {
+    setTimeout(() => {
       inputEl.classList.remove("shake-trigger");
-      void inputEl.offsetWidth;
-      inputEl.classList.add("shake-trigger");
-      inputEl.focus();
-      inputEl.select();
-    }
+    }, 400);
   }
+
+  localStorage.setItem(STORAGE_KEY_ACTIVE, JSON.stringify(activeProblem));
 }
 
-function toggleAllSolutions() {
+function revealStepAnswer(idx, inputEl) {
+  const step = activeProblem.solution[idx];
+  step.isAnswered = true;
+  step.isRevealed = true;
+  step.userVal = step.expectedVal;
+  inputEl.value = step.expectedVal;
+  inputEl.classList.add("state-revealed");
+  inputEl.disabled = true;
+  
+  recordEquationAttempt(step.eqId, false);
+  (step.fadedAncestorEqIds || []).forEach(ancId => penalizeBlameEquation(ancId));
+
+  document.getElementById(`step-item-${idx}`).classList.add("open");
+  updateToggleVisibility();
+  localStorage.setItem(STORAGE_KEY_ACTIVE, JSON.stringify(activeProblem));
+}
+
+function updateToggleVisibility() {
+  const btn = document.getElementById("btn-toggle-all");
   const items = document.querySelectorAll(".solution-item");
-  const anyClosed = Array.from(items).some(it => !it.classList.contains("open"));
-  items.forEach(it => {
-    if (anyClosed) {
-      it.style.display = "block";
-      it.classList.add("open");
-    } else {
-      it.classList.remove("open");
-    }
-  });
-}
+  if (!btn || items.length === 0) return;
 
-// ========================================================
-// 5. MATH, TOOLTIP & CAROUSEL
-// ========================================================
-function renderTextWithMath(container, rawText) {
-  if (!container) return;
-  container.innerHTML = "";
-  if (!rawText) return;
+  const allCompleted = activeProblem.solution.every(s => s.isAnswered);
+  const openCount = Array.from(items).filter(it => it.classList.contains("open")).length;
 
-  const varTokens = [];
-  const processed = rawText.replace(/\{\{(.+?)(?:\|([a-zA-Z0-9_\\-]+))?\}\}/g, (_, disp, base) => {
-    const token = `__VARKATEX_${varTokens.length}__`;
-    varTokens.push({ display: disp.trim(), base: (base || disp).trim() });
-    return token;
-  });
+  btn.style.display = "flex";
+  btn.style.gap = "0.5rem";
 
-  const mathParts = processed.split("$");
-  mathParts.forEach((part, idx) => {
-    if (idx % 2 === 1) {
-      const span = document.createElement("span");
-      katex.render(part, span, { throwOnError: false });
-      container.appendChild(span);
-    } else {
-      const chunks = part.split(/(__VARKATEX_\d+__)/);
-      chunks.forEach(chunk => {
-        const m = chunk.match(/__VARKATEX_(\d+)__/);
-        if (m) {
-          const item = varTokens[parseInt(m[1], 10)];
-          container.appendChild(createInteractiveVarNode(item.display, item.base));
-        } else if (chunk) {
-          container.appendChild(document.createTextNode(chunk));
-        }
-      });
-    }
-  });
-}
-
-function renderMathOnly(container, eqString) {
-  if (!container) return;
-  katex.render(eqString, container, { displayMode: true, throwOnError: false });
-}
-
-function createInteractiveVarNode(displayVar, baseVarKey) {
-  const span = document.createElement("span");
-  span.className = "interactive-var";
-
-  let latexExpr = (displayVar === "phi" || displayVar === "\\phi") ? "\\phi" : displayVar;
-  latexExpr = latexExpr.replace(/_([a-zA-Z0-9]+)/g, "_{$1}");
-  katex.render(latexExpr, span, { throwOnError: false });
-
-  span.onmouseenter = e => showTooltip(e, baseVarKey, displayVar);
-  span.onmouseleave = hideTooltip;
-  span.onclick = e => {
-    e.stopPropagation();
-    openCarousel(baseVarKey);
-  };
-  return span;
-}
-
-function showTooltip(e, baseVarKey, displayVar) {
-  const tooltip = document.getElementById("tooltip");
-  if (!tooltip) return;
-
-  const meta = GEAR_VARS_DB[baseVarKey] || GEAR_VARS_DB[displayVar] || { name: displayVar, unit: "" };
-  const cards = getGraphCardsForVariable(baseVarKey, activeProblem);
-
-  let mathContent = "";
-  let hintContent = "";
-
-  const currentAlias = (typeof getVarName === "function" && activeProblem)
-    ? getVarName(activeProblem.S, baseVarKey)
-    : meta.name;
-
-  let titleContent = currentAlias;
-  if (currentAlias !== meta.name) {
-    titleContent = `${currentAlias} [${meta.name}]`;
-  }
-
-  if (cards.length > 0) {
-    const primaryCard = cards.find(c => c.isBase) || cards[0];
-    mathContent = primaryCard.formula;
-    const isContext = cards.some(c => c.usedInProblem);
-    hintContent = isContext
-      ? `★ Standard textbook formula (Click to explore ${cards.length} forms)`
-      : `Click to explore all ${cards.length} forms`;
+  if (openCount === 0 && !allCompleted) {
+    btn.style.display = "none";
+  } else if (!allCompleted) {
+    btn.innerHTML = `<span onclick="performToggle('collapse')" style="cursor:pointer; border-bottom:1px dotted var(--text-muted);">Collapse All</span>`;
   } else {
-    mathContent = displayVar;
-    hintContent = meta.unit ? `Unit: ${meta.unit}` : "Variable";
+    btn.innerHTML = `
+      <span onclick="performToggle('collapse')" style="cursor:pointer; border-bottom:1px dotted var(--text-muted);">Collapse All</span>
+      <span>/</span>
+      <span onclick="performToggle('expand')" style="cursor:pointer; border-bottom:1px dotted var(--text-muted);">Expand All</span>
+    `;
   }
-
-  tooltip.innerHTML = `
-    <div class="tt-name">${titleContent}</div>
-    <div class="tt-math" id="tt-m"></div>
-    <div class="tt-hint">${hintContent}</div>
-  `;
-
-  const mathEl = document.getElementById("tt-m");
-  if (mathEl) katex.render(mathContent, mathEl, { throwOnError: false });
-
-  tooltip.style.display = "block";
-  const rect = e.target.getBoundingClientRect();
-  tooltip.style.left = `${Math.max(10, rect.left)}px`;
-  tooltip.style.top = `${rect.bottom + 8}px`;
 }
 
-function hideTooltip() {
+// Ensure the button isn't accidentally wiping out click events. We make it a standard delegate function.
+window.performToggle = function(action) {
+  const items = document.querySelectorAll(".solution-item");
+  items.forEach((it, idx) => {
+    if (action === 'collapse') {
+      it.classList.remove("open");
+    } else if (action === 'expand') {
+      const step = activeProblem.solution[idx];
+      const inputEl = it.querySelector('.step-ans-input');
+      if (!step.isAnswered) {
+        revealStepAnswer(idx, inputEl);
+      } else {
+        it.classList.add("open");
+      }
+    }
+  });
+  updateToggleVisibility();
+};
+
+function checkDistractors() {
+  const banner = document.getElementById("distractor-banner");
+  if (!banner || !activeProblem) return;
+
+  const givens = activeProblem.givens;
+  const usedVars = new Set();
+  
+  (activeProblem.allPathSteps || activeProblem.solution).forEach(s => {
+    const eq = (topic.relations || []).find(e => e.id === s.eqId);
+    if (eq) eq.nodes.forEach(n => usedVars.add(n));
+  });
+
+  const distractors = givens.filter(v => !usedVars.has(v));
+
+  if (distractors.length > 0) {
+    const dList = distractors.map(v => {
+      const sym = (topic.varsDb[v] && topic.varsDb[v].symbol) || v;
+      return `${getVarName(activeProblem.system, v, topic.varsDb)} <span class="math-token">(<span class="interactive-var" data-var="${v}">$${sym}$</span>)</span>`;
+    }).join(", ");
+    banner.style.display = "block";
+    banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that <em>${dList}</em> was provided in the specifications but is not needed in the solution path. Exams often supply extra parameters to test whether you choose the correct relations.`;
+  } else {
+    banner.style.display = "none";
+  }
+}
+
+// ========================================================
+// 6. TOOLTIPS & CAROUSEL VIEW
+// ========================================================
+let activeCards = [];
+let currentCardIdx = 0;
+
+function attachInteractiveVars() {
   const tooltip = document.getElementById("tooltip");
-  if (tooltip) tooltip.style.display = "none";
+  const varEls = document.querySelectorAll(".interactive-var");
+
+  varEls.forEach(el => {
+    const varKey = el.dataset.var;
+    const meta = topic.varsDb[varKey];
+    if (!meta) return;
+
+    el.addEventListener("mouseenter", e => {
+      const rect = el.getBoundingClientRect();
+      const sym = meta.symbol || varKey;
+      tooltip.innerHTML = `
+        <div class="tt-name">${meta.name}</div>
+        <div class="tt-math">$${sym}$ &bull; Unit: ${meta.unit || "dimless"}</div>
+        <div class="tt-hint">Click variable to review formula cards</div>
+      `;
+      tooltip.style.left = `${rect.left}px`;
+      tooltip.style.top = `${rect.bottom + 6}px`;
+      tooltip.style.display = "block";
+      renderMathInElement(tooltip, { delimiters: [{ left: "$", right: "$", display: false }] });
+    });
+
+    el.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
+    });
+
+    el.addEventListener("click", () => {
+      tooltip.style.display = "none";
+      openCarousel(varKey);
+    });
+  });
 }
 
-function openCarousel(baseVarKey) {
-  const meta = GEAR_VARS_DB[baseVarKey] || { name: baseVarKey, unit: "" };
-  activeCarouselCards = getGraphCardsForVariable(baseVarKey, activeProblem);
-  if (activeCarouselCards.length === 0) return;
+function openCarousel(varKey) {
+  activeCards = getGraphCardsForVariable(varKey, activeProblem, topic.relations, topic.varsDb);
+  if (!activeCards || activeCards.length === 0) return;
 
-  currentVarKey = baseVarKey;
-  cardIdx = 0;
-
+  currentCardIdx = 0;
   document.getElementById("view-problem").classList.remove("active");
   document.getElementById("view-carousel").classList.add("active");
 
-  const currentAlias = (typeof getVarName === "function" && activeProblem)
-    ? getVarName(activeProblem.S, baseVarKey)
-    : meta.name;
-
-  document.getElementById("c-var-title").textContent = currentAlias !== meta.name ? `${currentAlias} (${meta.name})` : meta.name;
-  document.getElementById("c-unit").textContent = meta.unit ? `Unit: ${meta.unit}` : "";
-
-  renderCarouselCard();
+  const meta = topic.varsDb[varKey] || {};
+  document.getElementById("c-var-title").textContent = meta.name || varKey;
+  renderCurrentCard();
 }
 
-function renderCarouselCard() {
-  const card = activeCarouselCards[cardIdx];
-  const badge = card.usedInProblem ? " ★ Relevant to this Problem" : "";
-  document.getElementById("c-counter").textContent = `${cardIdx + 1} / ${activeCarouselCards.length}${badge}`;
+function renderCurrentCard() {
+  if (!activeCards || activeCards.length === 0) return;
+  const card = activeCards[currentCardIdx];
 
-  katex.render(card.formula, document.getElementById("c-formula"), { displayMode: true, throwOnError: false });
+  document.getElementById("c-counter").textContent = `${currentCardIdx + 1} / ${activeCards.length}`;
+  document.getElementById("c-unit").textContent = (topic.varsDb[card.targetVar] || {}).unit || "";
+  document.getElementById("c-formula").innerHTML = `\\[ ${card.formula} \\]`;
   document.getElementById("c-notes").textContent = card.notes;
 
-  const linkContainer = document.getElementById("c-linked-container");
-  linkContainer.innerHTML = "";
-  (card.vars || []).forEach(vKey => {
-    if (GEAR_VARS_DB[vKey]) {
-      const vNode = createInteractiveVarNode(vKey, vKey);
-      linkContainer.appendChild(vNode);
-    }
+  const linkedCont = document.getElementById("c-linked-container");
+  linkedCont.innerHTML = "";
+  card.vars.forEach(v => {
+    const meta = topic.varsDb[v] || {};
+    const sym = meta.symbol || v;
+    const span = document.createElement("span");
+    span.className = "interactive-var";
+    span.dataset.var = v;
+    span.innerHTML = `$${sym}$`;
+    linkedCont.appendChild(span);
   });
 
-  const dotsEl = document.getElementById("c-dots");
-  dotsEl.innerHTML = "";
-  activeCarouselCards.forEach((_, i) => {
+  const dotsCont = document.getElementById("c-dots");
+  dotsCont.innerHTML = "";
+  activeCards.forEach((_, i) => {
     const dot = document.createElement("div");
-    dot.className = `dot ${i === cardIdx ? 'active' : ''}`;
-    dotsEl.appendChild(dot);
+    dot.className = `dot ${i === currentCardIdx ? "active" : ""}`;
+    dotsCont.appendChild(dot);
   });
 
-  document.getElementById("c-prev").disabled = (cardIdx === 0);
-  document.getElementById("c-next").disabled = (cardIdx === activeCarouselCards.length - 1);
-}
-
-function prevCard() {
-  if (cardIdx > 0) { cardIdx--; renderCarouselCard(); }
+  renderMathInElement(document.getElementById("view-carousel"), {
+    delimiters: [
+      { left: "\\[", right: "\\]", display: true },
+      { left: "$", right: "$", display: false }
+    ],
+    throwOnError: false
+  });
+  attachInteractiveVars();
 }
 
 function nextCard() {
-  if (cardIdx < activeCarouselCards.length - 1) { cardIdx++; renderCarouselCard(); }
+  if (currentCardIdx < activeCards.length - 1) {
+    currentCardIdx++;
+    renderCurrentCard();
+  }
+}
+
+function prevCard() {
+  if (currentCardIdx > 0) {
+    currentCardIdx--;
+    renderCurrentCard();
+  }
 }
 
 function backToProblem() {
@@ -969,11 +704,66 @@ function backToProblem() {
   document.getElementById("view-problem").classList.add("active");
 }
 
-function toggleSidebar() {
-  const aside = document.querySelector("aside");
-  const overlay = document.getElementById("sidebar-overlay");
-  if (!aside || !overlay) return;
-  const willOpen = !aside.classList.contains("open");
-  aside.classList.toggle("open", willOpen);
-  overlay.classList.toggle("active", willOpen);
+// ========================================================
+// 7. BACKUP IMPORT / EXPORT & SYNC
+// ========================================================
+function exportMasteryFile() {
+  const blob = new Blob([JSON.stringify(edgeHistory, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${topic.id}_mastery.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
+
+function triggerImportMastery() {
+  document.getElementById("mastery-file-input").click();
+}
+
+function handleMasteryImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      edgeHistory = data;
+      saveMastery();
+      renderWeightBars();
+      alert("Mastery profile successfully imported!");
+    } catch (err) {
+      alert("Invalid JSON file.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function openFolderPicker() {
+  if (!window.showSaveFilePicker) {
+    alert("File System Access API is not supported in this browser. Use Export/Import buttons instead.");
+    return;
+  }
+  try {
+    fileHandle = await window.showSaveFilePicker({
+      suggestedName: `${topic.id}_mastery.json`,
+      types: [{ description: "JSON Files", accept: { "application/json": [".json"] } }]
+    });
+    syncToFile();
+    alert("Live file sync established!");
+  } catch (err) {
+    console.log("File picker cancelled.");
+  }
+}
+
+// ========================================================
+// 8. INITIALIZATION
+// ========================================================
+window.addEventListener("DOMContentLoaded", () => {
+  // Bind standard collapse/expand all toggles to the global window
+  // in case inline onclick handlers require it to be easily accessible
+  window.toggleAllSolutions = function() {}; // stub to override previous HTML button onclick
+
+  loadMastery();
+  generateGraphProblem();
+});
