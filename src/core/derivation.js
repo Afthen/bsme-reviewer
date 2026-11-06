@@ -223,6 +223,10 @@ function toLatexSymbol(name, varsDb = {}) {
   if (name === "Pdn" || name === "P_dn") return "P_{dn}";
   if (name === "Pa" || name === "P_a") return "P_a";
   if (name === "Fa" || name === "F_a") return "F_a";
+  if (name === "Dr" || name === "D_r") return "D_r";
+  if (name === "FD" || name === "F_D") return "F_D";
+  if (name === "Cd" || name === "C_d") return "C_d";
+  if (name === "yform" || name === "y_form") return "y";
   return name;
 }
 
