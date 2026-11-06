@@ -217,6 +217,12 @@ function toLatexSymbol(name, varsDb = {}) {
   if (name === "D2" || name === "D_2") return "D_2";
   if (name === "T1" || name === "T_1") return "T_1";
   if (name === "T2" || name === "T_2") return "T_2";
+  if (name === "psi") return "\\psi";
+  if (name === "phin" || name === "phi_n") return "\\phi_n";
+  if (name === "Pcn" || name === "P_cn") return "P_{cn}";
+  if (name === "Pdn" || name === "P_dn") return "P_{dn}";
+  if (name === "Pa" || name === "P_a") return "P_a";
+  if (name === "Fa" || name === "F_a") return "F_a";
   return name;
 }
 
