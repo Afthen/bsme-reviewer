@@ -17,19 +17,6 @@ function fmt(n, maxDec = 3) {
 }
 
 /**
- * Target label formatting with unit awareness
- */
-function targetLabel(name, token, u) {
-  if (!u || u === "dimless" || u === "ratio" || u === "teeth") {
-    return `${name} (${token})`;
-  }
-  if (u === "deg") {
-    return `${name} (${token}) in °`;
-  }
-  return `${name} (${token}) in $\\text{${u}}$`;
-}
-
-/**
  * Resolves localized / randomized variable name from system state or database
  */
 function getVarName(S, k, varsDb = null) {
