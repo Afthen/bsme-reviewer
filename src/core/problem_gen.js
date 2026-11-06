@@ -130,7 +130,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}) {
     const name = meta.name || v;
 
     let valWithUnit = `$${val}$`;
-    if (u && u !== "dimless" && u !== "ratio" && u !== "teeth") {
+    if (u && u !== "dimless" && u !== "ratio") {
       valWithUnit = u === "deg" ? `$${val}^\\circ$` : `$${val}\\text{ ${u}}$`;
     }
 
