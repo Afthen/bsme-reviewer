@@ -1,71 +1,66 @@
 /**
  * src/core/problem_gen.js
- * Autonomous graph-walk problem generator with true priority-weighted sampling
- * and natural multi-step depth distribution.
+ * Autonomous graph-walk problem generator with strict target enforcement
+ * and true deficiency-weighted selection.
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 
 // ========================================================
-// 1. EQUATION-TARGETED AUTONOMOUS PROBLEM GENERATION
+// 1. EQUATION-TARGETED PROBLEM GENERATION
 // ========================================================
 
 /**
- * Generates an organic problem prioritizing unmastered equations (0% mastery).
- * @param {Array} relations - Topic relation graph.
- * @param {Object} S - Ground truth system state.
- * @param {Object} varsDb - Topic variable metadata.
- * @param {Function} getMastery - (eqId) => score in [0, 1].
+ * Generates an organic problem strictly guaranteeing that under-mastered
+ * equations appear in the solution path.
  */
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
-  // 1. Weight equations by unmastered deficiency (0% mastery = weight 1.0, 100% = 0.03)
+  // 1. Weight equations by deficiency: 0% mastery = maximum priority
   const scoredRelations = relations.map(eq => {
     const mastery = getMastery(eq.id);
-    const weight = Math.max(0.03, Math.pow(1 - mastery, 2));
-    // A-Res Weighted Key: larger weight => larger key
+    // Unattempted (0%) gets massive priority boost; mastered (>=0.8) drops exponentially
+    const weight = mastery === 0 ? 5.0 : Math.max(0.02, Math.pow(1 - mastery, 3));
+    // A-Res Weighted Key: larger weight => higher rank
     const key = Math.pow(Math.random(), 1 / weight);
-    return { eq, weight, key };
+    return { eq, weight, key, mastery };
   });
 
-  // Sort DESCENDING (largest key first): 0% mastery equations will be at the front
+  // Sort descending: unmastered equations are evaluated first
   scoredRelations.sort((a, b) => b.key - a.key);
 
   for (const { eq: targetEq } of scoredRelations) {
-    // Pick an unknown goal node from the target relation
     const candidateGoals = [...targetEq.nodes].sort(() => Math.random() - 0.5);
 
     for (const goalVar of candidateGoals) {
-      const problem = buildAdaptivePath(targetEq, goalVar, relations, S);
+      const problem = buildAdaptivePath(targetEq, goalVar, relations, S, getMastery);
       if (problem) return problem;
     }
   }
 
-  // Fallback to random relation
-  const fallbackEq = relations[Math.floor(Math.random() * relations.length)];
+  // Fallback: direct 1-step problem on the lowest mastery relation
+  const fallbackEq = scoredRelations[0].eq;
   const goalVar = fallbackEq.nodes[0];
   const givens = fallbackEq.nodes.filter(n => n !== goalVar);
-  return { goalVar, givens, distractors: [] };
+  return { goalVar, givens, distractors: [], targetEqId: fallbackEq.id };
 }
 
 /**
- * Chains backwards through the DAG to build rich 1-step, 2-step, or 3-step problems.
+ * Chains backwards through the DAG and enforces that targetEq is strictly
+ * included in the student's solution steps.
  */
-function buildAdaptivePath(targetEq, goalVar, relations, S) {
+function buildAdaptivePath(targetEq, goalVar, relations, S, getMastery) {
   let givens = targetEq.nodes.filter(n => n !== goalVar);
 
-  // Natural depth distribution:
-  // 20% 1-step (direct), 45% 2-step (synthesis), 35% 3-to-4 step (design chain)
+  // Depth: 30% 1-step (direct practice on weak eq), 50% 2-step, 20% 3-step
   const depthRoll = Math.random();
-  const desiredHops = depthRoll < 0.20 ? 0 : (depthRoll < 0.65 ? 1 : Math.floor(Math.random() * 2) + 2);
+  const desiredHops = depthRoll < 0.30 ? 0 : (depthRoll < 0.80 ? 1 : 2);
 
   let hops = 0;
   let attempts = 0;
 
-  // Backward expansion loop
   while (hops < desiredHops && attempts < 15) {
     attempts++;
 
-    // Find all current givens that can be produced by another relation
     const expandableGivens = givens.filter(g =>
       relations.some(r => r.id !== targetEq.id && r.nodes.includes(g))
     );
@@ -76,35 +71,37 @@ function buildAdaptivePath(targetEq, goalVar, relations, S) {
     const chosenProducer = producerEqs[Math.floor(Math.random() * producerEqs.length)];
     const subGivens = chosenProducer.nodes.filter(n => n !== expandVar);
 
-    // Prevent circular references to the goal
     if (!subGivens.includes(goalVar) && !subGivens.includes(expandVar)) {
       const candidateSet = Array.from(new Set([
         ...givens.filter(g => g !== expandVar),
         ...subGivens
       ]));
 
-      // Allow up to 6 givens for realistic engineering problems
-      if (candidateSet.length <= 6 && canSolveTarget(candidateSet, goalVar, relations)) {
+      if (candidateSet.length <= 6 && canSolveTarget(candidateSet, goalVar, relations, getMastery)) {
         givens = candidateSet;
         hops++;
       }
     }
   }
 
-  // Ensure path solvability on the ground truth system
-  if (!canSolveTarget(givens, goalVar, relations)) return null;
-
-  // Add Optional Distractor Parameter (40% chance)
-  const steps = solveDAG(givens, S, relations);
+  // Solve forward using mastery-prioritized solver
+  const steps = solveDAG(givens, S, relations, {}, getMastery);
   const required = pruneSolutionPath(steps, goalVar);
+
+  // STRICT CHECK: The generated problem MUST require targetEq in its solution steps!
+  // If targetEq was bypassed or shortcutted by other equations, reject this path.
+  const containsTarget = required.some(s => s.eqId === targetEq.id);
+  if (!containsTarget) return null;
+
+  // Add optional distractor (30% chance)
   const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
   givens.forEach(g => usedVars.add(g));
 
-  const candidateDistractors = Object.keys(S).filter(k => 
+  const candidateDistractors = Object.keys(S).filter(k =>
     !k.startsWith("_") && !usedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
   );
 
-  const distractors = candidateDistractors.length > 0 && Math.random() < 0.40
+  const distractors = candidateDistractors.length > 0 && Math.random() < 0.30
     ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
     : [];
 
@@ -144,7 +141,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}) {
     const u = S._u?.[gVar] || meta.unit || "";
 
     let uStr = "";
-    if (u && u !== "dimless" && u !== "ratio" && u !== "teeth") {
+    if (u && u !== "dimless" && u !== "ratio") {
       uStr = u === "deg" ? " in °" : ` in $\\text{${u}}$`;
     }
 
