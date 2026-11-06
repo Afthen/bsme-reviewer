@@ -73,6 +73,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
         revealStepAnswer(idx, input, activeProblem, relations, topicId);
       } else {
         item.classList.toggle("open");
+        refreshStepDerivations(activeProblem, relations);
       }
       updateToggleAllButton(activeProblem);
     });
@@ -86,7 +87,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
 
     const mathDiv = document.createElement("div");
     mathDiv.className = "solution-math-display";
-    mathDiv.innerHTML = buildAlignedDerivation(step, activeProblem.system, activeProblem.allSteps, activeProblem.varsDb, relations);
+    mathDiv.id = `math-display-${idx}`;
 
     body.appendChild(mathDiv);
     item.appendChild(summary);
@@ -94,6 +95,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     flowEl.appendChild(item);
   });
 
+  refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
   updateToggleAllButton(activeProblem);
 
@@ -104,6 +106,32 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
   }
 
   attachTooltips(activeProblem.system, activeProblem.solution);
+}
+
+function refreshStepDerivations(activeProblem, relations) {
+  const answeredVars = new Set(
+    activeProblem.solution.filter(s => s.isAnswered).map(s => s.targetVar)
+  );
+
+  activeProblem.solution.forEach((step, idx) => {
+    const mathDiv = document.getElementById(`math-display-${idx}`);
+    if (mathDiv) {
+      mathDiv.innerHTML = buildAlignedDerivation(
+        step,
+        activeProblem.system,
+        activeProblem.allSteps,
+        activeProblem.varsDb,
+        relations,
+        answeredVars
+      );
+    }
+  });
+
+  if (window.renderMathInElement) {
+    window.renderMathInElement(document.getElementById("p-solution-flow"), {
+      delimiters: [{ left: "$$", right: "$$", display: true }, { left: "\\[", right: "\\]", display: true }, { left: "$", right: "$", display: false }]
+    });
+  }
 }
 
 function checkStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
@@ -137,6 +165,8 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
     setTimeout(() => inputEl.classList.remove("shake-trigger"), 400);
   }
 
+  refreshStepDerivations(activeProblem, relations);
+  renderDistractorBanner(activeProblem);
   renderMasteryBars(relations, getDecayedMastery);
   updateToggleAllButton(activeProblem);
 }
@@ -154,31 +184,65 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
   penalizeAncestors(step.fadedAncestorEqIds || [], topicId);
 
   document.getElementById(`step-item-${idx}`).classList.add("open");
+  refreshStepDerivations(activeProblem, relations);
+  renderDistractorBanner(activeProblem);
   renderMasteryBars(relations, getDecayedMastery);
   updateToggleAllButton(activeProblem);
 }
 
+// ========================================================
+// DISTRACTOR BANNER (ONLY SHOWN AFTER COMPLETION)
+// ========================================================
 function renderDistractorBanner(activeProblem) {
   const banner = document.getElementById("distractor-banner");
   if (!banner) return;
-  if (activeProblem.distractors && activeProblem.distractors.length > 0) {
+
+  const allCompleted = activeProblem.solution.every(s => s.isAnswered);
+
+  // Strictly hidden until ALL solution steps are finished
+  if (allCompleted && activeProblem.distractors && activeProblem.distractors.length > 0) {
     const list = activeProblem.distractors.map(v => `<strong>${getVarMeta(v).name} ($${getVarMeta(v).symbol}$)</strong>`).join(", ");
     banner.style.display = "block";
-    banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that ${list} was given in the specifications but is not needed in the solution path. Exams often supply extra parameters to test whether you choose the correct relations.`;
+    banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that ${list} was given in the specifications but was not needed in the solution path. Exams often supply extra parameters to test whether you choose the correct relations.`;
   } else {
     banner.style.display = "none";
   }
 }
 
+// ========================================================
+// STRICT EXPAND / COLLAPSE ALL CONTROLS
+// ========================================================
 function updateToggleAllButton(activeProblem) {
   const btn = document.getElementById("btn-toggle-all");
   const items = document.querySelectorAll(".solution-item");
   if (!btn || items.length === 0) return;
 
-  btn.onclick = () => {
-    const anyClosed = Array.from(items).some(it => !it.classList.contains("open"));
-    items.forEach(it => anyClosed ? it.classList.add("open") : it.classList.remove("open"));
-  };
+  const allCompleted = activeProblem.solution.every(s => s.isAnswered);
+  const openCount = Array.from(items).filter(it => it.classList.contains("open")).length;
+
+  if (openCount === 0 && !allCompleted) {
+    // 0 steps open: button is hidden
+    btn.style.display = "none";
+  } else if (!allCompleted) {
+    // At least 1 step open, but problem not finished: only allow Collapse All
+    btn.style.display = "inline-flex";
+    btn.innerHTML = `<span style="cursor: pointer; border-bottom: 1px dotted var(--text-muted);">Collapse All</span>`;
+    btn.onclick = () => {
+      items.forEach(it => it.classList.remove("open"));
+      updateToggleAllButton(activeProblem);
+    };
+  } else {
+    // All steps completed: show full Expand / Collapse controls
+    btn.style.display = "inline-flex";
+    const allOpen = openCount === items.length;
+    btn.innerHTML = allOpen
+      ? `<span style="cursor: pointer; border-bottom: 1px dotted var(--text-muted);">Collapse All</span>`
+      : `<span style="cursor: pointer; border-bottom: 1px dotted var(--text-muted);">Expand All</span>`;
+    btn.onclick = () => {
+      items.forEach(it => allOpen ? it.classList.remove("open") : it.classList.add("open"));
+      updateToggleAllButton(activeProblem);
+    };
+  }
 }
 
 function renderTargetMarkup(targetStr) {
