@@ -1,6 +1,7 @@
 /**
  * src/core/cas.js
- * Symbolic Computer Algebra System (CAS) abstraction layer powered by Nerdamer.
+ * Universal Computer Algebra System (CAS) with Semantic & Physical Unit Algebra.
+ * Semantic units (su_teeth, su_rad, su_rev) are treated as distinct algebraic variables.
  */
 
 // ========================================================
@@ -38,10 +39,6 @@ export function getPossibleTokens(varKey) {
   return matches.length > 0 ? matches : [varKey];
 }
 
-// ========================================================
-// 2. TOKEN NORMALIZATION & KATEX RESTORATION
-// ========================================================
-
 export function toCasToken(v) {
   if (!v) return "";
   return v.replace(/[^a-zA-Z0-9]/g, "");
@@ -58,7 +55,6 @@ export function casToTex(exprStr, varsDb = {}) {
     let tex = nerdamer(sanitizeExpr(exprStr)).toTeX();
 
     tex = tex.replace(/\bphi\b/g, "\\phi");
-    // Universal pi match (matches pi even when touching parentheses or symbols)
     tex = tex.replace(/(?<![a-zA-Z\\])pi(?![a-zA-Z])/g, "\\pi");
 
     tex = tex.replace(/\bhk\b/g, "h_k");
@@ -77,18 +73,15 @@ export function casToTex(exprStr, varsDb = {}) {
     tex = tex.replace(/\bVR\b/g, "\\text{SR}");
     tex = tex.replace(/\bSR\b/g, "\\text{SR}");
 
-    // Convert n1/n2 to N_1/N_2 and D1/D2 to D_1/D_2
     tex = tex.replace(/\bn_?1\b/g, "N_1");
     tex = tex.replace(/\bn_?2\b/g, "N_2");
     tex = tex.replace(/\b([A-Za-z])(\d+)\b/g, "$1_{$2}");
 
-    // Replace raw atan/acos with clean textbook inverse notation
     tex = tex.replace(/\\text\{atan\}\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
     tex = tex.replace(/\\text\{acos\}\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
     tex = tex.replace(/atan\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
     tex = tex.replace(/acos\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
 
-    // Strip multiplication symbols
     tex = tex.replace(/\\cdot/g, " ");
     tex = tex.replace(/\*/g, " ");
     tex = tex.replace(/(\d+)\s+([a-zA-Z_\\])/g, "$1$2");
@@ -98,10 +91,6 @@ export function casToTex(exprStr, varsDb = {}) {
     return (exprStr || "").replace(/\*/g, " ");
   }
 }
-
-// ========================================================
-// 3. CAS OPERATIONS
-// ========================================================
 
 export function simplifyExpression(exprStr) {
   if (typeof nerdamer === "undefined" || !exprStr) return exprStr;
@@ -117,7 +106,6 @@ export function substituteExpression(exprStr, subsObj = {}) {
   try {
     const cleanSubs = {};
     for (const [k, v] of Object.entries(subsObj)) {
-      // Add both the raw key and all possible formula tokens (e.g. M_t and T)
       cleanSubs[toCasToken(k)] = sanitizeExpr(v);
       const tokens = getPossibleTokens(k);
       tokens.forEach(tok => {
@@ -134,31 +122,6 @@ export function substituteExpression(exprStr, subsObj = {}) {
   }
 }
 
-export function evaluateExpression(exprStr, values = {}) {
-  if (typeof nerdamer === "undefined" || !exprStr) return NaN;
-  try {
-    const cleanVals = {};
-    for (const [k, v] of Object.entries(values)) {
-      if (typeof v === "number" && !isNaN(v)) {
-        cleanVals[toCasToken(k)] = v;
-      }
-    }
-    for (const [sym, key] of Object.entries(SYMBOL_TO_KEY)) {
-      if (values[key] !== undefined && typeof values[key] === "number" && !isNaN(values[key])) {
-        cleanVals[toCasToken(sym)] = values[key];
-      }
-    }
-    const evaluated = nerdamer(sanitizeExpr(exprStr), cleanVals).evaluate().text();
-    return parseFloat(evaluated);
-  } catch {
-    return NaN;
-  }
-}
-
-// ========================================================
-// 4. DYNAMIC VARIABLE ISOLATION (WITH TRIG INVERSION)
-// ========================================================
-
 export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   const parts = eqStr.split("=");
   const rawLhs = parts[0]?.trim() || "";
@@ -167,31 +130,25 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   const targetKey = SYMBOL_TO_KEY[targetVar] || targetVar;
   const targetTex = varsDb[targetKey]?.symbol || targetVar;
 
-  // 1. Intercept Standard Trigonometric Inversions (Prevents Nerdamer half-angle ^2 quadratic bugs)
   if (targetKey === "phi") {
-    // Fr = Ft * tan(phi) => phi = tan^-1(Fr / Ft)
-    if (rawRhs.includes("tan(phi)") || rawRhs.includes("tan(phi)")) {
+    if (rawRhs.includes("tan(phi)")) {
       const coeff = rawRhs.replace(/(\*|\s)?tan\(phi\)/g, "").trim() || "1";
-      const isolatedRhs = `atan((${rawLhs}) / (${coeff}))`;
       return {
         targetVar,
-        isolatedRhs,
+        isolatedRhs: `atan((${rawLhs}) / (${coeff}))`,
         texEquation: `\\phi = \\tan^{-1}\\left(\\frac{${casToTex(rawLhs, varsDb)}}{${casToTex(coeff, varsDb)}}\\right)`
       };
     }
-    // Ft = Fn * cos(phi) => phi = cos^-1(Ft / Fn)
     if (rawRhs.includes("cos(phi)")) {
       const coeff = rawRhs.replace(/(\*|\s)?cos\(phi\)/g, "").trim() || "1";
-      const isolatedRhs = `acos((${rawLhs}) / (${coeff}))`;
       return {
         targetVar,
-        isolatedRhs,
+        isolatedRhs: `acos((${rawLhs}) / (${coeff}))`,
         texEquation: `\\phi = \\cos^{-1}\\left(\\frac{${casToTex(rawLhs, varsDb)}}{${casToTex(coeff, varsDb)}}\\right)`
       };
     }
   }
 
-  // 2. Standard CAS Algebraic Isolation
   const possibleTokens = getPossibleTokens(targetVar);
   const sanitizedLhs = sanitizeExpr(rawLhs);
   const sanitizedRhs = sanitizeExpr(rawRhs);
@@ -228,7 +185,7 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
         };
       }
     } catch (err) {
-      console.warn(`CAS isolation failed for ${targetVar} (${tokenInEq}) in ${eqStr}:`, err);
+      console.warn(`CAS isolation failed for ${targetVar} in ${eqStr}:`, err);
     }
   }
 
@@ -236,5 +193,209 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
     targetVar,
     isolatedRhs: rawRhs,
     texEquation: `${targetTex} = ${casToTex(rawRhs, varsDb)}`
+  };
+}
+
+// ========================================================
+// 2. CAS UNIT REGISTRY: SEMANTIC (su_) & PHYSICAL (u_)
+// ========================================================
+
+/**
+ * Universal Unit Dictionary.
+ * All semantic/counting entities use the prefix "su_".
+ * All physical dimensions use the prefix "u_".
+ */
+export const UNIT_ALGEBRA_DB = Object.freeze({
+  // Semantic / Counting units (protected from cross-contamination)
+  "teeth":    { sym: "su_teeth", dim: "entity", tex: "\\text{teeth}" },
+  "rad":      { sym: "su_rad",   dim: "angular", tex: "\\text{rad}" },
+  "rev":      { sym: "su_rev",   dim: "angular", tex: "\\text{rev}" },
+  "deg":      { sym: "su_deg",   dim: "angular", tex: "^\\circ" },
+
+  // Base physical dimensions
+  "mm":       { sym: "u_mm",     dim: "length",  base: "length", tex: "\\text{mm}" },
+  "m":        { sym: "u_m",      dim: "length",  base: "length", tex: "\\text{m}" },
+  "in":       { sym: "u_in",     dim: "length",  base: "length", tex: "\\text{in}" },
+  "ft":       { sym: "u_ft",     dim: "length",  base: "length", tex: "\\text{ft}" },
+
+  "s":        { sym: "u_s",      dim: "time",    base: "time",   tex: "\\text{s}" },
+  "min":      { sym: "u_min",    dim: "time",    base: "time",   tex: "\\text{min}" },
+
+  "N":        { sym: "u_N",      dim: "force",   base: "force",  tex: "\\text{N}" },
+  "lb":       { sym: "u_lb",     dim: "force",   base: "force",  tex: "\\text{lb}" },
+
+  // Decomposed / Compound units
+  "rpm":      { sym: "(su_rev / u_min)", dim: "rot_speed", hasTime: "u_min", hasSemantic: "su_rev", tex: "\\frac{\\text{rev}}{\\text{min}}" },
+  "rev/min":  { sym: "(su_rev / u_min)", dim: "rot_speed", hasTime: "u_min", hasSemantic: "su_rev", tex: "\\frac{\\text{rev}}{\\text{min}}" },
+  "teeth/in": { sym: "(su_teeth / u_in)", dim: "pitch", hasLength: "u_in", hasSemantic: "su_teeth", tex: "\\frac{\\text{teeth}}{\\text{in}}" },
+  "m/s":      { sym: "(u_m / u_s)", dim: "velocity", hasLength: "u_m", hasTime: "u_s", tex: "\\frac{\\text{m}}{\\text{s}}" },
+  "ft/min":   { sym: "(u_ft / u_min)", dim: "velocity", hasLength: "u_ft", hasTime: "u_min", tex: "\\frac{\\text{ft}}{\\text{min}}" },
+
+  "N-m":      { sym: "(u_N * u_m)", dim: "torque", hasForce: "u_N", hasLength: "u_m", tex: "\\text{N}\\cdot\\text{m}" },
+  "lb-in":    { sym: "(u_lb * u_in)", dim: "torque", hasForce: "u_lb", hasLength: "u_in", tex: "\\text{lb}\\cdot\\text{in}" },
+
+  "W":        { sym: "u_W", dim: "power", tex: "\\text{W}" },
+  "kW":       { sym: "u_kW", dim: "power", tex: "\\text{kW}" },
+  "hp":       { sym: "u_hp", dim: "power", tex: "\\text{hp}" },
+
+  "MPa":      { sym: "u_MPa", dim: "stress", tex: "\\text{MPa}" },
+  "psi":      { sym: "u_psi", dim: "stress", tex: "\\text{psi}" },
+  "Pa":       { sym: "u_Pa", dim: "stress", tex: "\\text{Pa}" },
+
+  "dimless":  { sym: "1", dim: "dimensionless", tex: "" },
+  "ratio":    { sym: "1", dim: "dimensionless", tex: "" }
+});
+
+// ========================================================
+// 3. ATOMIC DIMENSIONAL CONVERSION DICTIONARY
+// ========================================================
+
+export const ATOMIC_CONVERSIONS = Object.freeze([
+  // Length
+  { from: "u_mm", to: "u_m",  factor: 1 / 1000, latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" },
+  { from: "u_m",  to: "u_mm", factor: 1000,     latex: "\\frac{1000\\text{ mm}}{1\\,\\cancel{\\text{m}}}" },
+  { from: "u_in", to: "u_ft", factor: 1 / 12,   latex: "\\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}" },
+  { from: "u_ft", to: "u_in", factor: 12,       latex: "\\frac{12\\text{ in}}{1\\,\\cancel{\\text{ft}}}" },
+  { from: "u_mm", to: "u_in", factor: 1 / 25.4, latex: "\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}" },
+  { from: "u_in", to: "u_mm", factor: 25.4,     latex: "\\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}" },
+
+  // Time
+  { from: "u_min", to: "u_s", factor: 1 / 60,   latex: "\\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}" },
+  { from: "u_s",   to: "u_min", factor: 60,     latex: "\\frac{60\\,\\cancel{\\text{s}}}{1\\text{ min}}" },
+
+  // Power
+  { from: "u_W",   to: "u_kW", factor: 1 / 1000, latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" },
+  { from: "u_kW",  to: "u_W",  factor: 1000,     latex: "\\frac{1000\\,\\cancel{\\text{W}}}{1\\,\\cancel{\\text{kW}}}" },
+  { from: "u_hp",  to: "u_ftlb_min", factor: 33000, latex: "\\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}}" }
+]);
+
+// ========================================================
+// 4. GENERAL CAS UNIT SOLVER (NO HARDCODED FORMULA BRANCHES)
+// ========================================================
+
+/**
+ * Universal Unit Solver.
+ * Evaluates algebraic unit cancellation in Nerdamer, resolves mismatches
+ * against the atomic conversion dictionary, and preserves semantic units.
+ */
+export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}) {
+  const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
+  const mathConstants = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "log", "exp"]);
+  const varTokens = Array.from(new Set(tokens.filter(t => !mathConstants.has(t))));
+
+  // Map each active variable to its unit info
+  const activeVarUnits = {};
+  varTokens.forEach(tok => {
+    const k = SYMBOL_TO_KEY[tok] || tok;
+    const rawUnit = S._u?.[k] || varsDb[k]?.unit || "dimless";
+    activeVarUnits[tok] = UNIT_ALGEBRA_DB[rawUnit] || { sym: rawUnit, dim: "custom", tex: `\\text{${rawUnit}}` };
+  });
+
+  const canceledTokens = new Set();
+  const subTokenCancellations = {};
+  const selectedConversions = [];
+
+  // 1. Algebraic Internal Cancellation Test via Nerdamer
+  // Substitute each variable's unit symbol into the expression
+  const unitSubs = {};
+  varTokens.forEach(tok => {
+    unitSubs[toCasToken(tok)] = activeVarUnits[tok].sym;
+  });
+
+  let rawUnitExpr = sanitizeExpr(exprStr);
+  for (const [v, uSym] of Object.entries(unitSubs)) {
+    rawUnitExpr = rawUnitExpr.split(v).join(`(${uSym})`);
+  }
+
+  // Remove numerical coefficients to inspect pure unit behavior
+  const pureUnitExpr = rawUnitExpr.replace(/\b\d+(\.\d+)?\b/g, "1");
+  const simplifiedUnits = simplifyExpression(pureUnitExpr);
+
+  // If a semantic unit (e.g., su_teeth, su_rev) was present but is absent in simplifiedUnits,
+  // it canceled algebraically (e.g., su_teeth / su_teeth = 1)
+  const isTargetDimless = !targetUnit || targetUnit === "dimless" || targetUnit === "ratio";
+  if (isTargetDimless) {
+    varTokens.forEach(tok => canceledTokens.add(tok));
+  } else {
+    // Check internal ratio cancellations
+    varTokens.forEach(t1 => {
+      const u1 = activeVarUnits[t1];
+      if (!u1 || u1.dim === "dimensionless" || u1.dim === "angular") return;
+      varTokens.forEach(t2 => {
+        if (t1 !== t2 && u1.sym === activeVarUnits[t2]?.sym) {
+          if (!simplifiedUnits.includes(u1.sym.replace(/[()]/g, ""))) {
+            canceledTokens.add(t1);
+            canceledTokens.add(t2);
+          }
+        }
+      });
+    });
+  }
+
+  // 2. General Dimensional Matching (Length, Time, Power)
+  const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { sym: targetUnit, dim: "custom", tex: targetUnit };
+  const allActiveUnits = Object.values(activeVarUnits);
+
+  // Time Dimension Matching (e.g. u_min in rpm -> u_s in m/s, kW, N-m)
+  const hasMin = allActiveUnits.some(u => u.hasTime === "u_min" || u.sym === "u_min");
+  const targetNeedsSec = targetInfo.hasTime === "u_s" || targetUnit === "kW" || targetUnit === "N-m";
+  if (hasMin && targetNeedsSec) {
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_min" && c.to === "u_s");
+    if (conv) {
+      selectedConversions.push(conv);
+      varTokens.filter(t => activeVarUnits[t].hasTime === "u_min").forEach(t => {
+        subTokenCancellations[t] = { cancelMin: true };
+      });
+    }
+  }
+
+  // Length Dimension Matching (e.g. u_mm -> u_m for velocity/torque, or u_mm -> u_in for Pd)
+  const hasMm = allActiveUnits.some(u => u.hasLength === "u_mm" || u.sym === "u_mm");
+  const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m";
+  const targetNeedsInch = targetInfo.hasLength === "u_in" || targetUnit === "teeth/in";
+
+  if (hasMm && targetNeedsMeter) {
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_mm" && c.to === "u_m");
+    if (conv) {
+      selectedConversions.push(conv);
+      varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
+    }
+  } else if (hasMm && targetNeedsInch) {
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_mm");
+    if (conv) {
+      selectedConversions.push(conv);
+      varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
+    }
+  }
+
+  const hasInch = allActiveUnits.some(u => u.hasLength === "u_in" || u.sym === "u_in");
+  const targetNeedsFt = targetInfo.hasLength === "u_ft" || targetUnit === "hp";
+  if (hasInch && targetNeedsFt) {
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_ft");
+    if (conv) {
+      selectedConversions.push(conv);
+      varTokens.filter(t => activeVarUnits[t].sym === "u_in").forEach(t => canceledTokens.add(t));
+    }
+  }
+
+  // Power Dimension Matching (e.g. W -> kW, or hp -> ft*lb/min)
+  if (targetUnit === "kW" && (hasMin || allActiveUnits.some(u => u.sym === "u_N" || u.dim === "torque"))) {
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_W" && c.to === "u_kW");
+    if (conv && !selectedConversions.includes(conv)) selectedConversions.push(conv);
+  } else if (targetUnit === "N-m" && allActiveUnits.some(u => u.sym === "u_kW")) {
+    const convW = ATOMIC_CONVERSIONS.find(c => c.from === "u_kW" && c.to === "u_W");
+    if (convW) selectedConversions.push(convW);
+    varTokens.filter(t => activeVarUnits[t].sym === "u_kW").forEach(t => canceledTokens.add(t));
+  } else if (targetUnit === "hp" && (hasInch || allActiveUnits.some(u => u.dim === "torque"))) {
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_ftlb_min" && c.to === "u_hp") ||
+                 { latex: "\\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}" };
+    selectedConversions.push(conv);
+  }
+
+  return {
+    canceledTokens,
+    subTokenCancellations,
+    conversionFactors: selectedConversions,
+    conversionFactorTex: selectedConversions.map(cf => ` \\cdot ${cf.latex}`).join("")
   };
 }
