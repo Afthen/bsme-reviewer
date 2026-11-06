@@ -226,15 +226,28 @@ function generateOrganicStatement(cand, S) {
     const meta = topic.varsDb[v] || {};
     const displaySym = meta.symbol || v;
     const name = getVarName(S, v, topic.varsDb);
-    const uStr = (u && u !== "dimless" && u !== "ratio" && u !== "teeth") ? `\\text{ ${u}}` : (u === "deg" ? "^\\circ" : "");
-    parts.push(`${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${displaySym}$</span> = ${val}${uStr})</span>`);
+    
+    let valWithUnit = `$${val}$`;
+    if (u && u !== "dimless" && u !== "ratio" && u !== "teeth") {
+      if (u === "deg") {
+        valWithUnit = `$${val}$°`;
+      } else {
+        valWithUnit = `$${val}\\text{ ${u}}$`;
+      }
+    }
+    
+    parts.push(`${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${displaySym}$</span> = ${valWithUnit})</span>`);
   });
 
   const goalMeta = topic.varsDb[cand.goal] || {};
   const goalSym = goalMeta.symbol || cand.goal;
   const goalName = getVarName(S, cand.goal, topic.varsDb);
   const goalU = unitOf(S, cand.goal, topic.varsDb);
-  const goalUStr = (goalU && goalU !== "dimless" && goalU !== "ratio" && goalU !== "teeth") ? ` in $\\text{${goalU}}$` : "";
+  
+  let goalUStr = "";
+  if (goalU && goalU !== "dimless" && goalU !== "ratio" && goalU !== "teeth") {
+    goalUStr = goalU === "deg" ? " in °" : ` in $\\text{${goalU}}$`;
+  }
 
   return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: <strong>${goalName}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${cand.goal}">$${goalSym}$</span>)</span>${goalUStr}.`;
 }
