@@ -372,17 +372,16 @@
   <header>
     <div style="display: flex; align-items: center; gap: 0.6rem;">
       <button class="btn" id="btn-hamburger">☰ Mastery</button>
-      <h1>Spur Gear Reviewer</h1>
+      <select id="topic-selector" class="btn" style="background: var(--card); font-weight: 600;">
+        <option value="spur_gears">Spur Gears</option>
+        <option value="helical_gears">Helical Gears</option>
+      </select>
     </div>
     <div class="header-actions">
       <button class="btn" id="btn-export">💾 Export</button>
       <button class="btn" id="btn-import">📥 Import</button>
       <input type="file" id="mastery-file-input" style="display: none" accept=".json">
     </div>
-    <select id="topic-selector" class="btn" style="background: var(--card); font-weight: 600;">
-      <option value="spur_gears">Spur Gears</option>
-      <option value="helical_gears">Helical Gears</option>
-    </select>
   </header>
 
   <div id="sidebar-overlay"></div>
