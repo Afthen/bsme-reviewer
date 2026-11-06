@@ -227,6 +227,15 @@ function toLatexSymbol(name, varsDb = {}) {
   if (name === "FD" || name === "F_D") return "F_D";
   if (name === "Cd" || name === "C_d") return "C_d";
   if (name === "yform" || name === "y_form") return "y";
+  if (name === "Fs" || name === "F_s") return "F_s";
+  if (name === "Fw" || name === "F_w") return "F_w";
+  if (name === "Nsf" || name === "N_sf") return "N_{sf}";
+  if (name === "Kw" || name === "K_w") return "K_w";
+  if (name === "kf" || name === "k_f") return "k_f";
+  if (name === "Tv" || name === "T_v" || name === "Nev") return "T_v";
+  if (name === "mF" || name === "m_F") return "m_F";
+  if (name === "Llead" || name === "L_lead") return "L";
+  if (name === "Sspace" || name === "S_space") return "S";
   return name;
 }
 
