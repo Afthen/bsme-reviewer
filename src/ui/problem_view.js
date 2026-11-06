@@ -4,7 +4,7 @@
  */
 
 import { buildAlignedDerivation } from "../core/derivation.js";
-import { getVarMeta } from "../topics/spur_gears/schema.js";
+import { getVarMeta } from "../topics/machine_design/spur_gears/schema.js";
 import { targetLabel } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
