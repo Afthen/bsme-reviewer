@@ -96,7 +96,7 @@ export function casToTex(exprStr, varsDb = {}) {
 }
 
 // ========================================================
-// 3. CAS OPERATIONS
+// 3. CAS OPERATIONS (SIMPLIFY, SUBSTITUTE, EVALUATE)
 // ========================================================
 
 export function simplifyExpression(exprStr) {
@@ -122,6 +122,32 @@ export function substituteExpression(exprStr, subsObj = {}) {
       result = result.split(toCasToken(k)).join(`(${v})`);
     }
     return result;
+  }
+}
+
+/**
+ * Numerically evaluates an algebraic expression against system values.
+ * Injects aliases so tokens like 'v', 'D1', 'n1' resolve to 'V_m', 'D_P1', 'n_1'.
+ */
+export function evaluateExpression(exprStr, values = {}) {
+  if (typeof nerdamer === "undefined" || !exprStr) return NaN;
+  try {
+    const cleanVals = {};
+    for (const [k, v] of Object.entries(values)) {
+      if (typeof v === "number" && !isNaN(v)) {
+        cleanVals[toCasToken(k)] = v;
+      }
+    }
+    // Also inject formula symbol aliases from SYMBOL_TO_KEY
+    for (const [sym, key] of Object.entries(SYMBOL_TO_KEY)) {
+      if (values[key] !== undefined && typeof values[key] === "number" && !isNaN(values[key])) {
+        cleanVals[toCasToken(sym)] = values[key];
+      }
+    }
+    const evaluated = nerdamer(sanitizeExpr(exprStr), cleanVals).evaluate().text();
+    return parseFloat(evaluated);
+  } catch {
+    return NaN;
   }
 }
 
