@@ -1,31 +1,18 @@
 /**
  * src/core/problem_gen.js
- * Autonomous graph-walk problem generator with strict target enforcement
- * and true deficiency-weighted selection.
+ * Dynamic problem statement builder that adapts to the active topic.
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 
-// ========================================================
-// 1. EQUATION-TARGETED PROBLEM GENERATION
-// ========================================================
-
-/**
- * Generates an organic problem strictly guaranteeing that under-mastered
- * equations appear in the solution path.
- */
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
-  // 1. Weight equations by deficiency: 0% mastery = maximum priority
   const scoredRelations = relations.map(eq => {
     const mastery = getMastery(eq.id);
-    // Unattempted (0%) gets massive priority boost; mastered (>=0.8) drops exponentially
     const weight = mastery === 0 ? 5.0 : Math.max(0.02, Math.pow(1 - mastery, 3));
-    // A-Res Weighted Key: larger weight => higher rank
     const key = Math.pow(Math.random(), 1 / weight);
     return { eq, weight, key, mastery };
   });
 
-  // Sort descending: unmastered equations are evaluated first
   scoredRelations.sort((a, b) => b.key - a.key);
 
   for (const { eq: targetEq } of scoredRelations) {
@@ -37,21 +24,15 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
     }
   }
 
-  // Fallback: direct 1-step problem on the lowest mastery relation
   const fallbackEq = scoredRelations[0].eq;
   const goalVar = fallbackEq.nodes[0];
   const givens = fallbackEq.nodes.filter(n => n !== goalVar);
   return { goalVar, givens, distractors: [], targetEqId: fallbackEq.id };
 }
 
-/**
- * Chains backwards through the DAG and enforces that targetEq is strictly
- * included in the student's solution steps.
- */
 function buildAdaptivePath(targetEq, goalVar, relations, S, getMastery) {
   let givens = targetEq.nodes.filter(n => n !== goalVar);
 
-  // Depth: 30% 1-step (direct practice on weak eq), 50% 2-step, 20% 3-step
   const depthRoll = Math.random();
   const desiredHops = depthRoll < 0.30 ? 0 : (depthRoll < 0.80 ? 1 : 2);
 
@@ -84,16 +65,12 @@ function buildAdaptivePath(targetEq, goalVar, relations, S, getMastery) {
     }
   }
 
-  // Solve forward using mastery-prioritized solver
   const steps = solveDAG(givens, S, relations, {}, getMastery);
   const required = pruneSolutionPath(steps, goalVar);
 
-  // STRICT CHECK: The generated problem MUST require targetEq in its solution steps!
-  // If targetEq was bypassed or shortcutted by other equations, reject this path.
   const containsTarget = required.some(s => s.eqId === targetEq.id);
   if (!containsTarget) return null;
 
-  // Add optional distractor (30% chance)
   const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
   givens.forEach(g => usedVars.add(g));
 
@@ -114,11 +91,7 @@ function buildAdaptivePath(targetEq, goalVar, relations, S, getMastery) {
   };
 }
 
-// ========================================================
-// 2. DYNAMIC STATEMENT FORMATTER
-// ========================================================
-
-export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}) {
+export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicTitle = "Gear") {
   const parts = givens.map(v => {
     const val = S[v];
     const u = S._u?.[v] || varsDb[v]?.unit || "";
@@ -149,5 +122,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}) {
     return `${prefix}<strong>${name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${sym}$</span>)</span>${uStr}`;
   });
 
-  return `A spur gear drive operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
+  // Dynamic drive naming based on topic title
+  const driveType = topicTitle.toLowerCase().replace(/s$/, "");
+  return `A ${driveType} drive operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
 }
