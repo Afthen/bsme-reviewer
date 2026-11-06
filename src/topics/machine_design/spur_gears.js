@@ -243,7 +243,7 @@ const GEAR_RELATION_GRAPH = [
     topic: "forces_torque",
     termsCount: 5,
     forms: {
-      F_D: { formula: "F_D = F_t + \\cfrac{k v (b C + F_t)}{k v + \\sqrt{b C + F_t}}", notes: "Maximum dynamic load (k = 0.05 English, k = 21 SI)" }
+      F_D: { formula: "F_D = F_t + \\cfrac{k v (b C_d + F_t)}{k v + \\sqrt{b C_d + F_t}}", notes: "Maximum dynamic load (k = 0.05 English, k = 21 SI)" }
     },
     solve: (target, S) => {
       const u = unitOf(S, "F_D");
@@ -395,15 +395,15 @@ const GEAR_RELATION_GRAPH = [
     topic: "pitch_geometry",
     termsCount: 3,
     forms: {
-      m:   { formula: "m = \\cfrac{1}{P_d} \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right)", notes: "Module in mm from diametral pitch" },
-      P_d: { formula: "P_d = \\cfrac{1}{m} \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right)", notes: "Diametral pitch from module" }
+      m:   { formula: "m = \\cfrac{25.4}{P_d}", notes: "Module in mm from diametral pitch" },
+      P_d: { formula: "P_d = \\cfrac{25.4}{m}", notes: "Diametral pitch from module" }
     },
     solve: (target, S) => {
       if (target === "m") {
         return {
           target: targetLabel(getVarName(S, "m"), "{{m}}", "mm"),
           text: "Metric module from diametral pitch through dimensional inch-to-mm conversion:",
-          eq: `m = \\cfrac{1}{P_d} \\cdot \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right) = \\cfrac{1}{${fmt(S.P_d, 2)}\\cfrac{\\text{teeth}}{\\cancel{\\text{in}}}} \\cdot \\cfrac{25.4\\text{ mm}}{1\\cancel{\\text{ in}}} = \\mathbf{${fmt(S.m, 2)}\\text{ mm}}`,
+          eq: `m = \\cfrac{1}{P_d} = \\cfrac{1}{${fmt(S.P_d, 2)}\\cfrac{\\text{teeth}}{\\cancel{\\text{in}}}} \\cdot \\cfrac{25.4\\text{ mm}}{1\\cancel{\\text{ in}}} = \\mathbf{${fmt(S.m, 2)}\\text{ mm}}`,
           val: S.m
         };
       }
@@ -411,7 +411,7 @@ const GEAR_RELATION_GRAPH = [
         return {
           target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: "Diametral pitch from module through dimensional mm-to-inch conversion:",
-          eq: `P_d = \\cfrac{1}{m} \\cdot \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right) = \\cfrac{1}{${fmt(S.m, 2)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
+          eq: `P_d = \\cfrac{1}{m} = \\cfrac{1}{${fmt(S.m, 2)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
       }
@@ -554,10 +554,10 @@ const GEAR_RELATION_GRAPH = [
         return {
           target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: isSI
-            ? "From circular pitch with mm-to-inch conversion ($P_d = \\cfrac{\\pi}{P_c} \\cdot 25.4$):"
+            ? "From circular pitch with mm-to-inch conversion:"
             : "From pitch reciprocal identity ($P_c \\cdot P_d = \\pi$):",
           eq: isSI
-            ? `P_d = \\cfrac{\\pi}{P_c} \\cdot \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right) = \\cfrac{\\pi}{${fmt(S.P_c, 3)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            ? `P_d = \\cfrac{\\pi}{P_c} = \\cfrac{\\pi}{${fmt(S.P_c, 3)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
             : `P_d = \\cfrac{\\pi}{P_c} = \\cfrac{\\pi}{${fmt(S.P_c, 4)}\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
@@ -612,7 +612,7 @@ const GEAR_RELATION_GRAPH = [
             ? "From teeth and diameter with dimensional inch conversion:"
             : "From pitch diameter and teeth ($P_d = \\cfrac{T_1}{D_1}$):",
           eq: isSI
-            ? `P_d = \\cfrac{T_1}{D_1} \\cdot \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right) = \\cfrac{${fmt(S.T_1, 0)}}{${fmt(S.D_P1, 1)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            ? `P_d = \\cfrac{T_1}{D_1} = \\cfrac{${fmt(S.T_1, 0)}}{${fmt(S.D_P1, 1)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
             : `P_d = \\cfrac{T_1}{D_1} = \\cfrac{${fmt(S.T_1, 0)}}{${fmt(S.D_P1, 3)}\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
@@ -675,8 +675,12 @@ const GEAR_RELATION_GRAPH = [
       if (target === "P_d") {
         return {
           target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
-          text: "From gear diameter and teeth ($P_d = \\cfrac{T_2}{D_2}$):",
-          eq: `P_d = \\cfrac{T_2}{D_2} = \\cfrac{${fmt(S.T_2, 0)}}{${fmt(S.D_P2, 2)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
+          text: isSI
+            ? "From gear diameter and teeth with dimensional inch conversion:"
+            : "From gear diameter and teeth ($P_d = \\cfrac{T_2}{D_2}$):",
+          eq: isSI
+            ? `P_d = \\cfrac{T_2}{D_2} = \\cfrac{${fmt(S.T_2, 0)}}{${fmt(S.D_P2, 1)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            : `P_d = \\cfrac{T_2}{D_2} = \\cfrac{${fmt(S.T_2, 0)}}{${fmt(S.D_P2, 2)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
       }
@@ -795,7 +799,7 @@ const GEAR_RELATION_GRAPH = [
             ? `Pitch from teeth sum and distance with dimensional conversion:`
             : `Pitch from total teeth and center distance:`,
           eq: isSI
-            ? `P_d = \\cfrac{T_1 + T_2}{2C} \\cdot \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right) = \\cfrac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 1)})\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            ? `P_d = \\cfrac{T_1 + T_2}{2C} = \\cfrac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 1)})\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
             : `P_d = \\cfrac{T_1 + T_2}{2C} = \\cfrac{${fmt(S.T_1, 0)} + ${fmt(S.T_2, 0)}}{2(${fmt(S.C, 3)})} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
@@ -999,8 +1003,8 @@ const GEAR_RELATION_GRAPH = [
         }
         return {
           target: targetLabel(getVarName(S, "P"), "{{P}}", u_P),
-          text: "Horsepower from torque and rpm ($P = \\cfrac{2\\pi N_1 T}{33000}$):",
-          eq: `P = \\cfrac{2\\pi N_1 T}{1} = \\left(2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\text{rev}}{\\cancel{\\text{min}}}\\right) \\left(${fmt(S.M_t, 1)}\\cancel{\\text{ lb}}\\cdot\\cancel{\\text{in}} \\cdot \\cfrac{1\\cancel{\\text{ ft}}}{12\\cancel{\\text{ in}}}\\right) \\cdot \\cfrac{1\\text{ hp}}{33000\\cancel{\\text{ ft}}\\cdot\\cancel{\\text{lb}}/\\cancel{\\text{min}}} = \\mathbf{${fmt(S.P, 2)}\\text{ hp}}`,
+          text: "Horsepower from torque and rpm ($P = 2\\pi N_1 T$):",
+          eq: `P = 2\\pi N_1 T = \\left(2\\pi \\cdot ${fmt(S.n_1, 0)}\\cfrac{\\text{rev}}{\\cancel{\\text{min}}}\\right) \\left(${fmt(S.M_t, 1)}\\cancel{\\text{ lb}}\\cdot\\cancel{\\text{in}} \\cdot \\cfrac{1\\cancel{\\text{ ft}}}{12\\cancel{\\text{ in}}}\\right) \\cdot \\cfrac{1\\text{ hp}}{33000\\cancel{\\text{ ft}}\\cdot\\cancel{\\text{lb}}/\\cancel{\\text{min}}} = \\mathbf{${fmt(S.P, 2)}\\text{ hp}}`,
           val: S.P
         };
       }
@@ -1278,10 +1282,10 @@ const GEAR_RELATION_GRAPH = [
         return {
           target: targetLabel(getVarName(S, "P_d"), "{{P_d}}", "teeth/in"),
           text: isSI
-            ? `From metric addendum ($a = m$) with inch conversion:`
+            ? `From metric addendum with inch conversion:`
             : `From standard full-depth addendum ($P_d = \\cfrac{1}{a}$):`,
           eq: isSI
-            ? `P_d = \\cfrac{1}{a} \\cdot \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right) = \\cfrac{1}{${fmt(S.a, 2)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            ? `P_d = \\cfrac{1}{a} = \\cfrac{1}{${fmt(S.a, 2)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
             : `P_d = \\cfrac{1}{a} = \\cfrac{1}{${fmt(S.a, 4)}\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
@@ -1322,7 +1326,7 @@ const GEAR_RELATION_GRAPH = [
             ? `Pitch from metric clearance with inch conversion:`
             : `Pitch from clearance proportion:`,
           eq: isSI
-            ? `P_d = \\cfrac{${factor}}{c} \\cdot \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right) = \\cfrac{${factor}}{${fmt(S.c, 3)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            ? `P_d = \\cfrac{${factor}}{c} = \\cfrac{${factor}}{${fmt(S.c, 3)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
             : `P_d = \\cfrac{${factor}}{c} = \\cfrac{${factor}}{${fmt(S.c, 4)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
@@ -1407,7 +1411,7 @@ const GEAR_RELATION_GRAPH = [
             ? `Pitch from teeth and metric blank diameter with dimensional conversion:`
             : `Pitch from teeth and outside blank diameter ($P_d = \\cfrac{T_1 + 2}{D_o}$):`,
           eq: isSI
-            ? `P_d = \\cfrac{T_1 + 2}{D_o} \\cdot \\left(\\cfrac{25.4\\text{ mm}}{1\\text{ in}}\\right) = \\cfrac{${fmt(S.T_1, 0)} + 2}{${fmt(S.D_o, 1)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
+            ? `P_d = \\cfrac{T_1 + 2}{D_o} = \\cfrac{${fmt(S.T_1, 0)} + 2}{${fmt(S.D_o, 1)}\\cancel{\\text{ mm}}} \\cdot \\cfrac{25.4\\cancel{\\text{ mm}}}{1\\text{ in}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`
             : `P_d = \\cfrac{T_1 + 2}{D_o} = \\cfrac{${fmt(S.T_1, 0)} + 2}{${fmt(S.D_o, 3)}} = \\mathbf{${fmt(S.P_d, 2)}\\text{ teeth/in}}`,
           val: S.P_d
         };
@@ -1744,9 +1748,9 @@ function createGroundTruthSystem() {
 const ORGANIC_SEED_PATTERNS = [
   { name: "Buckingham Maximum Dynamic Load", givens: ["W_t", "V_m", "b", "C_d"], topic: "forces_torque", goals: ["F_D"] },
   { name: "Tooth Thickness with Exam Distractors (Slide 6)", givens: ["P_c", "h", "phi"], topic: "pitch_geometry", goals: ["t"] },
-  { name: "Tooth Clearance from Pitch (Video 63:00)", givens: ["P_d", "phi"], topic: "pitch_geometry", goals: ["c"] },
-  { name: "Internal Gearing with Idler Gear (Video 59:40)", givens: ["D_P1", "C_i"], topic: "speed_center", goals: ["D_P2"] },
-  { name: "Base Pitch from Involute Geometry (Video 15:50)", givens: ["P_c", "phi"], topic: "pitch_geometry", goals: ["p_b"] },
+  { name: "Tooth Clearance from Pitch", givens: ["P_d", "phi"], topic: "pitch_geometry", goals: ["c"] },
+  { name: "Internal Gearing with Idler Gear", givens: ["D_P1", "C_i"], topic: "speed_center", goals: ["D_P2"] },
+  { name: "Base Pitch from Involute Geometry", givens: ["P_c", "phi"], topic: "pitch_geometry", goals: ["p_b"] },
   { name: "Tooth Proportions Suite", givens: ["P_d", "phi"], topic: "pitch_geometry", goals: ["h_k", "d", "B", "m"] },
   { name: "Motor Power to Shaft Torque & Load", givens: ["P", "n_1", "D_P1", "phi"], topic: "forces_torque", goals: ["M_t", "W_r", "W", "D_b"] },
   { name: "Shaft Torque and RPM to Motor Power", givens: ["M_t", "n_1", "D_P1"], topic: "forces_torque", goals: ["P", "W_t", "V_m"] },
