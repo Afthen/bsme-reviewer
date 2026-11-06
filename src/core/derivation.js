@@ -2,16 +2,11 @@
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
  * 100% dynamic: Zero hardcoded equation checks.
- * Uses Nerdamer CAS for graph substitution, symbolic simplification,
- * variable isolation, exact expression-tree numerical substitution, and unit cancellation.
  */
 
-import { casToTex, isolateVariable, substituteExpression, simplifyExpression } from "./cas.js";
+import { casToTex, isolateVariable, substituteExpression, simplifyExpression, SYMBOL_TO_KEY } from "./cas.js";
 import { cancelUnit, formatConversionWithCancellation } from "./dimensions.js";
 
-/**
- * Universal numerical formatter matching the input's natural precision.
- */
 function fmtPrecise(n, maxDec = 4) {
   if (n === undefined || n === null) return "";
   const num = typeof n === "number" ? n : Number(n);
@@ -22,13 +17,6 @@ function fmtPrecise(n, maxDec = 4) {
 
 /**
  * Builds an aligned KaTeX derivation block entirely via Graph + CAS.
- * @param {Object} step - Current step object.
- * @param {Object} S - Ground truth system state.
- * @param {Array} allSteps - All DAG path steps.
- * @param {Object} varsDb - Topic variable metadata.
- * @param {Array} relations - Topic relation graph.
- * @param {Set} answeredVars - Set of variable keys currently answered by the student.
- * @param {Array} givens - Initial problem givens.
  */
 export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, relations = [], answeredVars = new Set(), givens = []) {
   const targetVar = step.targetVar;
@@ -51,7 +39,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
   const lines = [];
 
   // Line 1: Canonical Equation on top
-  const canonicalTex = (eq?.canonicalTex || step.canonicalTex || `${currentLhs} = ${currentRhs}`).replace(/\*/g, " ");
+  const canonicalTex = (eq?.canonicalTex || `${currentLhs} = ${currentRhs}`).replace(/\*/g, " ");
   if (canonicalTex.includes("=")) {
     const [cLhs, cRhs] = canonicalTex.split("=");
     lines.push(`${cLhs.trim()} &= ${cRhs.trim()}`);
@@ -60,24 +48,24 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
   }
 
   // 2. Alternating Graph Substitution + CAS Simplify Loop
-  // If an input is unresolved (unanswered intermediate step or faded ancestor), substitute symbolically
+  // If an input is unresolved (unanswered intermediate step), substitute symbolically
   let maxSubstitutions = 5;
   let didSubstitute = false;
 
   while (maxSubstitutions-- > 0) {
     const currentVars = extractVariableTokens(currentRhs);
-    const unresolvedVar = currentVars.find(v => !knownVars.has(v) && v !== targetVar);
-    if (!unresolvedVar) break;
+    const unresolvedVarKey = currentVars
+      .map(tok => SYMBOL_TO_KEY[tok] || tok)
+      .find(k => !knownVars.has(k) && k !== targetVar);
 
-    // Find the producer relation in the graph for this unresolved variable
-    const parentStep = allSteps.find(s => s.targetVar === unresolvedVar);
-    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedVar));
+    if (!unresolvedVarKey) break;
+
+    const parentStep = allSteps.find(s => s.targetVar === unresolvedVarKey);
+    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedVarKey));
 
     if (parentEq?.baseFormula) {
-      const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedVar, varsDb);
-      // Graph substitution
-      currentRhs = substituteExpression(currentRhs, { [unresolvedVar]: `(${isolatedParent.isolatedRhs})` });
-      // CAS simplification
+      const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedVarKey, varsDb);
+      currentRhs = substituteExpression(currentRhs, { [unresolvedVarKey]: `(${isolatedParent.isolatedRhs})` });
       currentRhs = simplifyExpression(currentRhs);
       didSubstitute = true;
     } else {
@@ -87,7 +75,8 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   // 3. Symbolic Target Isolation via CAS
   let isolatedRhsExpr = currentRhs;
-  if (currentLhs !== targetVar || didSubstitute) {
+  const targetKeyInLhs = SYMBOL_TO_KEY[currentLhs] || currentLhs;
+  if (targetKeyInLhs !== targetVar || didSubstitute) {
     const isolatedTarget = isolateVariable(`${currentLhs} = ${currentRhs}`, targetVar, varsDb);
     isolatedRhsExpr = isolatedTarget.isolatedRhs;
     lines.push(`\\implies ${targetSym} &= ${casToTex(isolatedRhsExpr, varsDb)}`);
@@ -99,19 +88,16 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
   // 5. Dimensional Unit Cancellation Factor
   const conversionFactorTex = detectUnitConversion(isolatedRhsExpr, targetUnit, S, varsDb);
 
-  // Line: Substitution with units and final evaluated answer
+  // Line 3: Substitution with units and final evaluated answer
   lines.push(`&= ${substitutedTex}${conversionFactorTex} = \\mathbf{${formattedVal}${targetUnit ? `\\text{ ${targetUnit}}` : ""}}`);
 
   return `\\[ \\begin{aligned} ${lines.join(" \\\\[6pt]\n")} \\end{aligned} \\]`;
 }
 
 // ========================================================
-// UNIVERSAL HELPER FUNCTIONS (ZERO HARDCODED EQUATION CHECKS)
+// UNIVERSAL HELPER FUNCTIONS
 // ========================================================
 
-/**
- * Extracts variable identifier tokens from an algebraic expression.
- */
 function extractVariableTokens(exprStr) {
   if (!exprStr) return [];
   const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
@@ -123,21 +109,20 @@ function extractVariableTokens(exprStr) {
  * Dynamically substitutes values and units into an algebraic expression tree via KaTeX.
  */
 function substituteValuesAndUnits(exprStr, S, varsDb) {
-  // Convert expression structure to pure KaTeX template
   let tex = casToTex(exprStr, varsDb);
-
   const tokens = extractVariableTokens(exprStr);
-  // Sort by token length descending to prevent partial token replacement (e.g. D_1 before D)
+
+  // Sort by token length descending
   tokens.sort((a, b) => b.length - a.length);
 
-  tokens.forEach(token => {
-    // Resolve value from system state
-    const val = S[token] !== undefined ? S[token] : S[token.replace(/_/g, "")];
+  tokens.forEach(tok => {
+    const varKey = SYMBOL_TO_KEY[tok] || tok;
+    const val = S[varKey] !== undefined ? S[varKey] : S[tok];
     if (val === undefined || isNaN(val)) return;
 
-    const meta = varsDb[token] || {};
-    const sym = meta.symbol || token;
-    const unit = S._u?.[token] || meta.unit || "";
+    const meta = varsDb[varKey] || {};
+    const sym = meta.symbol || tok;
+    const unit = S._u?.[varKey] || meta.unit || "";
     const isDimensionless = !unit || unit === "dimless" || unit === "ratio" || unit === "teeth";
 
     const formattedNum = fmtPrecise(val, meta.isInteger ? 0 : 4);
@@ -145,50 +130,54 @@ function substituteValuesAndUnits(exprStr, S, varsDb) {
       ? formattedNum
       : (unit === "deg" ? `${formattedNum}^\\circ` : `${formattedNum}\\text{ ${unit}}`);
 
-    // Match symbol in KaTeX: e.g. T_{2}, D_{1}, h_k, a, etc.
+    // KaTeX symbol representation: e.g. D_{1}, N_{1}, h_k, a
     const symTex = casToTex(sym, varsDb);
-    const escapedSym = symTex.replace(/\\/g, "\\\\").replace(/\{/g, "\\{").replace(/\}/g, "\\}");
+    const escaped = symTex.replace(/\\/g, "\\\\").replace(/\{/g, "\\{").replace(/\}/g, "\\}");
 
-    // Replace symbol with formatted numerical value wrapped in parentheses where needed
-    const pattern = new RegExp(`(?<![a-zA-Z0-9_])${escapedSym}(?![a-zA-Z0-9_])`, "g");
-    tex = tex.replace(pattern, formattedWithUnit);
+    const pattern = new RegExp(`(?<![a-zA-Z0-9_])${escaped}(?![a-zA-Z0-9_])`, "g");
+    tex = tex.replace(pattern, `(${formattedWithUnit})`);
   });
+
+  // Clean double-wrapped parentheses like ((...))
+  tex = tex.replace(/\(\(([^()]+)\)\)/g, "($1)");
 
   return tex;
 }
 
 /**
- * Dynamically analyzes physical units in the expression and generates
- * the required cancellation fraction if dimensional conversion is needed.
+ * Detects unit conversions and appends cancellation fractions.
  */
 function detectUnitConversion(exprStr, targetUnit, S, varsDb) {
   const tokens = extractVariableTokens(exprStr);
-  const unitsInExpr = tokens.map(t => S._u?.[t] || varsDb[t]?.unit || "").filter(Boolean);
+  const unitsInExpr = tokens.map(t => {
+    const k = SYMBOL_TO_KEY[t] || t;
+    return S._u?.[k] || varsDb[k]?.unit || "";
+  }).filter(Boolean);
 
-  // 1. Imperial Length mismatch: ft/min and inches in rotational velocity (v = pi * D * N)
+  // 1. Imperial Pitch Speed: ft/min and inches -> cancel ft and in
   if (unitsInExpr.includes("ft/min") && unitsInExpr.includes("in")) {
-    return ` \\cdot ${formatConversionWithCancellation("in_to_ft_cancel_in")}`;
+    return ` \\cdot ${formatConversionWithCancellation("ft_to_in_cancel_ft")}`;
   }
   if (unitsInExpr.includes("ft") && unitsInExpr.includes("in")) {
-    return ` \\cdot ${formatConversionWithCancellation("in_to_ft_cancel_in")}`;
+    return ` \\cdot ${formatConversionWithCancellation("ft_to_in_cancel_ft")}`;
   }
 
-  // 2. Metric Length prefix mismatch: N and mm resulting in N-m torque (T = Ft * D / 2)
+  // 2. Metric Torque: N and mm -> convert mm to m
   if (targetUnit === "N-m" && unitsInExpr.includes("N") && unitsInExpr.includes("mm")) {
     return ` \\cdot ${formatConversionWithCancellation("mm_to_m_cancel_mm")}`;
   }
 
-  // 3. Metric to Imperial Pitch conversion: mm center distance to teeth/in (Pd = (T1+T2)/(2C))
+  // 3. Metric Pitch: mm Center Distance -> convert mm to in
   if (targetUnit === "teeth/in" && unitsInExpr.includes("mm")) {
     return ` \\cdot ${formatConversionWithCancellation("in_to_mm_cancel_mm")}`;
   }
 
-  // 4. Metric Velocity: mm diameter and rpm to m/s pitch velocity
+  // 4. Metric Velocity: mm diameter and rpm -> convert to m/s
   if (targetUnit === "m/s" && unitsInExpr.includes("mm") && unitsInExpr.includes("rpm")) {
     return ` \\cdot ${formatConversionWithCancellation("mm_to_m_cancel_mm")} \\cdot ${formatConversionWithCancellation("min_to_s_cancel_min")}`;
   }
 
-  // 5. Rotational speed from linear velocity (N = v / (pi * D)) in SI
+  // 5. Rotational speed from linear velocity in SI
   if (targetUnit === "rpm" && unitsInExpr.includes("m/s") && unitsInExpr.includes("mm")) {
     return ` \\cdot ${formatConversionWithCancellation("m_to_mm_cancel_m")} \\cdot ${formatConversionWithCancellation("s_to_min_cancel_s")}`;
   }
