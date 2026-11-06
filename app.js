@@ -1,22 +1,32 @@
 /**
  * app.js
  * Universal Reviewer entrypoint & application lifecycle orchestrator (ES Module).
+ * Multi-topic support for Spur Gears and Helical Gears.
  */
 
 import {
   loadMastery, exportMasteryJSON, importMasteryJSON,
   getDecayedMastery, FADING_THRESHOLD
 } from "./src/repetition/mastery.js";
+
+// Spur Gears Topic
 import { GEAR_VARS_DB } from "./src/topics/machine_design/spur_gears/schema.js";
 import { GEAR_RELATION_GRAPH } from "./src/topics/machine_design/spur_gears/relations.js";
 import { createGroundTruthSystem } from "./src/topics/machine_design/spur_gears/system.js";
+
+// Helical Gears Topic
+import { HELICAL_VARS_DB } from "./src/topics/machine_design/helical_gears/schema.js";
+import { HELICAL_RELATION_GRAPH } from "./src/topics/machine_design/helical_gears/relations.js";
+import { createGroundTruthHelicalSystem } from "./src/topics/machine_design/helical_gears/system.js";
+
 import { generateAutonomousProblem, buildProblemStatement } from "./src/core/problem_gen.js";
 import { solveDAG, pruneSolutionPath } from "./src/core/graph_solver.js";
 import { initSidebarView, renderMasteryBars } from "./src/ui/sidebar_view.js";
 import { initCarouselView } from "./src/ui/carousel_view.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
 
-const TOPICS = {
+// Multi-Topic Registry
+export const TOPICS = Object.freeze({
   spur_gears: {
     id: "spur_gears",
     title: "Spur Gears",
@@ -31,27 +41,19 @@ const TOPICS = {
     relations: HELICAL_RELATION_GRAPH,
     createSystem: createGroundTruthHelicalSystem
   }
-};
-
-let currentTopic = TOPICS.spur_gears;
-
-document.getElementById("topic-selector")?.addEventListener("change", (e) => {
-  currentTopic = TOPICS[e.target.value];
-  initSidebarView(currentTopic.relations, getDecayedMastery);
-  initCarouselView(currentTopic.relations);
-  generateNewProblem();
 });
 
+let currentTopic = TOPICS.spur_gears;
 let activeProblem = null;
 
 export function generateNewProblem() {
-  const S = TOPIC.createSystem();
-  const problemPlan = generateAutonomousProblem(TOPIC.relations, S, TOPIC.varsDb, getDecayedMastery);
+  const S = currentTopic.createSystem();
+  const problemPlan = generateAutonomousProblem(currentTopic.relations, S, currentTopic.varsDb, getDecayedMastery);
 
-  const allRawSteps = solveDAG(problemPlan.givens, S, TOPIC.relations, TOPIC.varsDb);
+  const allRawSteps = solveDAG(problemPlan.givens, S, currentTopic.relations, currentTopic.varsDb, getDecayedMastery);
   const requiredSteps = pruneSolutionPath(allRawSteps, problemPlan.goalVar);
 
-  // Apply fading scaffolding: master intermediate steps fade into the algebraic derivation
+  // Apply fading scaffolding
   requiredSteps.forEach(st => {
     if (st.targetVar === problemPlan.goalVar) {
       st.isFaded = false;
@@ -60,7 +62,6 @@ export function generateNewProblem() {
     }
   });
 
-  // Extract visible steps and map faded ancestor IDs for spaced repetition credit
   const visibleSteps = requiredSteps.filter(st => !st.isFaded).map(st => {
     const fadedAncestors = (st.ancestorIndices || [])
       .map(i => allRawSteps[i])
@@ -75,8 +76,8 @@ export function generateNewProblem() {
   });
 
   const visibleGoals = visibleSteps.map(s => s.targetVar);
-  const statement = buildProblemStatement(problemPlan.givens, visibleGoals, S, TOPIC.varsDb);
-  const goalMeta = TOPIC.varsDb[problemPlan.goalVar] || {};
+  const statement = buildProblemStatement(problemPlan.givens, visibleGoals, S, currentTopic.varsDb);
+  const goalMeta = currentTopic.varsDb[problemPlan.goalVar] || {};
 
   activeProblem = {
     title: `${goalMeta.name || problemPlan.goalVar} Determination`,
@@ -87,31 +88,48 @@ export function generateNewProblem() {
     system: S,
     allSteps: allRawSteps,
     solution: visibleSteps,
-    varsDb: TOPIC.varsDb
+    varsDb: currentTopic.varsDb
   };
 
-  renderProblemView(activeProblem, TOPIC.relations, TOPIC.id);
+  renderProblemView(activeProblem, currentTopic.relations, currentTopic.id);
 }
 
 // ========================================================
 // LIFECYCLE & EVENT BINDINGS
 // ========================================================
 function initApp() {
-  loadMastery(TOPIC.id);
+  loadMastery(currentTopic.id);
 
-  initSidebarView(TOPIC.relations, getDecayedMastery);
-  initCarouselView(TOPIC.relations);
-  renderMasteryBars(TOPIC.relations, getDecayedMastery);
+  initSidebarView(currentTopic.relations, getDecayedMastery);
+  initCarouselView(currentTopic.relations);
+  renderMasteryBars(currentTopic.relations, getDecayedMastery);
 
   document.getElementById("btn-generate-next")?.addEventListener("click", generateNewProblem);
 
-  // Mastery Profile Backup & Restore
+  // Topic Switcher Listener
+  const topicSelect = document.getElementById("topic-selector");
+  if (topicSelect) {
+    topicSelect.value = currentTopic.id;
+    topicSelect.addEventListener("change", e => {
+      const selectedId = e.target.value;
+      if (TOPICS[selectedId]) {
+        currentTopic = TOPICS[selectedId];
+        loadMastery(currentTopic.id);
+        initSidebarView(currentTopic.relations, getDecayedMastery);
+        initCarouselView(currentTopic.relations);
+        renderMasteryBars(currentTopic.relations, getDecayedMastery);
+        generateNewProblem();
+      }
+    });
+  }
+
+  // Mastery Backup & Restore
   document.getElementById("btn-export")?.addEventListener("click", () => {
     const blob = new Blob([exportMasteryJSON()], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${TOPIC.id}_mastery.json`;
+    a.download = `${currentTopic.id}_mastery.json`;
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -123,8 +141,8 @@ function initApp() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      if (importMasteryJSON(ev.target.result, TOPIC.id)) {
-        renderMasteryBars(TOPIC.relations, getDecayedMastery);
+      if (importMasteryJSON(ev.target.result, currentTopic.id)) {
+        renderMasteryBars(currentTopic.relations, getDecayedMastery);
         alert("Mastery profile imported successfully!");
       } else {
         alert("Invalid JSON file.");
