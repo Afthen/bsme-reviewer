@@ -27,7 +27,13 @@ export const SYMBOL_TO_KEY = Object.freeze({
   "Do": "D_o", "D_o": "D_o",
   "Db": "D_b", "D_b": "D_b",
   "pb": "p_b", "p_b": "p_b",
-  "c": "c", "h": "h", "a": "a", "s": "s", "b": "b", "Y": "Y", "C": "C", "P": "P", "phi": "phi", "m": "m", "t": "t"
+  "c": "c", "h": "h", "a": "a", "s": "s", "b": "b", "Y": "Y", "C": "C", "P": "P", "phi": "phi", "m": "m", "t": "t",
+  "psi": "psi",
+  "phin": "phi_n", "phi_n": "phi_n",
+  "Pcn": "P_cn", "P_cn": "P_cn",
+  "Pdn": "P_dn", "P_dn": "P_dn",
+  "Pa": "P_a", "P_a": "P_a",
+  "Fa": "F_a", "F_a": "F_a",
 });
 
 export function getPossibleTokens(varKey) {
