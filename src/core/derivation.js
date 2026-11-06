@@ -1,7 +1,7 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * 100% dynamic: Zero hardcoded equation checks.
+ * Dynamic expression-tree numerical substitution with unit cancellation fractions.
  */
 
 import { casToTex, isolateVariable, substituteExpression, simplifyExpression, SYMBOL_TO_KEY } from "./cas.js";
@@ -20,14 +20,18 @@ function fmtPrecise(n, maxDec = 4) {
  */
 export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, relations = [], answeredVars = new Set(), givens = []) {
   const targetVar = step.targetVar;
-  const targetMeta = varsDb[targetVar] || {};
+  const targetKey = SYMBOL_TO_KEY[targetVar] || targetVar;
+  const targetMeta = varsDb[targetKey] || {};
   const targetSym = targetMeta.symbol || targetVar;
-  const targetUnit = S._u?.[targetVar] || targetMeta.unit || "";
+  const targetUnit = S._u?.[targetKey] || targetMeta.unit || "";
   const isInteger = !!targetMeta.isInteger;
   const formattedVal = fmtPrecise(step.expectedVal, isInteger ? 0 : 4);
 
   // Combine student-answered variables and initial givens into knowns
-  const knownVars = new Set([...answeredVars, ...givens]);
+  const knownVars = new Set([
+    ...Array.from(answeredVars).map(v => SYMBOL_TO_KEY[v] || v),
+    ...givens.map(g => SYMBOL_TO_KEY[g] || g)
+  ]);
 
   // 1. Resolve Canonical Equation from the Graph
   const eq = relations.find(r => r.id === step.eqId);
@@ -54,18 +58,20 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   while (maxSubstitutions-- > 0) {
     const currentVars = extractVariableTokens(currentRhs);
-    const unresolvedVarKey = currentVars
-      .map(tok => SYMBOL_TO_KEY[tok] || tok)
-      .find(k => !knownVars.has(k) && k !== targetVar);
+    const unresolvedToken = currentVars.find(tok => {
+      const k = SYMBOL_TO_KEY[tok] || tok;
+      return !knownVars.has(k) && k !== targetKey;
+    });
 
-    if (!unresolvedVarKey) break;
+    if (!unresolvedToken) break;
 
-    const parentStep = allSteps.find(s => s.targetVar === unresolvedVarKey);
-    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedVarKey));
+    const unresolvedKey = SYMBOL_TO_KEY[unresolvedToken] || unresolvedToken;
+    const parentStep = allSteps.find(s => (SYMBOL_TO_KEY[s.targetVar] || s.targetVar) === unresolvedKey);
+    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedKey));
 
     if (parentEq?.baseFormula) {
-      const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedVarKey, varsDb);
-      currentRhs = substituteExpression(currentRhs, { [unresolvedVarKey]: `(${isolatedParent.isolatedRhs})` });
+      const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedToken, varsDb);
+      currentRhs = substituteExpression(currentRhs, { [unresolvedToken]: `(${isolatedParent.isolatedRhs})` });
       currentRhs = simplifyExpression(currentRhs);
       didSubstitute = true;
     } else {
@@ -75,8 +81,8 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   // 3. Symbolic Target Isolation via CAS
   let isolatedRhsExpr = currentRhs;
-  const targetKeyInLhs = SYMBOL_TO_KEY[currentLhs] || currentLhs;
-  if (targetKeyInLhs !== targetVar || didSubstitute) {
+  const currentLhsKey = SYMBOL_TO_KEY[currentLhs] || currentLhs;
+  if (currentLhsKey !== targetKey || didSubstitute) {
     const isolatedTarget = isolateVariable(`${currentLhs} = ${currentRhs}`, targetVar, varsDb);
     isolatedRhsExpr = isolatedTarget.isolatedRhs;
     lines.push(`\\implies ${targetSym} &= ${casToTex(isolatedRhsExpr, varsDb)}`);
@@ -86,9 +92,9 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
   const substitutedTex = substituteValuesAndUnits(isolatedRhsExpr, S, varsDb);
 
   // 5. Dimensional Unit Cancellation Factor
-  const conversionFactorTex = detectUnitConversion(isolatedRhsExpr, targetUnit, S, varsDb);
+  const conversionFactorTex = detectUnitConversion(step, isolatedRhsExpr, targetUnit, S, varsDb);
 
-  // Line 3: Substitution with units and final evaluated answer
+  // Line: Substitution with units, cancellation factors, and final evaluated answer
   lines.push(`&= ${substitutedTex}${conversionFactorTex} = \\mathbf{${formattedVal}${targetUnit ? `\\text{ ${targetUnit}}` : ""}}`);
 
   return `\\[ \\begin{aligned} ${lines.join(" \\\\[6pt]\n")} \\end{aligned} \\]`;
@@ -101,7 +107,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 function extractVariableTokens(exprStr) {
   if (!exprStr) return [];
   const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
-  const mathConstants = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "log", "exp"]);
+  const mathConstants = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "log", "exp", "atan", "acos", "asin"]);
   return Array.from(new Set(tokens.filter(t => !mathConstants.has(t))));
 }
 
@@ -112,7 +118,7 @@ function substituteValuesAndUnits(exprStr, S, varsDb) {
   let tex = casToTex(exprStr, varsDb);
   const tokens = extractVariableTokens(exprStr);
 
-  // Sort by token length descending
+  // Sort by token length descending to replace multi-char tokens before single-char (e.g. T2 before T)
   tokens.sort((a, b) => b.length - a.length);
 
   tokens.forEach(tok => {
@@ -130,7 +136,7 @@ function substituteValuesAndUnits(exprStr, S, varsDb) {
       ? formattedNum
       : (unit === "deg" ? `${formattedNum}^\\circ` : `${formattedNum}\\text{ ${unit}}`);
 
-    // KaTeX symbol representation: e.g. D_{1}, N_{1}, h_k, a
+    // Match symbol in KaTeX (e.g., T_{2}, N_{1}, D_{1}, T)
     const symTex = casToTex(sym, varsDb);
     const escaped = symTex.replace(/\\/g, "\\\\").replace(/\{/g, "\\{").replace(/\}/g, "\\}");
 
@@ -145,41 +151,80 @@ function substituteValuesAndUnits(exprStr, S, varsDb) {
 }
 
 /**
- * Detects unit conversions and appends cancellation fractions.
+ * Detects unit conversions and returns explicit cancellation fractions.
  */
-function detectUnitConversion(exprStr, targetUnit, S, varsDb) {
+function detectUnitConversion(step, exprStr, targetUnit, S, varsDb) {
+  const isSI = S.sys === "SI" || S._u?.V_m === "m/s" || S._u?.D_P1 === "mm";
   const tokens = extractVariableTokens(exprStr);
   const unitsInExpr = tokens.map(t => {
     const k = SYMBOL_TO_KEY[t] || t;
     return S._u?.[k] || varsDb[k]?.unit || "";
   }).filter(Boolean);
 
-  // 1. Imperial Pitch Speed: ft/min and inches -> cancel ft and in
-  if (unitsInExpr.includes("ft/min") && unitsInExpr.includes("in")) {
-    return ` \\cdot ${formatConversionWithCancellation("ft_to_in_cancel_ft")}`;
+  // 1. Mechanical Rotational Power (P = 2*pi*N*T)
+  if (targetUnit === "kW" && unitsInExpr.includes("rpm") && unitsInExpr.includes("N-m")) {
+    return ` \\cdot \\frac{1\\,\\cancel{\\text{min}}}{60\\,\\cancel{\\text{s}}} \\cdot \\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}`;
   }
-  if (unitsInExpr.includes("ft") && unitsInExpr.includes("in")) {
-    return ` \\cdot ${formatConversionWithCancellation("ft_to_in_cancel_ft")}`;
+  if (targetUnit === "hp" && unitsInExpr.includes("rpm") && unitsInExpr.includes("lb-in")) {
+    return ` \\cdot \\frac{1\\,\\cancel{\\text{ft}}}{12\\,\\cancel{\\text{in}}} \\cdot \\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}`;
   }
 
-  // 2. Metric Torque: N and mm -> convert mm to m
+  // 2. Shaft Torque from Power (T = P / (2*pi*N))
+  if (targetUnit === "N-m" && unitsInExpr.includes("kW") && unitsInExpr.includes("rpm")) {
+    return ` \\cdot \\frac{1000\\,\\cancel{\\text{W}}}{1\\,\\cancel{\\text{kW}}} \\cdot \\frac{60\\,\\cancel{\\text{s}}}{1\\,\\cancel{\\text{min}}}`;
+  }
+  if (targetUnit === "lb-in" && unitsInExpr.includes("hp") && unitsInExpr.includes("rpm")) {
+    return ` \\cdot \\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}} \\cdot \\frac{12\\text{ in}}{1\\,\\cancel{\\text{ft}}}`;
+  }
+
+  // 3. Linear Power (P = Ft * v)
+  if (targetUnit === "kW" && unitsInExpr.includes("N") && unitsInExpr.includes("m/s")) {
+    return ` \\cdot \\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{N}\\cdot\\text{m/s}}}`;
+  }
+  if (targetUnit === "hp" && unitsInExpr.includes("lb") && unitsInExpr.includes("ft/min")) {
+    return ` \\cdot \\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}`;
+  }
+
+  // 4. Pitch Line Velocity (v = pi * D * N)
+  if (targetUnit === "m/s" && unitsInExpr.includes("mm") && unitsInExpr.includes("rpm")) {
+    return ` \\cdot \\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}} \\cdot \\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}`;
+  }
+  if (targetUnit === "ft/min" && unitsInExpr.includes("in") && unitsInExpr.includes("rpm")) {
+    return ` \\cdot \\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}`;
+  }
+
+  // 5. Pitch Diameter from Velocity (D = v / (pi * N))
+  if (targetUnit === "mm" && unitsInExpr.includes("m/s") && unitsInExpr.includes("rpm")) {
+    return ` \\cdot \\frac{60\\,\\cancel{\\text{s}}}{1\\,\\cancel{\\text{min}}} \\cdot \\frac{1000\\text{ mm}}{1\\,\\cancel{\\text{m}}}`;
+  }
+  if (targetUnit === "in" && unitsInExpr.includes("ft/min") && unitsInExpr.includes("rpm")) {
+    return ` \\cdot \\frac{12\\text{ in}}{1\\,\\cancel{\\text{ft}}}`;
+  }
+
+  // 6. Rotational Speed from Velocity (N = v / (pi * D))
+  if (targetUnit === "rpm" && unitsInExpr.includes("m/s") && unitsInExpr.includes("mm")) {
+    return ` \\cdot \\frac{1000\\,\\cancel{\\text{mm}}}{1\\,\\cancel{\\text{m}}} \\cdot \\frac{60\\text{ s}}{1\\,\\cancel{\\text{min}}}`;
+  }
+  if (targetUnit === "rpm" && unitsInExpr.includes("ft/min") && unitsInExpr.includes("in")) {
+    return ` \\cdot \\frac{12\\,\\cancel{\\text{in}}}{1\\,\\cancel{\\text{ft}}}`;
+  }
+
+  // 7. Torque from Tangential Load (T = Ft * D / 2)
   if (targetUnit === "N-m" && unitsInExpr.includes("N") && unitsInExpr.includes("mm")) {
     return ` \\cdot ${formatConversionWithCancellation("mm_to_m_cancel_mm")}`;
   }
 
-  // 3. Metric Pitch: mm Center Distance -> convert mm to in
+  // 8. Tangential Load from Torque (Ft = 2T / D)
+  if (targetUnit === "N" && unitsInExpr.includes("N-m") && unitsInExpr.includes("mm")) {
+    return ` \\cdot \\frac{1000\\,\\cancel{\\text{mm}}}{1\\,\\cancel{\\text{m}}}`;
+  }
+
+  // 9. Diametral Pitch from Center Distance / Diameter
   if (targetUnit === "teeth/in" && unitsInExpr.includes("mm")) {
     return ` \\cdot ${formatConversionWithCancellation("in_to_mm_cancel_mm")}`;
   }
-
-  // 4. Metric Velocity: mm diameter and rpm -> convert to m/s
-  if (targetUnit === "m/s" && unitsInExpr.includes("mm") && unitsInExpr.includes("rpm")) {
-    return ` \\cdot ${formatConversionWithCancellation("mm_to_m_cancel_mm")} \\cdot ${formatConversionWithCancellation("min_to_s_cancel_min")}`;
-  }
-
-  // 5. Rotational speed from linear velocity in SI
-  if (targetUnit === "rpm" && unitsInExpr.includes("m/s") && unitsInExpr.includes("mm")) {
-    return ` \\cdot ${formatConversionWithCancellation("m_to_mm_cancel_m")} \\cdot ${formatConversionWithCancellation("s_to_min_cancel_s")}`;
+  if (targetUnit === "mm" && unitsInExpr.includes("teeth/in")) {
+    return ` \\cdot \\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}`;
   }
 
   return "";
