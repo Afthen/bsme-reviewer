@@ -122,7 +122,8 @@ function refreshStepDerivations(activeProblem, relations) {
         activeProblem.allSteps,
         activeProblem.varsDb,
         relations,
-        answeredVars
+        answeredVars,
+        activeProblem.givens // Passed here so givens are recognized as known
       );
     }
   });
