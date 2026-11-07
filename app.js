@@ -1,7 +1,6 @@
 /**
  * app.js
  * Universal Reviewer entrypoint & application lifecycle orchestrator (ES Module).
- * Multi-topic support for Spur Gears and Helical Gears.
  */
 
 import {
@@ -9,12 +8,10 @@ import {
   getDecayedMastery, FADING_THRESHOLD
 } from "./src/repetition/mastery.js";
 
-// Spur Gears Topic
 import { GEAR_VARS_DB } from "./src/topics/machine_design/spur_gears/schema.js";
 import { GEAR_RELATION_GRAPH } from "./src/topics/machine_design/spur_gears/relations.js";
 import { createGroundTruthSystem } from "./src/topics/machine_design/spur_gears/system.js";
 
-// Helical Gears Topic
 import { HELICAL_VARS_DB } from "./src/topics/machine_design/helical_gears/schema.js";
 import { HELICAL_RELATION_GRAPH } from "./src/topics/machine_design/helical_gears/relations.js";
 import { createGroundTruthHelicalSystem } from "./src/topics/machine_design/helical_gears/system.js";
@@ -25,7 +22,6 @@ import { initSidebarView, renderMasteryBars } from "./src/ui/sidebar_view.js";
 import { initCarouselView } from "./src/ui/carousel_view.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
 
-// Multi-Topic Registry
 export const TOPICS = Object.freeze({
   spur_gears: {
     id: "spur_gears",
@@ -53,7 +49,6 @@ export function generateNewProblem() {
   const allRawSteps = solveDAG(problemPlan.givens, S, currentTopic.relations, currentTopic.varsDb, getDecayedMastery);
   const requiredSteps = pruneSolutionPath(allRawSteps, problemPlan.goalVar);
 
-  // Apply fading scaffolding
   requiredSteps.forEach(st => {
     if (st.targetVar === problemPlan.goalVar) {
       st.isFaded = false;
@@ -76,7 +71,7 @@ export function generateNewProblem() {
   });
 
   const visibleGoals = visibleSteps.map(s => s.targetVar);
-  const statement = buildProblemStatement(problemPlan.givens, visibleGoals, S, currentTopic.varsDb);
+  const statement = buildProblemStatement(problemPlan.givens, visibleGoals, S, currentTopic.varsDb, currentTopic.title);
   const goalMeta = currentTopic.varsDb[problemPlan.goalVar] || {};
 
   activeProblem = {
@@ -94,9 +89,6 @@ export function generateNewProblem() {
   renderProblemView(activeProblem, currentTopic.relations, currentTopic.id);
 }
 
-// ========================================================
-// LIFECYCLE & EVENT BINDINGS
-// ========================================================
 function initApp() {
   loadMastery(currentTopic.id);
 
@@ -106,7 +98,6 @@ function initApp() {
 
   document.getElementById("btn-generate-next")?.addEventListener("click", generateNewProblem);
 
-  // Topic Switcher Listener
   const topicSelect = document.getElementById("topic-selector");
   if (topicSelect) {
     topicSelect.value = currentTopic.id;
@@ -123,7 +114,6 @@ function initApp() {
     });
   }
 
-  // Mastery Backup & Restore
   document.getElementById("btn-export")?.addEventListener("click", () => {
     const blob = new Blob([exportMasteryJSON()], { type: "application/json" });
     const url = URL.createObjectURL(blob);
