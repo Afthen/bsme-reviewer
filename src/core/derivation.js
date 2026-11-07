@@ -1,156 +1,19 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * Formats mathematical substitution lines using pure atomic unit-bag markup.
+ * Empirical equations are protected from symbolic inlining; units rendered via pure atomic bags.
  */
 
 import {
   casToTex, isolateVariable, substituteExpression,
   simplifyExpression, solveUnitAlgebra,
-  resolveCanonicalKey, parseMathAST, tokenizeExpr
+  resolveCanonicalKey, parseMathAST, tokenizeExpr,
+  astToLatex, stripOuterParens
 } from "./cas.js";
 import { fmtSigFig } from "./dimensions.js";
 
-export function stripOuterParens(texStr) {
-  if (!texStr) return "";
-  let s = texStr.trim();
-  let changed = true;
-
-  while (changed) {
-    changed = false;
-    s = s.trim();
-
-    if (s.startsWith("\\left(") && s.endsWith("\\right)")) {
-      let depth = 0;
-      let wrapsAll = true;
-      for (let i = 0; i < s.length - 7; i++) {
-        if (s.startsWith("\\left(", i)) depth++;
-        else if (s.startsWith("\\right)", i)) depth--;
-        if (depth === 0 && i < s.length - 7) {
-          wrapsAll = false;
-          break;
-        }
-      }
-      if (wrapsAll) {
-        s = s.slice(6, -7).trim();
-        changed = true;
-        continue;
-      }
-    }
-
-    if (s.startsWith("(") && s.endsWith(")")) {
-      let depth = 0;
-      let wrapsAll = true;
-      for (let i = 0; i < s.length - 1; i++) {
-        if (s[i] === "(") depth++;
-        else if (s[i] === ")") depth--;
-        if (depth === 0) {
-          wrapsAll = false;
-          break;
-        }
-      }
-      if (wrapsAll) {
-        s = s.slice(1, -1).trim();
-        changed = true;
-        continue;
-      }
-    }
-  }
-
-  return s;
-}
-
-function toLatexSymbol(name, varsDb = {}) {
-  const canonical = resolveCanonicalKey(name, varsDb);
-  if (varsDb[canonical]?.symbol) return varsDb[canonical].symbol;
-  if (varsDb[name]?.symbol) return varsDb[name].symbol;
-  if (name === "pi") return "\\pi";
-  if (name === "phi") return "\\phi";
-  if (name === "phin" || name === "phi_n") return "\\phi_n";
-  if (name === "psi") return "\\psi";
-  return name;
-}
-
-function astToLatex(node, substituteMap = null, varsDb = {}) {
-  if (!node) return "";
-
-  if (node.type === "num") {
-    return node.val;
-  }
-
-  if (node.type === "id") {
-    if (substituteMap && substituteMap[node.name] !== undefined) {
-      return substituteMap[node.name];
-    }
-    return toLatexSymbol(node.name, varsDb);
-  }
-
-  if (node.type === "group") {
-    let innerNode = node.expr;
-    while (innerNode && innerNode.type === "group") {
-      innerNode = innerNode.expr;
-    }
-    const inner = stripOuterParens(astToLatex(innerNode, substituteMap, varsDb));
-    return `(${inner})`;
-  }
-
-  if (node.type === "call") {
-    let argNode = node.arg;
-    while (argNode && argNode.type === "group") {
-      argNode = argNode.expr;
-    }
-
-    const inner = stripOuterParens(astToLatex(argNode, substituteMap, varsDb));
-
-    if (node.fn === "sqrt") return `\\sqrt{${inner}}`;
-    if (node.fn === "cos") return `\\cos(${inner})`;
-    if (node.fn === "sin") return `\\sin(${inner})`;
-    if (node.fn === "tan") return `\\tan(${inner})`;
-    if (node.fn === "atan") return `\\tan^{-1}\\left(${inner}\\right)`;
-    if (node.fn === "acos") return `\\cos^{-1}\\left(${inner}\\right)`;
-    return `\\text{${node.fn}}\\left(${inner}\\right)`;
-  }
-
-  if (node.type === "binary") {
-    if (node.op === "/") {
-      const num = stripOuterParens(astToLatex(node.left, substituteMap, varsDb));
-      const den = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));
-      return `\\frac{${num}}{${den}}`;
-    }
-    if (node.op === "*") {
-      const leftTex = astToLatex(node.left, substituteMap, varsDb);
-      const rightTex = astToLatex(node.right, substituteMap, varsDb);
-
-      const leftIsNum = /^[+-]?[\d.]+$/.test(leftTex.trim());
-      const rightIsNum = /^[+-]?[\d.]+$/.test(rightTex.trim());
-
-      let sep = " ";
-      if (leftIsNum && rightIsNum) {
-        sep = " \\cdot ";
-      } else if (rightTex.startsWith("\\left(") || rightTex.startsWith("(")) {
-        sep = "";
-      }
-
-      return `${leftTex}${sep}${rightTex}`.trim();
-    }
-    if (node.op === "+") {
-      return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
-    }
-    if (node.op === "-") {
-      return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
-    }
-    if (node.op === "^") {
-      const leftTex = astToLatex(node.left, substituteMap, varsDb);
-      const expTex = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));
-      return `{${leftTex}}^{${expTex}}`;
-    }
-  }
-
-  return "";
-}
-
 // ========================================================
-// 3. MAIN DERIVATION EXPORT
+// MAIN DERIVATION EXPORT
 // ========================================================
 
 export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, relations = [], answeredVars = new Set(), givens = []) {
@@ -177,7 +40,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   const lines = [];
 
-  // PURE ATOMIC UNIT-BAG ANALYSIS
+  // 1. OPTION B: INPUT PRE-CONDITIONING FOR EMPIRICAL RULES
   const unitAnalysis = solveUnitAlgebra(currentRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
   const preConvertedVals = {};
 
@@ -191,7 +54,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     });
   }
 
-  // Canonical formula line
+  // 2. Canonical formula line
   const canonicalTex = (activeVariant?.canonicalTex || step.canonicalTex || eq?.canonicalTex || `${currentLhs} = ${currentRhs}`).replace(/\*/g, " ");
   if (canonicalTex.includes("=")) {
     const [cLhs, cRhs] = canonicalTex.split("=");
@@ -200,60 +63,69 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     lines.push(`\\text{Canonical:} \\quad & ${canonicalTex}`);
   }
 
-  let maxSubstitutions = 5;
-  let didSubstitute = false;
-  let intermediateSubFormulaTex = "";
-  let rhsAst = parseMathAST(currentRhs);
+  // 3. Symbolic Inlining: ONLY allowed on physical equations.
+  // Empirical equations (with requiredUnits) must NEVER have parent formulas inlined!
+  const isEmpirical = !!requiredUnits;
 
-  while (maxSubstitutions-- > 0) {
-    const idTokens = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
-    const mathConsts = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin"]);
-    const unresolvedToken = idTokens.find(tok => {
-      const k = resolveCanonicalKey(tok, varsDb);
-      return !mathConsts.has(tok) && !knownVars.has(k) && k !== canonicalTarget;
-    });
+  if (!isEmpirical) {
+    let maxSubstitutions = 5;
+    let didSubstitute = false;
+    let intermediateSubFormulaTex = "";
+    let rhsAst = parseMathAST(currentRhs);
 
-    if (!unresolvedToken) break;
+    while (maxSubstitutions-- > 0) {
+      const idTokens = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
+      const mathConsts = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin"]);
+      const unresolvedToken = idTokens.find(tok => {
+        const k = resolveCanonicalKey(tok, varsDb);
+        return !mathConsts.has(tok) && !knownVars.has(k) && k !== canonicalTarget;
+      });
 
-    const unresolvedKey = resolveCanonicalKey(unresolvedToken, varsDb);
-    const parentStep = allSteps.find(s => resolveCanonicalKey(s.targetVar, varsDb) === unresolvedKey);
-    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedKey));
+      if (!unresolvedToken) break;
 
-    if (parentEq?.baseFormula) {
-      const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedToken, varsDb);
-      const parentAst = parseMathAST(isolatedParent.isolatedRhs);
+      const unresolvedKey = resolveCanonicalKey(unresolvedToken, varsDb);
+      const parentStep = allSteps.find(s => resolveCanonicalKey(s.targetVar, varsDb) === unresolvedKey);
+      const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedKey));
 
-      const subMap = {
-        [unresolvedToken]: `\\left(${astToLatex(parentAst, null, varsDb)}\\right)`
-      };
-      const unsimplifiedTex = astToLatex(rhsAst, subMap, varsDb);
+      if (parentEq?.baseFormula) {
+        const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedToken, varsDb);
+        const parentAst = parseMathAST(isolatedParent.isolatedRhs);
 
-      currentRhs = substituteExpression(currentRhs, { [unresolvedToken]: `(${isolatedParent.isolatedRhs})` });
-      currentRhs = simplifyExpression(currentRhs);
-      rhsAst = parseMathAST(currentRhs);
-      const simplifiedTex = astToLatex(rhsAst, null, varsDb);
+        const subMap = {
+          [unresolvedToken]: `\\left(${astToLatex(parentAst, null, varsDb)}\\right)`
+        };
+        const unsimplifiedTex = astToLatex(rhsAst, subMap, varsDb);
 
-      if (unsimplifiedTex !== simplifiedTex) {
-        intermediateSubFormulaTex = `${unsimplifiedTex} = ${simplifiedTex}`;
+        currentRhs = substituteExpression(currentRhs, { [unresolvedToken]: `(${isolatedParent.isolatedRhs})` });
+        currentRhs = simplifyExpression(currentRhs);
+        rhsAst = parseMathAST(currentRhs);
+        const simplifiedTex = astToLatex(rhsAst, null, varsDb);
+
+        if (unsimplifiedTex !== simplifiedTex) {
+          intermediateSubFormulaTex = `${unsimplifiedTex} = ${simplifiedTex}`;
+        } else {
+          intermediateSubFormulaTex = unsimplifiedTex;
+        }
+
+        didSubstitute = true;
       } else {
-        intermediateSubFormulaTex = unsimplifiedTex;
+        break;
       }
+    }
 
-      didSubstitute = true;
-    } else {
-      break;
+    if (didSubstitute && intermediateSubFormulaTex) {
+      lines.push(`&= ${intermediateSubFormulaTex}`);
     }
   }
 
-  if (didSubstitute && intermediateSubFormulaTex) {
-    lines.push(`&= ${intermediateSubFormulaTex}`);
-  } else if (resolveCanonicalKey(currentLhs, varsDb) !== canonicalTarget) {
+  if (resolveCanonicalKey(currentLhs, varsDb) !== canonicalTarget) {
     const isolatedTarget = isolateVariable(`${currentLhs} = ${currentRhs}`, targetVar, varsDb);
     currentRhs = isolatedTarget.isolatedRhs;
-    rhsAst = parseMathAST(currentRhs);
+    const rhsAst = parseMathAST(currentRhs);
     lines.push(`\\implies ${targetSym} &= ${astToLatex(rhsAst, null, varsDb)}`);
   }
 
+  // 4. Numerical Substitution Line
   const substitutedValuesMap = {};
   const activeIds = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
 
@@ -286,6 +158,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     }
   });
 
+  const rhsAst = parseMathAST(currentRhs);
   const numericalSubstitutedTex = astToLatex(rhsAst, substitutedValuesMap, varsDb);
   const conversionFactorTex = unitAnalysis.conversionFactorTex;
   const displayTargetUnit = (targetUnit === "deg" || targetUnit === "°") ? "°" : (targetUnit ? `\\text{ ${targetUnit}}` : "");
