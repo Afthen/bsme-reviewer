@@ -1,7 +1,7 @@
 /**
  * src/core/cas.js
- * Universal Computer Algebra System (CAS) with True Dimensional Vector Analysis.
- * Supports expanded constituent unit definitions (psi -> lb/in^2, MPa -> N/mm^2, etc.).
+ * Universal Computer Algebra System (CAS) with True Atomic Unit-Bag Algebra.
+ * Zero hardcoded unit logic: units are rational products of atomic base dimensions.
  */
 
 const RESERVED_CAS_WORDS = new Set(["E", "I"]);
@@ -190,10 +190,6 @@ function flattenMultiplication(node) {
   return factors;
 }
 
-// ========================================================
-// 2. ELEMENTARY ALGEBRAIC ISOLATION (HUMAN-LIKE BALANCER)
-// ========================================================
-
 function unwrapGroup(node) {
   let n = node;
   while (n && n.type === "group") {
@@ -201,6 +197,10 @@ function unwrapGroup(node) {
   }
   return n;
 }
+
+// ========================================================
+// 2. ELEMENTARY ALGEBRAIC ISOLATION (HUMAN BALANCER)
+// ========================================================
 
 function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
   const targetCanon = resolveCanonicalKey(targetVar, varsDb);
@@ -213,9 +213,7 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
   const ast = parseMathAST(rawRhs);
   if (!ast) return { success: false };
 
-  // ========================================================
   // SHAPE 1, 3 & 4: FRACTIONS & RATIONAL SUMS (LHS = Num / Den)
-  // ========================================================
   if (ast.type === "binary" && ast.op === "/") {
     const rawNum = unwrapGroup(ast.left);
     const rawDen = unwrapGroup(ast.right);
@@ -226,46 +224,28 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     const targetInNum = numIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
     const targetInDen = denIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
 
-    // ----------------------------------------------------
-    // CASE A: Target only in Denominator (e.g. Q = 2*T2 / (T1 + T2))
-    // ----------------------------------------------------
     if (targetInDen && !targetInNum) {
-      // Shape 1: Simple Denominator (LHS = Num / x => x = Num / LHS)
       if (rawDen.type === "id") {
         const numStr = astToExprStr(rawNum);
-        return {
-          isolatedRhs: `(${numStr}) / (${rawLhs.trim()})`,
-          success: true
-        };
+        return { isolatedRhs: `(${numStr}) / (${rawLhs.trim()})`, success: true };
       }
 
-      // Shape 4: Denominator Sum/Diff: LHS = Num / (B + C) or Num / (B - C)
       if (rawDen.type === "binary" && (rawDen.op === "+" || rawDen.op === "-")) {
         const leftIds = getAstIdentifiers(rawDen.left);
         const rightIds = getAstIdentifiers(rawDen.right);
         const targetInLeft = leftIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
         const targetInRight = rightIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
-
         const denTerm = `((${astToExprStr(rawNum)}) / (${rawLhs.trim()}))`;
 
         if (rawDen.op === "+") {
-          if (targetInLeft) {
-            return { isolatedRhs: `${denTerm} - (${astToExprStr(rawDen.right)})`, success: true };
-          }
-          if (targetInRight) {
-            return { isolatedRhs: `${denTerm} - (${astToExprStr(rawDen.left)})`, success: true };
-          }
+          if (targetInLeft) return { isolatedRhs: `${denTerm} - (${astToExprStr(rawDen.right)})`, success: true };
+          if (targetInRight) return { isolatedRhs: `${denTerm} - (${astToExprStr(rawDen.left)})`, success: true };
         } else if (rawDen.op === "-") {
-          if (targetInLeft) {
-            return { isolatedRhs: `${denTerm} + (${astToExprStr(rawDen.right)})`, success: true };
-          }
-          if (targetInRight) {
-            return { isolatedRhs: `(${astToExprStr(rawDen.left)}) - ${denTerm}`, success: true };
-          }
+          if (targetInLeft) return { isolatedRhs: `${denTerm} + (${astToExprStr(rawDen.right)})`, success: true };
+          if (targetInRight) return { isolatedRhs: `(${astToExprStr(rawDen.left)}) - ${denTerm}`, success: true };
         }
       }
 
-      // Single trig call in Denominator (e.g. Pa = Pc / tan(psi))
       if (rawDen.type === "call") {
         const fn = rawDen.fn;
         const argId = rawDen.arg?.name;
@@ -279,50 +259,31 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
       }
     }
 
-    // ----------------------------------------------------
-    // CASE B: Target only in Numerator (e.g. C = (T1 + T2) / (2*Pd))
-    // ----------------------------------------------------
     if (targetInNum && !targetInDen) {
-      // Shape 1: Simple Numerator (LHS = x / Den => x = LHS * Den)
       if (rawNum.type === "id") {
         const denStr = astToExprStr(rawDen);
-        return {
-          isolatedRhs: `${rawLhs.trim()} * ${denStr}`,
-          success: true
-        };
+        return { isolatedRhs: `${rawLhs.trim()} * ${denStr}`, success: true };
       }
 
-      // Shape 3: Numerator Sum/Diff: LHS = (A + B) / Den or (A - B) / Den
       if (rawNum.type === "binary" && (rawNum.op === "+" || rawNum.op === "-")) {
         const leftIds = getAstIdentifiers(rawNum.left);
         const rightIds = getAstIdentifiers(rawNum.right);
         const targetInLeft = leftIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
         const targetInRight = rightIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
-
         const numTerm = `((${rawLhs.trim()}) * (${astToExprStr(rawDen)}))`;
 
         if (rawNum.op === "+") {
-          if (targetInLeft) {
-            return { isolatedRhs: `${numTerm} - (${astToExprStr(rawNum.right)})`, success: true };
-          }
-          if (targetInRight) {
-            return { isolatedRhs: `${numTerm} - (${astToExprStr(rawNum.left)})`, success: true };
-          }
+          if (targetInLeft) return { isolatedRhs: `${numTerm} - (${astToExprStr(rawNum.right)})`, success: true };
+          if (targetInRight) return { isolatedRhs: `${numTerm} - (${astToExprStr(rawNum.left)})`, success: true };
         } else if (rawNum.op === "-") {
-          if (targetInLeft) {
-            return { isolatedRhs: `${numTerm} + (${astToExprStr(rawNum.right)})`, success: true };
-          }
-          if (targetInRight) {
-            return { isolatedRhs: `(${astToExprStr(rawNum.left)}) - ${numTerm}`, success: true };
-          }
+          if (targetInLeft) return { isolatedRhs: `${numTerm} + (${astToExprStr(rawNum.right)})`, success: true };
+          if (targetInRight) return { isolatedRhs: `(${astToExprStr(rawNum.left)}) - ${numTerm}`, success: true };
         }
       }
     }
   }
 
-  // ========================================================
   // SHAPE 1: MULTIPLICATION (LHS = A * B * C...)
-  // ========================================================
   if (ast.type === "binary" && ast.op === "*") {
     const factors = flattenMultiplication(ast);
     const targetIdx = factors.findIndex(f => f.type === "id" && resolveCanonicalKey(f.name, varsDb) === targetCanon);
@@ -345,9 +306,7 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     }
   }
 
-  // ========================================================
   // SHAPE 2: LINEAR SUM & DIFFERENCE (LHS = A + B or A - B)
-  // ========================================================
   if (ast.type === "binary" && ast.op === "+") {
     if (ast.left.type === "id" && resolveCanonicalKey(ast.left.name, varsDb) === targetCanon) {
       return { isolatedRhs: `(${rawLhs.trim()}) - (${astToExprStr(ast.right)})`, success: true };
@@ -365,9 +324,7 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     }
   }
 
-  // ========================================================
   // SHAPE 5: SQUARE ROOT (LHS = sqrt(A))
-  // ========================================================
   if (ast.type === "call" && ast.fn === "sqrt") {
     if (ast.arg?.type === "id" && resolveCanonicalKey(ast.arg.name, varsDb) === targetCanon) {
       return { isolatedRhs: `(${rawLhs.trim()})^2`, success: true };
@@ -405,7 +362,6 @@ export function casToTex(exprStr, varsDb = {}) {
     }
 
     tex = tex.replace(/_E_/g, "E").replace(/_I_/g, "I");
-
     tex = tex.replace(/\\text\{atan\}\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
     tex = tex.replace(/\\text\{acos\}\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
     tex = tex.replace(/atan\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
@@ -505,197 +461,167 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
 }
 
 // ========================================================
-// 4. BASE-DIMENSION VECTOR ENGINE [M, L, T, Theta, C]
+// 4. ATOMIC BASE UNIT & COMPOUND UNIT REGISTRY (DATA-DRIVEN)
 // ========================================================
 
-function makeDim(M = 0, L = 0, T = 0, Th = 0, C = 0) {
-  return { M, L, T, Th, C };
-}
-
-function addDim(a, b) {
-  return {
-    M: (a.M || 0) + (b.M || 0),
-    L: (a.L || 0) + (b.L || 0),
-    T: (a.T || 0) + (b.T || 0),
-    Th: (a.Th || 0) + (b.Th || 0),
-    C: (a.C || 0) + (b.C || 0)
-  };
-}
-
-function subDim(a, b) {
-  return {
-    M: (a.M || 0) - (b.M || 0),
-    L: (a.L || 0) - (b.L || 0),
-    T: (a.T || 0) - (b.T || 0),
-    Th: (a.Th || 0) - (b.Th || 0),
-    C: (a.C || 0) - (b.C || 0)
-  };
-}
-
-export function isDimEqual(a, b) {
-  if (!a || !b) return false;
-  return (
-    (a.M || 0) === (b.M || 0) &&
-    (a.L || 0) === (b.L || 0) &&
-    (a.T || 0) === (b.T || 0) &&
-    (a.Th || 0) === (b.Th || 0) &&
-    (a.C || 0) === (b.C || 0)
-  );
-}
-
-/**
- * Universal Dimensional Unit Registry with Expanded Physical Representations.
- * Scale factors are calibrated relative to SI Base: kg, m, s, K, count.
- */
-export const UNIT_ALGEBRA_DB = Object.freeze({
-  // Entities & Angular
-  "teeth":    { dim: makeDim(0, 0, 0, 0, 1), scale: 1.0, baseType: "count", unitName: "teeth", tex: "\\text{teeth}", expandedTex: "\\cancel{\\text{teeth}}" },
-  "rad":      { dim: makeDim(), scale: 1.0, baseType: "angular", unitName: "rad", tex: "\\text{rad}" },
-  "rev":      { dim: makeDim(), scale: 1.0, baseType: "angular", unitName: "rev", tex: "\\text{rev}" },
-  "deg":      { dim: makeDim(), scale: Math.PI / 180, baseType: "angular", unitName: "°", tex: "°" },
-  "°":        { dim: makeDim(), scale: Math.PI / 180, baseType: "angular", unitName: "°", tex: "°" },
-
-  // Length [L]
-  "mm":       { dim: makeDim(0, 1, 0, 0, 0), scale: 0.001, baseType: "length", unitName: "mm", tex: "\\text{mm}" },
-  "cm":       { dim: makeDim(0, 1, 0, 0, 0), scale: 0.01, baseType: "length", unitName: "cm", tex: "\\text{cm}" },
-  "m":        { dim: makeDim(0, 1, 0, 0, 0), scale: 1.0, baseType: "length", unitName: "m", tex: "\\text{m}" },
-  "in":       { dim: makeDim(0, 1, 0, 0, 0), scale: 0.0254, baseType: "length", unitName: "in", tex: "\\text{in}" },
-  "ft":       { dim: makeDim(0, 1, 0, 0, 0), scale: 0.3048, baseType: "length", unitName: "ft", tex: "\\text{ft}" },
-
-  // Time [T]
-  "s":        { dim: makeDim(0, 0, 1, 0, 0), scale: 1.0, baseType: "time", unitName: "s", tex: "\\text{s}" },
-  "min":      { dim: makeDim(0, 0, 1, 0, 0), scale: 60.0, baseType: "time", unitName: "min", tex: "\\text{min}" },
-  "hr":       { dim: makeDim(0, 0, 1, 0, 0), scale: 3600.0, baseType: "time", unitName: "h", tex: "\\text{h}" },
-  "h":        { dim: makeDim(0, 0, 1, 0, 0), scale: 3600.0, baseType: "time", unitName: "h", tex: "\\text{h}" },
-
-  // Rotational frequency [T^-1]
-  "rpm":      { dim: makeDim(0, 0, -1, 0, 0), scale: 1 / 60, baseType: "time", unitName: "min", tex: "\\frac{\\text{rev}}{\\text{min}}" },
-  "rev/min":  { dim: makeDim(0, 0, -1, 0, 0), scale: 1 / 60, baseType: "time", unitName: "min", tex: "\\frac{\\text{rev}}{\\text{min}}" },
-
-  // Mass [M]
-  "kg":       { dim: makeDim(1, 0, 0, 0, 0), scale: 1.0, baseType: "mass", unitName: "kg", tex: "\\text{kg}" },
-  "g":        { dim: makeDim(1, 0, 0, 0, 0), scale: 0.001, baseType: "mass", unitName: "g", tex: "\\text{g}" },
-  "lb_m":     { dim: makeDim(1, 0, 0, 0, 0), scale: 0.45359237, baseType: "mass", unitName: "lb_m", tex: "\\text{lb}_m" },
-
-  // Force [M L T^-2]
-  "N":        { dim: makeDim(1, 1, -2, 0, 0), scale: 1.0, baseType: "force", unitName: "N", tex: "\\text{N}" },
-  "kN":       { dim: makeDim(1, 1, -2, 0, 0), scale: 1000.0, baseType: "force", unitName: "kN", tex: "\\text{kN}" },
-  "lb":       { dim: makeDim(1, 1, -2, 0, 0), scale: 4.4482216, baseType: "force", unitName: "lb", tex: "\\text{lb}" },
-
-  // Velocity [L T^-1]
-  "m/s":      { dim: makeDim(0, 1, -1, 0, 0), scale: 1.0, components: { length: "m", time: "s" }, tex: "\\frac{\\text{m}}{\\text{s}}" },
-  "ft/min":   { dim: makeDim(0, 1, -1, 0, 0), scale: 0.3048 / 60, components: { length: "ft", time: "min" }, tex: "\\frac{\\text{ft}}{\\text{min}}" },
-
-  // Pitch [C L^-1]
-  "teeth/in": { dim: makeDim(0, -1, 0, 0, 1), scale: 1 / 0.0254, components: { count: "teeth", length: "in" }, tex: "\\frac{\\text{teeth}}{\\text{in}}", expandedTex: "\\frac{\\cancel{\\text{teeth}}}{\\text{in}}" },
-
-  // Torque / Energy [M L^2 T^-2]
-  "J":        { dim: makeDim(1, 2, -2, 0, 0), scale: 1.0, baseType: "energy", unitName: "J", tex: "\\text{J}", expandedTex: "\\text{N}\\cdot\\text{m}" },
-  "kJ":       { dim: makeDim(1, 2, -2, 0, 0), scale: 1000.0, baseType: "energy", unitName: "kJ", tex: "\\text{kJ}", expandedTex: "1000\\,\\text{N}\\cdot\\text{m}" },
-  "N-m":      { dim: makeDim(1, 2, -2, 0, 0), scale: 1.0, baseType: "energy", unitName: "N-m", tex: "\\text{N}\\cdot\\text{m}" },
-  "kN-m":     { dim: makeDim(1, 2, -2, 0, 0), scale: 1000.0, baseType: "energy", unitName: "kN-m", tex: "\\text{kN}\\cdot\\text{m}" },
-  "lb-in":    { dim: makeDim(1, 2, -2, 0, 0), scale: 4.4482216 * 0.0254, baseType: "energy", unitName: "lb-in", tex: "\\text{lb}\\cdot\\text{in}" },
-  "lb-ft":    { dim: makeDim(1, 2, -2, 0, 0), scale: 4.4482216 * 0.3048, baseType: "energy", unitName: "lb-ft", tex: "\\text{lb}\\cdot\\text{ft}" },
-
-  // Power [M L^2 T^-3]
-  "W":        { dim: makeDim(1, 2, -3, 0, 0), scale: 1.0, baseType: "power", unitName: "W", tex: "\\text{W}", expandedTex: "\\frac{\\text{N}\\cdot\\text{m}}{\\text{s}}" },
-  "kW":       { dim: makeDim(1, 2, -3, 0, 0), scale: 1000.0, baseType: "power", unitName: "kW", tex: "\\text{kW}", expandedTex: "\\frac{1000\\text{ N}\\cdot\\text{m}}{\\text{s}}" },
-  "MW":       { dim: makeDim(1, 2, -3, 0, 0), scale: 1e6, baseType: "power", unitName: "MW", tex: "\\text{MW}" },
-  "hp":       { dim: makeDim(1, 2, -3, 0, 0), scale: 745.69987, baseType: "power", unitName: "hp", tex: "\\text{hp}", expandedTex: "\\frac{33000\\text{ ft}\\cdot\\text{lb}}{\\text{min}}" },
-
-  // Pressure & Stress [M L^-1 T^-2]
-  "Pa":       { dim: makeDim(1, -1, -2, 0, 0), scale: 1.0, baseType: "pressure", unitName: "Pa", tex: "\\text{Pa}", expandedTex: "\\frac{\\text{N}}{\\text{m}^2}" },
-  "kPa":      { dim: makeDim(1, -1, -2, 0, 0), scale: 1000.0, baseType: "pressure", unitName: "kPa", tex: "\\text{kPa}", expandedTex: "\\frac{\\text{kN}}{\\text{m}^2}" },
-  "bar":      { dim: makeDim(1, -1, -2, 0, 0), scale: 100000.0, baseType: "pressure", unitName: "bar", tex: "\\text{bar}", expandedTex: "10^5\\,\\frac{\\text{N}}{\\text{m}^2}" },
-  "MPa":      { dim: makeDim(1, -1, -2, 0, 0), scale: 1e6, baseType: "pressure", unitName: "MPa", tex: "\\text{MPa}", expandedTex: "\\frac{\\text{N}}{\\text{mm}^2}" },
-  "psi":      { dim: makeDim(1, -1, -2, 0, 0), scale: 6894.757, baseType: "pressure", unitName: "psi", tex: "\\text{psi}", expandedTex: "\\frac{\\text{lb}}{\\text{in}^2}" },
-
-  // Volume [L^3]
-  "m^3":      { dim: makeDim(0, 3, 0, 0, 0), scale: 1.0, baseType: "volume", unitName: "m^3", tex: "\\text{m}^3" },
-  "L":        { dim: makeDim(0, 3, 0, 0, 0), scale: 0.001, baseType: "volume", unitName: "L", tex: "\\text{L}" },
-
-  // Specific Energy [L^2 T^-2]
-  "kJ/kg":    { dim: makeDim(0, 2, -2, 0, 0), scale: 1000.0, tex: "\\frac{\\text{kJ}}{\\text{kg}}" },
-
-  // Mass Flow [M T^-1]
-  "kg/s":     { dim: makeDim(1, 0, -1, 0, 0), scale: 1.0, tex: "\\frac{\\text{kg}}{\\text{s}}" },
-  "kg/h":     { dim: makeDim(1, 0, -1, 0, 0), scale: 1 / 3600, tex: "\\frac{\\text{kg}}{\\text{h}}" },
-
-  // Temperature [Th]
-  "K":        { dim: makeDim(0, 0, 0, 1, 0), scale: 1.0, baseType: "temp", unitName: "K", tex: "\\text{K}" },
-  "deg C":    { dim: makeDim(0, 0, 0, 1, 0), scale: 1.0, baseType: "temp", unitName: "°C", tex: "^\\circ\\text{C}" },
-
-  // Dimensionless
-  "%":        { dim: makeDim(), scale: 0.01, tex: "\\%" },
-  "dimless":  { dim: makeDim(), scale: 1.0, tex: "" },
-  "ratio":    { dim: makeDim(), scale: 1.0, tex: "" }
+export const BASE_DIMENSIONS = Object.freeze({
+  L: "Length",
+  T: "Time",
+  F: "Force",
+  M: "Mass",
+  Th: "Temperature",
+  C: "Count"
 });
 
-export const ATOMIC_CONVERSIONS = Object.freeze([
-  { from: "mm", to: "m",   factor: 1 / 1000, latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" },
-  { from: "m",  to: "mm",  factor: 1000,     latex: "\\frac{1000\\text{ mm}}{1\\,\\cancel{\\text{m}}}" },
-  { from: "in", to: "ft",  factor: 1 / 12,   latex: "\\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}" },
-  { from: "ft", to: "in",  factor: 12,       latex: "\\frac{12\\,\\cancel{\\text{in}}}{1\\,\\cancel{\\text{ft}}}" },
-  { from: "mm", to: "in",  factor: 1 / 25.4, latex: "\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}" },
-  { from: "in", to: "mm",  factor: 25.4,     latex: "\\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}" },
+export const ATOMIC_BASE_UNITS = Object.freeze({
+  // Length (base: m)
+  m:    { dim: "L", scale: 1.0, tex: "\\text{m}" },
+  mm:   { dim: "L", scale: 0.001, tex: "\\text{mm}" },
+  cm:   { dim: "L", scale: 0.01, tex: "\\text{cm}" },
+  in:   { dim: "L", scale: 0.0254, tex: "\\text{in}" },
+  ft:   { dim: "L", scale: 0.3048, tex: "\\text{ft}" },
 
-  { from: "min", to: "s",   factor: 1 / 60,   latex: "\\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}" },
-  { from: "s",   to: "min", factor: 60,       latex: "\\frac{60\\,\\cancel{\\text{s}}}{1\\text{ min}}" },
-  { from: "hr",  to: "s",   factor: 1 / 3600, latex: "\\frac{1\\,\\cancel{\\text{h}}}{3600\\text{ s}}" },
+  // Time (base: s)
+  s:    { dim: "T", scale: 1.0, tex: "\\text{s}" },
+  min:  { dim: "T", scale: 60.0, tex: "\\text{min}" },
+  h:    { dim: "T", scale: 3600.0, tex: "\\text{h}" },
+  hr:   { dim: "T", scale: 3600.0, tex: "\\text{h}" },
 
-  { from: "W",   to: "kW",  factor: 1 / 1000, latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" },
-  { from: "kW",  to: "W",   factor: 1000,     latex: "\\frac{1000\\,\\cancel{\\text{W}}}{1\\,\\cancel{\\text{kW}}}" },
-  { from: "kW",  to: "MW",  factor: 1 / 1000, latex: "\\frac{1\\text{ MW}}{1000\\,\\cancel{\\text{kW}}}" },
-  { from: "hp",  to: "ftlb_min", factor: 33000, latex: "\\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}}" },
+  // Force (base: N)
+  N:    { dim: "F", scale: 1.0, tex: "\\text{N}" },
+  kN:   { dim: "F", scale: 1000.0, tex: "\\text{kN}" },
+  lb:   { dim: "F", scale: 4.4482216, tex: "\\text{lb}" },
 
-  { from: "kPa", to: "MPa", factor: 1 / 1000, latex: "\\frac{1\\text{ MPa}}{1000\\,\\cancel{\\text{kPa}}}" },
-  { from: "bar", to: "kPa", factor: 100,      latex: "\\frac{100\\text{ kPa}}{1\\,\\cancel{\\text{bar}}}" },
-  { from: "L",   to: "m^3", factor: 1 / 1000, latex: "\\frac{1\\text{ m}^3}{1000\\,\\cancel{\\text{L}}}" }
-]);
+  // Mass (base: kg)
+  kg:   { dim: "M", scale: 1.0, tex: "\\text{kg}" },
+  g:    { dim: "M", scale: 0.001, tex: "\\text{g}" },
+  lb_m: { dim: "M", scale: 0.45359237, tex: "\\text{lb}_m" },
 
-export function findConversion(fromU, toU) {
-  if (fromU === toU) return null;
-  const direct = ATOMIC_CONVERSIONS.find(c => c.from === fromU && c.to === toU);
-  if (direct) return direct;
+  // Temperature (base: K)
+  K:    { dim: "Th", scale: 1.0, tex: "\\text{K}" },
+  "°C": { dim: "Th", scale: 1.0, tex: "^\\circ\\text{C}" },
 
-  const inv = ATOMIC_CONVERSIONS.find(c => c.from === toU && c.to === fromU);
-  if (inv) {
+  // Count / Entities
+  teeth:{ dim: "C", scale: 1.0, tex: "\\text{teeth}" },
+  rad:  { dim: "C", scale: 1.0, tex: "\\text{rad}" },
+  rev:  { dim: "C", scale: 1.0, tex: "\\text{rev}" },
+  "°":  { dim: "C", scale: Math.PI / 180, tex: "°" },
+  deg:  { dim: "C", scale: Math.PI / 180, tex: "°" }
+});
+
+export const COMPOUND_UNITS = Object.freeze({
+  psi:      { atoms: { lb: 1, in: -2 }, displayTex: "\\text{psi}" },
+  MPa:      { atoms: { N: 1, mm: -2 }, displayTex: "\\text{MPa}" },
+  Pa:       { atoms: { N: 1, m: -2 }, displayTex: "\\text{Pa}" },
+  kPa:      { atoms: { kN: 1, m: -2 }, displayTex: "\\text{kPa}" },
+  bar:      { factor: 100000, atoms: { N: 1, m: -2 }, displayTex: "\\text{bar}" },
+
+  "N-m":    { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
+  "N*m":    { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
+  "kN-m":   { atoms: { kN: 1, m: 1 }, displayTex: "\\text{kN}\\cdot\\text{m}" },
+  "lb-in":  { atoms: { lb: 1, in: 1 }, displayTex: "\\text{lb}\\cdot\\text{in}" },
+  "lb-ft":  { atoms: { lb: 1, ft: 1 }, displayTex: "\\text{lb}\\cdot\\text{ft}" },
+  J:        { atoms: { N: 1, m: 1 }, displayTex: "\\text{J}" },
+  kJ:       { factor: 1000, atoms: { N: 1, m: 1 }, displayTex: "\\text{kJ}" },
+
+  W:        { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{W}" },
+  kW:       { factor: 1000, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{kW}" },
+  MW:       { factor: 1e6, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{MW}" },
+  hp:       { factor: 33000, atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\text{hp}" },
+
+  "m/s":    { atoms: { m: 1, s: -1 }, displayTex: "\\frac{\\text{m}}{\\text{s}}" },
+  "ft/min": { atoms: { ft: 1, min: -1 }, displayTex: "\\frac{\\text{ft}}{\\text{min}}" },
+
+  "teeth/in": { atoms: { teeth: 1, in: -1 }, displayTex: "\\frac{\\text{teeth}}{\\text{in}}" },
+  rpm:      { atoms: { min: -1 }, displayTex: "\\text{rpm}" },
+  "rev/min":{ atoms: { rev: 1, min: -1 }, displayTex: "\\frac{\\text{rev}}{\\text{min}}" },
+
+  "kg/s":   { atoms: { kg: 1, s: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{s}}" },
+  "kg/h":   { atoms: { kg: 1, h: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{h}}" },
+  "kJ/kg":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1 }, displayTex: "\\frac{\\text{kJ}}{\\text{kg}}" },
+  "m^3":    { atoms: { m: 3 }, displayTex: "\\text{m}^3" },
+  L:        { factor: 0.001, atoms: { m: 3 }, displayTex: "\\text{L}" },
+  "m^3/s":  { atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{m}^3}{\\text{s}}" },
+  "L/s":    { factor: 0.001, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{s}}" }
+});
+
+export function getUnitAtomBag(uName) {
+  if (!uName || uName === "dimless" || uName === "ratio" || uName === "%") {
+    return { factor: 1.0, atoms: {}, dimMap: {}, scale: 1.0, isDimensionless: true };
+  }
+
+  if (COMPOUND_UNITS[uName]) {
+    const c = COMPOUND_UNITS[uName];
+    const factor = c.factor || 1.0;
+    const atoms = { ...c.atoms };
+    let scale = factor;
+    const dimMap = {};
+
+    for (const [aName, p] of Object.entries(atoms)) {
+      const base = ATOMIC_BASE_UNITS[aName];
+      if (base) {
+        dimMap[base.dim] = (dimMap[base.dim] || 0) + p;
+        scale *= Math.pow(base.scale, p);
+      }
+    }
+    return { factor, atoms, dimMap, scale, isDimensionless: false, displayTex: c.displayTex };
+  }
+
+  if (ATOMIC_BASE_UNITS[uName]) {
+    const base = ATOMIC_BASE_UNITS[uName];
     return {
-      from: fromU,
-      to: toU,
-      factor: 1 / inv.factor,
-      latex: `\\frac{1\\text{ ${toU}}}{${inv.factor}\\,\\cancel{\\text{${fromU}}}}`
+      factor: 1.0,
+      atoms: { [uName]: 1 },
+      dimMap: { [base.dim]: 1 },
+      scale: base.scale,
+      isDimensionless: false,
+      displayTex: base.tex
     };
   }
-  return null;
+
+  return { factor: 1.0, atoms: {}, dimMap: {}, scale: 1.0, isDimensionless: true };
 }
 
+export function isDimEqual(aMap, bMap) {
+  const allDims = new Set([...Object.keys(aMap || {}), ...Object.keys(bMap || {})]);
+  for (const d of allDims) {
+    if ((aMap?.[d] || 0) !== (bMap?.[d] || 0)) return false;
+  }
+  return true;
+}
+
+// ========================================================
+// 5. AST ATOMIC UNIT COLLECTOR & CANCELLATION ENGINE
+// ========================================================
+
 function evalExprUnitAST(node, S, varsDb) {
-  if (!node) return { dim: makeDim(), scale: 1.0, components: [] };
+  if (!node) return { factor: 1.0, atoms: [] };
 
   if (node.type === "num") {
-    return { dim: makeDim(), scale: 1.0, components: [] };
+    return { factor: 1.0, atoms: [] };
   }
 
   if (node.type === "id") {
     const canonicalKey = resolveCanonicalKey(node.name, varsDb);
     const uName = S._u?.[canonicalKey] || S._u?.[node.name] || varsDb[canonicalKey]?.unit || varsDb[node.name]?.unit || "dimless";
-    const info = UNIT_ALGEBRA_DB[uName] || { dim: makeDim(), scale: 1.0, tex: uName };
+    const bag = getUnitAtomBag(uName);
 
-    const comps = [];
-    if (info.components) {
-      for (const [baseType, u] of Object.entries(info.components)) {
-        comps.push({ token: node.name, canonicalKey, baseType, unit: u, power: 1 });
-      }
-    } else if (info.baseType) {
-      comps.push({ token: node.name, canonicalKey, baseType: info.baseType, unit: info.unitName || uName, power: 1 });
+    const atoms = [];
+    for (const [aName, p] of Object.entries(bag.atoms)) {
+      const base = ATOMIC_BASE_UNITS[aName];
+      atoms.push({
+        token: node.name,
+        canonicalKey,
+        unitName: uName,
+        atom: aName,
+        dim: base?.dim || "custom",
+        scale: base?.scale || 1.0,
+        power: p,
+        tex: base?.tex || `\\text{${aName}}`
+      });
     }
 
-    return {
-      dim: info.dim,
-      scale: info.scale,
-      components: comps
-    };
+    return { factor: bag.factor, atoms };
   }
 
   if (node.type === "group") {
@@ -704,17 +630,13 @@ function evalExprUnitAST(node, S, varsDb) {
 
   if (node.type === "call") {
     if (["sin", "cos", "tan", "atan", "acos", "asin"].includes(node.fn)) {
-      return { dim: makeDim(), scale: 1.0, components: [] };
+      return { factor: 1.0, atoms: [] };
     }
     if (node.fn === "sqrt") {
       const inner = evalExprUnitAST(node.arg, S, varsDb);
-      const halfDim = {
-        M: inner.dim.M / 2, L: inner.dim.L / 2, T: inner.dim.T / 2, Th: inner.dim.Th / 2, C: inner.dim.C / 2
-      };
       return {
-        dim: halfDim,
-        scale: Math.sqrt(inner.scale),
-        components: inner.components.map(c => ({ ...c, power: c.power / 2 }))
+        factor: Math.sqrt(inner.factor),
+        atoms: inner.atoms.map(a => ({ ...a, power: a.power / 2 }))
       };
     }
     return evalExprUnitAST(node.arg, S, varsDb);
@@ -726,18 +648,16 @@ function evalExprUnitAST(node, S, varsDb) {
 
     if (node.op === "*") {
       return {
-        dim: addDim(left.dim, right.dim),
-        scale: left.scale * right.scale,
-        components: [...left.components, ...right.components]
+        factor: left.factor * right.factor,
+        atoms: [...left.atoms, ...right.atoms]
       };
     }
 
     if (node.op === "/") {
-      const invRightComps = right.components.map(c => ({ ...c, power: -c.power }));
+      const invRightAtoms = right.atoms.map(a => ({ ...a, power: -a.power }));
       return {
-        dim: subDim(left.dim, right.dim),
-        scale: left.scale / right.scale,
-        components: [...left.components, ...invRightComps]
+        factor: left.factor / right.factor,
+        atoms: [...left.atoms, ...invRightAtoms]
       };
     }
 
@@ -746,13 +666,16 @@ function evalExprUnitAST(node, S, varsDb) {
     }
   }
 
-  return { dim: makeDim(), scale: 1.0, components: [] };
+  return { factor: 1.0, atoms: [] };
 }
 
+/**
+ * Universal Data-Driven Unit Algebra Solver.
+ * Evaluates units purely through atomic unit-bags and dimensional mathematics.
+ * Zero hardcoded unit branches.
+ */
 export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const ast = parseMathAST(exprStr);
-  const canceledTokens = new Set();
-  const subTokenCancellations = {};
   const selectedConversions = [];
   const preConversions = [];
 
@@ -772,10 +695,18 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
       const currentU = S._u?.[canonicalKey] || S._u?.[tok] || varsDb[canonicalKey]?.unit || varsDb[tok]?.unit || "";
 
       if (currentU && reqU && currentU !== reqU && currentU !== "deg" && reqU !== "°") {
-        const conv = findConversion(currentU, reqU);
-        if (conv) {
+        const currentBag = getUnitAtomBag(currentU);
+        const reqBag = getUnitAtomBag(reqU);
+
+        if (isDimEqual(currentBag.dimMap, reqBag.dimMap)) {
+          const ratio = currentBag.scale / reqBag.scale;
+          const conv = {
+            factor: ratio,
+            latex: `\\frac{1\\text{ ${reqU}}}{${(1 / ratio).toFixed(4).replace(/\\.0+$/, "")}\\,\\cancel{\\text{${currentU}}}}`
+          };
           const rawVal = S[canonicalKey] !== undefined ? S[canonicalKey] : S[tok];
-          const convertedVal = rawVal * conv.factor;
+          const convertedVal = rawVal * ratio;
+
           preConversions.push({
             token: tok,
             canonicalKey,
@@ -790,8 +721,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
     });
 
     return {
-      canceledTokens,
-      subTokenCancellations,
+      tokenMarkup: {},
       conversionFactors: [],
       conversionFactorTex: "",
       preConversions
@@ -799,71 +729,145 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
   }
 
   // ========================================================
-  // B. DIMENSIONALLY HOMOGENEOUS AST ANALYSIS
+  // B. PURE ATOMIC UNIT ANALYSIS (ZERO HARDCODED UNIT NAMES)
   // ========================================================
   const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
-  const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { dim: makeDim(), scale: 1.0, tex: targetUnit };
+  const targetBag = getUnitAtomBag(targetUnit);
 
-  if (isDimEqual(exprAnalysis.dim, targetInfo.dim)) {
-    const ratio = targetInfo.scale / exprAnalysis.scale;
+  const targetWantsTeeth = (targetBag.atoms["teeth"] || 0) > 0;
+  const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false, preserved: false }));
 
-    if (Math.abs(ratio - 1.0) > 1e-4) {
-      exprAnalysis.components.forEach(comp => {
-        if (comp.baseType === "length") {
-          let targetLengthU = targetInfo.components?.length;
-          if (!targetLengthU && targetInfo.baseType === "length") targetLengthU = targetInfo.unitName;
+  // PASS 1: Direct Identical Atom Cancellation (Opposite Powers)
+  for (let i = 0; i < atomList.length; i++) {
+    for (let j = i + 1; j < atomList.length; j++) {
+      const a1 = atomList[i];
+      const a2 = atomList[j];
 
-          if (targetLengthU && comp.unit !== targetLengthU) {
-            let conv = null;
-            if (comp.power < 0) {
-              if (comp.unit === "mm" && targetLengthU === "in") {
-                conv = { latex: "\\frac{25.4\\,\\cancel{\\text{mm}}}{1\\text{ in}}" };
-              } else if (comp.unit === "in" && targetLengthU === "mm") {
-                conv = { latex: "\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}" };
-              } else if (comp.unit === "m" && targetLengthU === "mm") {
-                conv = { latex: "\\frac{1\\,\\cancel{\\text{m}}}{1000\\text{ mm}}" };
-              }
-            } else {
-              if (comp.unit === "mm" && targetLengthU === "m") {
-                conv = { latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" };
-              } else if (comp.unit === "in" && targetLengthU === "ft") {
-                conv = { latex: "\\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}" };
-              } else if (comp.unit === "in" && targetLengthU === "mm") {
-                conv = { latex: "\\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}" };
-              }
-            }
-
-            if (conv) {
-              selectedConversions.push(conv);
-              canceledTokens.add(comp.token);
-            }
-          }
-        }
-
-        if (comp.baseType === "time") {
-          let targetTimeU = targetInfo.components?.time;
-          if (!targetTimeU && targetInfo.baseType === "time") targetTimeU = targetInfo.unitName;
-
-          if (targetTimeU && comp.unit !== targetTimeU) {
-            if (comp.unit === "min" && targetTimeU === "s") {
-              selectedConversions.push({ latex: "\\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}" });
-              subTokenCancellations[comp.token] = { cancelMin: true };
-            }
-          }
-        }
-      });
-
-      if (targetUnit === "kW" && Math.abs(ratio - 0.001) < 1e-5) {
-        selectedConversions.push({ latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" });
-      } else if (targetUnit === "hp" && exprAnalysis.scale < 10) {
-        selectedConversions.push({ latex: "\\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}" });
+      if (a1.atom === a2.atom && a1.power * a2.power < 0 && !a1.canceled && !a2.canceled) {
+        a1.canceled = true;
+        a2.canceled = true;
       }
     }
   }
 
+  // PASS 2: Goal Unit Preservation
+  atomList.forEach(a => {
+    if (!a.canceled) {
+      if (a.atom === "teeth") {
+        if (targetWantsTeeth) {
+          a.preserved = true;
+        } else {
+          a.canceled = true; // entity count drops out
+        }
+      }
+    }
+  });
+
+  // PASS 3: Internal Same-Dimension Clash (e.g. Length in Numerator vs Length in Denominator)
+  const remainingAtoms = atomList.filter(a => !a.canceled && !a.preserved);
+  const dimsPresent = Array.from(new Set(remainingAtoms.map(a => a.dim)));
+
+  dimsPresent.forEach(dim => {
+    const dimAtoms = remainingAtoms.filter(a => a.dim === dim);
+    const pos = dimAtoms.find(a => a.power > 0);
+    const neg = dimAtoms.find(a => a.power < 0);
+
+    if (pos && neg && pos.atom !== neg.atom) {
+      const ratio = pos.scale / neg.scale;
+      let convLatex = "";
+
+      if (ratio < 1) {
+        const factor = (1 / ratio).toFixed(4).replace(/\.?0+$/, "");
+        convLatex = `\\frac{1\\,\\cancel{\\text{${neg.atom}}}}{${factor}\\,\\cancel{\\text{${pos.atom}}}}`;
+      } else {
+        const factor = ratio.toFixed(4).replace(/\.?0+$/, "");
+        convLatex = `\\frac{${factor}\\,\\cancel{\\text{${neg.atom}}}}{1\\,\\cancel{\\text{${pos.atom}}}}`;
+      }
+
+      selectedConversions.push({ latex: convLatex });
+      pos.canceled = true;
+      neg.canceled = true;
+    }
+  });
+
+  // PASS 4: Target Unit Reconciliation (Expr Atoms vs Target Atoms)
+  const netExprDims = {};
+  let netExprScale = exprAnalysis.factor;
+
+  atomList.filter(a => !a.canceled).forEach(a => {
+    netExprDims[a.dim] = (netExprDims[a.dim] || 0) + a.power;
+    netExprScale *= Math.pow(a.scale, a.power);
+  });
+
+  if (isDimEqual(netExprDims, targetBag.dimMap)) {
+    const scaleRatio = targetBag.scale / netExprScale;
+
+    if (Math.abs(scaleRatio - 1.0) > 1e-4) {
+      const uncanceled = atomList.filter(a => !a.canceled && !a.preserved);
+
+      uncanceled.forEach(a => {
+        for (const [tAtom, tPower] of Object.entries(targetBag.atoms)) {
+          const tBase = ATOMIC_BASE_UNITS[tAtom];
+
+          if (tBase && tBase.dim === a.dim && Math.abs(tPower - a.power) < 1e-4 && a.atom !== tAtom) {
+            let convLatex = "";
+            if (a.power < 0) {
+              const ratio = tBase.scale / a.scale;
+              convLatex = ratio > 1
+                ? `\\frac{${ratio.toFixed(4).replace(/\.?0+$/, "")}\\,\\cancel{\\text{${a.atom}}}}{1\\text{ ${tAtom}}}`
+                : `\\frac{1\\,\\cancel{\\text{${a.atom}}}}{${(1 / ratio).toFixed(4).replace(/\.?0+$/, "")}\\text{ ${tAtom}}}`;
+            } else {
+              const ratio = a.scale / tBase.scale;
+              convLatex = ratio > 1
+                ? `\\frac{${ratio.toFixed(4).replace(/\.?0+$/, "")}\\text{ ${tAtom}}}{1\\,\\cancel{\\text{${a.atom}}}}`
+                : `\\frac{1\\text{ ${tAtom}}}{${(1 / ratio).toFixed(4).replace(/\.?0+$/, "")}\\,\\cancel{\\text{${a.atom}}}}`;
+            }
+
+            selectedConversions.push({ latex: convLatex });
+            a.canceled = true;
+          }
+        }
+      });
+    }
+  }
+
+  // BUILD INDIVIDUAL TOKEN UNIT MARKUP DIRECTLY FROM ATOMS
+  const tokenMarkup = {};
+  const tokenGroups = {};
+
+  atomList.forEach(a => {
+    if (!tokenGroups[a.token]) tokenGroups[a.token] = [];
+    tokenGroups[a.token].push(a);
+  });
+
+  for (const [tok, atoms] of Object.entries(tokenGroups)) {
+    const uName = atoms[0]?.unitName;
+    const compound = COMPOUND_UNITS[uName];
+
+    if (!compound) {
+      const a = atoms[0];
+      tokenMarkup[tok] = a.canceled ? `\\cancel{${a.tex}}` : a.tex;
+      continue;
+    }
+
+    const numAtoms = atoms.filter(a => a.power > 0);
+    const denAtoms = atoms.filter(a => a.power < 0);
+
+    const formatAtom = a => a.canceled ? `\\cancel{${a.tex}}` : a.tex;
+
+    const numStr = numAtoms.map(formatAtom).join("\\cdot");
+    const denStr = denAtoms.map(formatAtom).join("\\cdot");
+    const prefix = compound.factor && compound.factor !== 1 ? `${compound.factor}\\,` : "";
+
+    if (denAtoms.length > 0) {
+      tokenMarkup[tok] = `\\frac{${prefix}${numStr || "1"}}{${denStr}}`;
+    } else {
+      tokenMarkup[tok] = `${prefix}${numStr}`;
+    }
+  }
+
   return {
-    canceledTokens,
-    subTokenCancellations,
+    tokenMarkup,
     conversionFactors: selectedConversions,
     conversionFactorTex: selectedConversions.map(cf => ` \\cdot ${cf.latex}`).join(""),
     preConversions
