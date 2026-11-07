@@ -1,7 +1,7 @@
 /**
  * src/core/graph_solver.js
  * Formulas-as-Nodes / Variables-as-Edges Solver Engine.
- * Supports sequential DAG propagation AND simultaneous systems of equations (2x2 parallel edges).
+ * Supports directional solvability whitelists (solvable: [...]) to protect empirical equations.
  */
 
 import { isolateVariable } from "./cas.js";
@@ -26,8 +26,13 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
       const unknowns = eq.nodes.filter(n => !known.has(n));
       if (unknowns.length === 1) {
         const targetVar = unknowns[0];
-        const inputVars = eq.nodes.filter(n => n !== targetVar);
 
+        // Check if equation restricts which variables it can be solved for
+        if (eq.solvable && !eq.solvable.includes(targetVar)) {
+          continue;
+        }
+
+        const inputVars = eq.nodes.filter(n => n !== targetVar);
         const baseFormula = eq.baseFormula || (eq.canonical ? `${eq.canonical.lhs} = ${eq.canonical.rhs}` : "");
         const isolated = isolateVariable(baseFormula, targetVar, varsDb);
         const expectedVal = S[targetVar] !== undefined ? S[targetVar] : S[targetVar.replace(/_/g, "")];

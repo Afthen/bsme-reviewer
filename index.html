@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Machine Design Reviewer & Graph Solver</title>
+  <title>Engineering Reviewer & Graph Solver</title>
   
   <!-- Math & Symbolic Dependencies -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
@@ -85,6 +85,16 @@
       font-weight: 600;
       cursor: pointer;
       outline: none;
+    }
+    .select-topic optgroup {
+      background: var(--panel);
+      color: var(--accent-math);
+      font-weight: 700;
+    }
+    .select-topic option {
+      background: var(--card);
+      color: #fff;
+      font-weight: 500;
     }
     .select-topic:focus { border-color: var(--accent-math); }
 
@@ -390,8 +400,7 @@
     <div class="header-left">
       <button class="btn" id="btn-hamburger">☰ Mastery</button>
       <select id="topic-selector" class="select-topic">
-        <option value="spur_gears">Spur Gears</option>
-        <option value="helical_gears">Helical Gears</option>
+        <!-- Dynamically populated with subject optgroups by app.js -->
       </select>
     </div>
     <div class="header-actions">

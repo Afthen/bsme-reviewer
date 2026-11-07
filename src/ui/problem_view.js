@@ -1,13 +1,13 @@
 /**
  * src/ui/problem_view.js
- * Interactive problem presenter, dynamic schema resolver, and derivation renderer.
+ * Interactive problem presenter with adaptive relative error checks.
  */
 
 import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
-  incrementGlobalTick, PHI_INV8, getDecayedMastery
+  incrementTopicTick, PHI_INV8, getDecayedMastery
 } from "../repetition/mastery.js";
 import { attachTooltips } from "./carousel_view.js";
 import { renderMasteryBars } from "./sidebar_view.js";
@@ -43,7 +43,6 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
     const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
     
-    // Construct the interactive token span directly so LaTeX braces inside symbols (like P_{dn}) never get corrupted
     const symSpan = `<span class="interactive-var" data-var="${step.targetVar}">$${meta.symbol || step.targetVar}$</span>`;
     const labelText = targetLabel(meta.name, symSpan, unit);
 
@@ -160,15 +159,27 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
   const raw = inputEl.value.trim();
   if (raw === "") return revealStepAnswer(idx, inputEl, activeProblem, relations, topicId);
 
-  incrementGlobalTick();
+  incrementTopicTick(topicId);
   const val = parseFloat(raw);
   if (isNaN(val)) return;
 
   const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
   const expected = step.expectedVal;
-  const tol = meta.isInteger ? 0.5 : Math.max(PHI_INV8 * Math.abs(expected), 0.05);
-  const isCorrect = Math.abs(val - expected) <= tol;
 
+  // Adaptive relative tolerance:
+  // 1. Integer quantities (teeth, cylinders) get +/- 0.5 rounding window.
+  // 2. Custom tolerance defined in schema gets precedence.
+  // 3. Otherwise, use PHI_INV8 (~2.13% relative error) with a 1e-4 numeric epsilon floor.
+  let tol;
+  if (meta.isInteger) {
+    tol = 0.5;
+  } else if (typeof meta.tolerance === "number") {
+    tol = meta.tolerance;
+  } else {
+    tol = Math.max(PHI_INV8 * Math.abs(expected), 1e-4);
+  }
+
+  const isCorrect = Math.abs(val - expected) <= tol;
   inputEl.classList.remove("state-correct", "state-wrong", "shake-trigger");
 
   if (isCorrect) {
@@ -176,19 +187,30 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
     inputEl.disabled = true;
     step.isAnswered = true;
     step.userVal = val;
-    recordAttempt(step.eqId, true, topicId);
+    
+    // Credit both equations if this was a coupled system
+    if (step.systemEqIds) {
+      step.systemEqIds.forEach(id => recordAttempt(id, true, topicId));
+    } else {
+      recordAttempt(step.eqId, true, topicId);
+    }
+    
     reinforceAncestors(step.fadedAncestorEqIds || [], topicId);
     document.getElementById(`step-item-${idx}`).classList.add("open");
   } else {
     inputEl.classList.add("state-wrong", "shake-trigger");
-    recordAttempt(step.eqId, false, topicId);
+    if (step.systemEqIds) {
+      step.systemEqIds.forEach(id => recordAttempt(id, false, topicId));
+    } else {
+      recordAttempt(step.eqId, false, topicId);
+    }
     penalizeAncestors(step.fadedAncestorEqIds || [], topicId);
     setTimeout(() => inputEl.classList.remove("shake-trigger"), 400);
   }
 
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
-  renderMasteryBars(relations, getDecayedMastery);
+  renderMasteryBars(relations, id => getDecayedMastery(id, topicId));
   updateToggleAllButton(activeProblem);
 }
 
@@ -201,13 +223,17 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
   inputEl.classList.add("state-revealed");
   inputEl.disabled = true;
 
-  recordAttempt(step.eqId, false, topicId);
+  if (step.systemEqIds) {
+    step.systemEqIds.forEach(id => recordAttempt(id, false, topicId));
+  } else {
+    recordAttempt(step.eqId, false, topicId);
+  }
   penalizeAncestors(step.fadedAncestorEqIds || [], topicId);
 
   document.getElementById(`step-item-${idx}`).classList.add("open");
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
-  renderMasteryBars(relations, getDecayedMastery);
+  renderMasteryBars(relations, id => getDecayedMastery(id, topicId));
   updateToggleAllButton(activeProblem);
 }
 
@@ -223,7 +249,7 @@ function renderDistractorBanner(activeProblem) {
       return `<strong>${meta.name} ($${meta.symbol}$)</strong>`;
     }).join(", ");
     banner.style.display = "block";
-    banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that ${list} was given in the specifications but was not needed in the solution path. Exams often supply extra parameters to test whether you choose the correct relations.`;
+    banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that ${list} was given in the specifications but was not needed in the solution path. Board exams often supply extra parameters to test whether you choose the correct relations.`;
 
     if (window.renderMathInElement) {
       window.renderMathInElement(banner, {

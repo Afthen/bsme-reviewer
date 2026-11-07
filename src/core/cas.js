@@ -1,114 +1,64 @@
 /**
  * src/core/cas.js
  * Universal Computer Algebra System (CAS) with Semantic & Physical Unit Algebra.
+ * Decoupled from topic-specific symbols; handles reserved words (E, I) safely.
  */
 
-export const SYMBOL_TO_KEY = Object.freeze({
-  "v": "V_m", "Vm": "V_m", "V_m": "V_m",
-  "D1": "D_P1", "D_1": "D_P1", "D_P1": "D_P1", "DP1": "D_P1",
-  "D2": "D_P2", "D_2": "D_P2", "D_P2": "D_P2", "DP2": "D_P2",
-  "D": "D_P", "D_P": "D_P", "DP": "D_P",
-  "Dr": "D_r", "D_r": "D_r",
-  "Db": "D_b", "D_b": "D_b",
-  "Do": "D_o", "D_o": "D_o",
-  "Ft": "W_t", "F_t": "W_t", "Wt": "W_t", "W_t": "W_t",
-  "Fr": "W_r", "F_r": "W_r", "Wr": "W_r", "W_r": "W_r",
-  "Fa": "F_a", "F_a": "F_a",
-  "Fn": "W", "F_n": "W", "W": "W",
-  "T": "M_t", "Mt": "M_t", "M_t": "M_t",
-  "SR": "VR", "VR": "VR",
-  "N1": "n_1", "n1": "n_1", "n_1": "n_1", "N_1": "n_1",
-  "N2": "n_2", "n2": "n_2", "n_2": "n_2", "N_2": "n_2",
-  "T1": "T_1", "T_1": "T_1",
-  "T2": "T_2", "T_2": "T_2",
-  "T": "T",
-  "Tv": "T_v", "T_v": "T_v", "Nev": "T_v",
-  "Pd": "P_d", "P_d": "P_d",
-  "Pdn": "P_dn", "P_dn": "P_dn",
-  "Pc": "P_c", "P_c": "P_c",
-  "Pcn": "P_cn", "P_cn": "P_cn",
-  "Pa": "P_a", "P_a": "P_a",
-  "Llead": "L_lead", "L_lead": "L_lead",
-  "mF": "m_F", "m_F": "m_F",
-  "hk": "h_k", "h_k": "h_k",
-  "c": "c", "h": "h", "a": "a", "d": "d", "t": "t",
-  "Sspace": "S_space", "S_space": "S_space",
-  "B": "B", "b": "b", "s": "s", "Y": "Y",
-  "yform": "y_form", "y_form": "y_form",
-  "Sn": "S_n", "S_n": "S_n",
-  "kf": "k_f", "k_f": "k_f",
-  "Fs": "F_s", "F_s": "F_s",
-  "FD": "F_D", "F_D": "F_D",
-  "Cd": "C_d", "C_d": "C_d",
-  "Fw": "F_w", "F_w": "F_w",
-  "Kw": "K_w", "K_w": "K_w", "kg": "K_w",
-  "Q": "Q",
-  "Nsf": "N_sf", "N_sf": "N_sf",
-  "C": "C", "P": "P", "m": "m", "mn": "m_n", "m_n": "m_n",
-  "phi": "phi", "phin": "phi_n", "phi_n": "phi_n", "psi": "psi"
-});
-
-export function getPossibleTokens(varKey) {
-  const matches = [];
-  for (const [sym, k] of Object.entries(SYMBOL_TO_KEY)) {
-    if (k === varKey) matches.push(sym);
-  }
-  return matches.length > 0 ? matches : [varKey];
-}
+// Nerdamer reserved identifiers in engineering contexts
+const RESERVED_CAS_WORDS = new Set(["E", "I"]);
 
 export function toCasToken(v) {
   if (!v) return "";
-  return v.replace(/[^a-zA-Z0-9]/g, "");
+  const clean = v.replace(/[^a-zA-Z0-9]/g, "");
+  return RESERVED_CAS_WORDS.has(clean) ? `_${clean}_` : clean;
+}
+
+export function fromCasToken(v) {
+  if (!v) return "";
+  return v.replace(/^_([EI])_$/, "$1");
 }
 
 export function sanitizeExpr(exprStr) {
   if (!exprStr) return "";
-  return exprStr.replace(/([a-zA-Z]+)_(\w+)/g, "$1$2");
+  let s = exprStr.replace(/([a-zA-Z]+)_(\w+)/g, "$1$2");
+  s = s.replace(/\bE\b/g, "_E_").replace(/\bI\b/g, "_I_");
+  return s;
 }
 
+/**
+ * Converts CAS expressions to KaTeX using dynamic symbol lookups from varsDb.
+ */
 export function casToTex(exprStr, varsDb = {}) {
   if (typeof nerdamer === "undefined" || !exprStr) return exprStr || "";
   try {
     let tex = nerdamer(sanitizeExpr(exprStr)).toTeX();
 
+    // Universal Greek & math replacements
     tex = tex.replace(/\bphi\b/g, "\\phi");
     tex = tex.replace(/\bphin\b/g, "\\phi_n");
     tex = tex.replace(/\bpsi\b/g, "\\psi");
+    tex = tex.replace(/\beta\b/g, "\\eta");
     tex = tex.replace(/(?<![a-zA-Z\\])pi(?![a-zA-Z])/g, "\\pi");
 
-    tex = tex.replace(/\bhk\b/g, "W_r");
-    tex = tex.replace(/\bPd\b/g, "P_d");
-    tex = tex.replace(/\bPdn\b/g, "P_{dn}");
-    tex = tex.replace(/\bPc\b/g, "P_c");
-    tex = tex.replace(/\bPcn\b/g, "P_{cn}");
-    tex = tex.replace(/\bPa\b/g, "P_a");
-    tex = tex.replace(/\bDo\b/g, "D_o");
-    tex = tex.replace(/\bDr\b/g, "D_r");
-    tex = tex.replace(/\bDb\b/g, "D_b");
-    tex = tex.replace(/\bFt\b/g, "F_t");
-    tex = tex.replace(/\bFn\b/g, "F_n");
-    tex = tex.replace(/\bFr\b/g, "F_r");
-    tex = tex.replace(/\bFa\b/g, "F_a");
-    tex = tex.replace(/\bFD\b/g, "F_D");
-    tex = tex.replace(/\bFs\b/g, "F_s");
-    tex = tex.replace(/\bFw\b/g, "F_w");
-    tex = tex.replace(/\bCd\b/g, "C_d");
-    tex = tex.replace(/\bKw\b/g, "K_w");
-    tex = tex.replace(/\bTv\b/g, "T_v");
-    tex = tex.replace(/\bMt\b/g, "T");
-    tex = tex.replace(/\bVm\b/g, "v");
-    tex = tex.replace(/\bVR\b/g, "\\text{SR}");
-    tex = tex.replace(/\bSR\b/g, "\\text{SR}");
+    // Dynamic schema replacement from varsDb
+    for (const [k, meta] of Object.entries(varsDb)) {
+      if (meta.symbol) {
+        const cleanK = k.replace(/[^a-zA-Z0-9]/g, "");
+        const re = new RegExp(`\\b${cleanK}\\b`, "g");
+        tex = tex.replace(re, meta.symbol);
+      }
+    }
 
-    tex = tex.replace(/\bn_?1\b/g, "N_1");
-    tex = tex.replace(/\bn_?2\b/g, "N_2");
-    tex = tex.replace(/\b([A-Za-z])(\d+)\b/g, "$1_{$2}");
+    // Clean up reserved word tokens
+    tex = tex.replace(/_E_/g, "E").replace(/_I_/g, "I");
 
+    // Inverse trig formatting
     tex = tex.replace(/\\text\{atan\}\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
     tex = tex.replace(/\\text\{acos\}\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
     tex = tex.replace(/atan\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
     tex = tex.replace(/acos\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
 
+    // Typography: spacing around operators
     tex = tex.replace(/\\cdot/g, " ");
     tex = tex.replace(/\*/g, " ");
     tex = tex.replace(/(\d+)\s+([a-zA-Z_\\])/g, "$1$2");
@@ -122,7 +72,8 @@ export function casToTex(exprStr, varsDb = {}) {
 export function simplifyExpression(exprStr) {
   if (typeof nerdamer === "undefined" || !exprStr) return exprStr;
   try {
-    return nerdamer(`simplify(${sanitizeExpr(exprStr)})`).text();
+    const text = nerdamer(`simplify(${sanitizeExpr(exprStr)})`).text();
+    return text.replace(/_E_/g, "E").replace(/_I_/g, "I");
   } catch {
     return exprStr;
   }
@@ -134,12 +85,9 @@ export function substituteExpression(exprStr, subsObj = {}) {
     const cleanSubs = {};
     for (const [k, v] of Object.entries(subsObj)) {
       cleanSubs[toCasToken(k)] = sanitizeExpr(v);
-      const tokens = getPossibleTokens(k);
-      tokens.forEach(tok => {
-        cleanSubs[toCasToken(tok)] = sanitizeExpr(v);
-      });
     }
-    return nerdamer(sanitizeExpr(exprStr), cleanSubs).text();
+    const res = nerdamer(sanitizeExpr(exprStr), cleanSubs).text();
+    return res.replace(/_E_/g, "E").replace(/_I_/g, "I");
   } catch {
     let result = exprStr;
     for (const [k, v] of Object.entries(subsObj)) {
@@ -154,40 +102,35 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   const rawLhs = parts[0]?.trim() || "";
   const rawRhs = parts[1]?.trim() || "";
 
-  const targetKey = SYMBOL_TO_KEY[targetVar] || targetVar;
-  const targetTex = varsDb[targetKey]?.symbol || targetVar;
+  const targetMeta = varsDb[targetVar] || {};
+  const targetTex = targetMeta.symbol || targetVar;
 
-  if (targetKey === "phi") {
-    if (rawRhs.includes("tan(phi)")) {
-      const coeff = rawRhs.replace(/(\*|\s)?tan\(phi\)/g, "").trim() || "1";
+  // Transcendental angle isolation helpers
+  if (targetVar === "phi" || targetVar === "psi" || targetVar === "phi_n") {
+    if (rawRhs.includes(`tan(${targetVar})`)) {
+      const coeff = rawRhs.replace(new RegExp(`(\\*|\\s)?tan\\(${targetVar}\\)`, "g"), "").trim() || "1";
       return {
         targetVar,
         isolatedRhs: `atan((${rawLhs}) / (${coeff}))`,
-        texEquation: `\\phi = \\tan^{-1}\\left(\\frac{${casToTex(rawLhs, varsDb)}}{${casToTex(coeff, varsDb)}}\\right)`
+        texEquation: `${targetTex} = \\tan^{-1}\\left(\\frac{${casToTex(rawLhs, varsDb)}}{${casToTex(coeff, varsDb)}}\\right)`
       };
     }
-    if (rawRhs.includes("cos(phi)")) {
-      const coeff = rawRhs.replace(/(\*|\s)?cos\(phi\)/g, "").trim() || "1";
+    if (rawRhs.includes(`cos(${targetVar})`)) {
+      const coeff = rawRhs.replace(new RegExp(`(\\*|\\s)?cos\\(${targetVar}\\)`, "g"), "").trim() || "1";
       return {
         targetVar,
         isolatedRhs: `acos((${rawLhs}) / (${coeff}))`,
-        texEquation: `\\phi = \\cos^{-1}\\left(\\frac{${casToTex(rawLhs, varsDb)}}{${casToTex(coeff, varsDb)}}\\right)`
+        texEquation: `${targetTex} = \\cos^{-1}\\left(\\frac{${casToTex(rawLhs, varsDb)}}{${casToTex(coeff, varsDb)}}\\right)`
       };
     }
   }
 
-  const possibleTokens = getPossibleTokens(targetVar);
   const sanitizedLhs = sanitizeExpr(rawLhs);
   const sanitizedRhs = sanitizeExpr(rawRhs);
   const sanitizedEq = `${sanitizedLhs} = ${sanitizedRhs}`;
+  const targetToken = toCasToken(targetVar);
 
-  const tokenInEq = possibleTokens.find(tok => {
-    const clean = toCasToken(tok);
-    const regex = new RegExp(`\\b${clean}\\b`);
-    return regex.test(sanitizedLhs) || regex.test(sanitizedRhs);
-  }) || toCasToken(targetVar);
-
-  if (toCasToken(rawLhs) === toCasToken(tokenInEq)) {
+  if (toCasToken(rawLhs) === targetToken) {
     const cleanRhs = simplifyExpression(rawRhs);
     return {
       targetVar,
@@ -198,8 +141,7 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
 
   if (typeof nerdamer !== "undefined") {
     try {
-      const cleanToken = toCasToken(tokenInEq);
-      const solutions = nerdamer.solveEquations(sanitizedEq, cleanToken);
+      const solutions = nerdamer.solveEquations(sanitizedEq, targetToken);
       if (solutions && solutions.length > 0) {
         let solText = solutions[0];
         if (typeof solText.text === "function") solText = solText.text();
@@ -223,40 +165,90 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   };
 }
 
+// ========================================================
+// 5. EXPANDED PHYSICAL & THERMODYNAMIC UNIT ALGEBRA
+// ========================================================
+
 export const UNIT_ALGEBRA_DB = Object.freeze({
+  // Discrete / Angular
   "teeth":    { sym: "su_teeth", dim: "entity", tex: "\\text{teeth}" },
   "rad":      { sym: "su_rad",   dim: "angular", tex: "\\text{rad}" },
   "rev":      { sym: "su_rev",   dim: "angular", tex: "\\text{rev}" },
   "deg":      { sym: "su_deg",   dim: "angular", tex: "^\\circ" },
+  "°":        { sym: "su_deg",   dim: "angular", tex: "^\\circ" },
 
+  // Length
   "mm":       { sym: "u_mm",     dim: "length",  base: "length", tex: "\\text{mm}" },
+  "cm":       { sym: "u_cm",     dim: "length",  base: "length", tex: "\\text{cm}" },
   "m":        { sym: "u_m",      dim: "length",  base: "length", tex: "\\text{m}" },
   "in":       { sym: "u_in",     dim: "length",  base: "length", tex: "\\text{in}" },
   "ft":       { sym: "u_ft",     dim: "length",  base: "length", tex: "\\text{ft}" },
 
+  // Time
   "s":        { sym: "u_s",      dim: "time",    base: "time",   tex: "\\text{s}" },
   "min":      { sym: "u_min",    dim: "time",    base: "time",   tex: "\\text{min}" },
+  "hr":       { sym: "u_hr",     dim: "time",    base: "time",   tex: "\\text{hr}" },
+  "h":        { sym: "u_hr",     dim: "time",    base: "time",   tex: "\\text{h}" },
 
+  // Mass
+  "kg":       { sym: "u_kg",     dim: "mass",    base: "mass",   tex: "\\text{kg}" },
+  "g":        { sym: "u_g",      dim: "mass",    base: "mass",   tex: "\\text{g}" },
+  "lb_m":     { sym: "u_lbm",    dim: "mass",    base: "mass",   tex: "\\text{lb}_m" },
+
+  // Force
   "N":        { sym: "u_N",      dim: "force",   base: "force",  tex: "\\text{N}" },
+  "kN":       { sym: "u_kN",     dim: "force",   base: "force",  tex: "\\text{kN}" },
   "lb":       { sym: "u_lb",     dim: "force",   base: "force",  tex: "\\text{lb}" },
 
+  // Velocity & Frequency
   "rpm":      { sym: "(su_rev / u_min)", dim: "rot_speed", hasTime: "u_min", hasSemantic: "su_rev", tex: "\\frac{\\text{rev}}{\\text{min}}" },
   "rev/min":  { sym: "(su_rev / u_min)", dim: "rot_speed", hasTime: "u_min", hasSemantic: "su_rev", tex: "\\frac{\\text{rev}}{\\text{min}}" },
-  "teeth/in": { sym: "(su_teeth / u_in)", dim: "pitch", hasLength: "u_in", hasSemantic: "su_teeth", tex: "\\frac{\\text{teeth}}{\\text{in}}" },
   "m/s":      { sym: "(u_m / u_s)", dim: "velocity", hasLength: "u_m", hasTime: "u_s", tex: "\\frac{\\text{m}}{\\text{s}}" },
   "ft/min":   { sym: "(u_ft / u_min)", dim: "velocity", hasLength: "u_ft", hasTime: "u_min", tex: "\\frac{\\text{ft}}{\\text{min}}" },
+  "teeth/in": { sym: "(su_teeth / u_in)", dim: "pitch", hasLength: "u_in", hasSemantic: "su_teeth", tex: "\\frac{\\text{teeth}}{\\text{in}}" },
 
+  // Torque
   "N-m":      { sym: "(u_N * u_m)", dim: "torque", hasForce: "u_N", hasLength: "u_m", tex: "\\text{N}\\cdot\\text{m}" },
+  "kN-m":     { sym: "(u_kN * u_m)", dim: "torque", tex: "\\text{kN}\\cdot\\text{m}" },
   "lb-in":    { sym: "(u_lb * u_in)", dim: "torque", hasForce: "u_lb", hasLength: "u_in", tex: "\\text{lb}\\cdot\\text{in}" },
+  "lb-ft":    { sym: "(u_lb * u_ft)", dim: "torque", hasForce: "u_lb", hasLength: "u_ft", tex: "\\text{lb}\\cdot\\text{ft}" },
 
+  // Power
   "W":        { sym: "u_W", dim: "power", tex: "\\text{W}" },
   "kW":       { sym: "u_kW", dim: "power", tex: "\\text{kW}" },
+  "MW":       { sym: "u_MW", dim: "power", tex: "\\text{MW}" },
   "hp":       { sym: "u_hp", dim: "power", tex: "\\text{hp}" },
 
+  // Pressure & Stress
+  "Pa":       { sym: "u_Pa", dim: "stress", tex: "\\text{Pa}" },
+  "kPa":      { sym: "u_kPa", dim: "stress", tex: "\\text{kPa}" },
+  "bar":      { sym: "u_bar", dim: "stress", tex: "\\text{bar}" },
   "MPa":      { sym: "u_MPa", dim: "stress", tex: "\\text{MPa}" },
   "psi":      { sym: "u_psi", dim: "stress", tex: "\\text{psi}" },
-  "Pa":       { sym: "u_Pa", dim: "stress", tex: "\\text{Pa}" },
 
+  // Volume & Volume Flow
+  "m^3":      { sym: "u_m3", dim: "volume", tex: "\\text{m}^3" },
+  "L":        { sym: "u_L", dim: "volume", tex: "\\text{L}" },
+  "m^3/s":    { sym: "(u_m3 / u_s)", dim: "vol_flow", tex: "\\frac{\\text{m}^3}{\\text{s}}" },
+  "m^3/min":  { sym: "(u_m3 / u_min)", dim: "vol_flow", tex: "\\frac{\\text{m}^3}{\\text{min}}" },
+  "L/s":      { sym: "(u_L / u_s)", dim: "vol_flow", tex: "\\frac{\\text{L}}{\\text{s}}" },
+
+  // Energy & Specific Energy
+  "J":        { sym: "u_J", dim: "energy", tex: "\\text{J}" },
+  "kJ":       { sym: "u_kJ", dim: "energy", tex: "\\text{kJ}" },
+  "kJ/kg":    { sym: "(u_kJ / u_kg)", dim: "spec_energy", tex: "\\frac{\\text{kJ}}{\\text{kg}}" },
+  "kJ/kg-K":  { sym: "u_cp", dim: "spec_heat", tex: "\\frac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
+
+  // Mass Flow & Specific Consumption
+  "kg/s":     { sym: "(u_kg / u_s)", dim: "mass_flow", tex: "\\frac{\\text{kg}}{\\text{s}}" },
+  "kg/h":     { sym: "(u_kg / u_hr)", dim: "mass_flow", tex: "\\frac{\\text{kg}}{\\text{h}}" },
+  "kg/kWh":   { sym: "u_sfc", dim: "sfc", tex: "\\frac{\\text{kg}}{\\text{kW}\\cdot\\text{h}}" },
+  "g/kWh":    { sym: "u_gsfc", dim: "sfc", tex: "\\frac{\\text{g}}{\\text{kW}\\cdot\\text{h}}" },
+
+  // Temperature & Dimensionless
+  "K":        { sym: "u_K", dim: "temp", tex: "\\text{K}" },
+  "deg C":    { sym: "u_degC", dim: "temp", tex: "^\\circ\\text{C}" },
+  "%":        { sym: "1", dim: "dimensionless", tex: "\\%" },
   "dimless":  { sym: "1", dim: "dimensionless", tex: "" },
   "ratio":    { sym: "1", dim: "dimensionless", tex: "" }
 });
@@ -271,10 +263,16 @@ export const ATOMIC_CONVERSIONS = Object.freeze([
 
   { from: "u_min", to: "u_s", factor: 1 / 60,   latex: "\\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}" },
   { from: "u_s",   to: "u_min", factor: 60,     latex: "\\frac{60\\,\\cancel{\\text{s}}}{1\\text{ min}}" },
+  { from: "u_hr",  to: "u_s", factor: 1 / 3600, latex: "\\frac{1\\,\\cancel{\\text{h}}}{3600\\text{ s}}" },
 
   { from: "u_W",   to: "u_kW", factor: 1 / 1000, latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" },
   { from: "u_kW",  to: "u_W",  factor: 1000,     latex: "\\frac{1000\\,\\cancel{\\text{W}}}{1\\,\\cancel{\\text{kW}}}" },
-  { from: "u_hp",  to: "u_ftlb_min", factor: 33000, latex: "\\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}}" }
+  { from: "u_kW",  to: "u_MW", factor: 1 / 1000, latex: "\\frac{1\\text{ MW}}{1000\\,\\cancel{\\text{kW}}}" },
+  { from: "u_hp",  to: "u_ftlb_min", factor: 33000, latex: "\\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}}" },
+
+  { from: "u_kPa", to: "u_MPa", factor: 1 / 1000, latex: "\\frac{1\\text{ MPa}}{1000\\,\\cancel{\\text{kPa}}}" },
+  { from: "u_bar", to: "u_kPa", factor: 100,      latex: "\\frac{100\\text{ kPa}}{1\\,\\cancel{\\text{bar}}}" },
+  { from: "u_L",   to: "u_m3",  factor: 1 / 1000, latex: "\\frac{1\\text{ m}^3}{1000\\,\\cancel{\\text{L}}}" }
 ]);
 
 export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}) {
@@ -284,8 +282,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
 
   const activeVarUnits = {};
   varTokens.forEach(tok => {
-    const k = SYMBOL_TO_KEY[tok] || tok;
-    const rawUnit = S._u?.[k] || varsDb[k]?.unit || "dimless";
+    const rawUnit = S._u?.[tok] || varsDb[tok]?.unit || "dimless";
     activeVarUnits[tok] = UNIT_ALGEBRA_DB[rawUnit] || { sym: rawUnit, dim: "custom", tex: `\\text{${rawUnit}}` };
   });
 
@@ -302,7 +299,6 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const hasFt = allActiveUnits.some(u => u.hasLength === "u_ft" || u.sym === "u_ft");
   const hasMeter = allActiveUnits.some(u => u.hasLength === "u_m" || u.sym === "u_m");
 
-  // 1. Internal Cross-Dimension Mismatches within the expression itself
   if (hasFt && hasIn) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_ft" && c.to === "u_in");
     if (conv) {
@@ -324,10 +320,8 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const targetNeedsSec = targetInfo.hasTime === "u_s" || targetUnit === "kW" || targetUnit === "W" || targetUnit === "N-m";
   const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m" || targetUnit === "kW" || targetUnit === "W";
   const targetNeedsInch = targetInfo.hasLength === "u_in" || targetUnit === "teeth/in";
-  const targetNeedsMm = targetInfo.hasLength === "u_mm" || targetUnit === "mm";
   const targetNeedsFt = targetInfo.hasLength === "u_ft" || targetUnit === "hp";
 
-  // 2. Time Matching against Target
   if (hasMin && targetNeedsSec) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_min" && c.to === "u_s");
     if (conv && !selectedConversions.includes(conv)) {
@@ -338,23 +332,11 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     }
   }
 
-  // 3. Length Matching against Target
   if (hasMm && targetNeedsMeter) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_mm" && c.to === "u_m");
     if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
-    }
-  } else if (hasMm && targetNeedsInch) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_mm");
-    if (conv && !selectedConversions.includes(conv)) {
-      selectedConversions.push(conv);
-      varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
-    }
-  } else if (hasIn && targetNeedsMm) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_mm");
-    if (conv && !selectedConversions.includes(conv)) {
-      selectedConversions.push(conv);
     }
   } else if (hasIn && targetNeedsFt) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_ft");
@@ -364,7 +346,6 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     }
   }
 
-  // 4. Power Matching
   if (targetUnit === "kW" && (hasMin || hasMm || allActiveUnits.some(u => u.sym === "u_N" || u.dim === "torque"))) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_W" && c.to === "u_kW");
     if (conv && !selectedConversions.includes(conv)) selectedConversions.push(conv);
@@ -378,8 +359,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     if (!selectedConversions.some(c => c.latex === conv.latex)) selectedConversions.push(conv);
   }
 
-  // 5. Dimensionless Ratio Cancellation
-  const isTargetDimless = !targetUnit || targetUnit === "dimless" || targetUnit === "ratio";
+  const isTargetDimless = !targetUnit || targetUnit === "dimless" || targetUnit === "ratio" || targetUnit === "%";
   if (isTargetDimless) {
     varTokens.forEach(tok => canceledTokens.add(tok));
   }

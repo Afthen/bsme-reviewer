@@ -1,14 +1,14 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * Pure AST tree-walker parser with ZERO regex replacements on LaTeX strings.
+ * AST tree-walker parser with dynamic topic symbol resolution.
  */
 
 import {
   casToTex, isolateVariable, substituteExpression,
-  simplifyExpression, SYMBOL_TO_KEY, solveUnitAlgebra, UNIT_ALGEBRA_DB
+  simplifyExpression, solveUnitAlgebra, UNIT_ALGEBRA_DB
 } from "./cas.js";
-import { fmtSigFig, cancelUnit } from "./dimensions.js";
+import { fmtSigFig } from "./dimensions.js";
 
 // ========================================================
 // 1. AST EXPRESSION PARSER
@@ -142,6 +142,15 @@ function stripOuterParens(texStr) {
   return s;
 }
 
+function toLatexSymbol(name, varsDb = {}) {
+  if (varsDb[name]?.symbol) return varsDb[name].symbol;
+  if (name === "pi") return "\\pi";
+  if (name === "phi") return "\\phi";
+  if (name === "phin" || name === "phi_n") return "\\phi_n";
+  if (name === "psi") return "\\psi";
+  return name;
+}
+
 function astToLatex(node, substituteMap = null, varsDb = {}) {
   if (!node) return "";
 
@@ -194,55 +203,15 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
   return "";
 }
 
-function toLatexSymbol(name, varsDb = {}) {
-  const k = SYMBOL_TO_KEY[name] || name;
-  if (varsDb[k]?.symbol) return varsDb[k].symbol;
-  if (name === "pi") return "\\pi";
-  if (name === "phi") return "\\phi";
-  if (name === "phin" || name === "phi_n") return "\\phi_n";
-  if (name === "psi") return "\\psi";
-  if (name === "Ft" || name === "F_t" || name === "Wt" || name === "W_t") return "F_t";
-  if (name === "Fn" || name === "F_n" || name === "W") return "F_n";
-  if (name === "Fr" || name === "F_r" || name === "Wr" || name === "W_r") return "F_r";
-  if (name === "Fa" || name === "F_a") return "F_a";
-  if (name === "FD" || name === "F_D") return "F_D";
-  if (name === "Fs" || name === "F_s") return "F_s";
-  if (name === "Fw" || name === "F_w") return "F_w";
-  if (name === "Cd" || name === "C_d") return "C_d";
-  if (name === "Kw" || name === "K_w") return "K_w";
-  if (name === "Pd" || name === "P_d") return "P_d";
-  if (name === "Pdn" || name === "P_dn") return "P_{dn}";
-  if (name === "Pc" || name === "P_c") return "P_c";
-  if (name === "Pcn" || name === "P_cn") return "P_{cn}";
-  if (name === "Pa" || name === "P_a") return "P_a";
-  if (name === "Do" || name === "D_o") return "D_o";
-  if (name === "Dr" || name === "D_r") return "D_r";
-  if (name === "Db" || name === "D_b") return "D_b";
-  if (name === "VR" || name === "SR") return "\\text{SR}";
-  if (name === "Mt" || name === "M_t") return "T";
-  if (name === "Vm" || name === "V_m") return "v";
-  if (name === "n1" || name === "n_1") return "N_1";
-  if (name === "n2" || name === "n_2") return "N_2";
-  if (name === "D1" || name === "D_1") return "D_1";
-  if (name === "D2" || name === "D_2") return "D_2";
-  if (name === "T1" || name === "T_1") return "T_1";
-  if (name === "T2" || name === "T_2") return "T_2";
-  if (name === "Tv" || name === "T_v" || name === "Nev") return "T_v";
-  if (name === "mF" || name === "m_F") return "m_F";
-  if (name === "Llead" || name === "L_lead") return "L";
-  return name;
-}
-
 // ========================================================
-// 2. UNIT FORMATTING (TIED TO CAS CONVERSION FACTORS)
+// 2. UNIT FORMATTING (CONNECTED TO CAS CONVERSIONS)
 // ========================================================
 
 function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   if (!unitKey || unitKey === "dimless" || unitKey === "ratio") return "";
-  if (unitKey === "deg") return "^\\circ";
+  if (unitKey === "deg" || unitKey === "°") return "^\\circ";
 
   const factors = unitAnalysis?.conversionFactors || [];
-
   const cancelsMin = factors.some(f => f.from === "u_min" || f.to === "u_min");
   const cancelsMm  = factors.some(f => f.from === "u_mm"  || f.to === "u_mm");
   const cancelsIn  = factors.some(f => f.from === "u_in"  || f.to === "u_in");
@@ -271,30 +240,24 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
     return `\\text{ teeth}`;
   }
 
-  if (unitKey === "teeth/in") {
-    if (cancelsIn) return `\\,\\frac{\\cancel{\\text{teeth}}}{\\cancel{\\text{in}}}`;
-    return `\\,\\frac{\\text{teeth}}{\\text{in}}`;
-  }
-
   const meta = UNIT_ALGEBRA_DB[unitKey];
   return meta?.tex ? `\\,${meta.tex}` : `\\text{ ${unitKey}}`;
 }
 
 // ========================================================
-// 3. MAIN EXPORT
+// 3. MAIN DERIVATION EXPORT
 // ========================================================
 
 export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, relations = [], answeredVars = new Set(), givens = []) {
   const targetVar = step.targetVar;
-  const targetKey = SYMBOL_TO_KEY[targetVar] || targetVar;
-  const targetMeta = varsDb[targetKey] || {};
+  const targetMeta = varsDb[targetVar] || {};
   const targetSym = targetMeta.symbol || targetVar;
-  const targetUnit = S._u?.[targetKey] || targetMeta.unit || "";
+  const targetUnit = S._u?.[targetVar] || targetMeta.unit || "";
   const formattedVal = fmtSigFig(step.expectedVal, 6);
 
   const knownVars = new Set([
-    ...Array.from(answeredVars).map(v => SYMBOL_TO_KEY[v] || v),
-    ...givens.map(g => SYMBOL_TO_KEY[g] || g)
+    ...Array.from(answeredVars),
+    ...givens
   ]);
 
   const eq = relations.find(r => r.id === step.eqId);
@@ -321,15 +284,13 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     const idTokens = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
     const mathConsts = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs"]);
     const unresolvedToken = idTokens.find(tok => {
-      const k = SYMBOL_TO_KEY[tok] || tok;
-      return !mathConsts.has(tok) && !knownVars.has(k) && k !== targetKey;
+      return !mathConsts.has(tok) && !knownVars.has(tok) && tok !== targetVar;
     });
 
     if (!unresolvedToken) break;
 
-    const unresolvedKey = SYMBOL_TO_KEY[unresolvedToken] || unresolvedToken;
-    const parentStep = allSteps.find(s => (SYMBOL_TO_KEY[s.targetVar] || s.targetVar) === unresolvedKey);
-    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedKey));
+    const parentStep = allSteps.find(s => s.targetVar === unresolvedToken);
+    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedToken));
 
     if (parentEq?.baseFormula) {
       const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedToken, varsDb);
@@ -359,7 +320,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   if (didSubstitute && intermediateSubFormulaTex) {
     lines.push(`&= ${intermediateSubFormulaTex}`);
-  } else if (SYMBOL_TO_KEY[currentLhs] !== targetKey) {
+  } else if (currentLhs !== targetVar) {
     const isolatedTarget = isolateVariable(`${currentLhs} = ${currentRhs}`, targetVar, varsDb);
     currentRhs = isolatedTarget.isolatedRhs;
     rhsAst = parseMathAST(currentRhs);
@@ -373,12 +334,11 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   activeIds.forEach(tok => {
     if (tok === "pi") return;
-    const varKey = SYMBOL_TO_KEY[tok] || tok;
-    const val = S[varKey] !== undefined ? S[varKey] : S[tok];
+    const val = S[tok];
     if (val === undefined || isNaN(val)) return;
 
-    const meta = varsDb[varKey] || {};
-    const unit = S._u?.[varKey] || meta.unit || "";
+    const meta = varsDb[tok] || {};
+    const unit = S._u?.[tok] || meta.unit || "";
     const formattedNum = fmtSigFig(val, 6);
     const unitTex = formatUnitMarkup(unit, tok, unitAnalysis);
 
