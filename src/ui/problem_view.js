@@ -1,11 +1,10 @@
 /**
  * src/ui/problem_view.js
- * Interactive problem presenter, step input validator, and derivation renderer.
- * Dynamically resolves metadata from the active topic schema.
+ * Interactive problem presenter, dynamic schema resolver, and derivation renderer.
  */
 
 import { buildAlignedDerivation } from "../core/derivation.js";
-import { targetLabel } from "../core/dimensions.js";
+import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
   incrementGlobalTick, PHI_INV8, getDecayedMastery
@@ -41,7 +40,6 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     chevron.className = "chevron";
     chevron.textContent = "▶";
 
-    // Dynamic schema resolution from active problem
     const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
     const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
     const rawTarget = targetLabel(meta.name, `{{${meta.symbol || step.targetVar}|${step.targetVar}}}`, unit);
@@ -62,7 +60,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     input.placeholder = "Enter value...";
 
     if (step.isAnswered) {
-      input.value = step.userVal !== undefined ? step.userVal : step.expectedVal;
+      input.value = step.userVal !== undefined ? step.userVal : fmtSigFig(step.expectedVal, 6);
       input.classList.add(step.isRevealed ? "state-revealed" : "state-correct");
       input.disabled = true;
       item.classList.add("open");
@@ -196,7 +194,7 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
   step.isAnswered = true;
   step.isRevealed = true;
   step.userVal = step.expectedVal;
-  inputEl.value = step.expectedVal;
+  inputEl.value = fmtSigFig(step.expectedVal, 6);
   inputEl.classList.add("state-revealed");
   inputEl.disabled = true;
 

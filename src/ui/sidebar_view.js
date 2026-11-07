@@ -1,6 +1,6 @@
 /**
  * src/ui/sidebar_view.js
- * Mastery progress visualization and sidebar drawer controller.
+ * Sidebar drawer controller with single-listener initialization guard.
  */
 
 import { FADING_THRESHOLD, PHI_INV2 } from "../repetition/mastery.js";
@@ -13,10 +13,7 @@ export function initSidebarView(relations = [], getMastery = () => 0) {
   activeRelations = relations;
   activeGetMastery = getMastery;
 
-  // Always re-render the bars with the new topic relations
   renderMasteryBars(activeRelations, activeGetMastery);
-
-  // Only bind the click event listeners ONCE to prevent instant-close bugs
   if (isInitialized) return;
 
   const drawer = document.getElementById("sidebar-drawer");
