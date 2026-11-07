@@ -93,7 +93,7 @@ function initApp() {
   loadMastery(currentTopic.id);
 
   initSidebarView(currentTopic.relations, getDecayedMastery);
-  initCarouselView(currentTopic.relations);
+  initCarouselView(currentTopic.relations, currentTopic.varsDb);
   renderMasteryBars(currentTopic.relations, getDecayedMastery);
 
   document.getElementById("btn-generate-next")?.addEventListener("click", generateNewProblem);
@@ -107,7 +107,7 @@ function initApp() {
         currentTopic = TOPICS[selectedId];
         loadMastery(currentTopic.id);
         initSidebarView(currentTopic.relations, getDecayedMastery);
-        initCarouselView(currentTopic.relations);
+        initCarouselView(currentTopic.relations, currentTopic.varsDb);
         renderMasteryBars(currentTopic.relations, getDecayedMastery);
         generateNewProblem();
       }
