@@ -120,7 +120,18 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
     if (node.op === "*") {
       const leftTex = astToLatex(node.left, substituteMap, varsDb);
       const rightTex = astToLatex(node.right, substituteMap, varsDb);
-      const sep = (rightTex.startsWith("\\left(") || rightTex.startsWith("(") || rightTex.startsWith("\\tan") || rightTex.startsWith("\\cos") || rightTex.startsWith("\\sin")) ? " " : " ";
+
+      // Prevent number-gluing bugs (e.g. -2 and 1.5 turning into -21.5)
+      const leftIsNum = /^[+-]?[\d.]+$/.test(leftTex.trim());
+      const rightIsNum = /^[+-]?[\d.]+$/.test(rightTex.trim());
+
+      let sep = " ";
+      if (leftIsNum && rightIsNum) {
+        sep = " \\cdot ";
+      } else if (rightTex.startsWith("\\left(") || rightTex.startsWith("(")) {
+        sep = "";
+      }
+
       return `${leftTex}${sep}${rightTex}`.trim();
     }
     if (node.op === "+") {
