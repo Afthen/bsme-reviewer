@@ -1,6 +1,6 @@
 /**
  * src/topics/machine_design/spur_gears/relations.js
- * Spur Gear Relations extending Base Gear Relations.
+ * Spur Gear Relations with empirical requiredUnits and SI/US variants.
  */
 
 import { BASE_GEAR_RELATIONS } from "../common/gear_base_relations.js";
@@ -27,10 +27,23 @@ export const GEAR_RELATION_GRAPH = [
   { 
     id: "eq_spur_buckingham", 
     name: "Buckingham Dynamic Tooth Load", 
-    canonicalTex: "F_D = F_t + \\frac{0.05 v (b C_d + F_t)}{0.05 v + \\sqrt{b C_d + F_t}}", 
-    baseFormula: "F_D = W_t + (0.05 * V_m * (b * C_d + W_t)) / (0.05 * V_m + sqrt(b * C_d + W_t))", 
+    solvable: ["F_D"],
     nodes: ["F_D", "W_t", "V_m", "b", "C_d"],
-    solvable: ["F_D"] // Protected empirical equation
+    variants: {
+      US: {
+        canonicalTex: "F_D = F_t + \\frac{0.05 v (b C_d + F_t)}{0.05 v + \\sqrt{b C_d + F_t}}",
+        baseFormula: "F_D = W_t + (0.05 * V_m * (b * C_d + W_t)) / (0.05 * V_m + sqrt(b * C_d + W_t))",
+        requiredUnits: { V_m: "ft/min", b: "in", W_t: "lb", C_d: "lb", F_D: "lb" }
+      },
+      SI: {
+        canonicalTex: "F_D = F_t + \\frac{21 v (b C_d + F_t)}{21 v + \\sqrt{b C_d + F_t}}",
+        baseFormula: "F_D = W_t + (21 * V_m * (b * C_d + W_t)) / (21 * V_m + sqrt(b * C_d + W_t))",
+        requiredUnits: { V_m: "m/s", b: "mm", W_t: "N", C_d: "N", F_D: "N" }
+      }
+    },
+    canonicalTex: "F_D = F_t + \\frac{0.05 v (b C_d + F_t)}{0.05 v + \\sqrt{b C_d + F_t}}",
+    baseFormula: "F_D = W_t + (0.05 * V_m * (b * C_d + W_t)) / (0.05 * V_m + sqrt(b * C_d + W_t))",
+    requiredUnits: { V_m: "ft/min", b: "in", W_t: "lb", C_d: "lb", F_D: "lb" }
   },
   { id: "eq_ratio_factor_q", name: "Ratio Factor for Gearing", canonicalTex: "Q = \\frac{2 T_2}{T_1 + T_2}", baseFormula: "Q = (2 * T_2) / (T_1 + T_2)", nodes: ["Q", "T_1", "T_2"] },
   { id: "eq_wear_load", name: "Limiting Wear Load", canonicalTex: "F_w = D_1 b Q K_w", baseFormula: "F_w = D_P1 * b * Q * K_w", nodes: ["F_w", "D_P1", "b", "Q", "K_w"] },
