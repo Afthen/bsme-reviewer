@@ -1,126 +1,17 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * AST tree-walker parser with dynamic topic symbol resolution.
+ * AST tree-walker parser with clean parenthesis elimination and literal degree rendering.
  */
 
 import {
   casToTex, isolateVariable, substituteExpression,
-  simplifyExpression, solveUnitAlgebra, UNIT_ALGEBRA_DB
+  simplifyExpression, solveUnitAlgebra, UNIT_ALGEBRA_DB,
+  resolveCanonicalKey, parseMathAST, tokenizeExpr
 } from "./cas.js";
 import { fmtSigFig } from "./dimensions.js";
 
-// ========================================================
-// 1. AST EXPRESSION PARSER
-// ========================================================
-
-function tokenizeExpr(str) {
-  const tokens = [];
-  let i = 0;
-  while (i < str.length) {
-    const ch = str[i];
-    if (ch === " " || ch === "\t" || ch === "\n") {
-      i++;
-      continue;
-    }
-    if ("+-*/^()=".includes(ch)) {
-      tokens.push({ type: "op", val: ch });
-      i++;
-    } else if (/[0-9]/.test(ch) || (ch === "." && /[0-9]/.test(str[i + 1] || ""))) {
-      let num = "";
-      while (i < str.length && /[0-9.]/.test(str[i])) {
-        num += str[i++];
-      }
-      tokens.push({ type: "num", val: num });
-    } else if (/[a-zA-Z_]/.test(ch)) {
-      let id = "";
-      while (i < str.length && /[a-zA-Z0-9_]/.test(str[i])) {
-        id += str[i++];
-      }
-      tokens.push({ type: "id", val: id });
-    } else {
-      i++;
-    }
-  }
-  return tokens;
-}
-
-function parseMathAST(exprStr) {
-  const tokens = tokenizeExpr(exprStr);
-  let pos = 0;
-
-  function peek() { return tokens[pos]; }
-  function consume(expectedVal) {
-    const tok = tokens[pos];
-    if (expectedVal && (!tok || tok.val !== expectedVal)) return null;
-    pos++;
-    return tok;
-  }
-
-  function parsePrimary() {
-    const tok = peek();
-    if (!tok) return null;
-
-    if (tok.val === "(") {
-      consume("(");
-      const node = parseAddSub();
-      consume(")");
-      return { type: "group", expr: node };
-    }
-
-    if (tok.type === "num") {
-      consume();
-      return { type: "num", val: tok.val };
-    }
-
-    if (tok.type === "id") {
-      consume();
-      if (peek() && peek().val === "(") {
-        consume("(");
-        const arg = parseAddSub();
-        consume(")");
-        return { type: "call", fn: tok.val, arg };
-      }
-      return { type: "id", name: tok.val };
-    }
-
-    return null;
-  }
-
-  function parsePower() {
-    let left = parsePrimary();
-    while (peek() && peek().val === "^") {
-      const op = consume().val;
-      const right = parsePrimary();
-      left = { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  function parseMulDiv() {
-    let left = parsePower();
-    while (peek() && (peek().val === "*" || peek().val === "/")) {
-      const op = consume().val;
-      const right = parsePower();
-      left = { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  function parseAddSub() {
-    let left = parseMulDiv();
-    while (peek() && (peek().val === "+" || peek().val === "-")) {
-      const op = consume().val;
-      const right = parseMulDiv();
-      left = { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  return parseAddSub();
-}
-
-function stripOuterParens(texStr) {
+export function stripOuterParens(texStr) {
   if (!texStr) return "";
   let s = texStr.trim();
   if (s.startsWith("\\left(") && s.endsWith("\\right)")) {
@@ -143,6 +34,8 @@ function stripOuterParens(texStr) {
 }
 
 function toLatexSymbol(name, varsDb = {}) {
+  const canonical = resolveCanonicalKey(name, varsDb);
+  if (varsDb[canonical]?.symbol) return varsDb[canonical].symbol;
   if (varsDb[name]?.symbol) return varsDb[name].symbol;
   if (name === "pi") return "\\pi";
   if (name === "phi") return "\\phi";
@@ -159,22 +52,25 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
   }
 
   if (node.type === "id") {
-    if (substituteMap && substituteMap[node.name]) {
+    if (substituteMap && substituteMap[node.name] !== undefined) {
       return substituteMap[node.name];
     }
     return toLatexSymbol(node.name, varsDb);
   }
 
   if (node.type === "group") {
-    return `\\left(${astToLatex(node.expr, substituteMap, varsDb)}\\right)`;
+    const inner = astToLatex(node.expr, substituteMap, varsDb);
+    return `\\left(${stripOuterParens(inner)}\\right)`;
   }
 
   if (node.type === "call") {
-    const inner = astToLatex(node.arg, substituteMap, varsDb);
+    const inner = stripOuterParens(astToLatex(node.arg, substituteMap, varsDb));
     if (node.fn === "sqrt") return `\\sqrt{${inner}}`;
     if (node.fn === "cos") return `\\cos(${inner})`;
     if (node.fn === "sin") return `\\sin(${inner})`;
     if (node.fn === "tan") return `\\tan(${inner})`;
+    if (node.fn === "atan") return `\\tan^{-1}\\left(${inner}\\right)`;
+    if (node.fn === "acos") return `\\cos^{-1}\\left(${inner}\\right)`;
     return `\\text{${node.fn}}\\left(${inner}\\right)`;
   }
 
@@ -187,7 +83,8 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
     if (node.op === "*") {
       const leftTex = astToLatex(node.left, substituteMap, varsDb);
       const rightTex = astToLatex(node.right, substituteMap, varsDb);
-      return `${leftTex}${rightTex.startsWith("\\left(") || rightTex.startsWith("(") ? "" : " "}${rightTex}`;
+      const sep = (rightTex.startsWith("\\left(") || rightTex.startsWith("(") || rightTex.startsWith("\\tan") || rightTex.startsWith("\\cos") || rightTex.startsWith("\\sin")) ? " " : " ";
+      return `${leftTex}${sep}${rightTex}`.trim();
     }
     if (node.op === "+") {
       return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
@@ -196,20 +93,18 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
       return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
     }
     if (node.op === "^") {
-      return `{${astToLatex(node.left, substituteMap, varsDb)}}^{${astToLatex(node.right, substituteMap, varsDb)}}`;
+      const leftTex = astToLatex(node.left, substituteMap, varsDb);
+      const expTex = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));
+      return `{${leftTex}}^{${expTex}}`;
     }
   }
 
   return "";
 }
 
-// ========================================================
-// 2. UNIT FORMATTING (CONNECTED TO CAS CONVERSIONS)
-// ========================================================
-
 function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   if (!unitKey || unitKey === "dimless" || unitKey === "ratio") return "";
-  if (unitKey === "deg" || unitKey === "°") return "^\\circ";
+  if (unitKey === "deg" || unitKey === "°") return "°";
 
   const factors = unitAnalysis?.conversionFactors || [];
   const cancelsMin = factors.some(f => f.from === "u_min" || f.to === "u_min");
@@ -250,14 +145,15 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
 
 export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, relations = [], answeredVars = new Set(), givens = []) {
   const targetVar = step.targetVar;
-  const targetMeta = varsDb[targetVar] || {};
+  const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
+  const targetMeta = varsDb[canonicalTarget] || varsDb[targetVar] || {};
   const targetSym = targetMeta.symbol || targetVar;
-  const targetUnit = S._u?.[targetVar] || targetMeta.unit || "";
+  const targetUnit = S._u?.[canonicalTarget] || S._u?.[targetVar] || targetMeta.unit || "";
   const formattedVal = fmtSigFig(step.expectedVal, 6);
 
   const knownVars = new Set([
-    ...Array.from(answeredVars),
-    ...givens
+    ...Array.from(answeredVars).map(v => resolveCanonicalKey(v, varsDb)),
+    ...givens.map(g => resolveCanonicalKey(g, varsDb))
   ]);
 
   const eq = relations.find(r => r.id === step.eqId);
@@ -282,15 +178,17 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   while (maxSubstitutions-- > 0) {
     const idTokens = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
-    const mathConsts = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs"]);
+    const mathConsts = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin"]);
     const unresolvedToken = idTokens.find(tok => {
-      return !mathConsts.has(tok) && !knownVars.has(tok) && tok !== targetVar;
+      const k = resolveCanonicalKey(tok, varsDb);
+      return !mathConsts.has(tok) && !knownVars.has(k) && k !== canonicalTarget;
     });
 
     if (!unresolvedToken) break;
 
-    const parentStep = allSteps.find(s => s.targetVar === unresolvedToken);
-    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedToken));
+    const unresolvedKey = resolveCanonicalKey(unresolvedToken, varsDb);
+    const parentStep = allSteps.find(s => resolveCanonicalKey(s.targetVar, varsDb) === unresolvedKey);
+    const parentEq = relations.find(r => r.id === parentStep?.eqId) || relations.find(r => r.nodes && r.nodes.includes(unresolvedKey));
 
     if (parentEq?.baseFormula) {
       const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedToken, varsDb);
@@ -320,7 +218,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   if (didSubstitute && intermediateSubFormulaTex) {
     lines.push(`&= ${intermediateSubFormulaTex}`);
-  } else if (currentLhs !== targetVar) {
+  } else if (resolveCanonicalKey(currentLhs, varsDb) !== canonicalTarget) {
     const isolatedTarget = isolateVariable(`${currentLhs} = ${currentRhs}`, targetVar, varsDb);
     currentRhs = isolatedTarget.isolatedRhs;
     rhsAst = parseMathAST(currentRhs);
@@ -333,22 +231,30 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
   const activeIds = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
 
   activeIds.forEach(tok => {
-    if (tok === "pi") return;
-    const val = S[tok];
+    const mathConsts = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin"]);
+    if (mathConsts.has(tok)) return;
+
+    const canonicalKey = resolveCanonicalKey(tok, varsDb);
+    const val = S[canonicalKey] !== undefined ? S[canonicalKey] : S[tok];
     if (val === undefined || isNaN(val)) return;
 
-    const meta = varsDb[tok] || {};
-    const unit = S._u?.[tok] || meta.unit || "";
+    const meta = varsDb[canonicalKey] || varsDb[tok] || {};
+    const unit = S._u?.[canonicalKey] || S._u?.[tok] || meta.unit || "";
     const formattedNum = fmtSigFig(val, 6);
     const unitTex = formatUnitMarkup(unit, tok, unitAnalysis);
 
-    substitutedValuesMap[tok] = `(${formattedNum}${unitTex})`;
+    if (unit === "deg" || unit === "°" || !unitTex) {
+      substitutedValuesMap[tok] = `${formattedNum}${unitTex}`;
+    } else {
+      substitutedValuesMap[tok] = `(${formattedNum}${unitTex})`;
+    }
   });
 
   const numericalSubstitutedTex = astToLatex(rhsAst, substitutedValuesMap, varsDb);
   const conversionFactorTex = unitAnalysis.conversionFactorTex;
+  const displayTargetUnit = (targetUnit === "deg" || targetUnit === "°") ? "°" : (targetUnit ? `\\text{ ${targetUnit}}` : "");
 
-  lines.push(`&= ${numericalSubstitutedTex}${conversionFactorTex} = \\mathbf{${formattedVal}${targetUnit ? `\\text{ ${targetUnit}}` : ""}}`);
+  lines.push(`&= ${numericalSubstitutedTex}${conversionFactorTex} = \\mathbf{${formattedVal}${displayTargetUnit}}`);
 
   return `\\[ \\begin{aligned} ${lines.join(" \\\\[6pt]\n")} \\end{aligned} \\]`;
 }

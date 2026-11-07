@@ -28,7 +28,6 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
     const candidateGoals = [...targetNode.nodes].sort(() => Math.random() - 0.5);
 
     for (const goalVar of candidateGoals) {
-      // Respect relation-level solvability whitelist
       if (targetNode.solvable && !targetNode.solvable.includes(goalVar)) {
         continue;
       }
@@ -103,7 +102,6 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, getMas
 }
 
 export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicConfig = {}) {
-  // If the topic supplies a custom narrative builder, invoke it
   if (typeof topicConfig.statementBuilder === "function") {
     return topicConfig.statementBuilder(givens, visibleGoals, S, varsDb);
   }
@@ -118,7 +116,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const formattedVal = fmtSigFig(val, 6);
     let valWithUnit = `$${formattedVal}$`;
     if (u && u !== "dimless" && u !== "ratio") {
-      valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}^\\circ$` : `$${formattedVal}\\text{ ${u}}$`;
+      valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}°$` : `$${formattedVal}\\text{ ${u}}$`;
     }
 
     return `${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${sym}$</span> = ${valWithUnit})</span>`;
