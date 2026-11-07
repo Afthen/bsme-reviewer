@@ -1,7 +1,7 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * AST tree-walker parser with recursive parenthesis elimination and literal degree rendering.
+ * Supports Option B pre-conditioning steps for empirical requiredUnits and eliminates outer conversions.
  */
 
 import {
@@ -11,10 +11,6 @@ import {
 } from "./cas.js";
 import { fmtSigFig } from "./dimensions.js";
 
-/**
- * Recursively peels off all outer layers of parentheses or \left( ... \right) wrappers.
- * e.g. "((15°))" -> "15°", "\left(\left(15°\right)\right)" -> "15°"
- */
 export function stripOuterParens(texStr) {
   if (!texStr) return "";
   let s = texStr.trim();
@@ -99,7 +95,6 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
   }
 
   if (node.type === "call") {
-    // Drill through any nested AST group nodes so arguments are unwrapped
     let argNode = node.arg;
     while (argNode && argNode.type === "group") {
       argNode = argNode.expr;
@@ -149,10 +144,10 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   if (unitKey === "deg" || unitKey === "°") return "°";
 
   const factors = unitAnalysis?.conversionFactors || [];
-  const cancelsMin = factors.some(f => f.from === "u_min" || f.to === "u_min");
-  const cancelsMm  = factors.some(f => f.from === "u_mm"  || f.to === "u_mm");
-  const cancelsIn  = factors.some(f => f.from === "u_in"  || f.to === "u_in");
-  const cancelsFt  = factors.some(f => f.from === "u_ft"  || f.to === "u_ft");
+  const cancelsMin = factors.some(f => f.from === "min" || f.to === "min");
+  const cancelsMm  = factors.some(f => f.from === "mm"  || f.to === "mm");
+  const cancelsIn  = factors.some(f => f.from === "in"  || f.to === "in");
+  const cancelsFt  = factors.some(f => f.from === "ft"  || f.to === "ft");
   const isFullyCanceled = unitAnalysis?.canceledTokens?.has(tok);
 
   if (unitKey === "rpm" || unitKey === "rev/min") {
@@ -199,13 +194,34 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
   ]);
 
   const eq = relations.find(r => r.id === step.eqId);
-  const baseFormula = eq?.baseFormula || step.baseFormula || "";
+  const activeVariant = (eq?.variants && S?.sys && eq.variants[S.sys]) ? eq.variants[S.sys] : null;
+
+  const baseFormula = activeVariant?.baseFormula || step.baseFormula || eq?.baseFormula || "";
+  const requiredUnits = activeVariant?.requiredUnits || step.requiredUnits || eq?.requiredUnits || null;
   const baseParts = baseFormula.split("=");
   let currentLhs = baseParts[0]?.trim() || "";
   let currentRhs = baseParts[1]?.trim() || "";
 
   const lines = [];
-  const canonicalTex = (eq?.canonicalTex || `${currentLhs} = ${currentRhs}`).replace(/\*/g, " ");
+
+  // ========================================================
+  // OPTION B: INPUT UNIT PRE-CONDITIONING FOR EMPIRICAL RULES
+  // ========================================================
+  const unitAnalysis = solveUnitAlgebra(currentRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
+  const preConvertedVals = {};
+
+  if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
+    unitAnalysis.preConversions.forEach(pc => {
+      const sym = varsDb[pc.canonicalKey]?.symbol || pc.token;
+      const rawFormatted = fmtSigFig(pc.rawVal, 6);
+      const convFormatted = fmtSigFig(pc.convertedVal, 6);
+      lines.push(`\\text{Pre-convert } ${sym} \\text{ to } \\text{${pc.toUnit}}: \\quad ${sym} &= ${rawFormatted}\\,${pc.conv.latex} = \\mathbf{${convFormatted}\\text{ ${pc.toUnit}}}`);
+      preConvertedVals[pc.token] = { val: pc.convertedVal, unit: pc.toUnit };
+    });
+  }
+
+  // Canonical formula line
+  const canonicalTex = (activeVariant?.canonicalTex || step.canonicalTex || eq?.canonicalTex || `${currentLhs} = ${currentRhs}`).replace(/\*/g, " ");
   if (canonicalTex.includes("=")) {
     const [cLhs, cRhs] = canonicalTex.split("=");
     lines.push(`${cLhs.trim()} &= ${cRhs.trim()}`);
@@ -267,8 +283,6 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     lines.push(`\\implies ${targetSym} &= ${astToLatex(rhsAst, null, varsDb)}`);
   }
 
-  const unitAnalysis = solveUnitAlgebra(currentRhs, S, targetVar, targetUnit, varsDb);
-
   const substitutedValuesMap = {};
   const activeIds = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
 
@@ -277,11 +291,18 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     if (mathConsts.has(tok)) return;
 
     const canonicalKey = resolveCanonicalKey(tok, varsDb);
-    const val = S[canonicalKey] !== undefined ? S[canonicalKey] : S[tok];
+
+    // If pre-converted under Option B, use converted values
+    let val = preConvertedVals[tok]?.val;
+    let unit = preConvertedVals[tok]?.unit;
+
+    if (val === undefined) {
+      val = S[canonicalKey] !== undefined ? S[canonicalKey] : S[tok];
+      unit = S._u?.[canonicalKey] || S._u?.[tok] || varsDb[canonicalKey]?.unit || varsDb[tok]?.unit || "";
+    }
+
     if (val === undefined || isNaN(val)) return;
 
-    const meta = varsDb[canonicalKey] || varsDb[tok] || {};
-    const unit = S._u?.[canonicalKey] || S._u?.[tok] || meta.unit || "";
     const formattedNum = fmtSigFig(val, 6);
     const unitTex = formatUnitMarkup(unit, tok, unitAnalysis);
 
