@@ -1,10 +1,9 @@
 /**
  * src/core/cas.js
  * Universal Computer Algebra System (CAS) with Semantic & Physical Unit Algebra.
- * Features elementary algebraic inversion, 2-way schema token mapping, and literal degree handling.
+ * Features elementary algebraic inversion, requiredUnits contract checks, and atomic unit conversion helpers.
  */
 
-// Nerdamer reserved identifiers in engineering contexts
 const RESERVED_CAS_WORDS = new Set(["E", "I"]);
 
 export function toCasToken(v) {
@@ -502,28 +501,45 @@ export const UNIT_ALGEBRA_DB = Object.freeze({
 });
 
 export const ATOMIC_CONVERSIONS = Object.freeze([
-  { from: "u_mm", to: "u_m",  factor: 1 / 1000, latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" },
-  { from: "u_m",  to: "u_mm", factor: 1000,     latex: "\\frac{1000\\text{ mm}}{1\\,\\cancel{\\text{m}}}" },
-  { from: "u_in", to: "u_ft", factor: 1 / 12,   latex: "\\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}" },
-  { from: "u_ft", to: "u_in", factor: 12,       latex: "\\frac{12\\,\\cancel{\\text{in}}}{1\\,\\cancel{\\text{ft}}}" },
-  { from: "u_mm", to: "u_in", factor: 1 / 25.4, latex: "\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}" },
-  { from: "u_in", to: "u_mm", factor: 25.4,     latex: "\\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}" },
+  { from: "mm", to: "m",   factor: 1 / 1000, latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" },
+  { from: "m",  to: "mm",  factor: 1000,     latex: "\\frac{1000\\text{ mm}}{1\\,\\cancel{\\text{m}}}" },
+  { from: "in", to: "ft",  factor: 1 / 12,   latex: "\\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}" },
+  { from: "ft", to: "in",  factor: 12,       latex: "\\frac{12\\,\\cancel{\\text{in}}}{1\\,\\cancel{\\text{ft}}}" },
+  { from: "mm", to: "in",  factor: 1 / 25.4, latex: "\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}" },
+  { from: "in", to: "mm",  factor: 25.4,     latex: "\\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}" },
 
-  { from: "u_min", to: "u_s", factor: 1 / 60,   latex: "\\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}" },
-  { from: "u_s",   to: "u_min", factor: 60,     latex: "\\frac{60\\,\\cancel{\\text{s}}}{1\\text{ min}}" },
-  { from: "u_hr",  to: "u_s", factor: 1 / 3600, latex: "\\frac{1\\,\\cancel{\\text{h}}}{3600\\text{ s}}" },
+  { from: "min", to: "s",   factor: 1 / 60,   latex: "\\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}" },
+  { from: "s",   to: "min", factor: 60,       latex: "\\frac{60\\,\\cancel{\\text{s}}}{1\\text{ min}}" },
+  { from: "hr",  to: "s",   factor: 1 / 3600, latex: "\\frac{1\\,\\cancel{\\text{h}}}{3600\\text{ s}}" },
 
-  { from: "u_W",   to: "u_kW", factor: 1 / 1000, latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" },
-  { from: "u_kW",  to: "u_W",  factor: 1000,     latex: "\\frac{1000\\,\\cancel{\\text{W}}}{1\\,\\cancel{\\text{kW}}}" },
-  { from: "u_kW",  to: "u_MW", factor: 1 / 1000, latex: "\\frac{1\\text{ MW}}{1000\\,\\cancel{\\text{kW}}}" },
-  { from: "u_hp",  to: "u_ftlb_min", factor: 33000, latex: "\\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}}" },
+  { from: "W",   to: "kW",  factor: 1 / 1000, latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" },
+  { from: "kW",  to: "W",   factor: 1000,     latex: "\\frac{1000\\,\\cancel{\\text{W}}}{1\\,\\cancel{\\text{kW}}}" },
+  { from: "kW",  to: "MW",  factor: 1 / 1000, latex: "\\frac{1\\text{ MW}}{1000\\,\\cancel{\\text{kW}}}" },
+  { from: "hp",  to: "ftlb_min", factor: 33000, latex: "\\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}}" },
 
-  { from: "u_kPa", to: "u_MPa", factor: 1 / 1000, latex: "\\frac{1\\text{ MPa}}{1000\\,\\cancel{\\text{kPa}}}" },
-  { from: "u_bar", to: "u_kPa", factor: 100,      latex: "\\frac{100\\text{ kPa}}{1\\,\\cancel{\\text{bar}}}" },
-  { from: "u_L",   to: "u_m3",  factor: 1 / 1000, latex: "\\frac{1\\text{ m}^3}{1000\\,\\cancel{\\text{L}}}" }
+  { from: "kPa", to: "MPa", factor: 1 / 1000, latex: "\\frac{1\\text{ MPa}}{1000\\,\\cancel{\\text{kPa}}}" },
+  { from: "bar", to: "kPa", factor: 100,      latex: "\\frac{100\\text{ kPa}}{1\\,\\cancel{\\text{bar}}}" },
+  { from: "L",   to: "m^3", factor: 1 / 1000, latex: "\\frac{1\\text{ m}^3}{1000\\,\\cancel{\\text{L}}}" }
 ]);
 
-export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}) {
+export function findConversion(fromU, toU) {
+  if (fromU === toU) return null;
+  const direct = ATOMIC_CONVERSIONS.find(c => c.from === fromU && c.to === toU);
+  if (direct) return direct;
+
+  const inv = ATOMIC_CONVERSIONS.find(c => c.from === toU && c.to === fromU);
+  if (inv) {
+    return {
+      from: fromU,
+      to: toU,
+      factor: 1 / inv.factor,
+      latex: `\\frac{1\\text{ ${toU}}}{${inv.factor}\\,\\cancel{\\text{${fromU}}}}`
+    };
+  }
+  return null;
+}
+
+export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
   const mathConstants = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin", "log", "exp"]);
   const varTokens = Array.from(new Set(tokens.filter(t => !mathConstants.has(t))));
@@ -538,7 +554,51 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const canceledTokens = new Set();
   const subTokenCancellations = {};
   const selectedConversions = [];
+  const preConversions = [];
 
+  // ========================================================
+  // A. EMPIRICAL FORMULA HANDLING (requiredUnits Contract)
+  // ========================================================
+  if (requiredUnits && typeof requiredUnits === "object") {
+    varTokens.forEach(tok => {
+      const canonicalKey = resolveCanonicalKey(tok, varsDb);
+      const reqU = requiredUnits[canonicalKey] || requiredUnits[tok];
+      if (!reqU) return;
+
+      const currentU = S._u?.[canonicalKey] || S._u?.[tok] || varsDb[canonicalKey]?.unit || varsDb[tok]?.unit || "";
+
+      // Check for unit mismatch against the empirical contract
+      if (currentU && reqU && currentU !== reqU && currentU !== "deg" && reqU !== "°") {
+        const conv = findConversion(currentU, reqU);
+        if (conv) {
+          const rawVal = S[canonicalKey] !== undefined ? S[canonicalKey] : S[tok];
+          const convertedVal = rawVal * conv.factor;
+          preConversions.push({
+            token: tok,
+            canonicalKey,
+            fromUnit: currentU,
+            toUnit: reqU,
+            conv,
+            rawVal,
+            convertedVal
+          });
+        }
+      }
+    });
+
+    // Suppress all global cross-variable conversions for empirical equations
+    return {
+      canceledTokens,
+      subTokenCancellations,
+      conversionFactors: [],
+      conversionFactorTex: "",
+      preConversions
+    };
+  }
+
+  // ========================================================
+  // B. STANDARD DIMENSIONALLY HOMOGENEOUS EQUATIONS
+  // ========================================================
   const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { sym: targetUnit, dim: "custom", tex: targetUnit };
   const allActiveUnits = Object.values(activeVarUnits);
 
@@ -549,7 +609,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const hasMeter = allActiveUnits.some(u => u.hasLength === "u_m" || u.sym === "u_m");
 
   if (hasFt && hasIn) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_ft" && c.to === "u_in");
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "ft" && c.to === "in");
     if (conv) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].hasLength === "u_in" || activeVarUnits[t].sym === "u_in").forEach(t => canceledTokens.add(t));
@@ -558,7 +618,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   }
 
   if (hasMeter && hasMm) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_m" && c.to === "u_mm");
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "m" && c.to === "mm");
     if (conv) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].hasLength === "u_mm" || activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
@@ -572,7 +632,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const targetNeedsFt = targetInfo.hasLength === "u_ft" || targetUnit === "hp";
 
   if (hasMin && targetNeedsSec) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_min" && c.to === "u_s");
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "min" && c.to === "s");
     if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].hasTime === "u_min").forEach(t => {
@@ -582,13 +642,13 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   }
 
   if (hasMm && targetNeedsMeter) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_mm" && c.to === "u_m");
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "mm" && c.to === "m");
     if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
     }
   } else if (hasIn && targetNeedsFt) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_ft");
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "in" && c.to === "ft");
     if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].sym === "u_in").forEach(t => canceledTokens.add(t));
@@ -596,14 +656,14 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   }
 
   if (targetUnit === "kW" && (hasMin || hasMm || allActiveUnits.some(u => u.sym === "u_N" || u.dim === "torque"))) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_W" && c.to === "u_kW");
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "W" && c.to === "kW");
     if (conv && !selectedConversions.includes(conv)) selectedConversions.push(conv);
   } else if (targetUnit === "N-m" && allActiveUnits.some(u => u.sym === "u_kW")) {
-    const convW = ATOMIC_CONVERSIONS.find(c => c.from === "u_kW" && c.to === "u_W");
+    const convW = ATOMIC_CONVERSIONS.find(c => c.from === "kW" && c.to === "W");
     if (convW) selectedConversions.push(convW);
     varTokens.filter(t => activeVarUnits[t].sym === "u_kW").forEach(t => canceledTokens.add(t));
   } else if (targetUnit === "hp" && (hasIn || allActiveUnits.some(u => u.dim === "torque"))) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_ftlb_min" && c.to === "u_hp") ||
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "ftlb_min" && c.to === "hp") ||
                  { latex: "\\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}" };
     if (!selectedConversions.some(c => c.latex === conv.latex)) selectedConversions.push(conv);
   }
@@ -617,6 +677,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     canceledTokens,
     subTokenCancellations,
     conversionFactors: selectedConversions,
-    conversionFactorTex: selectedConversions.map(cf => ` \\cdot ${cf.latex}`).join("")
+    conversionFactorTex: selectedConversions.map(cf => ` \\cdot ${cf.latex}`).join(""),
+    preConversions: []
   };
 }
