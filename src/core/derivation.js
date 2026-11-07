@@ -1,7 +1,7 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * Supports Option B pre-conditioning steps for empirical requiredUnits and eliminates outer conversions.
+ * AST tree-walker parser with recursive parenthesis elimination and literal degree rendering.
  */
 
 import {
@@ -143,33 +143,22 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   if (!unitKey || unitKey === "dimless" || unitKey === "ratio") return "";
   if (unitKey === "deg" || unitKey === "°") return "°";
 
-  const factors = unitAnalysis?.conversionFactors || [];
-  const cancelsMin = factors.some(f => f.from === "min" || f.to === "min");
-  const cancelsMm  = factors.some(f => f.from === "mm"  || f.to === "mm");
-  const cancelsIn  = factors.some(f => f.from === "in"  || f.to === "in");
-  const cancelsFt  = factors.some(f => f.from === "ft"  || f.to === "ft");
   const isFullyCanceled = unitAnalysis?.canceledTokens?.has(tok);
 
   if (unitKey === "rpm" || unitKey === "rev/min") {
     if (isFullyCanceled) return `\\,\\frac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}}`;
-    if (cancelsMin || unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) return `\\,\\frac{\\text{rev}}{\\cancel{\\text{min}}}`;
+    if (unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) return `\\,\\frac{\\text{rev}}{\\cancel{\\text{min}}}`;
     return `\\,\\frac{\\text{rev}}{\\text{min}}`;
   }
 
   if (unitKey === "ft/min") {
-    if (cancelsFt && cancelsMin) return `\\,\\frac{\\cancel{\\text{ft}}}{\\cancel{\\text{min}}}`;
-    if (cancelsFt) return `\\,\\frac{\\cancel{\\text{ft}}}{\\text{min}}`;
-    if (cancelsMin) return `\\,\\frac{\\text{ft}}{\\cancel{\\text{min}}}`;
+    if (isFullyCanceled) return `\\,\\frac{\\cancel{\\text{ft}}}{\\cancel{\\text{min}}}`;
+    if (unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) return `\\,\\frac{\\text{ft}}{\\cancel{\\text{min}}}`;
     return `\\,\\frac{\\text{ft}}{\\text{min}}`;
   }
 
-  if (unitKey === "mm" && (cancelsMm || isFullyCanceled)) return `\\,\\cancel{\\text{mm}}`;
-  if (unitKey === "in" && (cancelsIn || isFullyCanceled)) return `\\,\\cancel{\\text{in}}`;
-  if (unitKey === "ft" && (cancelsFt || isFullyCanceled)) return `\\,\\cancel{\\text{ft}}`;
-
-  if (unitKey === "teeth") {
-    if (factors.length > 0 || isFullyCanceled) return `\\,\\cancel{\\text{teeth}}`;
-    return `\\text{ teeth}`;
+  if (isFullyCanceled) {
+    return `\\,\\cancel{\\text{${unitKey}}}`;
   }
 
   const meta = UNIT_ALGEBRA_DB[unitKey];
@@ -292,7 +281,6 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
     const canonicalKey = resolveCanonicalKey(tok, varsDb);
 
-    // If pre-converted under Option B, use converted values
     let val = preConvertedVals[tok]?.val;
     let unit = preConvertedVals[tok]?.unit;
 
