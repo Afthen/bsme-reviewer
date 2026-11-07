@@ -191,8 +191,16 @@ function flattenMultiplication(node) {
 }
 
 // ========================================================
-// 2. ELEMENTARY ALGEBRAIC ISOLATION
+// 2. ELEMENTARY ALGEBRAIC ISOLATION (HUMAN-LIKE BALANCER)
 // ========================================================
+
+function unwrapGroup(node) {
+  let n = node;
+  while (n && n.type === "group") {
+    n = n.expr;
+  }
+  return n;
+}
 
 function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
   const targetCanon = resolveCanonicalKey(targetVar, varsDb);
@@ -205,38 +213,116 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
   const ast = parseMathAST(rawRhs);
   if (!ast) return { success: false };
 
-  // 1. Division: LHS = Num / Den
+  // ========================================================
+  // SHAPE 1, 3 & 4: FRACTIONS & RATIONAL SUMS (LHS = Num / Den)
+  // ========================================================
   if (ast.type === "binary" && ast.op === "/") {
-    const numIds = getAstIdentifiers(ast.left);
-    const denIds = getAstIdentifiers(ast.right);
+    const rawNum = unwrapGroup(ast.left);
+    const rawDen = unwrapGroup(ast.right);
+
+    const numIds = getAstIdentifiers(rawNum);
+    const denIds = getAstIdentifiers(rawDen);
 
     const targetInNum = numIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
     const targetInDen = denIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
 
-    if (targetInNum && ast.left.type === "id") {
-      const denStr = astToExprStr(ast.right);
-      return { isolatedRhs: `${rawLhs.trim()} * ${denStr}`, success: true };
+    // ----------------------------------------------------
+    // CASE A: Target only in Denominator (e.g. Q = 2*T2 / (T1 + T2))
+    // ----------------------------------------------------
+    if (targetInDen && !targetInNum) {
+      // Shape 1: Simple Denominator (LHS = Num / x => x = Num / LHS)
+      if (rawDen.type === "id") {
+        const numStr = astToExprStr(rawNum);
+        return {
+          isolatedRhs: `(${numStr}) / (${rawLhs.trim()})`,
+          success: true
+        };
+      }
+
+      // Shape 4: Denominator Sum/Diff: LHS = Num / (B + C) or Num / (B - C)
+      if (rawDen.type === "binary" && (rawDen.op === "+" || rawDen.op === "-")) {
+        const leftIds = getAstIdentifiers(rawDen.left);
+        const rightIds = getAstIdentifiers(rawDen.right);
+        const targetInLeft = leftIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
+        const targetInRight = rightIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
+
+        const denTerm = `((${astToExprStr(rawNum)}) / (${rawLhs.trim()}))`;
+
+        if (rawDen.op === "+") {
+          if (targetInLeft) {
+            return { isolatedRhs: `${denTerm} - (${astToExprStr(rawDen.right)})`, success: true };
+          }
+          if (targetInRight) {
+            return { isolatedRhs: `${denTerm} - (${astToExprStr(rawDen.left)})`, success: true };
+          }
+        } else if (rawDen.op === "-") {
+          if (targetInLeft) {
+            return { isolatedRhs: `${denTerm} + (${astToExprStr(rawDen.right)})`, success: true };
+          }
+          if (targetInRight) {
+            return { isolatedRhs: `(${astToExprStr(rawDen.left)}) - ${denTerm}`, success: true };
+          }
+        }
+      }
+
+      // Single trig call in Denominator (e.g. Pa = Pc / tan(psi))
+      if (rawDen.type === "call") {
+        const fn = rawDen.fn;
+        const argId = rawDen.arg?.name;
+        if (resolveCanonicalKey(argId, varsDb) === targetCanon) {
+          const numStr = astToExprStr(rawNum);
+          const ratio = `(${numStr}) / (${rawLhs.trim()})`;
+          if (fn === "tan") return { isolatedRhs: `atan(${ratio})`, success: true };
+          if (fn === "cos") return { isolatedRhs: `acos(${ratio})`, success: true };
+          if (fn === "sin") return { isolatedRhs: `asin(${ratio})`, success: true };
+        }
+      }
     }
 
-    if (targetInDen && ast.right.type === "id") {
-      const numStr = astToExprStr(ast.left);
-      return { isolatedRhs: `(${numStr}) / (${rawLhs.trim()})`, success: true };
-    }
+    // ----------------------------------------------------
+    // CASE B: Target only in Numerator (e.g. C = (T1 + T2) / (2*Pd))
+    // ----------------------------------------------------
+    if (targetInNum && !targetInDen) {
+      // Shape 1: Simple Numerator (LHS = x / Den => x = LHS * Den)
+      if (rawNum.type === "id") {
+        const denStr = astToExprStr(rawDen);
+        return {
+          isolatedRhs: `${rawLhs.trim()} * ${denStr}`,
+          success: true
+        };
+      }
 
-    if (targetInDen && ast.right.type === "call") {
-      const fn = ast.right.fn;
-      const argId = ast.right.arg?.name;
-      if (resolveCanonicalKey(argId, varsDb) === targetCanon) {
-        const numStr = astToExprStr(ast.left);
-        const ratio = `(${numStr}) / (${rawLhs.trim()})`;
-        if (fn === "tan") return { isolatedRhs: `atan(${ratio})`, success: true };
-        if (fn === "cos") return { isolatedRhs: `acos(${ratio})`, success: true };
-        if (fn === "sin") return { isolatedRhs: `asin(${ratio})`, success: true };
+      // Shape 3: Numerator Sum/Diff: LHS = (A + B) / Den or (A - B) / Den
+      if (rawNum.type === "binary" && (rawNum.op === "+" || rawNum.op === "-")) {
+        const leftIds = getAstIdentifiers(rawNum.left);
+        const rightIds = getAstIdentifiers(rawNum.right);
+        const targetInLeft = leftIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
+        const targetInRight = rightIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
+
+        const numTerm = `((${rawLhs.trim()}) * (${astToExprStr(rawDen)}))`;
+
+        if (rawNum.op === "+") {
+          if (targetInLeft) {
+            return { isolatedRhs: `${numTerm} - (${astToExprStr(rawNum.right)})`, success: true };
+          }
+          if (targetInRight) {
+            return { isolatedRhs: `${numTerm} - (${astToExprStr(rawNum.left)})`, success: true };
+          }
+        } else if (rawNum.op === "-") {
+          if (targetInLeft) {
+            return { isolatedRhs: `${numTerm} + (${astToExprStr(rawNum.right)})`, success: true };
+          }
+          if (targetInRight) {
+            return { isolatedRhs: `(${astToExprStr(rawNum.left)}) - ${numTerm}`, success: true };
+          }
+        }
       }
     }
   }
 
-  // 2. Multiplication: LHS = A * B * C...
+  // ========================================================
+  // SHAPE 1: MULTIPLICATION (LHS = A * B * C...)
+  // ========================================================
   if (ast.type === "binary" && ast.op === "*") {
     const factors = flattenMultiplication(ast);
     const targetIdx = factors.findIndex(f => f.type === "id" && resolveCanonicalKey(f.name, varsDb) === targetCanon);
@@ -259,7 +345,9 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     }
   }
 
-  // 3. Addition / Subtraction
+  // ========================================================
+  // SHAPE 2: LINEAR SUM & DIFFERENCE (LHS = A + B or A - B)
+  // ========================================================
   if (ast.type === "binary" && ast.op === "+") {
     if (ast.left.type === "id" && resolveCanonicalKey(ast.left.name, varsDb) === targetCanon) {
       return { isolatedRhs: `(${rawLhs.trim()}) - (${astToExprStr(ast.right)})`, success: true };
@@ -277,7 +365,9 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     }
   }
 
-  // 4. Square Root
+  // ========================================================
+  // SHAPE 5: SQUARE ROOT (LHS = sqrt(A))
+  // ========================================================
   if (ast.type === "call" && ast.fn === "sqrt") {
     if (ast.arg?.type === "id" && resolveCanonicalKey(ast.arg.name, varsDb) === targetCanon) {
       return { isolatedRhs: `(${rawLhs.trim()})^2`, success: true };
