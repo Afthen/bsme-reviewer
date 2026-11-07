@@ -1,8 +1,7 @@
 /**
  * src/core/cas.js
  * Universal Computer Algebra System (CAS) with True Dimensional Vector Analysis.
- * Implements base-dimension vector arithmetic [M, L, T, Theta, C], scale factors,
- * AST unit propagation, and automated conversion generation without procedural ladders.
+ * Supports expanded constituent unit definitions (psi -> lb/in^2, MPa -> N/mm^2, etc.).
  */
 
 const RESERVED_CAS_WORDS = new Set(["E", "I"]);
@@ -443,7 +442,8 @@ function subDim(a, b) {
   };
 }
 
-function isDimEqual(a, b) {
+export function isDimEqual(a, b) {
+  if (!a || !b) return false;
   return (
     (a.M || 0) === (b.M || 0) &&
     (a.L || 0) === (b.L || 0) &&
@@ -454,12 +454,12 @@ function isDimEqual(a, b) {
 }
 
 /**
- * Universal Dimensional Unit Registry.
+ * Universal Dimensional Unit Registry with Expanded Physical Representations.
  * Scale factors are calibrated relative to SI Base: kg, m, s, K, count.
  */
 export const UNIT_ALGEBRA_DB = Object.freeze({
   // Entities & Angular
-  "teeth":    { dim: makeDim(0, 0, 0, 0, 1), scale: 1.0, baseType: "count", unitName: "teeth", tex: "\\text{teeth}" },
+  "teeth":    { dim: makeDim(0, 0, 0, 0, 1), scale: 1.0, baseType: "count", unitName: "teeth", tex: "\\text{teeth}", expandedTex: "\\cancel{\\text{teeth}}" },
   "rad":      { dim: makeDim(), scale: 1.0, baseType: "angular", unitName: "rad", tex: "\\text{rad}" },
   "rev":      { dim: makeDim(), scale: 1.0, baseType: "angular", unitName: "rev", tex: "\\text{rev}" },
   "deg":      { dim: makeDim(), scale: Math.PI / 180, baseType: "angular", unitName: "°", tex: "°" },
@@ -497,28 +497,28 @@ export const UNIT_ALGEBRA_DB = Object.freeze({
   "ft/min":   { dim: makeDim(0, 1, -1, 0, 0), scale: 0.3048 / 60, components: { length: "ft", time: "min" }, tex: "\\frac{\\text{ft}}{\\text{min}}" },
 
   // Pitch [C L^-1]
-  "teeth/in": { dim: makeDim(0, -1, 0, 0, 1), scale: 1 / 0.0254, components: { count: "teeth", length: "in" }, tex: "\\frac{\\text{teeth}}{\\text{in}}" },
+  "teeth/in": { dim: makeDim(0, -1, 0, 0, 1), scale: 1 / 0.0254, components: { count: "teeth", length: "in" }, tex: "\\frac{\\text{teeth}}{\\text{in}}", expandedTex: "\\frac{\\cancel{\\text{teeth}}}{\\text{in}}" },
 
   // Torque / Energy [M L^2 T^-2]
-  "J":        { dim: makeDim(1, 2, -2, 0, 0), scale: 1.0, baseType: "energy", unitName: "J", tex: "\\text{J}" },
-  "kJ":       { dim: makeDim(1, 2, -2, 0, 0), scale: 1000.0, baseType: "energy", unitName: "kJ", tex: "\\text{kJ}" },
+  "J":        { dim: makeDim(1, 2, -2, 0, 0), scale: 1.0, baseType: "energy", unitName: "J", tex: "\\text{J}", expandedTex: "\\text{N}\\cdot\\text{m}" },
+  "kJ":       { dim: makeDim(1, 2, -2, 0, 0), scale: 1000.0, baseType: "energy", unitName: "kJ", tex: "\\text{kJ}", expandedTex: "1000\\,\\text{N}\\cdot\\text{m}" },
   "N-m":      { dim: makeDim(1, 2, -2, 0, 0), scale: 1.0, baseType: "energy", unitName: "N-m", tex: "\\text{N}\\cdot\\text{m}" },
   "kN-m":     { dim: makeDim(1, 2, -2, 0, 0), scale: 1000.0, baseType: "energy", unitName: "kN-m", tex: "\\text{kN}\\cdot\\text{m}" },
   "lb-in":    { dim: makeDim(1, 2, -2, 0, 0), scale: 4.4482216 * 0.0254, baseType: "energy", unitName: "lb-in", tex: "\\text{lb}\\cdot\\text{in}" },
   "lb-ft":    { dim: makeDim(1, 2, -2, 0, 0), scale: 4.4482216 * 0.3048, baseType: "energy", unitName: "lb-ft", tex: "\\text{lb}\\cdot\\text{ft}" },
 
   // Power [M L^2 T^-3]
-  "W":        { dim: makeDim(1, 2, -3, 0, 0), scale: 1.0, baseType: "power", unitName: "W", tex: "\\text{W}" },
-  "kW":       { dim: makeDim(1, 2, -3, 0, 0), scale: 1000.0, baseType: "power", unitName: "kW", tex: "\\text{kW}" },
+  "W":        { dim: makeDim(1, 2, -3, 0, 0), scale: 1.0, baseType: "power", unitName: "W", tex: "\\text{W}", expandedTex: "\\frac{\\text{N}\\cdot\\text{m}}{\\text{s}}" },
+  "kW":       { dim: makeDim(1, 2, -3, 0, 0), scale: 1000.0, baseType: "power", unitName: "kW", tex: "\\text{kW}", expandedTex: "\\frac{1000\\text{ N}\\cdot\\text{m}}{\\text{s}}" },
   "MW":       { dim: makeDim(1, 2, -3, 0, 0), scale: 1e6, baseType: "power", unitName: "MW", tex: "\\text{MW}" },
-  "hp":       { dim: makeDim(1, 2, -3, 0, 0), scale: 745.69987, baseType: "power", unitName: "hp", tex: "\\text{hp}" },
+  "hp":       { dim: makeDim(1, 2, -3, 0, 0), scale: 745.69987, baseType: "power", unitName: "hp", tex: "\\text{hp}", expandedTex: "\\frac{33000\\text{ ft}\\cdot\\text{lb}}{\\text{min}}" },
 
   // Pressure & Stress [M L^-1 T^-2]
-  "Pa":       { dim: makeDim(1, -1, -2, 0, 0), scale: 1.0, baseType: "pressure", unitName: "Pa", tex: "\\text{Pa}" },
-  "kPa":      { dim: makeDim(1, -1, -2, 0, 0), scale: 1000.0, baseType: "pressure", unitName: "kPa", tex: "\\text{kPa}" },
-  "bar":      { dim: makeDim(1, -1, -2, 0, 0), scale: 100000.0, baseType: "pressure", unitName: "bar", tex: "\\text{bar}" },
-  "MPa":      { dim: makeDim(1, -1, -2, 0, 0), scale: 1e6, baseType: "pressure", unitName: "MPa", tex: "\\text{MPa}" },
-  "psi":      { dim: makeDim(1, -1, -2, 0, 0), scale: 6894.757, baseType: "pressure", unitName: "psi", tex: "\\text{psi}" },
+  "Pa":       { dim: makeDim(1, -1, -2, 0, 0), scale: 1.0, baseType: "pressure", unitName: "Pa", tex: "\\text{Pa}", expandedTex: "\\frac{\\text{N}}{\\text{m}^2}" },
+  "kPa":      { dim: makeDim(1, -1, -2, 0, 0), scale: 1000.0, baseType: "pressure", unitName: "kPa", tex: "\\text{kPa}", expandedTex: "\\frac{\\text{kN}}{\\text{m}^2}" },
+  "bar":      { dim: makeDim(1, -1, -2, 0, 0), scale: 100000.0, baseType: "pressure", unitName: "bar", tex: "\\text{bar}", expandedTex: "10^5\\,\\frac{\\text{N}}{\\text{m}^2}" },
+  "MPa":      { dim: makeDim(1, -1, -2, 0, 0), scale: 1e6, baseType: "pressure", unitName: "MPa", tex: "\\text{MPa}", expandedTex: "\\frac{\\text{N}}{\\text{mm}^2}" },
+  "psi":      { dim: makeDim(1, -1, -2, 0, 0), scale: 6894.757, baseType: "pressure", unitName: "psi", tex: "\\text{psi}", expandedTex: "\\frac{\\text{lb}}{\\text{in}^2}" },
 
   // Volume [L^3]
   "m^3":      { dim: makeDim(0, 3, 0, 0, 0), scale: 1.0, baseType: "volume", unitName: "m^3", tex: "\\text{m}^3" },
@@ -580,10 +580,6 @@ export function findConversion(fromU, toU) {
   return null;
 }
 
-/**
- * Traverses an equation AST and computes net dimension vector, scale factor,
- * and tracks the individual unit components present.
- */
 function evalExprUnitAST(node, S, varsDb) {
   if (!node) return { dim: makeDim(), scale: 1.0, components: [] };
 
@@ -663,11 +659,6 @@ function evalExprUnitAST(node, S, varsDb) {
   return { dim: makeDim(), scale: 1.0, components: [] };
 }
 
-/**
- * Universal Data-Driven Unit Algebra Solver.
- * Compares AST evaluated dimensions & scale with Target requirements.
- * Employs zero hardcoded procedural ladders.
- */
 export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const ast = parseMathAST(exprStr);
   const canceledTokens = new Set();
@@ -723,23 +714,18 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
   const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
   const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { dim: makeDim(), scale: 1.0, tex: targetUnit };
 
-  // If dimensions match and there is a scale discrepancy, derive conversion factor
   if (isDimEqual(exprAnalysis.dim, targetInfo.dim)) {
     const ratio = targetInfo.scale / exprAnalysis.scale;
 
-    // Check if a conversion is mathematically required (ratio differs from 1)
     if (Math.abs(ratio - 1.0) > 1e-4) {
-      // Find which component units in the expression disagree with the target
       exprAnalysis.components.forEach(comp => {
         if (comp.baseType === "length") {
           let targetLengthU = targetInfo.components?.length;
           if (!targetLengthU && targetInfo.baseType === "length") targetLengthU = targetInfo.unitName;
 
           if (targetLengthU && comp.unit !== targetLengthU) {
-            // comp.power determines if length is numerator (+1) or denominator (-1)
             let conv = null;
             if (comp.power < 0) {
-              // Denominator: multiply by (comp.unit / targetLengthU) to cancel comp.unit in denominator
               if (comp.unit === "mm" && targetLengthU === "in") {
                 conv = { latex: "\\frac{25.4\\,\\cancel{\\text{mm}}}{1\\text{ in}}" };
               } else if (comp.unit === "in" && targetLengthU === "mm") {
@@ -748,7 +734,6 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
                 conv = { latex: "\\frac{1\\,\\cancel{\\text{m}}}{1000\\text{ mm}}" };
               }
             } else {
-              // Numerator: multiply by (targetLengthU / comp.unit) to cancel comp.unit in numerator
               if (comp.unit === "mm" && targetLengthU === "m") {
                 conv = { latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" };
               } else if (comp.unit === "in" && targetLengthU === "ft") {
@@ -778,7 +763,6 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
         }
       });
 
-      // Special power conversion: W to kW or hp
       if (targetUnit === "kW" && Math.abs(ratio - 0.001) < 1e-5) {
         selectedConversions.push({ latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" });
       } else if (targetUnit === "hp" && exprAnalysis.scale < 10) {
