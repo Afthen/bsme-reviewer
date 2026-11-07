@@ -51,7 +51,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
           eqId: eq.id,
           eqName: eq.name,
           baseFormula,
-          canonicalTex: eq.canonical?.tex || eq.baseFormula || baseFormula,
+          canonicalTex: eq.canonicalTex || eq.canonical?.tex || eq.baseFormula || baseFormula,
           equationTex: isolated.texEquation,
           rhsExpr: isolated.isolatedRhs,
           expectedVal,
