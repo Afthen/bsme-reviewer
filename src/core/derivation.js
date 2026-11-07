@@ -1,23 +1,15 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * Uses a pure AST (Abstract Syntax Tree) expression parser and tree-walker.
- * ZERO regex replacements on LaTeX strings.
+ * Pure AST tree-walker parser with ZERO regex replacements on LaTeX strings.
  */
 
 import {
   casToTex, isolateVariable, substituteExpression,
   simplifyExpression, SYMBOL_TO_KEY, solveUnitAlgebra, UNIT_ALGEBRA_DB
 } from "./cas.js";
-import { cancelUnit } from "./dimensions.js";
+import { fmtSigFig, cancelUnit } from "./dimensions.js";
 
-// ========================================================
-// 1. AST PARSER (REPLACES ALL REGEX STRING MANIPULATION)
-// ========================================================
-
-/**
- * Character-by-character scanner (lexer) that breaks a math expression into tokens.
- */
 function tokenizeExpr(str) {
   const tokens = [];
   let i = 0;
@@ -49,21 +41,14 @@ function tokenizeExpr(str) {
   return tokens;
 }
 
-/**
- * Recursive descent parser constructing an AST from tokens.
- */
 function parseMathAST(exprStr) {
   const tokens = tokenizeExpr(exprStr);
   let pos = 0;
 
-  function peek() {
-    return tokens[pos];
-  }
+  function peek() { return tokens[pos]; }
   function consume(expectedVal) {
     const tok = tokens[pos];
-    if (expectedVal && (!tok || tok.val !== expectedVal)) {
-      return null;
-    }
+    if (expectedVal && (!tok || tok.val !== expectedVal)) return null;
     pos++;
     return tok;
   }
@@ -86,7 +71,6 @@ function parseMathAST(exprStr) {
 
     if (tok.type === "id") {
       consume();
-      // Check for function call: fn(arg)
       if (peek() && peek().val === "(") {
         consume("(");
         const arg = parseAddSub();
@@ -132,10 +116,6 @@ function parseMathAST(exprStr) {
   return parseAddSub();
 }
 
-/**
- * Recursively converts an AST directly into LaTeX.
- * If substituteMap is provided, variable nodes are directly replaced at the tree level.
- */
 function astToLatex(node, substituteMap = null, varsDb = {}) {
   if (!node) return "";
 
@@ -144,11 +124,9 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
   }
 
   if (node.type === "id") {
-    // If a substitution mapping exists for this exact token, output it directly
     if (substituteMap && substituteMap[node.name]) {
       return substituteMap[node.name];
     }
-    // Otherwise render its symbolic LaTeX token
     return toLatexSymbol(node.name, varsDb);
   }
 
@@ -202,11 +180,24 @@ function toLatexSymbol(name, varsDb = {}) {
   if (varsDb[k]?.symbol) return varsDb[k].symbol;
   if (name === "pi") return "\\pi";
   if (name === "phi") return "\\phi";
+  if (name === "phin" || name === "phi_n") return "\\phi_n";
+  if (name === "psi") return "\\psi";
   if (name === "Ft" || name === "F_t" || name === "Wt" || name === "W_t") return "F_t";
   if (name === "Fn" || name === "F_n" || name === "W") return "F_n";
   if (name === "Fr" || name === "F_r" || name === "Wr" || name === "W_r") return "F_r";
+  if (name === "Fa" || name === "F_a") return "F_a";
+  if (name === "FD" || name === "F_D") return "F_D";
+  if (name === "Fs" || name === "F_s") return "F_s";
+  if (name === "Fw" || name === "F_w") return "F_w";
+  if (name === "Cd" || name === "C_d") return "C_d";
+  if (name === "Kw" || name === "K_w") return "K_w";
   if (name === "Pd" || name === "P_d") return "P_d";
+  if (name === "Pdn" || name === "P_dn") return "P_{dn}";
+  if (name === "Pc" || name === "P_c") return "P_c";
+  if (name === "Pcn" || name === "P_cn") return "P_{cn}";
+  if (name === "Pa" || name === "P_a") return "P_a";
   if (name === "Do" || name === "D_o") return "D_o";
+  if (name === "Dr" || name === "D_r") return "D_r";
   if (name === "Db" || name === "D_b") return "D_b";
   if (name === "VR" || name === "SR") return "\\text{SR}";
   if (name === "Mt" || name === "M_t") return "T";
@@ -217,31 +208,11 @@ function toLatexSymbol(name, varsDb = {}) {
   if (name === "D2" || name === "D_2") return "D_2";
   if (name === "T1" || name === "T_1") return "T_1";
   if (name === "T2" || name === "T_2") return "T_2";
-  if (name === "psi") return "\\psi";
-  if (name === "phin" || name === "phi_n") return "\\phi_n";
-  if (name === "Pcn" || name === "P_cn") return "P_{cn}";
-  if (name === "Pdn" || name === "P_dn") return "P_{dn}";
-  if (name === "Pa" || name === "P_a") return "P_a";
-  if (name === "Fa" || name === "F_a") return "F_a";
-  if (name === "Dr" || name === "D_r") return "D_r";
-  if (name === "FD" || name === "F_D") return "F_D";
-  if (name === "Cd" || name === "C_d") return "C_d";
-  if (name === "yform" || name === "y_form") return "y";
-  if (name === "Fs" || name === "F_s") return "F_s";
-  if (name === "Fw" || name === "F_w") return "F_w";
-  if (name === "Nsf" || name === "N_sf") return "N_{sf}";
-  if (name === "Kw" || name === "K_w") return "K_w";
-  if (name === "kf" || name === "k_f") return "k_f";
   if (name === "Tv" || name === "T_v" || name === "Nev") return "T_v";
   if (name === "mF" || name === "m_F") return "m_F";
   if (name === "Llead" || name === "L_lead") return "L";
-  if (name === "Sspace" || name === "S_space") return "S";
   return name;
 }
-
-// ========================================================
-// 2. UNIT FORMATTING (TIED TO CAS CONVERSION FACTORS)
-// ========================================================
 
 function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   if (!unitKey || unitKey === "dimless" || unitKey === "ratio") return "";
@@ -255,18 +226,12 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   const cancelsFt  = factors.some(f => f.from === "u_ft"  || f.to === "u_ft");
   const isFullyCanceled = unitAnalysis?.canceledTokens?.has(tok);
 
-  // 1. Rotational speed: rpm = rev / min
   if (unitKey === "rpm" || unitKey === "rev/min") {
-    if (isFullyCanceled) {
-      return `\\,\\frac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}}`;
-    }
-    if (cancelsMin || unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) {
-      return `\\,\\frac{\\text{rev}}{\\cancel{\\text{min}}}`;
-    }
+    if (isFullyCanceled) return `\\,\\frac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}}`;
+    if (cancelsMin || unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) return `\\,\\frac{\\text{rev}}{\\cancel{\\text{min}}}`;
     return `\\,\\frac{\\text{rev}}{\\text{min}}`;
   }
 
-  // 2. Velocity: ft/min
   if (unitKey === "ft/min") {
     if (cancelsFt && cancelsMin) return `\\,\\frac{\\cancel{\\text{ft}}}{\\cancel{\\text{min}}}`;
     if (cancelsFt) return `\\,\\frac{\\cancel{\\text{ft}}}{\\text{min}}`;
@@ -274,29 +239,15 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
     return `\\,\\frac{\\text{ft}}{\\text{min}}`;
   }
 
-  // 3. Lengths
   if (unitKey === "mm" && (cancelsMm || isFullyCanceled)) return `\\,\\cancel{\\text{mm}}`;
   if (unitKey === "in" && (cancelsIn || isFullyCanceled)) return `\\,\\cancel{\\text{in}}`;
   if (unitKey === "ft" && (cancelsFt || isFullyCanceled)) return `\\,\\cancel{\\text{ft}}`;
 
-  // 4. Force & Torque
-  if (unitKey === "lb" && isFullyCanceled) return `\\,\\cancel{\\text{lb}}`;
-  if (unitKey === "N" && isFullyCanceled) return `\\,\\cancel{\\text{N}}`;
-  if (unitKey === "lb-in") {
-    if (isFullyCanceled) return `\\,\\cancel{\\text{lb}\\cdot\\text{in}}`;
-    if (cancelsIn) return `\\,\\text{lb}\\cdot\\cancel{\\text{in}}`;
-    return `\\,\\text{lb}\\cdot\\text{in}`;
-  }
-  if (unitKey === "N-m") {
-    if (isFullyCanceled) return `\\,\\cancel{\\text{N}\\cdot\\text{m}}`;
-    return `\\,\\text{N}\\cdot\\text{m}`;
-  }
-
-  // 5. Tooth counts & Tooth pitch
   if (unitKey === "teeth") {
     if (factors.length > 0 || isFullyCanceled) return `\\,\\cancel{\\text{teeth}}`;
     return `\\text{ teeth}`;
   }
+
   if (unitKey === "teeth/in") {
     if (cancelsIn) return `\\,\\frac{\\cancel{\\text{teeth}}}{\\cancel{\\text{in}}}`;
     return `\\,\\frac{\\text{teeth}}{\\text{in}}`;
@@ -306,33 +257,19 @@ function formatUnitMarkup(unitKey, tok, unitAnalysis) {
   return meta?.tex ? `\\,${meta.tex}` : `\\text{ ${unitKey}}`;
 }
 
-function fmtPrecise(n, maxDec = 4) {
-  if (n === undefined || n === null) return "";
-  const num = typeof n === "number" ? n : Number(n);
-  if (isNaN(num)) return "";
-  if (Number.isInteger(num)) return num.toString();
-  return parseFloat(num.toFixed(maxDec)).toString();
-}
-
-// ========================================================
-// 3. UNIVERSAL STEP DERIVATION BUILDER
-// ========================================================
-
 export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, relations = [], answeredVars = new Set(), givens = []) {
   const targetVar = step.targetVar;
   const targetKey = SYMBOL_TO_KEY[targetVar] || targetVar;
   const targetMeta = varsDb[targetKey] || {};
   const targetSym = targetMeta.symbol || targetVar;
   const targetUnit = S._u?.[targetKey] || targetMeta.unit || "";
-  const isInteger = !!targetMeta.isInteger;
-  const formattedVal = fmtPrecise(step.expectedVal, isInteger ? 0 : 4);
+  const formattedVal = fmtSigFig(step.expectedVal, 6);
 
   const knownVars = new Set([
     ...Array.from(answeredVars).map(v => SYMBOL_TO_KEY[v] || v),
     ...givens.map(g => SYMBOL_TO_KEY[g] || g)
   ]);
 
-  // 1. Resolve Canonical Equation
   const eq = relations.find(r => r.id === step.eqId);
   const baseFormula = eq?.baseFormula || step.baseFormula || "";
   const baseParts = baseFormula.split("=");
@@ -348,12 +285,9 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     lines.push(`\\text{Canonical:} \\quad & ${canonicalTex}`);
   }
 
-  // 2. Symbolic Graph Substitution with Tree Construction
   let maxSubstitutions = 5;
   let didSubstitute = false;
   let intermediateSubFormulaTex = "";
-
-  // Parse RHS into an AST
   let rhsAst = parseMathAST(currentRhs);
 
   while (maxSubstitutions-- > 0) {
@@ -374,13 +308,11 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
       const isolatedParent = isolateVariable(parentEq.baseFormula, unresolvedToken, varsDb);
       const parentAst = parseMathAST(isolatedParent.isolatedRhs);
 
-      // Create substitution mapping at AST level
       const subMap = {
         [unresolvedToken]: `\\left(${astToLatex(parentAst, null, varsDb)}\\right)`
       };
       const unsimplifiedTex = astToLatex(rhsAst, subMap, varsDb);
 
-      // Simplify algebraically via CAS
       currentRhs = substituteExpression(currentRhs, { [unresolvedToken]: `(${isolatedParent.isolatedRhs})` });
       currentRhs = simplifyExpression(currentRhs);
       rhsAst = parseMathAST(currentRhs);
@@ -398,7 +330,6 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     }
   }
 
-  // If substitution occurred, render: &= 2\pi N_1 \left(\frac{F_t D_1}{2}\right) = \pi D_1 F_t N_1
   if (didSubstitute && intermediateSubFormulaTex) {
     lines.push(`&= ${intermediateSubFormulaTex}`);
   } else if (SYMBOL_TO_KEY[currentLhs] !== targetKey) {
@@ -408,10 +339,8 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     lines.push(`\\implies ${targetSym} &= ${astToLatex(rhsAst, null, varsDb)}`);
   }
 
-  // 3. General CAS Unit Solver (Solves conversions & cancellations)
   const unitAnalysis = solveUnitAlgebra(currentRhs, S, targetVar, targetUnit, varsDb);
 
-  // 4. Build Exact Substituted Values Map for Tree Nodes
   const substitutedValuesMap = {};
   const activeIds = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
 
@@ -423,18 +352,15 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
     const meta = varsDb[varKey] || {};
     const unit = S._u?.[varKey] || meta.unit || "";
-    const formattedNum = fmtPrecise(val, meta.isInteger ? 0 : 4);
+    const formattedNum = fmtSigFig(val, 6);
     const unitTex = formatUnitMarkup(unit, tok, unitAnalysis);
 
-    // Map AST node directly: e.g. T -> (700\text{ lb-in})
     substitutedValuesMap[tok] = `(${formattedNum}${unitTex})`;
   });
 
-  // Render numerical substitution straight from the AST (ZERO regex)
   const numericalSubstitutedTex = astToLatex(rhsAst, substitutedValuesMap, varsDb);
   const conversionFactorTex = unitAnalysis.conversionFactorTex;
 
-  // 5. Final Line
   lines.push(`&= ${numericalSubstitutedTex}${conversionFactorTex} = \\mathbf{${formattedVal}${targetUnit ? `\\text{ ${targetUnit}}` : ""}}`);
 
   return `\\[ \\begin{aligned} ${lines.join(" \\\\[6pt]\n")} \\end{aligned} \\]`;

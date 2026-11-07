@@ -1,40 +1,46 @@
 /**
  * src/core/problem_gen.js
- * Dynamic problem statement builder that adapts to the active topic.
+ * Formula-as-Node Graph Walk Problem Generator.
+ * Staggers distance expansion from scaffolding fading using Golden Ratio thresholds.
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
+import { PHI_INV, PHI_INV2 } from "../repetition/mastery.js";
+
+function determineGraphDistance(mastery) {
+  if (mastery < PHI_INV2) return 0; // < 38.2% -> d = 0 (single formula)
+  if (mastery < PHI_INV)  return 1; // 38.2% to 61.8% -> d = 1 (2 formulas, 1 bridge)
+  return Math.random() < 0.5 ? 2 : 3; // >= 61.8% -> d = 2 to 3 (synthesis chain)
+}
 
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
-  const scoredRelations = relations.map(eq => {
-    const mastery = getMastery(eq.id);
+  const scoredNodes = relations.map(node => {
+    const mastery = getMastery(node.id);
     const weight = mastery === 0 ? 5.0 : Math.max(0.02, Math.pow(1 - mastery, 3));
     const key = Math.pow(Math.random(), 1 / weight);
-    return { eq, weight, key, mastery };
+    return { node, weight, key, mastery };
   });
 
-  scoredRelations.sort((a, b) => b.key - a.key);
+  scoredNodes.sort((a, b) => b.key - a.key);
 
-  for (const { eq: targetEq } of scoredRelations) {
-    const candidateGoals = [...targetEq.nodes].sort(() => Math.random() - 0.5);
+  for (const { node: targetNode, mastery } of scoredNodes) {
+    const candidateGoals = [...targetNode.nodes].sort(() => Math.random() - 0.5);
 
     for (const goalVar of candidateGoals) {
-      const problem = buildAdaptivePath(targetEq, goalVar, relations, S, getMastery);
+      const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery, getMastery);
       if (problem) return problem;
     }
   }
 
-  const fallbackEq = scoredRelations[0].eq;
-  const goalVar = fallbackEq.nodes[0];
-  const givens = fallbackEq.nodes.filter(n => n !== goalVar);
-  return { goalVar, givens, distractors: [], targetEqId: fallbackEq.id };
+  const fallback = scoredNodes[0].node;
+  const goalVar = fallback.nodes[0];
+  const givens = fallback.nodes.filter(n => n !== goalVar);
+  return { goalVar, givens, distractors: [], targetEqId: fallback.id, hopDistance: 0 };
 }
 
-function buildAdaptivePath(targetEq, goalVar, relations, S, getMastery) {
-  let givens = targetEq.nodes.filter(n => n !== goalVar);
-
-  const depthRoll = Math.random();
-  const desiredHops = depthRoll < 0.30 ? 0 : (depthRoll < 0.80 ? 1 : 2);
+function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, getMastery) {
+  let givens = targetNode.nodes.filter(n => n !== goalVar);
+  const desiredHops = determineGraphDistance(targetMastery);
 
   let hops = 0;
   let attempts = 0;
@@ -42,20 +48,20 @@ function buildAdaptivePath(targetEq, goalVar, relations, S, getMastery) {
   while (hops < desiredHops && attempts < 15) {
     attempts++;
 
-    const expandableGivens = givens.filter(g =>
-      relations.some(r => r.id !== targetEq.id && r.nodes.includes(g))
+    const bridgeableEdges = givens.filter(edgeVar =>
+      relations.some(r => r.id !== targetNode.id && r.nodes.includes(edgeVar))
     );
-    if (expandableGivens.length === 0) break;
+    if (bridgeableEdges.length === 0) break;
 
-    const expandVar = expandableGivens[Math.floor(Math.random() * expandableGivens.length)];
-    const producerEqs = relations.filter(r => r.id !== targetEq.id && r.nodes.includes(expandVar));
-    const chosenProducer = producerEqs[Math.floor(Math.random() * producerEqs.length)];
-    const subGivens = chosenProducer.nodes.filter(n => n !== expandVar);
+    const chosenEdge = bridgeableEdges[Math.floor(Math.random() * bridgeableEdges.length)];
+    const neighborNodes = relations.filter(r => r.id !== targetNode.id && r.nodes.includes(chosenEdge));
+    const neighbor = neighborNodes[Math.floor(Math.random() * neighborNodes.length)];
+    const neighborGivens = neighbor.nodes.filter(n => n !== chosenEdge);
 
-    if (!subGivens.includes(goalVar) && !subGivens.includes(expandVar)) {
+    if (!neighborGivens.includes(goalVar) && !neighborGivens.includes(chosenEdge)) {
       const candidateSet = Array.from(new Set([
-        ...givens.filter(g => g !== expandVar),
-        ...subGivens
+        ...givens.filter(g => g !== chosenEdge),
+        ...neighborGivens
       ]));
 
       if (candidateSet.length <= 6 && canSolveTarget(candidateSet, goalVar, relations, getMastery)) {
@@ -68,8 +74,8 @@ function buildAdaptivePath(targetEq, goalVar, relations, S, getMastery) {
   const steps = solveDAG(givens, S, relations, {}, getMastery);
   const required = pruneSolutionPath(steps, goalVar);
 
-  const containsTarget = required.some(s => s.eqId === targetEq.id);
-  if (!containsTarget) return null;
+  const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
+  if (!usesTarget) return null;
 
   const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
   givens.forEach(g => usedVars.add(g));
@@ -86,8 +92,8 @@ function buildAdaptivePath(targetEq, goalVar, relations, S, getMastery) {
     goalVar,
     givens: Array.from(new Set([...givens, ...distractors])).sort(),
     distractors,
-    targetEqId: targetEq.id,
-    hopDepth: hops + 1
+    targetEqId: targetNode.id,
+    hopDistance: hops
   };
 }
 
@@ -122,7 +128,6 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     return `${prefix}<strong>${name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${sym}$</span>)</span>${uStr}`;
   });
 
-  // Dynamic drive naming based on topic title
   const driveType = topicTitle.toLowerCase().replace(/s$/, "");
   return `A ${driveType} drive operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
 }

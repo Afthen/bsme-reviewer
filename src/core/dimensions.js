@@ -1,11 +1,8 @@
 /**
  * src/core/dimensions.js
- * Physical dimensions, dimensional analysis conversions, and KaTeX cancellation formatters.
+ * Physical dimensions, KaTeX cancellation formatters, and universal 6-sig-fig engine.
  */
 
-// ========================================================
-// 1. PHYSICAL DIMENSIONS TAXONOMY
-// ========================================================
 export const DIMENSIONS = Object.freeze({
   LENGTH: "Length",
   FORCE: "Force",
@@ -20,40 +17,35 @@ export const DIMENSIONS = Object.freeze({
   DIMENSIONLESS: "Dimensionless"
 });
 
-// ========================================================
-// 2. KATEX CANCELLATION HELPERS
-// ========================================================
-
 /**
- * Wraps a unit token in a KaTeX \cancel{\text{...}} block.
+ * Universal 6-Significant-Figures Formatter.
+ * Automatically trims trailing zeroes to the right of the decimal.
  */
+export function fmtSigFig(n, sigFigs = 6) {
+  if (n === undefined || n === null) return "";
+  const num = typeof n === "number" ? n : Number(n);
+  if (isNaN(num)) return "";
+  if (Number.isInteger(num)) return num.toString();
+  const prec = parseFloat(num.toPrecision(sigFigs));
+  return prec.toString();
+}
+
+export function fmt(n) {
+  return fmtSigFig(n, 6);
+}
+
 export function cancelUnit(unitStr) {
   if (!unitStr) return "";
   return `\\cancel{\\text{${unitStr}}}`;
 }
 
-/**
- * Wraps a unit token in KaTeX \text{...}.
- */
 export function textUnit(unitStr) {
   if (!unitStr) return "";
   return `\\text{${unitStr}}`;
 }
 
-// ========================================================
-// 3. NUMERICAL & LABEL FORMATTERS
-// ========================================================
-
-export function fmt(n, maxDec = 2) {
-  if (n === undefined || n === null) return "";
-  const num = typeof n === "number" ? n : Number(n);
-  if (isNaN(num)) return "";
-  const factor = Math.pow(10, maxDec);
-  return (Math.round(num * factor) / factor).toString();
-}
-
 export function targetLabel(name, token, unit) {
-  if (!unit || unit === "dimless" || unit === "ratio" || unit === "teeth") {
+  if (!unit || unit === "dimless" || unit === "ratio") {
     return `${name} (${token})`;
   }
   if (unit === "deg") {
