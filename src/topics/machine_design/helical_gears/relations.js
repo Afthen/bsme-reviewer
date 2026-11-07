@@ -1,6 +1,6 @@
 /**
  * src/topics/machine_design/helical_gears/relations.js
- * Helical Gear Relations extending Base Gear Relations.
+ * Helical Gear Relations with empirical requiredUnits and SI/US variants.
  */
 
 import { BASE_GEAR_RELATIONS } from "../common/gear_base_relations.js";
@@ -23,10 +23,23 @@ export const HELICAL_RELATION_GRAPH = [
   { 
     id: "eq_helical_buckingham", 
     name: "Buckingham Dynamic Load (Helical)", 
-    canonicalTex: "F_D = F_t + \\frac{0.05 v (F_t + b C_d \\cos^2\\psi) \\cos\\psi}{0.05 v + \\sqrt{F_t + b C_d \\cos^2\\psi}}", 
-    baseFormula: "F_D = W_t + (0.05 * V_m * (W_t + b * C_d * cos(psi)^2) * cos(psi)) / (0.05 * V_m + sqrt(W_t + b * C_d * cos(psi)^2))", 
+    solvable: ["F_D"],
     nodes: ["F_D", "W_t", "V_m", "psi", "b", "C_d"],
-    solvable: ["F_D"] // Protected empirical equation
+    variants: {
+      US: {
+        canonicalTex: "F_D = F_t + \\frac{0.05 v (F_t + b C_d \\cos^2\\psi) \\cos\\psi}{0.05 v + \\sqrt{F_t + b C_d \\cos^2\\psi}}",
+        baseFormula: "F_D = W_t + (0.05 * V_m * (W_t + b * C_d * cos(psi)^2) * cos(psi)) / (0.05 * V_m + sqrt(W_t + b * C_d * cos(psi)^2))",
+        requiredUnits: { V_m: "ft/min", b: "in", W_t: "lb", C_d: "lb", psi: "°", F_D: "lb" }
+      },
+      SI: {
+        canonicalTex: "F_D = F_t + \\frac{21 v (F_t + b C_d \\cos^2\\psi) \\cos\\psi}{21 v + \\sqrt{F_t + b C_d \\cos^2\\psi}}",
+        baseFormula: "F_D = W_t + (21 * V_m * (W_t + b * C_d * cos(psi)^2) * cos(psi)) / (21 * V_m + sqrt(W_t + b * C_d * cos(psi)^2))",
+        requiredUnits: { V_m: "m/s", b: "mm", W_t: "N", C_d: "N", psi: "°", F_D: "N" }
+      }
+    },
+    canonicalTex: "F_D = F_t + \\frac{0.05 v (F_t + b C_d \\cos^2\\psi) \\cos\\psi}{0.05 v + \\sqrt{F_t + b C_d \\cos^2\\psi}}",
+    baseFormula: "F_D = W_t + (0.05 * V_m * (W_t + b * C_d * cos(psi)^2) * cos(psi)) / (0.05 * V_m + sqrt(W_t + b * C_d * cos(psi)^2))",
+    requiredUnits: { V_m: "ft/min", b: "in", W_t: "lb", C_d: "lb", psi: "°", F_D: "lb" }
   },
   { id: "eq_helical_ratio_factor", name: "Ratio Factor for Gearing", canonicalTex: "Q = \\frac{2 T_2}{T_1 + T_2}", baseFormula: "Q = (2 * T_2) / (T_1 + T_2)", nodes: ["Q", "T_1", "T_2"] },
   { id: "eq_helical_wear_load", name: "Limiting Wear Load (Helical)", canonicalTex: "F_w = \\frac{D_1 b Q K_w}{\\cos^2\\psi}", baseFormula: "F_w = (D_P1 * b * Q * K_w) / (cos(psi)^2)", nodes: ["F_w", "D_P1", "b", "Q", "K_w", "psi"] }
