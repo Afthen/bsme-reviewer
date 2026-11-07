@@ -3,7 +3,7 @@
  * Flashcard carousel with dynamic CAS isolation and topic-aware tooltips.
  */
 
-import { isolateVariable } from "../core/cas.js";
+import { isolateVariable, SYMBOL_TO_KEY } from "../core/cas.js";
 
 let currentCards = [];
 let currentCardIdx = 0;
@@ -13,11 +13,15 @@ let activeSystemRef = null;
 let activeVarsDbRef = {};
 
 function resolveMeta(varKey) {
-  return activeVarsDbRef[varKey] || { name: varKey, symbol: varKey, dimension: "Dimensionless" };
+  const k = SYMBOL_TO_KEY[varKey] || varKey;
+  return activeVarsDbRef[k] || activeVarsDbRef[varKey] || { name: k, symbol: k, dimension: "Dimensionless" };
 }
 
-export function initCarouselView(relations = []) {
+export function initCarouselView(relations = [], varsDb = {}) {
   globalRelations = relations;
+  if (varsDb && Object.keys(varsDb).length > 0) {
+    activeVarsDbRef = varsDb;
+  }
 
   document.getElementById("btn-back-to-problem")?.addEventListener("click", () => {
     document.getElementById("view-carousel").classList.remove("active");
@@ -58,8 +62,8 @@ export function openCarouselForVariable(varKey, system = null) {
 function renderCurrentCard() {
   if (currentCards.length === 0) return;
   const card = currentCards[currentCardIdx];
-  const canonicalLhs = (card.baseFormula || "").split("=")[0].trim();
-  const currentIsolated = isolatedVarMap[card.id] || canonicalLhs;
+  const canonicalKey = card.nodes?.[0] || (card.baseFormula || "").split("=")[0].trim();
+  const currentIsolated = isolatedVarMap[card.id] || canonicalKey;
 
   document.getElementById("c-counter").textContent = `${currentCardIdx + 1} / ${currentCards.length}`;
 
@@ -67,7 +71,7 @@ function renderCurrentCard() {
   document.getElementById("c-dimension").textContent = `[${isolatedMeta.dimension}]`;
 
   let displayLatex = card.canonicalTex;
-  if (currentIsolated !== canonicalLhs) {
+  if (currentIsolated !== canonicalKey) {
     const isolated = isolateVariable(card.baseFormula, currentIsolated, activeVarsDbRef);
     displayLatex = isolated.texEquation;
   }
@@ -124,8 +128,27 @@ export function attachTooltips(activeSystem = null, currentSteps = [], varsDb = 
 
     el.addEventListener("mouseenter", () => {
       const rect = el.getBoundingClientRect();
-      const relevantStep = currentSteps.find(s => s.targetVar === varKey || (s.nodes && s.nodes.includes(varKey)));
-      const relFormula = relevantStep ? `\\[ ${relevantStep.canonicalTex} \\]` : "";
+      
+      // Look up canonical formula: prioritizes the equation targeting this variable,
+      // or the canonical defining relation from globalRelations.
+      const activeStep = currentSteps.find(s => s.targetVar === varKey);
+      const relatedStep = currentSteps.find(s => s.nodes && s.nodes.includes(varKey));
+
+      let targetEq = null;
+      if (activeStep) {
+        targetEq = globalRelations.find(r => r.id === activeStep.eqId);
+      } else if (relatedStep) {
+        targetEq = globalRelations.find(r => r.id === relatedStep.eqId);
+      }
+
+      if (!targetEq) {
+        targetEq = globalRelations.find(r => r.nodes && r.nodes[0] === varKey) ||
+                   globalRelations.find(r => r.nodes && r.nodes.includes(varKey));
+      }
+
+      // Always use canonicalTex so fractions are consistently formatted top-and-bottom (\frac)
+      const canonicalFormula = targetEq?.canonicalTex || activeStep?.canonicalTex || "";
+      const relFormula = canonicalFormula ? `\\[ ${canonicalFormula} \\]` : "";
 
       tooltip.innerHTML = `
         <div class="tt-name">${meta.name}</div>
@@ -133,7 +156,10 @@ export function attachTooltips(activeSystem = null, currentSteps = [], varsDb = 
         ${relFormula ? `<div style="margin: 0.35rem 0;">${relFormula}</div>` : ""}
         <div class="tt-hint">Click variable to review canonical formula cards</div>
       `;
-      tooltip.style.left = `${rect.left}px`;
+
+      // Prevent tooltip overflow past screen right edge
+      const left = Math.min(Math.max(8, rect.left), window.innerWidth - 330);
+      tooltip.style.left = `${left}px`;
       tooltip.style.top = `${rect.bottom + 6}px`;
       tooltip.style.display = "block";
 
