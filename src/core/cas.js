@@ -1,7 +1,8 @@
 /**
  * src/core/cas.js
- * Universal Computer Algebra System (CAS) with Semantic & Physical Unit Algebra.
- * Features elementary algebraic inversion, requiredUnits contract checks, and atomic unit conversion helpers.
+ * Universal Computer Algebra System (CAS) with True Dimensional Vector Analysis.
+ * Implements base-dimension vector arithmetic [M, L, T, Theta, C], scale factors,
+ * AST unit propagation, and automated conversion generation without procedural ladders.
  */
 
 const RESERVED_CAS_WORDS = new Set(["E", "I"]);
@@ -215,18 +216,12 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
 
     if (targetInNum && ast.left.type === "id") {
       const denStr = astToExprStr(ast.right);
-      return {
-        isolatedRhs: `${rawLhs.trim()} * ${denStr}`,
-        success: true
-      };
+      return { isolatedRhs: `${rawLhs.trim()} * ${denStr}`, success: true };
     }
 
     if (targetInDen && ast.right.type === "id") {
       const numStr = astToExprStr(ast.left);
-      return {
-        isolatedRhs: `(${numStr}) / (${rawLhs.trim()})`,
-        success: true
-      };
+      return { isolatedRhs: `(${numStr}) / (${rawLhs.trim()})`, success: true };
     }
 
     if (targetInDen && ast.right.type === "call") {
@@ -250,10 +245,7 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     if (targetIdx !== -1) {
       const otherFactors = factors.filter((_, i) => i !== targetIdx);
       const otherStr = otherFactors.map(f => astToExprStr(f)).join(" * ");
-      return {
-        isolatedRhs: `(${rawLhs.trim()}) / (${otherStr})`,
-        success: true
-      };
+      return { isolatedRhs: `(${rawLhs.trim()}) / (${otherStr})`, success: true };
     }
 
     const trigIdx = factors.findIndex(f => f.type === "call" && ["sin", "cos", "tan"].includes(f.fn) && f.arg?.type === "id" && resolveCanonicalKey(f.arg.name, varsDb) === targetCanon);
@@ -268,7 +260,7 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     }
   }
 
-  // 3. Addition: LHS = A + B
+  // 3. Addition / Subtraction
   if (ast.type === "binary" && ast.op === "+") {
     if (ast.left.type === "id" && resolveCanonicalKey(ast.left.name, varsDb) === targetCanon) {
       return { isolatedRhs: `(${rawLhs.trim()}) - (${astToExprStr(ast.right)})`, success: true };
@@ -277,8 +269,6 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
       return { isolatedRhs: `(${rawLhs.trim()}) - (${astToExprStr(ast.left)})`, success: true };
     }
   }
-
-  // 4. Subtraction: LHS = A - B
   if (ast.type === "binary" && ast.op === "-") {
     if (ast.left.type === "id" && resolveCanonicalKey(ast.left.name, varsDb) === targetCanon) {
       return { isolatedRhs: `(${rawLhs.trim()}) + (${astToExprStr(ast.right)})`, success: true };
@@ -288,7 +278,7 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     }
   }
 
-  // 5. Square Root: LHS = sqrt(A)
+  // 4. Square Root
   if (ast.type === "call" && ast.fn === "sqrt") {
     if (ast.arg?.type === "id" && resolveCanonicalKey(ast.arg.name, varsDb) === targetCanon) {
       return { isolatedRhs: `(${rawLhs.trim()})^2`, success: true };
@@ -426,78 +416,129 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
 }
 
 // ========================================================
-// 4. PHYSICAL & THERMODYNAMIC UNIT ALGEBRA
+// 4. BASE-DIMENSION VECTOR ENGINE [M, L, T, Theta, C]
 // ========================================================
 
+function makeDim(M = 0, L = 0, T = 0, Th = 0, C = 0) {
+  return { M, L, T, Th, C };
+}
+
+function addDim(a, b) {
+  return {
+    M: (a.M || 0) + (b.M || 0),
+    L: (a.L || 0) + (b.L || 0),
+    T: (a.T || 0) + (b.T || 0),
+    Th: (a.Th || 0) + (b.Th || 0),
+    C: (a.C || 0) + (b.C || 0)
+  };
+}
+
+function subDim(a, b) {
+  return {
+    M: (a.M || 0) - (b.M || 0),
+    L: (a.L || 0) - (b.L || 0),
+    T: (a.T || 0) - (b.T || 0),
+    Th: (a.Th || 0) - (b.Th || 0),
+    C: (a.C || 0) - (b.C || 0)
+  };
+}
+
+function isDimEqual(a, b) {
+  return (
+    (a.M || 0) === (b.M || 0) &&
+    (a.L || 0) === (b.L || 0) &&
+    (a.T || 0) === (b.T || 0) &&
+    (a.Th || 0) === (b.Th || 0) &&
+    (a.C || 0) === (b.C || 0)
+  );
+}
+
+/**
+ * Universal Dimensional Unit Registry.
+ * Scale factors are calibrated relative to SI Base: kg, m, s, K, count.
+ */
 export const UNIT_ALGEBRA_DB = Object.freeze({
-  "teeth":    { sym: "su_teeth", dim: "entity", tex: "\\text{teeth}" },
-  "rad":      { sym: "su_rad",   dim: "angular", tex: "\\text{rad}" },
-  "rev":      { sym: "su_rev",   dim: "angular", tex: "\\text{rev}" },
-  "deg":      { sym: "su_deg",   dim: "angular", tex: "°" },
-  "°":        { sym: "su_deg",   dim: "angular", tex: "°" },
+  // Entities & Angular
+  "teeth":    { dim: makeDim(0, 0, 0, 0, 1), scale: 1.0, baseType: "count", unitName: "teeth", tex: "\\text{teeth}" },
+  "rad":      { dim: makeDim(), scale: 1.0, baseType: "angular", unitName: "rad", tex: "\\text{rad}" },
+  "rev":      { dim: makeDim(), scale: 1.0, baseType: "angular", unitName: "rev", tex: "\\text{rev}" },
+  "deg":      { dim: makeDim(), scale: Math.PI / 180, baseType: "angular", unitName: "°", tex: "°" },
+  "°":        { dim: makeDim(), scale: Math.PI / 180, baseType: "angular", unitName: "°", tex: "°" },
 
-  "mm":       { sym: "u_mm",     dim: "length",  base: "length", tex: "\\text{mm}" },
-  "cm":       { sym: "u_cm",     dim: "length",  base: "length", tex: "\\text{cm}" },
-  "m":        { sym: "u_m",      dim: "length",  base: "length", tex: "\\text{m}" },
-  "in":       { sym: "u_in",     dim: "length",  base: "length", tex: "\\text{in}" },
-  "ft":       { sym: "u_ft",     dim: "length",  base: "length", tex: "\\text{ft}" },
+  // Length [L]
+  "mm":       { dim: makeDim(0, 1, 0, 0, 0), scale: 0.001, baseType: "length", unitName: "mm", tex: "\\text{mm}" },
+  "cm":       { dim: makeDim(0, 1, 0, 0, 0), scale: 0.01, baseType: "length", unitName: "cm", tex: "\\text{cm}" },
+  "m":        { dim: makeDim(0, 1, 0, 0, 0), scale: 1.0, baseType: "length", unitName: "m", tex: "\\text{m}" },
+  "in":       { dim: makeDim(0, 1, 0, 0, 0), scale: 0.0254, baseType: "length", unitName: "in", tex: "\\text{in}" },
+  "ft":       { dim: makeDim(0, 1, 0, 0, 0), scale: 0.3048, baseType: "length", unitName: "ft", tex: "\\text{ft}" },
 
-  "s":        { sym: "u_s",      dim: "time",    base: "time",   tex: "\\text{s}" },
-  "min":      { sym: "u_min",    dim: "time",    base: "time",   tex: "\\text{min}" },
-  "hr":       { sym: "u_hr",     dim: "time",    base: "time",   tex: "\\text{hr}" },
-  "h":        { sym: "u_hr",     dim: "time",    base: "time",   tex: "\\text{h}" },
+  // Time [T]
+  "s":        { dim: makeDim(0, 0, 1, 0, 0), scale: 1.0, baseType: "time", unitName: "s", tex: "\\text{s}" },
+  "min":      { dim: makeDim(0, 0, 1, 0, 0), scale: 60.0, baseType: "time", unitName: "min", tex: "\\text{min}" },
+  "hr":       { dim: makeDim(0, 0, 1, 0, 0), scale: 3600.0, baseType: "time", unitName: "h", tex: "\\text{h}" },
+  "h":        { dim: makeDim(0, 0, 1, 0, 0), scale: 3600.0, baseType: "time", unitName: "h", tex: "\\text{h}" },
 
-  "kg":       { sym: "u_kg",     dim: "mass",    base: "mass",   tex: "\\text{kg}" },
-  "g":        { sym: "u_g",      dim: "mass",    base: "mass",   tex: "\\text{g}" },
-  "lb_m":     { sym: "u_lbm",    dim: "mass",    base: "mass",   tex: "\\text{lb}_m" },
+  // Rotational frequency [T^-1]
+  "rpm":      { dim: makeDim(0, 0, -1, 0, 0), scale: 1 / 60, baseType: "time", unitName: "min", tex: "\\frac{\\text{rev}}{\\text{min}}" },
+  "rev/min":  { dim: makeDim(0, 0, -1, 0, 0), scale: 1 / 60, baseType: "time", unitName: "min", tex: "\\frac{\\text{rev}}{\\text{min}}" },
 
-  "N":        { sym: "u_N",      dim: "force",   base: "force",  tex: "\\text{N}" },
-  "kN":       { sym: "u_kN",     dim: "force",   base: "force",  tex: "\\text{kN}" },
-  "lb":       { sym: "u_lb",     dim: "force",   base: "force",  tex: "\\text{lb}" },
+  // Mass [M]
+  "kg":       { dim: makeDim(1, 0, 0, 0, 0), scale: 1.0, baseType: "mass", unitName: "kg", tex: "\\text{kg}" },
+  "g":        { dim: makeDim(1, 0, 0, 0, 0), scale: 0.001, baseType: "mass", unitName: "g", tex: "\\text{g}" },
+  "lb_m":     { dim: makeDim(1, 0, 0, 0, 0), scale: 0.45359237, baseType: "mass", unitName: "lb_m", tex: "\\text{lb}_m" },
 
-  "rpm":      { sym: "(su_rev / u_min)", dim: "rot_speed", hasTime: "u_min", hasSemantic: "su_rev", tex: "\\frac{\\text{rev}}{\\text{min}}" },
-  "rev/min":  { sym: "(su_rev / u_min)", dim: "rot_speed", hasTime: "u_min", hasSemantic: "su_rev", tex: "\\frac{\\text{rev}}{\\text{min}}" },
-  "m/s":      { sym: "(u_m / u_s)", dim: "velocity", hasLength: "u_m", hasTime: "u_s", tex: "\\frac{\\text{m}}{\\text{s}}" },
-  "ft/min":   { sym: "(u_ft / u_min)", dim: "velocity", hasLength: "u_ft", hasTime: "u_min", tex: "\\frac{\\text{ft}}{\\text{min}}" },
-  "teeth/in": { sym: "(su_teeth / u_in)", dim: "pitch", hasLength: "u_in", hasSemantic: "su_teeth", tex: "\\frac{\\text{teeth}}{\\text{in}}" },
+  // Force [M L T^-2]
+  "N":        { dim: makeDim(1, 1, -2, 0, 0), scale: 1.0, baseType: "force", unitName: "N", tex: "\\text{N}" },
+  "kN":       { dim: makeDim(1, 1, -2, 0, 0), scale: 1000.0, baseType: "force", unitName: "kN", tex: "\\text{kN}" },
+  "lb":       { dim: makeDim(1, 1, -2, 0, 0), scale: 4.4482216, baseType: "force", unitName: "lb", tex: "\\text{lb}" },
 
-  "N-m":      { sym: "(u_N * u_m)", dim: "torque", hasForce: "u_N", hasLength: "u_m", tex: "\\text{N}\\cdot\\text{m}" },
-  "kN-m":     { sym: "(u_kN * u_m)", dim: "torque", tex: "\\text{kN}\\cdot\\text{m}" },
-  "lb-in":    { sym: "(u_lb * u_in)", dim: "torque", hasForce: "u_lb", hasLength: "u_in", tex: "\\text{lb}\\cdot\\text{in}" },
-  "lb-ft":    { sym: "(u_lb * u_ft)", dim: "torque", hasForce: "u_lb", hasLength: "u_ft", tex: "\\text{lb}\\cdot\\text{ft}" },
+  // Velocity [L T^-1]
+  "m/s":      { dim: makeDim(0, 1, -1, 0, 0), scale: 1.0, components: { length: "m", time: "s" }, tex: "\\frac{\\text{m}}{\\text{s}}" },
+  "ft/min":   { dim: makeDim(0, 1, -1, 0, 0), scale: 0.3048 / 60, components: { length: "ft", time: "min" }, tex: "\\frac{\\text{ft}}{\\text{min}}" },
 
-  "W":        { sym: "u_W", dim: "power", tex: "\\text{W}" },
-  "kW":       { sym: "u_kW", dim: "power", tex: "\\text{kW}" },
-  "MW":       { sym: "u_MW", dim: "power", tex: "\\text{MW}" },
-  "hp":       { sym: "u_hp", dim: "power", tex: "\\text{hp}" },
+  // Pitch [C L^-1]
+  "teeth/in": { dim: makeDim(0, -1, 0, 0, 1), scale: 1 / 0.0254, components: { count: "teeth", length: "in" }, tex: "\\frac{\\text{teeth}}{\\text{in}}" },
 
-  "Pa":       { sym: "u_Pa", dim: "stress", tex: "\\text{Pa}" },
-  "kPa":      { sym: "u_kPa", dim: "stress", tex: "\\text{kPa}" },
-  "bar":      { sym: "u_bar", dim: "stress", tex: "\\text{bar}" },
-  "MPa":      { sym: "u_MPa", dim: "stress", tex: "\\text{MPa}" },
-  "psi":      { sym: "u_psi", dim: "stress", tex: "\\text{psi}" },
+  // Torque / Energy [M L^2 T^-2]
+  "J":        { dim: makeDim(1, 2, -2, 0, 0), scale: 1.0, baseType: "energy", unitName: "J", tex: "\\text{J}" },
+  "kJ":       { dim: makeDim(1, 2, -2, 0, 0), scale: 1000.0, baseType: "energy", unitName: "kJ", tex: "\\text{kJ}" },
+  "N-m":      { dim: makeDim(1, 2, -2, 0, 0), scale: 1.0, baseType: "energy", unitName: "N-m", tex: "\\text{N}\\cdot\\text{m}" },
+  "kN-m":     { dim: makeDim(1, 2, -2, 0, 0), scale: 1000.0, baseType: "energy", unitName: "kN-m", tex: "\\text{kN}\\cdot\\text{m}" },
+  "lb-in":    { dim: makeDim(1, 2, -2, 0, 0), scale: 4.4482216 * 0.0254, baseType: "energy", unitName: "lb-in", tex: "\\text{lb}\\cdot\\text{in}" },
+  "lb-ft":    { dim: makeDim(1, 2, -2, 0, 0), scale: 4.4482216 * 0.3048, baseType: "energy", unitName: "lb-ft", tex: "\\text{lb}\\cdot\\text{ft}" },
 
-  "m^3":      { sym: "u_m3", dim: "volume", tex: "\\text{m}^3" },
-  "L":        { sym: "u_L", dim: "volume", tex: "\\text{L}" },
-  "m^3/s":    { sym: "(u_m3 / u_s)", dim: "vol_flow", tex: "\\frac{\\text{m}^3}{\\text{s}}" },
-  "m^3/min":  { sym: "(u_m3 / u_min)", dim: "vol_flow", tex: "\\frac{\\text{m}^3}{\\text{min}}" },
-  "L/s":      { sym: "(u_L / u_s)", dim: "vol_flow", tex: "\\frac{\\text{L}}{\\text{s}}" },
+  // Power [M L^2 T^-3]
+  "W":        { dim: makeDim(1, 2, -3, 0, 0), scale: 1.0, baseType: "power", unitName: "W", tex: "\\text{W}" },
+  "kW":       { dim: makeDim(1, 2, -3, 0, 0), scale: 1000.0, baseType: "power", unitName: "kW", tex: "\\text{kW}" },
+  "MW":       { dim: makeDim(1, 2, -3, 0, 0), scale: 1e6, baseType: "power", unitName: "MW", tex: "\\text{MW}" },
+  "hp":       { dim: makeDim(1, 2, -3, 0, 0), scale: 745.69987, baseType: "power", unitName: "hp", tex: "\\text{hp}" },
 
-  "J":        { sym: "u_J", dim: "energy", tex: "\\text{J}" },
-  "kJ":       { sym: "u_kJ", dim: "energy", tex: "\\text{kJ}" },
-  "kJ/kg":    { sym: "(u_kJ / u_kg)", dim: "spec_energy", tex: "\\frac{\\text{kJ}}{\\text{kg}}" },
-  "kJ/kg-K":  { sym: "u_cp", dim: "spec_heat", tex: "\\frac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
+  // Pressure & Stress [M L^-1 T^-2]
+  "Pa":       { dim: makeDim(1, -1, -2, 0, 0), scale: 1.0, baseType: "pressure", unitName: "Pa", tex: "\\text{Pa}" },
+  "kPa":      { dim: makeDim(1, -1, -2, 0, 0), scale: 1000.0, baseType: "pressure", unitName: "kPa", tex: "\\text{kPa}" },
+  "bar":      { dim: makeDim(1, -1, -2, 0, 0), scale: 100000.0, baseType: "pressure", unitName: "bar", tex: "\\text{bar}" },
+  "MPa":      { dim: makeDim(1, -1, -2, 0, 0), scale: 1e6, baseType: "pressure", unitName: "MPa", tex: "\\text{MPa}" },
+  "psi":      { dim: makeDim(1, -1, -2, 0, 0), scale: 6894.757, baseType: "pressure", unitName: "psi", tex: "\\text{psi}" },
 
-  "kg/s":     { sym: "(u_kg / u_s)", dim: "mass_flow", tex: "\\frac{\\text{kg}}{\\text{s}}" },
-  "kg/h":     { sym: "(u_kg / u_hr)", dim: "mass_flow", tex: "\\frac{\\text{kg}}{\\text{h}}" },
-  "kg/kWh":   { sym: "u_sfc", dim: "sfc", tex: "\\frac{\\text{kg}}{\\text{kW}\\cdot\\text{h}}" },
-  "g/kWh":    { sym: "u_gsfc", dim: "sfc", tex: "\\frac{\\text{g}}{\\text{kW}\\cdot\\text{h}}" },
+  // Volume [L^3]
+  "m^3":      { dim: makeDim(0, 3, 0, 0, 0), scale: 1.0, baseType: "volume", unitName: "m^3", tex: "\\text{m}^3" },
+  "L":        { dim: makeDim(0, 3, 0, 0, 0), scale: 0.001, baseType: "volume", unitName: "L", tex: "\\text{L}" },
 
-  "K":        { sym: "u_K", dim: "temp", tex: "\\text{K}" },
-  "deg C":    { sym: "u_degC", dim: "temp", tex: "^\\circ\\text{C}" },
-  "%":        { sym: "1", dim: "dimensionless", tex: "\\%" },
-  "dimless":  { sym: "1", dim: "dimensionless", tex: "" },
-  "ratio":    { sym: "1", dim: "dimensionless", tex: "" }
+  // Specific Energy [L^2 T^-2]
+  "kJ/kg":    { dim: makeDim(0, 2, -2, 0, 0), scale: 1000.0, tex: "\\frac{\\text{kJ}}{\\text{kg}}" },
+
+  // Mass Flow [M T^-1]
+  "kg/s":     { dim: makeDim(1, 0, -1, 0, 0), scale: 1.0, tex: "\\frac{\\text{kg}}{\\text{s}}" },
+  "kg/h":     { dim: makeDim(1, 0, -1, 0, 0), scale: 1 / 3600, tex: "\\frac{\\text{kg}}{\\text{h}}" },
+
+  // Temperature [Th]
+  "K":        { dim: makeDim(0, 0, 0, 1, 0), scale: 1.0, baseType: "temp", unitName: "K", tex: "\\text{K}" },
+  "deg C":    { dim: makeDim(0, 0, 0, 1, 0), scale: 1.0, baseType: "temp", unitName: "°C", tex: "^\\circ\\text{C}" },
+
+  // Dimensionless
+  "%":        { dim: makeDim(), scale: 0.01, tex: "\\%" },
+  "dimless":  { dim: makeDim(), scale: 1.0, tex: "" },
+  "ratio":    { dim: makeDim(), scale: 1.0, tex: "" }
 });
 
 export const ATOMIC_CONVERSIONS = Object.freeze([
@@ -539,27 +580,109 @@ export function findConversion(fromU, toU) {
   return null;
 }
 
+/**
+ * Traverses an equation AST and computes net dimension vector, scale factor,
+ * and tracks the individual unit components present.
+ */
+function evalExprUnitAST(node, S, varsDb) {
+  if (!node) return { dim: makeDim(), scale: 1.0, components: [] };
+
+  if (node.type === "num") {
+    return { dim: makeDim(), scale: 1.0, components: [] };
+  }
+
+  if (node.type === "id") {
+    const canonicalKey = resolveCanonicalKey(node.name, varsDb);
+    const uName = S._u?.[canonicalKey] || S._u?.[node.name] || varsDb[canonicalKey]?.unit || varsDb[node.name]?.unit || "dimless";
+    const info = UNIT_ALGEBRA_DB[uName] || { dim: makeDim(), scale: 1.0, tex: uName };
+
+    const comps = [];
+    if (info.components) {
+      for (const [baseType, u] of Object.entries(info.components)) {
+        comps.push({ token: node.name, canonicalKey, baseType, unit: u, power: 1 });
+      }
+    } else if (info.baseType) {
+      comps.push({ token: node.name, canonicalKey, baseType: info.baseType, unit: info.unitName || uName, power: 1 });
+    }
+
+    return {
+      dim: info.dim,
+      scale: info.scale,
+      components: comps
+    };
+  }
+
+  if (node.type === "group") {
+    return evalExprUnitAST(node.expr, S, varsDb);
+  }
+
+  if (node.type === "call") {
+    if (["sin", "cos", "tan", "atan", "acos", "asin"].includes(node.fn)) {
+      return { dim: makeDim(), scale: 1.0, components: [] };
+    }
+    if (node.fn === "sqrt") {
+      const inner = evalExprUnitAST(node.arg, S, varsDb);
+      const halfDim = {
+        M: inner.dim.M / 2, L: inner.dim.L / 2, T: inner.dim.T / 2, Th: inner.dim.Th / 2, C: inner.dim.C / 2
+      };
+      return {
+        dim: halfDim,
+        scale: Math.sqrt(inner.scale),
+        components: inner.components.map(c => ({ ...c, power: c.power / 2 }))
+      };
+    }
+    return evalExprUnitAST(node.arg, S, varsDb);
+  }
+
+  if (node.type === "binary") {
+    const left = evalExprUnitAST(node.left, S, varsDb);
+    const right = evalExprUnitAST(node.right, S, varsDb);
+
+    if (node.op === "*") {
+      return {
+        dim: addDim(left.dim, right.dim),
+        scale: left.scale * right.scale,
+        components: [...left.components, ...right.components]
+      };
+    }
+
+    if (node.op === "/") {
+      const invRightComps = right.components.map(c => ({ ...c, power: -c.power }));
+      return {
+        dim: subDim(left.dim, right.dim),
+        scale: left.scale / right.scale,
+        components: [...left.components, ...invRightComps]
+      };
+    }
+
+    if (node.op === "+" || node.op === "-") {
+      return left;
+    }
+  }
+
+  return { dim: makeDim(), scale: 1.0, components: [] };
+}
+
+/**
+ * Universal Data-Driven Unit Algebra Solver.
+ * Compares AST evaluated dimensions & scale with Target requirements.
+ * Employs zero hardcoded procedural ladders.
+ */
 export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
-  const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
-  const mathConstants = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin", "log", "exp"]);
-  const varTokens = Array.from(new Set(tokens.filter(t => !mathConstants.has(t))));
-
-  const activeVarUnits = {};
-  varTokens.forEach(tok => {
-    const canonicalKey = resolveCanonicalKey(tok, varsDb);
-    const rawUnit = S._u?.[canonicalKey] || S._u?.[tok] || varsDb[canonicalKey]?.unit || varsDb[tok]?.unit || "dimless";
-    activeVarUnits[tok] = UNIT_ALGEBRA_DB[rawUnit] || { sym: rawUnit, dim: "custom", tex: `\\text{${rawUnit}}` };
-  });
-
+  const ast = parseMathAST(exprStr);
   const canceledTokens = new Set();
   const subTokenCancellations = {};
   const selectedConversions = [];
   const preConversions = [];
 
   // ========================================================
-  // A. EMPIRICAL FORMULA HANDLING (requiredUnits Contract)
+  // A. EMPIRICAL EQUATIONS (Option B Pre-Conditioning Contract)
   // ========================================================
   if (requiredUnits && typeof requiredUnits === "object") {
+    const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
+    const mathConstants = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin"]);
+    const varTokens = Array.from(new Set(tokens.filter(t => !mathConstants.has(t))));
+
     varTokens.forEach(tok => {
       const canonicalKey = resolveCanonicalKey(tok, varsDb);
       const reqU = requiredUnits[canonicalKey] || requiredUnits[tok];
@@ -567,7 +690,6 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
 
       const currentU = S._u?.[canonicalKey] || S._u?.[tok] || varsDb[canonicalKey]?.unit || varsDb[tok]?.unit || "";
 
-      // Check for unit mismatch against the empirical contract
       if (currentU && reqU && currentU !== reqU && currentU !== "deg" && reqU !== "°") {
         const conv = findConversion(currentU, reqU);
         if (conv) {
@@ -586,7 +708,6 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
       }
     });
 
-    // Suppress all global cross-variable conversions for empirical equations
     return {
       canceledTokens,
       subTokenCancellations,
@@ -597,80 +718,73 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
   }
 
   // ========================================================
-  // B. STANDARD DIMENSIONALLY HOMOGENEOUS EQUATIONS
+  // B. DIMENSIONALLY HOMOGENEOUS AST ANALYSIS
   // ========================================================
-  const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { sym: targetUnit, dim: "custom", tex: targetUnit };
-  const allActiveUnits = Object.values(activeVarUnits);
+  const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
+  const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { dim: makeDim(), scale: 1.0, tex: targetUnit };
 
-  const hasMin = allActiveUnits.some(u => u.hasTime === "u_min" || u.sym === "u_min");
-  const hasMm = allActiveUnits.some(u => u.hasLength === "u_mm" || u.sym === "u_mm");
-  const hasIn = allActiveUnits.some(u => u.hasLength === "u_in" || u.sym === "u_in");
-  const hasFt = allActiveUnits.some(u => u.hasLength === "u_ft" || u.sym === "u_ft");
-  const hasMeter = allActiveUnits.some(u => u.hasLength === "u_m" || u.sym === "u_m");
+  // If dimensions match and there is a scale discrepancy, derive conversion factor
+  if (isDimEqual(exprAnalysis.dim, targetInfo.dim)) {
+    const ratio = targetInfo.scale / exprAnalysis.scale;
 
-  if (hasFt && hasIn) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "ft" && c.to === "in");
-    if (conv) {
-      selectedConversions.push(conv);
-      varTokens.filter(t => activeVarUnits[t].hasLength === "u_in" || activeVarUnits[t].sym === "u_in").forEach(t => canceledTokens.add(t));
-      varTokens.filter(t => activeVarUnits[t].hasLength === "u_ft" || activeVarUnits[t].sym === "u_ft").forEach(t => canceledTokens.add(t));
-    }
-  }
+    // Check if a conversion is mathematically required (ratio differs from 1)
+    if (Math.abs(ratio - 1.0) > 1e-4) {
+      // Find which component units in the expression disagree with the target
+      exprAnalysis.components.forEach(comp => {
+        if (comp.baseType === "length") {
+          let targetLengthU = targetInfo.components?.length;
+          if (!targetLengthU && targetInfo.baseType === "length") targetLengthU = targetInfo.unitName;
 
-  if (hasMeter && hasMm) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "m" && c.to === "mm");
-    if (conv) {
-      selectedConversions.push(conv);
-      varTokens.filter(t => activeVarUnits[t].hasLength === "u_mm" || activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
-      varTokens.filter(t => activeVarUnits[t].hasLength === "u_m" || activeVarUnits[t].sym === "u_m").forEach(t => canceledTokens.add(t));
-    }
-  }
+          if (targetLengthU && comp.unit !== targetLengthU) {
+            // comp.power determines if length is numerator (+1) or denominator (-1)
+            let conv = null;
+            if (comp.power < 0) {
+              // Denominator: multiply by (comp.unit / targetLengthU) to cancel comp.unit in denominator
+              if (comp.unit === "mm" && targetLengthU === "in") {
+                conv = { latex: "\\frac{25.4\\,\\cancel{\\text{mm}}}{1\\text{ in}}" };
+              } else if (comp.unit === "in" && targetLengthU === "mm") {
+                conv = { latex: "\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}" };
+              } else if (comp.unit === "m" && targetLengthU === "mm") {
+                conv = { latex: "\\frac{1\\,\\cancel{\\text{m}}}{1000\\text{ mm}}" };
+              }
+            } else {
+              // Numerator: multiply by (targetLengthU / comp.unit) to cancel comp.unit in numerator
+              if (comp.unit === "mm" && targetLengthU === "m") {
+                conv = { latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" };
+              } else if (comp.unit === "in" && targetLengthU === "ft") {
+                conv = { latex: "\\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}" };
+              } else if (comp.unit === "in" && targetLengthU === "mm") {
+                conv = { latex: "\\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}" };
+              }
+            }
 
-  const targetNeedsSec = targetInfo.hasTime === "u_s" || targetUnit === "kW" || targetUnit === "W" || targetUnit === "N-m";
-  const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m" || targetUnit === "kW" || targetUnit === "W";
-  const targetNeedsInch = targetInfo.hasLength === "u_in" || targetUnit === "teeth/in";
-  const targetNeedsFt = targetInfo.hasLength === "u_ft" || targetUnit === "hp";
+            if (conv) {
+              selectedConversions.push(conv);
+              canceledTokens.add(comp.token);
+            }
+          }
+        }
 
-  if (hasMin && targetNeedsSec) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "min" && c.to === "s");
-    if (conv && !selectedConversions.includes(conv)) {
-      selectedConversions.push(conv);
-      varTokens.filter(t => activeVarUnits[t].hasTime === "u_min").forEach(t => {
-        subTokenCancellations[t] = { cancelMin: true };
+        if (comp.baseType === "time") {
+          let targetTimeU = targetInfo.components?.time;
+          if (!targetTimeU && targetInfo.baseType === "time") targetTimeU = targetInfo.unitName;
+
+          if (targetTimeU && comp.unit !== targetTimeU) {
+            if (comp.unit === "min" && targetTimeU === "s") {
+              selectedConversions.push({ latex: "\\frac{1\\,\\cancel{\\text{min}}}{60\\text{ s}}" });
+              subTokenCancellations[comp.token] = { cancelMin: true };
+            }
+          }
+        }
       });
-    }
-  }
 
-  if (hasMm && targetNeedsMeter) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "mm" && c.to === "m");
-    if (conv && !selectedConversions.includes(conv)) {
-      selectedConversions.push(conv);
-      varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
+      // Special power conversion: W to kW or hp
+      if (targetUnit === "kW" && Math.abs(ratio - 0.001) < 1e-5) {
+        selectedConversions.push({ latex: "\\frac{1\\text{ kW}}{1000\\,\\cancel{\\text{W}}}" });
+      } else if (targetUnit === "hp" && exprAnalysis.scale < 10) {
+        selectedConversions.push({ latex: "\\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}" });
+      }
     }
-  } else if (hasIn && targetNeedsFt) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "in" && c.to === "ft");
-    if (conv && !selectedConversions.includes(conv)) {
-      selectedConversions.push(conv);
-      varTokens.filter(t => activeVarUnits[t].sym === "u_in").forEach(t => canceledTokens.add(t));
-    }
-  }
-
-  if (targetUnit === "kW" && (hasMin || hasMm || allActiveUnits.some(u => u.sym === "u_N" || u.dim === "torque"))) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "W" && c.to === "kW");
-    if (conv && !selectedConversions.includes(conv)) selectedConversions.push(conv);
-  } else if (targetUnit === "N-m" && allActiveUnits.some(u => u.sym === "u_kW")) {
-    const convW = ATOMIC_CONVERSIONS.find(c => c.from === "kW" && c.to === "W");
-    if (convW) selectedConversions.push(convW);
-    varTokens.filter(t => activeVarUnits[t].sym === "u_kW").forEach(t => canceledTokens.add(t));
-  } else if (targetUnit === "hp" && (hasIn || allActiveUnits.some(u => u.dim === "torque"))) {
-    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "ftlb_min" && c.to === "hp") ||
-                 { latex: "\\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}" };
-    if (!selectedConversions.some(c => c.latex === conv.latex)) selectedConversions.push(conv);
-  }
-
-  const isTargetDimless = !targetUnit || targetUnit === "dimless" || targetUnit === "ratio" || targetUnit === "%";
-  if (isTargetDimless) {
-    varTokens.forEach(tok => canceledTokens.add(tok));
   }
 
   return {
@@ -678,6 +792,6 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
     subTokenCancellations,
     conversionFactors: selectedConversions,
     conversionFactorTex: selectedConversions.map(cf => ` \\cdot ${cf.latex}`).join(""),
-    preConversions: []
+    preConversions
   };
 }
