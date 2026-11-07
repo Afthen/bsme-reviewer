@@ -42,10 +42,13 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
 
     const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
     const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
-    const rawTarget = targetLabel(meta.name, `{{${meta.symbol || step.targetVar}|${step.targetVar}}}`, unit);
+    
+    // Construct the interactive token span directly so LaTeX braces inside symbols (like P_{dn}) never get corrupted
+    const symSpan = `<span class="interactive-var" data-var="${step.targetVar}">$${meta.symbol || step.targetVar}$</span>`;
+    const labelText = targetLabel(meta.name, symSpan, unit);
 
     const targetSpan = document.createElement("span");
-    targetSpan.innerHTML = `Step ${idx + 1}: ${renderTargetMarkup(rawTarget)}`;
+    targetSpan.innerHTML = `Step ${idx + 1}: ${labelText}`;
 
     labelWrap.appendChild(chevron);
     labelWrap.appendChild(targetSpan);
@@ -266,11 +269,4 @@ function updateToggleAllButton(activeProblem) {
       updateToggleAllButton(activeProblem);
     };
   }
-}
-
-function renderTargetMarkup(targetStr) {
-  return targetStr.replace(/\{\{([^}]+)\}\}/g, (_, p1) => {
-    const parts = p1.split("|");
-    return `<span class="interactive-var" data-var="${parts[1] || parts[0]}">$${parts[0]}$</span>`;
-  });
 }
