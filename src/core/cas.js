@@ -1,20 +1,16 @@
 /**
  * src/core/cas.js
  * Universal Computer Algebra System (CAS) with True Atomic Unit-Bag Algebra.
- * Zero hardcoded unit logic: units are rational products of atomic base dimensions.
+ * Pure native AST implementation with zero external dependencies.
  */
-
-const RESERVED_CAS_WORDS = new Set(["E", "I"]);
 
 export function toCasToken(v) {
   if (!v) return "";
-  const clean = v.replace(/[^a-zA-Z0-9]/g, "");
-  return RESERVED_CAS_WORDS.has(clean) ? `_${clean}_` : clean;
+  return v.replace(/[^a-zA-Z0-9]/g, "");
 }
 
 export function fromCasToken(v) {
-  if (!v) return "";
-  return v.replace(/^_([EI])_$/, "$1");
+  return v || "";
 }
 
 export function resolveCanonicalKey(token, varsDb = {}) {
@@ -33,9 +29,7 @@ export function resolveCanonicalKey(token, varsDb = {}) {
 
 export function sanitizeExpr(exprStr) {
   if (!exprStr) return "";
-  let s = exprStr.replace(/([a-zA-Z]+)_(\w+)/g, "$1$2");
-  s = s.replace(/\bE\b/g, "_E_").replace(/\bI\b/g, "_I_");
-  return s;
+  return exprStr.replace(/([a-zA-Z]+)_(\w+)/g, "$1$2");
 }
 
 // ========================================================
@@ -198,6 +192,45 @@ function unwrapGroup(node) {
   return n;
 }
 
+export function astSubstitute(node, subsObj = {}) {
+  if (!node) return null;
+  if (node.type === "id") {
+    const repl = subsObj[node.name] || subsObj[resolveCanonicalKey(node.name)];
+    if (repl !== undefined) {
+      const subAst = parseMathAST(repl);
+      return subAst ? { type: "group", expr: subAst } : node;
+    }
+    return node;
+  }
+  if (node.type === "group") {
+    return { type: "group", expr: astSubstitute(node.expr, subsObj) };
+  }
+  if (node.type === "call") {
+    return { type: "call", fn: node.fn, arg: astSubstitute(node.arg, subsObj) };
+  }
+  if (node.type === "binary") {
+    return {
+      type: "binary",
+      op: node.op,
+      left: astSubstitute(node.left, subsObj),
+      right: astSubstitute(node.right, subsObj)
+    };
+  }
+  return node;
+}
+
+export function substituteExpression(exprStr, subsObj = {}) {
+  if (!exprStr) return "";
+  const ast = parseMathAST(exprStr);
+  if (!ast) return exprStr;
+  const newAst = astSubstitute(ast, subsObj);
+  return astToExprStr(newAst);
+}
+
+export function simplifyExpression(exprStr) {
+  return exprStr || "";
+}
+
 // ========================================================
 // 2. ELEMENTARY ALGEBRAIC ISOLATION (HUMAN BALANCER)
 // ========================================================
@@ -224,6 +257,7 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
     const targetInNum = numIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
     const targetInDen = denIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
 
+    // Target only in Denominator (e.g. Q = 2*T2 / (T1 + T2))
     if (targetInDen && !targetInNum) {
       if (rawDen.type === "id") {
         const numStr = astToExprStr(rawNum);
@@ -259,6 +293,7 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
       }
     }
 
+    // Target only in Numerator (e.g. C = (T1 + T2) / (2*Pd))
     if (targetInNum && !targetInDen) {
       if (rawNum.type === "id") {
         const denStr = astToExprStr(rawDen);
@@ -334,79 +369,6 @@ function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
   return { success: false };
 }
 
-// ========================================================
-// 3. CAS ENGINE & LATEX FORMATTER
-// ========================================================
-
-export function casToTex(exprStr, varsDb = {}) {
-  if (typeof nerdamer === "undefined" || !exprStr) return exprStr || "";
-  try {
-    let clean = exprStr;
-    clean = clean.replace(/cos\((.*?)\)\^\(-1\)\*sin\(\1\)/g, "tan($1)");
-    clean = clean.replace(/sin\((.*?)\)\*cos\(\1\)\^\(-1\)/g, "tan($1)");
-
-    let tex = nerdamer(sanitizeExpr(clean)).toTeX();
-
-    tex = tex.replace(/\bphi\b/g, "\\phi");
-    tex = tex.replace(/\bphin\b/g, "\\phi_n");
-    tex = tex.replace(/\bpsi\b/g, "\\psi");
-    tex = tex.replace(/\beta\b/g, "\\eta");
-    tex = tex.replace(/(?<![a-zA-Z\\])pi(?![a-zA-Z])/g, "\\pi");
-
-    for (const [k, meta] of Object.entries(varsDb)) {
-      if (meta.symbol) {
-        const cleanK = k.replace(/[^a-zA-Z0-9]/g, "");
-        const re = new RegExp(`\\b${cleanK}\\b`, "g");
-        tex = tex.replace(re, meta.symbol);
-      }
-    }
-
-    tex = tex.replace(/_E_/g, "E").replace(/_I_/g, "I");
-    tex = tex.replace(/\\text\{atan\}\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
-    tex = tex.replace(/\\text\{acos\}\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
-    tex = tex.replace(/atan\((.*?)\)/g, "\\tan^{-1}\\left($1\\right)");
-    tex = tex.replace(/acos\((.*?)\)/g, "\\cos^{-1}\\left($1\\right)");
-
-    tex = tex.replace(/\\cdot/g, " ");
-    tex = tex.replace(/\*/g, " ");
-    tex = tex.replace(/(\d+)\s+([a-zA-Z_\\])/g, "$1$2");
-
-    return tex;
-  } catch {
-    return (exprStr || "").replace(/\*/g, " ");
-  }
-}
-
-export function simplifyExpression(exprStr) {
-  if (typeof nerdamer === "undefined" || !exprStr) return exprStr;
-  try {
-    let clean = exprStr.replace(/cos\((.*?)\)\^\(-1\)\*sin\(\1\)/g, "tan($1)");
-    clean = clean.replace(/sin\((.*?)\)\*cos\(\1\)\^\(-1\)/g, "tan($1)");
-    const text = nerdamer(`simplify(${sanitizeExpr(clean)})`).text();
-    return text.replace(/_E_/g, "E").replace(/_I_/g, "I");
-  } catch {
-    return exprStr;
-  }
-}
-
-export function substituteExpression(exprStr, subsObj = {}) {
-  if (typeof nerdamer === "undefined" || !exprStr) return exprStr;
-  try {
-    const cleanSubs = {};
-    for (const [k, v] of Object.entries(subsObj)) {
-      cleanSubs[toCasToken(k)] = sanitizeExpr(v);
-    }
-    const res = nerdamer(sanitizeExpr(exprStr), cleanSubs).text();
-    return res.replace(/_E_/g, "E").replace(/_I_/g, "I");
-  } catch {
-    let result = exprStr;
-    for (const [k, v] of Object.entries(subsObj)) {
-      result = result.split(toCasToken(k)).join(`(${v})`);
-    }
-    return result;
-  }
-}
-
 export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   const parts = eqStr.split("=");
   const rawLhs = parts[0]?.trim() || "";
@@ -426,38 +388,160 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
     };
   }
 
-  const sanitizedLhs = sanitizeExpr(rawLhs);
-  const sanitizedRhs = sanitizeExpr(rawRhs);
-  const sanitizedEq = `${sanitizedLhs} = ${sanitizedRhs}`;
-  const targetToken = toCasToken(targetVar);
-
-  if (typeof nerdamer !== "undefined") {
-    try {
-      const solutions = nerdamer.solveEquations(sanitizedEq, targetToken);
-      if (solutions && solutions.length > 0) {
-        let solText = solutions[0];
-        if (typeof solText.text === "function") solText = solText.text();
-        solText = simplifyExpression(solText.toString());
-
-        solText = solText.replace(/cos\((.*?)\)\^\(-1\)\*sin\(\1\)/g, "tan($1)");
-        solText = solText.replace(/sin\((.*?)\)\*cos\(\1\)\^\(-1\)/g, "tan($1)");
-
-        return {
-          targetVar,
-          isolatedRhs: solText,
-          texEquation: `${targetTex} = ${casToTex(solText, varsDb)}`
-        };
-      }
-    } catch (err) {
-      console.warn(`CAS isolation fallback failed for ${targetVar} in ${eqStr}:`, err);
-    }
-  }
-
   return {
     targetVar,
     isolatedRhs: rawRhs,
     texEquation: `${targetTex} = ${casToTex(rawRhs, varsDb)}`
   };
+}
+
+// ========================================================
+// 3. PURE AST TO LATEX CONVERTER (ZERO NERDAMER)
+// ========================================================
+
+function toLatexSymbol(name, varsDb = {}) {
+  const canonical = resolveCanonicalKey(name, varsDb);
+  if (varsDb[canonical]?.symbol) return varsDb[canonical].symbol;
+  if (varsDb[name]?.symbol) return varsDb[name].symbol;
+  if (name === "pi") return "\\pi";
+  if (name === "phi") return "\\phi";
+  if (name === "phin" || name === "phi_n") return "\\phi_n";
+  if (name === "psi") return "\\psi";
+  return name;
+}
+
+export function stripOuterParens(texStr) {
+  if (!texStr) return "";
+  let s = texStr.trim();
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    s = s.trim();
+
+    if (s.startsWith("\\left(") && s.endsWith("\\right)")) {
+      let depth = 0;
+      let wrapsAll = true;
+      for (let i = 0; i < s.length - 7; i++) {
+        if (s.startsWith("\\left(", i)) depth++;
+        else if (s.startsWith("\\right)", i)) depth--;
+        if (depth === 0 && i < s.length - 7) {
+          wrapsAll = false;
+          break;
+        }
+      }
+      if (wrapsAll) {
+        s = s.slice(6, -7).trim();
+        changed = true;
+        continue;
+      }
+    }
+
+    if (s.startsWith("(") && s.endsWith(")")) {
+      let depth = 0;
+      let wrapsAll = true;
+      for (let i = 0; i < s.length - 1; i++) {
+        if (s[i] === "(") depth++;
+        else if (s[i] === ")") depth--;
+        if (depth === 0) {
+          wrapsAll = false;
+          break;
+        }
+      }
+      if (wrapsAll) {
+        s = s.slice(1, -1).trim();
+        changed = true;
+        continue;
+      }
+    }
+  }
+
+  return s;
+}
+
+export function astToLatex(node, substituteMap = null, varsDb = {}) {
+  if (!node) return "";
+
+  if (node.type === "num") {
+    return node.val;
+  }
+
+  if (node.type === "id") {
+    if (substituteMap && substituteMap[node.name] !== undefined) {
+      return substituteMap[node.name];
+    }
+    return toLatexSymbol(node.name, varsDb);
+  }
+
+  if (node.type === "group") {
+    let innerNode = node.expr;
+    while (innerNode && innerNode.type === "group") {
+      innerNode = innerNode.expr;
+    }
+    const inner = stripOuterParens(astToLatex(innerNode, substituteMap, varsDb));
+    return `(${inner})`;
+  }
+
+  if (node.type === "call") {
+    let argNode = node.arg;
+    while (argNode && argNode.type === "group") {
+      argNode = argNode.expr;
+    }
+
+    const inner = stripOuterParens(astToLatex(argNode, substituteMap, varsDb));
+
+    if (node.fn === "sqrt") return `\\sqrt{${inner}}`;
+    if (node.fn === "cos") return `\\cos(${inner})`;
+    if (node.fn === "sin") return `\\sin(${inner})`;
+    if (node.fn === "tan") return `\\tan(${inner})`;
+    if (node.fn === "atan") return `\\tan^{-1}\\left(${inner}\\right)`;
+    if (node.fn === "acos") return `\\cos^{-1}\\left(${inner}\\right)`;
+    return `\\text{${node.fn}}\\left(${inner}\\right)`;
+  }
+
+  if (node.type === "binary") {
+    if (node.op === "/") {
+      const num = stripOuterParens(astToLatex(node.left, substituteMap, varsDb));
+      const den = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));
+      return `\\frac{${num}}{${den}}`;
+    }
+    if (node.op === "*") {
+      const leftTex = astToLatex(node.left, substituteMap, varsDb);
+      const rightTex = astToLatex(node.right, substituteMap, varsDb);
+
+      const leftIsNum = /^[+-]?[\d.]+$/.test(leftTex.trim());
+      const rightIsNum = /^[+-]?[\d.]+$/.test(rightTex.trim());
+
+      let sep = " ";
+      if (leftIsNum && rightIsNum) {
+        sep = " \\cdot ";
+      } else if (rightTex.startsWith("\\left(") || rightTex.startsWith("(")) {
+        sep = "";
+      }
+
+      return `${leftTex}${sep}${rightTex}`.trim();
+    }
+    if (node.op === "+") {
+      return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
+    }
+    if (node.op === "-") {
+      return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
+    }
+    if (node.op === "^") {
+      const leftTex = astToLatex(node.left, substituteMap, varsDb);
+      const expTex = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));
+      return `{${leftTex}}^{${expTex}}`;
+    }
+  }
+
+  return "";
+}
+
+export function casToTex(exprStr, varsDb = {}) {
+  if (!exprStr) return "";
+  const ast = parseMathAST(exprStr);
+  if (!ast) return exprStr;
+  return astToLatex(ast, null, varsDb);
 }
 
 // ========================================================
@@ -474,34 +558,28 @@ export const BASE_DIMENSIONS = Object.freeze({
 });
 
 export const ATOMIC_BASE_UNITS = Object.freeze({
-  // Length (base: m)
   m:    { dim: "L", scale: 1.0, tex: "\\text{m}" },
   mm:   { dim: "L", scale: 0.001, tex: "\\text{mm}" },
   cm:   { dim: "L", scale: 0.01, tex: "\\text{cm}" },
   in:   { dim: "L", scale: 0.0254, tex: "\\text{in}" },
   ft:   { dim: "L", scale: 0.3048, tex: "\\text{ft}" },
 
-  // Time (base: s)
   s:    { dim: "T", scale: 1.0, tex: "\\text{s}" },
   min:  { dim: "T", scale: 60.0, tex: "\\text{min}" },
   h:    { dim: "T", scale: 3600.0, tex: "\\text{h}" },
   hr:   { dim: "T", scale: 3600.0, tex: "\\text{h}" },
 
-  // Force (base: N)
   N:    { dim: "F", scale: 1.0, tex: "\\text{N}" },
   kN:   { dim: "F", scale: 1000.0, tex: "\\text{kN}" },
   lb:   { dim: "F", scale: 4.4482216, tex: "\\text{lb}" },
 
-  // Mass (base: kg)
   kg:   { dim: "M", scale: 1.0, tex: "\\text{kg}" },
   g:    { dim: "M", scale: 0.001, tex: "\\text{g}" },
   lb_m: { dim: "M", scale: 0.45359237, tex: "\\text{lb}_m" },
 
-  // Temperature (base: K)
   K:    { dim: "Th", scale: 1.0, tex: "\\text{K}" },
   "°C": { dim: "Th", scale: 1.0, tex: "^\\circ\\text{C}" },
 
-  // Count / Entities
   teeth:{ dim: "C", scale: 1.0, tex: "\\text{teeth}" },
   rad:  { dim: "C", scale: 1.0, tex: "\\text{rad}" },
   rev:  { dim: "C", scale: 1.0, tex: "\\text{rev}" },
@@ -669,11 +747,6 @@ function evalExprUnitAST(node, S, varsDb) {
   return { factor: 1.0, atoms: [] };
 }
 
-/**
- * Universal Data-Driven Unit Algebra Solver.
- * Evaluates units purely through atomic unit-bags and dimensional mathematics.
- * Zero hardcoded unit branches.
- */
 export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const ast = parseMathAST(exprStr);
   const selectedConversions = [];
@@ -702,7 +775,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
           const ratio = currentBag.scale / reqBag.scale;
           const conv = {
             factor: ratio,
-            latex: `\\frac{1\\text{ ${reqU}}}{${(1 / ratio).toFixed(4).replace(/\\.0+$/, "")}\\,\\cancel{\\text{${currentU}}}}`
+            latex: `\\frac{1\\text{ ${reqU}}}{${(1 / ratio).toFixed(4).replace(/\.?0+$/, "")}\\,\\cancel{\\text{${currentU}}}}`
           };
           const rawVal = S[canonicalKey] !== undefined ? S[canonicalKey] : S[tok];
           const convertedVal = rawVal * ratio;
@@ -757,7 +830,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
         if (targetWantsTeeth) {
           a.preserved = true;
         } else {
-          a.canceled = true; // entity count drops out
+          a.canceled = true;
         }
       }
     }
@@ -831,7 +904,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
     }
   }
 
-  // BUILD INDIVIDUAL TOKEN UNIT MARKUP DIRECTLY FROM ATOMS
+  // BUILD TOKEN UNIT MARKUP DIRECTLY FROM ATOMS
   const tokenMarkup = {};
   const tokenGroups = {};
 
