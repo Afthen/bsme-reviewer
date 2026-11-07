@@ -1,6 +1,7 @@
 /**
  * src/topics/machine_design/helical_gears/system.js
  * Clean ground truth helical gear system generator (SI and US Imperial).
+ * Populates transverse and normal module across both unit branches.
  */
 
 import { HELICAL_VARS_DB } from "./schema.js";
@@ -78,7 +79,7 @@ export function createGroundTruthHelicalSystem() {
       D_P1: "mm", D_P2: "mm", C: "mm", P_c: "mm", P_cn: "mm", P_a: "mm", L_lead: "mm", b: "mm",
       m: "mm", m_n: "mm", V_m: "m/s", P: "kW", M_t: "N-m", W_t: "N", W_r: "N", F_a: "N", W: "N",
       s: "MPa", F_s: "N", F_D: "N", C_d: "N", F_w: "N", K_w: "MPa",
-      phi: "deg", phi_n: "deg", psi: "deg", n_1: "rpm", n_2: "rpm", P_d: "teeth/in", P_dn: "teeth/in",
+      phi: "°", phi_n: "°", psi: "°", n_1: "rpm", n_2: "rpm", P_d: "teeth/in", P_dn: "teeth/in",
       T_1: "teeth", T_2: "teeth", T: "teeth", T_v: "teeth"
     };
 
@@ -90,6 +91,8 @@ export function createGroundTruthHelicalSystem() {
   } else {
     const P_dn = [8, 10, 12, 16][Math.floor(Math.random() * 4)];
     const P_d = P_dn * Math.cos(psiRad);
+    const m_n = 25.4 / P_dn;
+    const m = 25.4 / P_d;
     const P_c = Math.PI / P_d;
     const P_cn = P_c * Math.cos(psiRad);
     const P_a = P_c / Math.tan(psiRad);
@@ -124,15 +127,15 @@ export function createGroundTruthHelicalSystem() {
 
     const _u = {
       D_P1: "in", D_P2: "in", C: "in", P_c: "in", P_cn: "in", P_a: "in", L_lead: "in", b: "in",
-      P_d: "teeth/in", P_dn: "teeth/in", V_m: "ft/min", P: "hp", M_t: "lb-in", W_t: "lb", W_r: "lb", F_a: "lb", W: "lb",
-      s: "psi", F_s: "lb", F_D: "lb", C_d: "lb", F_w: "lb", K_w: "psi",
-      phi: "deg", phi_n: "deg", psi: "deg", n_1: "rpm", n_2: "rpm",
+      m: "mm", m_n: "mm", P_d: "teeth/in", P_dn: "teeth/in", V_m: "ft/min", P: "hp", M_t: "lb-in",
+      W_t: "lb", W_r: "lb", F_a: "lb", W: "lb", s: "psi", F_s: "lb", F_D: "lb", C_d: "lb", F_w: "lb", K_w: "psi",
+      phi: "°", phi_n: "°", psi: "°", n_1: "rpm", n_2: "rpm",
       T_1: "teeth", T_2: "teeth", T: "teeth", T_v: "teeth"
     };
 
     S = {
       sys, psi, phi_n, phi, T_1, T_2, T_v, VR, n_1, n_2, D_P1, D_P2, C,
-      P_d, P_dn, P_c, P_cn, P_a, L_lead, m_F, b, V_m, P, W_t, M_t, F_a, W_r, W,
+      m, m_n, P_d, P_dn, P_c, P_cn, P_a, L_lead, m_F, b, V_m, P, W_t, M_t, F_a, W_r, W,
       s, Y, k_f, F_s, F_D, C_d, Q, K_w, F_w, _u, _names
     };
   }
