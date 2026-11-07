@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mechanical Engineering Reviewer & Graph Solver</title>
+  <title>Machine Design Reviewer & Graph Solver</title>
   
-  <!-- Math & Symbolic Dependencies (KaTeX has \cancel built-in) -->
+  <!-- Math & Symbolic Dependencies -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
@@ -55,7 +55,11 @@
       flex-shrink: 0;
       gap: 0.75rem;
     }
-    header h1 { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
     .header-actions { display: flex; gap: 0.4rem; align-items: center; }
     .btn {
       background: transparent;
@@ -71,6 +75,19 @@
     }
     .btn:hover { background: var(--border); color: #fff; }
     
+    .select-topic {
+      background: var(--card);
+      color: #fff;
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.65rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+    .select-topic:focus { border-color: var(--accent-math); }
+
     .workspace {
       display: block;
       flex: 1;
@@ -370,9 +387,9 @@
 <body>
 
   <header>
-    <div style="display: flex; align-items: center; gap: 0.6rem;">
+    <div class="header-left">
       <button class="btn" id="btn-hamburger">☰ Mastery</button>
-      <select id="topic-selector" class="btn" style="background: var(--card); font-weight: 600;">
+      <select id="topic-selector" class="select-topic">
         <option value="spur_gears">Spur Gears</option>
         <option value="helical_gears">Helical Gears</option>
       </select>

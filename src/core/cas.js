@@ -3,17 +3,17 @@
  * Universal Computer Algebra System (CAS) with Semantic & Physical Unit Algebra.
  */
 
-// ========================================================
-// 1. CANONICAL SYMBOL <-> DATABASE KEY RESOLVER
-// ========================================================
-
 export const SYMBOL_TO_KEY = Object.freeze({
   "v": "V_m", "Vm": "V_m", "V_m": "V_m",
   "D1": "D_P1", "D_1": "D_P1", "D_P1": "D_P1", "DP1": "D_P1",
   "D2": "D_P2", "D_2": "D_P2", "D_P2": "D_P2", "DP2": "D_P2",
   "D": "D_P", "D_P": "D_P", "DP": "D_P",
+  "Dr": "D_r", "D_r": "D_r",
+  "Db": "D_b", "D_b": "D_b",
+  "Do": "D_o", "D_o": "D_o",
   "Ft": "W_t", "F_t": "W_t", "Wt": "W_t", "W_t": "W_t",
   "Fr": "W_r", "F_r": "W_r", "Wr": "W_r", "W_r": "W_r",
+  "Fa": "F_a", "F_a": "F_a",
   "Fn": "W", "F_n": "W", "W": "W",
   "T": "M_t", "Mt": "M_t", "M_t": "M_t",
   "SR": "VR", "VR": "VR",
@@ -21,34 +21,31 @@ export const SYMBOL_TO_KEY = Object.freeze({
   "N2": "n_2", "n2": "n_2", "n_2": "n_2", "N_2": "n_2",
   "T1": "T_1", "T_1": "T_1",
   "T2": "T_2", "T_2": "T_2",
-  "Pd": "P_d", "P_d": "P_d",
-  "Pc": "P_c", "P_c": "P_c",
-  "hk": "h_k", "h_k": "h_k",
-  "Do": "D_o", "D_o": "D_o",
-  "Db": "D_b", "D_b": "D_b",
-  "pb": "p_b", "p_b": "p_b",
-  "c": "c", "h": "h", "a": "a", "s": "s", "b": "b", "Y": "Y", "C": "C", "P": "P", "phi": "phi", "m": "m", "t": "t",
-  "psi": "psi",
-  "phin": "phi_n", "phi_n": "phi_n",
-  "Pcn": "P_cn", "P_cn": "P_cn",
-  "Pdn": "P_dn", "P_dn": "P_dn",
-  "Pa": "P_a", "P_a": "P_a",
-  "Fa": "F_a", "F_a": "F_a",
-  "Dr": "D_r", "D_r": "D_r",
-  "FD": "F_D", "F_D": "F_D",
-  "Cd": "C_d", "C_d": "C_d",
-  "yform": "y_form", "y_form": "y_form",
-  "Fs": "F_s", "F_s": "F_s",
-  "Fw": "F_w", "F_w": "F_w",
-  "Nsf": "N_sf", "N_sf": "N_sf",
-  "Kw": "K_w", "K_w": "K_w", "kg": "K_w",
-  "kf": "k_f", "k_f": "k_f",
-  "Q": "Q",
-  "Sn": "S_n", "S_n": "S_n",
+  "T": "T",
   "Tv": "T_v", "T_v": "T_v", "Nev": "T_v",
+  "Pd": "P_d", "P_d": "P_d",
+  "Pdn": "P_dn", "P_dn": "P_dn",
+  "Pc": "P_c", "P_c": "P_c",
+  "Pcn": "P_cn", "P_cn": "P_cn",
+  "Pa": "P_a", "P_a": "P_a",
   "Llead": "L_lead", "L_lead": "L_lead",
   "mF": "m_F", "m_F": "m_F",
+  "hk": "h_k", "h_k": "h_k",
+  "c": "c", "h": "h", "a": "a", "d": "d", "t": "t",
   "Sspace": "S_space", "S_space": "S_space",
+  "B": "B", "b": "b", "s": "s", "Y": "Y",
+  "yform": "y_form", "y_form": "y_form",
+  "Sn": "S_n", "S_n": "S_n",
+  "kf": "k_f", "k_f": "k_f",
+  "Fs": "F_s", "F_s": "F_s",
+  "FD": "F_D", "F_D": "F_D",
+  "Cd": "C_d", "C_d": "C_d",
+  "Fw": "F_w", "F_w": "F_w",
+  "Kw": "K_w", "K_w": "K_w", "kg": "K_w",
+  "Q": "Q",
+  "Nsf": "N_sf", "N_sf": "N_sf",
+  "C": "C", "P": "P", "m": "m", "mn": "m_n", "m_n": "m_n",
+  "phi": "phi", "phin": "phi_n", "phi_n": "phi_n", "psi": "psi"
 });
 
 export function getPossibleTokens(varKey) {
@@ -75,19 +72,29 @@ export function casToTex(exprStr, varsDb = {}) {
     let tex = nerdamer(sanitizeExpr(exprStr)).toTeX();
 
     tex = tex.replace(/\bphi\b/g, "\\phi");
+    tex = tex.replace(/\bphin\b/g, "\\phi_n");
+    tex = tex.replace(/\bpsi\b/g, "\\psi");
     tex = tex.replace(/(?<![a-zA-Z\\])pi(?![a-zA-Z])/g, "\\pi");
 
-    tex = tex.replace(/\bhk\b/g, "h_k");
+    tex = tex.replace(/\bhk\b/g, "W_r");
     tex = tex.replace(/\bPd\b/g, "P_d");
+    tex = tex.replace(/\bPdn\b/g, "P_{dn}");
     tex = tex.replace(/\bPc\b/g, "P_c");
+    tex = tex.replace(/\bPcn\b/g, "P_{cn}");
+    tex = tex.replace(/\bPa\b/g, "P_a");
     tex = tex.replace(/\bDo\b/g, "D_o");
+    tex = tex.replace(/\bDr\b/g, "D_r");
     tex = tex.replace(/\bDb\b/g, "D_b");
     tex = tex.replace(/\bFt\b/g, "F_t");
     tex = tex.replace(/\bFn\b/g, "F_n");
     tex = tex.replace(/\bFr\b/g, "F_r");
+    tex = tex.replace(/\bFa\b/g, "F_a");
     tex = tex.replace(/\bFD\b/g, "F_D");
+    tex = tex.replace(/\bFs\b/g, "F_s");
+    tex = tex.replace(/\bFw\b/g, "F_w");
     tex = tex.replace(/\bCd\b/g, "C_d");
-    tex = tex.replace(/\bCi\b/g, "C_i");
+    tex = tex.replace(/\bKw\b/g, "K_w");
+    tex = tex.replace(/\bTv\b/g, "T_v");
     tex = tex.replace(/\bMt\b/g, "T");
     tex = tex.replace(/\bVm\b/g, "v");
     tex = tex.replace(/\bVR\b/g, "\\text{SR}");
@@ -216,10 +223,6 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   };
 }
 
-// ========================================================
-// 2. CAS UNIT REGISTRY: SEMANTIC (su_) & PHYSICAL (u_)
-// ========================================================
-
 export const UNIT_ALGEBRA_DB = Object.freeze({
   "teeth":    { sym: "su_teeth", dim: "entity", tex: "\\text{teeth}" },
   "rad":      { sym: "su_rad",   dim: "angular", tex: "\\text{rad}" },
@@ -258,15 +261,11 @@ export const UNIT_ALGEBRA_DB = Object.freeze({
   "ratio":    { sym: "1", dim: "dimensionless", tex: "" }
 });
 
-// ========================================================
-// 3. ATOMIC DIMENSIONAL CONVERSION DICTIONARY
-// ========================================================
-
 export const ATOMIC_CONVERSIONS = Object.freeze([
   { from: "u_mm", to: "u_m",  factor: 1 / 1000, latex: "\\frac{1\\text{ m}}{1000\\,\\cancel{\\text{mm}}}" },
   { from: "u_m",  to: "u_mm", factor: 1000,     latex: "\\frac{1000\\text{ mm}}{1\\,\\cancel{\\text{m}}}" },
   { from: "u_in", to: "u_ft", factor: 1 / 12,   latex: "\\frac{1\\text{ ft}}{12\\,\\cancel{\\text{in}}}" },
-  { from: "u_ft", to: "u_in", factor: 12,       latex: "\\frac{12\\text{ in}}{1\\,\\cancel{\\text{ft}}}" },
+  { from: "u_ft", to: "u_in", factor: 12,       latex: "\\frac{12\\,\\cancel{\\text{in}}}{1\\,\\cancel{\\text{ft}}}" },
   { from: "u_mm", to: "u_in", factor: 1 / 25.4, latex: "\\frac{1\\text{ in}}{25.4\\,\\cancel{\\text{mm}}}" },
   { from: "u_in", to: "u_mm", factor: 25.4,     latex: "\\frac{25.4\\text{ mm}}{1\\,\\cancel{\\text{in}}}" },
 
@@ -277,10 +276,6 @@ export const ATOMIC_CONVERSIONS = Object.freeze([
   { from: "u_kW",  to: "u_W",  factor: 1000,     latex: "\\frac{1000\\,\\cancel{\\text{W}}}{1\\,\\cancel{\\text{kW}}}" },
   { from: "u_hp",  to: "u_ftlb_min", factor: 33000, latex: "\\frac{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}{1\\,\\cancel{\\text{hp}}}" }
 ]);
-
-// ========================================================
-// 4. GENERAL CAS UNIT SOLVER
-// ========================================================
 
 export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {}) {
   const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
@@ -301,10 +296,30 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const targetInfo = UNIT_ALGEBRA_DB[targetUnit] || { sym: targetUnit, dim: "custom", tex: targetUnit };
   const allActiveUnits = Object.values(activeVarUnits);
 
-  // Unit Flags declared ONCE
   const hasMin = allActiveUnits.some(u => u.hasTime === "u_min" || u.sym === "u_min");
   const hasMm = allActiveUnits.some(u => u.hasLength === "u_mm" || u.sym === "u_mm");
-  const hasInch = allActiveUnits.some(u => u.hasLength === "u_in" || u.sym === "u_in");
+  const hasIn = allActiveUnits.some(u => u.hasLength === "u_in" || u.sym === "u_in");
+  const hasFt = allActiveUnits.some(u => u.hasLength === "u_ft" || u.sym === "u_ft");
+  const hasMeter = allActiveUnits.some(u => u.hasLength === "u_m" || u.sym === "u_m");
+
+  // 1. Internal Cross-Dimension Mismatches within the expression itself
+  if (hasFt && hasIn) {
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_ft" && c.to === "u_in");
+    if (conv) {
+      selectedConversions.push(conv);
+      varTokens.filter(t => activeVarUnits[t].hasLength === "u_in" || activeVarUnits[t].sym === "u_in").forEach(t => canceledTokens.add(t));
+      varTokens.filter(t => activeVarUnits[t].hasLength === "u_ft" || activeVarUnits[t].sym === "u_ft").forEach(t => canceledTokens.add(t));
+    }
+  }
+
+  if (hasMeter && hasMm) {
+    const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_m" && c.to === "u_mm");
+    if (conv) {
+      selectedConversions.push(conv);
+      varTokens.filter(t => activeVarUnits[t].hasLength === "u_mm" || activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
+      varTokens.filter(t => activeVarUnits[t].hasLength === "u_m" || activeVarUnits[t].sym === "u_m").forEach(t => canceledTokens.add(t));
+    }
+  }
 
   const targetNeedsSec = targetInfo.hasTime === "u_s" || targetUnit === "kW" || targetUnit === "W" || targetUnit === "N-m";
   const targetNeedsMeter = targetInfo.hasLength === "u_m" || targetUnit === "N-m" || targetUnit === "kW" || targetUnit === "W";
@@ -312,10 +327,10 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
   const targetNeedsMm = targetInfo.hasLength === "u_mm" || targetUnit === "mm";
   const targetNeedsFt = targetInfo.hasLength === "u_ft" || targetUnit === "hp";
 
-  // 1. Time Matching
+  // 2. Time Matching against Target
   if (hasMin && targetNeedsSec) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_min" && c.to === "u_s");
-    if (conv) {
+    if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].hasTime === "u_min").forEach(t => {
         subTokenCancellations[t] = { cancelMin: true };
@@ -323,33 +338,33 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     }
   }
 
-  // 2. Length Matching
+  // 3. Length Matching against Target
   if (hasMm && targetNeedsMeter) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_mm" && c.to === "u_m");
-    if (conv) {
+    if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
     }
   } else if (hasMm && targetNeedsInch) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_mm");
-    if (conv) {
+    if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].sym === "u_mm").forEach(t => canceledTokens.add(t));
     }
-  } else if (hasInch && targetNeedsMm) {
+  } else if (hasIn && targetNeedsMm) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_mm");
-    if (conv) {
+    if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
     }
-  } else if (hasInch && targetNeedsFt) {
+  } else if (hasIn && targetNeedsFt) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_in" && c.to === "u_ft");
-    if (conv) {
+    if (conv && !selectedConversions.includes(conv)) {
       selectedConversions.push(conv);
       varTokens.filter(t => activeVarUnits[t].sym === "u_in").forEach(t => canceledTokens.add(t));
     }
   }
 
-  // 3. Power Matching
+  // 4. Power Matching
   if (targetUnit === "kW" && (hasMin || hasMm || allActiveUnits.some(u => u.sym === "u_N" || u.dim === "torque"))) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_W" && c.to === "u_kW");
     if (conv && !selectedConversions.includes(conv)) selectedConversions.push(conv);
@@ -357,13 +372,13 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {})
     const convW = ATOMIC_CONVERSIONS.find(c => c.from === "u_kW" && c.to === "u_W");
     if (convW) selectedConversions.push(convW);
     varTokens.filter(t => activeVarUnits[t].sym === "u_kW").forEach(t => canceledTokens.add(t));
-  } else if (targetUnit === "hp" && (hasInch || allActiveUnits.some(u => u.dim === "torque"))) {
+  } else if (targetUnit === "hp" && (hasIn || allActiveUnits.some(u => u.dim === "torque"))) {
     const conv = ATOMIC_CONVERSIONS.find(c => c.from === "u_ftlb_min" && c.to === "u_hp") ||
                  { latex: "\\frac{1\\text{ hp}}{33000\\,\\cancel{\\text{ft}\\cdot\\text{lb}/\\text{min}}}" };
-    selectedConversions.push(conv);
+    if (!selectedConversions.some(c => c.latex === conv.latex)) selectedConversions.push(conv);
   }
 
-  // 4. Dimensionless Ratio Full Cancellation
+  // 5. Dimensionless Ratio Cancellation
   const isTargetDimless = !targetUnit || targetUnit === "dimless" || targetUnit === "ratio";
   if (isTargetDimless) {
     varTokens.forEach(tok => canceledTokens.add(tok));
