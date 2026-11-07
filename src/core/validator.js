@@ -1,7 +1,7 @@
 /**
  * src/core/validator.js
  * Automated Verification Harness for Topic Integrity.
- * Run validateTopic(TOPIC) in browser console to test all formulas against ground truth.
+ * Skips abstract schema categories and verifies all concrete relations against ground truth.
  */
 
 import { isolateVariable } from "./cas.js";
@@ -40,8 +40,11 @@ export function validateTopic(topic) {
     return report;
   }
 
-  // Check variable presence in S and S._u
+  // Check concrete variable presence in S and S._u
   for (const [k, meta] of Object.entries(varsDb)) {
+    // Skip abstract parent categories like generic D_P or generic T
+    if (meta.isAbstract) continue;
+
     if (S[k] === undefined && !k.startsWith("_")) {
       report.warnings.push(`Variable "${k}" in varsDb was not defined in generated system S.`);
     }
@@ -56,14 +59,16 @@ export function validateTopic(topic) {
     const allowableTargets = rel.solvable || rel.nodes;
 
     for (const targetVar of allowableTargets) {
-      const isolated = isolateVariable(rel.baseFormula, targetVar, varsDb);
+      const activeVariant = (rel.variants && S && S.sys && rel.variants[S.sys]) ? rel.variants[S.sys] : null;
+      const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
+
+      const isolated = isolateVariable(baseFormula, targetVar, varsDb);
       const rhs = isolated.isolatedRhs;
 
-      // Check if unknown is still on the RHS
       const token = targetVar.replace(/[^a-zA-Z0-9]/g, "");
       const regex = new RegExp(`\\b${token}\\b`);
       if (regex.test(rhs.replace(/[^a-zA-Z0-9]/g, ""))) {
-        report.errors.push(`CAS failed to isolate "${targetVar}" in relation [${rel.id}]: "${rel.baseFormula}"`);
+        report.errors.push(`CAS failed to isolate "${targetVar}" in relation [${rel.id}]: "${baseFormula}"`);
       }
     }
     report.passedRelations++;
@@ -83,11 +88,14 @@ export function validateTopic(topic) {
     report.errors.push(`solveDAG crashed: ${err.message}`);
   }
 
-  if (report.errors.length === 0) {
-    console.log(`%c[PASS] All ${report.testedRelations} relations & schema verified cleanly!`, "color: #22c55e; font-weight: bold;");
+  if (report.errors.length === 0 && report.warnings.length === 0) {
+    console.log(`%c[PASS] All ${report.testedRelations} relations & concrete schema verified with 0 errors and 0 warnings!`, "color: #22c55e; font-weight: bold;");
+  } else if (report.errors.length === 0) {
+    console.log(`%c[PASS] All ${report.testedRelations} relations verified cleanly!`, "color: #22c55e; font-weight: bold;");
   } else {
     console.error(`%c[FAIL] ${report.errors.length} errors found:`, "color: #ef4444; font-weight: bold;", report.errors);
   }
+
   if (report.warnings.length > 0) {
     console.warn(`[WARN] ${report.warnings.length} warnings:`, report.warnings);
   }
