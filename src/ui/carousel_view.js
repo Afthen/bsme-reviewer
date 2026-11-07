@@ -1,6 +1,6 @@
 /**
  * src/ui/carousel_view.js
- * Flashcard carousel with dynamic CAS isolation and single-listener initialization guard.
+ * Flashcard carousel with pure AST isolation and disabled pills for empirical non-invertibles.
  */
 
 import { isolateVariable } from "../core/cas.js";
@@ -23,7 +23,6 @@ export function initCarouselView(relations = [], varsDb = {}) {
     activeVarsDbRef = varsDb;
   }
 
-  // Prevent listener stacking on topic switches
   if (isCarouselInitialized) return;
 
   document.getElementById("btn-back-to-problem")?.addEventListener("click", () => {
@@ -86,16 +85,26 @@ function renderCurrentCard() {
   const pillsCont = document.getElementById("c-vars-container");
   pillsCont.innerHTML = "";
 
+  const allowableNodes = card.solvable || card.nodes;
+
   card.nodes.forEach(nodeVar => {
+    const isAllowed = allowableNodes.includes(nodeVar);
     const nodeMeta = resolveMeta(nodeVar);
     const pill = document.createElement("button");
     pill.className = `var-pill ${nodeVar === currentIsolated ? "active" : ""}`;
     pill.innerHTML = `$${nodeMeta.symbol || nodeVar}$`;
 
-    pill.addEventListener("click", () => {
-      isolatedVarMap[card.id] = nodeVar;
-      renderCurrentCard();
-    });
+    if (!isAllowed) {
+      pill.disabled = true;
+      pill.style.opacity = "0.35";
+      pill.style.cursor = "not-allowed";
+      pill.title = "Empirical parameter (not algebraically invertible)";
+    } else {
+      pill.addEventListener("click", () => {
+        isolatedVarMap[card.id] = nodeVar;
+        renderCurrentCard();
+      });
+    }
 
     pillsCont.appendChild(pill);
   });
