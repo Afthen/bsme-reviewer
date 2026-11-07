@@ -1,7 +1,7 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * AST tree-walker parser with clean parenthesis elimination and literal degree rendering.
+ * AST tree-walker parser with recursive parenthesis elimination and literal degree rendering.
  */
 
 import {
@@ -11,25 +11,56 @@ import {
 } from "./cas.js";
 import { fmtSigFig } from "./dimensions.js";
 
+/**
+ * Recursively peels off all outer layers of parentheses or \left( ... \right) wrappers.
+ * e.g. "((15°))" -> "15°", "\left(\left(15°\right)\right)" -> "15°"
+ */
 export function stripOuterParens(texStr) {
   if (!texStr) return "";
   let s = texStr.trim();
-  if (s.startsWith("\\left(") && s.endsWith("\\right)")) {
-    return s.slice(6, -7).trim();
-  }
-  if (s.startsWith("(") && s.endsWith(")")) {
-    let depth = 0;
-    let wrapsAll = true;
-    for (let i = 0; i < s.length - 1; i++) {
-      if (s[i] === "(") depth++;
-      else if (s[i] === ")") depth--;
-      if (depth === 0) {
-        wrapsAll = false;
-        break;
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    s = s.trim();
+
+    if (s.startsWith("\\left(") && s.endsWith("\\right)")) {
+      let depth = 0;
+      let wrapsAll = true;
+      for (let i = 0; i < s.length - 7; i++) {
+        if (s.startsWith("\\left(", i)) depth++;
+        else if (s.startsWith("\\right)", i)) depth--;
+        if (depth === 0 && i < s.length - 7) {
+          wrapsAll = false;
+          break;
+        }
+      }
+      if (wrapsAll) {
+        s = s.slice(6, -7).trim();
+        changed = true;
+        continue;
       }
     }
-    if (wrapsAll) return s.slice(1, -1).trim();
+
+    if (s.startsWith("(") && s.endsWith(")")) {
+      let depth = 0;
+      let wrapsAll = true;
+      for (let i = 0; i < s.length - 1; i++) {
+        if (s[i] === "(") depth++;
+        else if (s[i] === ")") depth--;
+        if (depth === 0) {
+          wrapsAll = false;
+          break;
+        }
+      }
+      if (wrapsAll) {
+        s = s.slice(1, -1).trim();
+        changed = true;
+        continue;
+      }
+    }
   }
+
   return s;
 }
 
@@ -59,12 +90,23 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
   }
 
   if (node.type === "group") {
-    const inner = astToLatex(node.expr, substituteMap, varsDb);
-    return `\\left(${stripOuterParens(inner)}\\right)`;
+    let innerNode = node.expr;
+    while (innerNode && innerNode.type === "group") {
+      innerNode = innerNode.expr;
+    }
+    const inner = stripOuterParens(astToLatex(innerNode, substituteMap, varsDb));
+    return `(${inner})`;
   }
 
   if (node.type === "call") {
-    const inner = stripOuterParens(astToLatex(node.arg, substituteMap, varsDb));
+    // Drill through any nested AST group nodes so arguments are unwrapped
+    let argNode = node.arg;
+    while (argNode && argNode.type === "group") {
+      argNode = argNode.expr;
+    }
+
+    const inner = stripOuterParens(astToLatex(argNode, substituteMap, varsDb));
+
     if (node.fn === "sqrt") return `\\sqrt{${inner}}`;
     if (node.fn === "cos") return `\\cos(${inner})`;
     if (node.fn === "sin") return `\\sin(${inner})`;
@@ -243,7 +285,8 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     const formattedNum = fmtSigFig(val, 6);
     const unitTex = formatUnitMarkup(unit, tok, unitAnalysis);
 
-    if (unit === "deg" || unit === "°" || !unitTex) {
+    const isAngle = unit === "deg" || unit === "°";
+    if (isAngle || !unitTex) {
       substitutedValuesMap[tok] = `${formattedNum}${unitTex}`;
     } else {
       substitutedValuesMap[tok] = `(${formattedNum}${unitTex})`;
