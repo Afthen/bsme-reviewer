@@ -1,12 +1,13 @@
 /**
  * src/topics/machine_design/common/gear_base_schema.js
  * Universal gear schema shared across Spur, Helical, Bevel, and Worm drives.
+ * Generic parent categories (D_P, T) marked abstract.
  */
 
 import { DIMENSIONS } from "../../../core/dimensions.js";
 
 export const BASE_GEAR_VARS = Object.freeze({
-  "D_P":  { name: "Pitch Diameter", symbol: "D", dimension: DIMENSIONS.LENGTH, baseVar: "D_P", aliases: ["Pitch Diameter", "Pitch Circle Diameter", "Pitch Line Diameter"] },
+  "D_P":  { name: "Pitch Diameter", symbol: "D", dimension: DIMENSIONS.LENGTH, isAbstract: true, baseVar: "D_P", aliases: ["Pitch Diameter", "Pitch Circle Diameter", "Pitch Line Diameter"] },
   "D_P1": { name: "Pinion Pitch Diameter", symbol: "D_1", dimension: DIMENSIONS.LENGTH, baseVar: "D_P", aliases: ["Pinion Pitch Diameter", "Pinion Diameter", "D_p", "D_1"] },
   "D_P2": { name: "Gear Pitch Diameter", symbol: "D_2", dimension: DIMENSIONS.LENGTH, baseVar: "D_P", aliases: ["Gear Pitch Diameter", "Gear Diameter", "D_g", "D_2"] },
   "C":    { name: "Center Distance", symbol: "C", dimension: DIMENSIONS.LENGTH, baseVar: "C", aliases: ["Center Distance", "Shaft Center Distance"] },
@@ -15,7 +16,7 @@ export const BASE_GEAR_VARS = Object.freeze({
   "P_d":  { name: "Diametral Pitch", symbol: "P_d", dimension: DIMENSIONS.PITCH, unit: "teeth/in", baseVar: "P_d", aliases: ["Diametral Pitch", "Transverse Diametral Pitch"] },
   "m":    { name: "Module", symbol: "m", dimension: DIMENSIONS.LENGTH, unit: "mm", baseVar: "m", aliases: ["Module", "Metric Module", "Module Pitch"] },
 
-  "T":    { name: "Tooth Count", symbol: "T", dimension: DIMENSIONS.COUNT, isInteger: true, unit: "teeth", baseVar: "T", aliases: ["Tooth Count", "Number of Teeth", "N"] },
+  "T":    { name: "Tooth Count", symbol: "T", dimension: DIMENSIONS.COUNT, isInteger: true, isAbstract: true, unit: "teeth", baseVar: "T", aliases: ["Tooth Count", "Number of Teeth", "N"] },
   "T_1":  { name: "Pinion Teeth", symbol: "T_1", dimension: DIMENSIONS.COUNT, isInteger: true, unit: "teeth", baseVar: "T", aliases: ["Pinion Teeth", "Driver Teeth", "N_p", "T_1"] },
   "T_2":  { name: "Gear Teeth", symbol: "T_2", dimension: DIMENSIONS.COUNT, isInteger: true, unit: "teeth", baseVar: "T", aliases: ["Gear Teeth", "Driven Teeth", "N_g", "T_2"] },
   "n_1":  { name: "Driver Speed", symbol: "n_1", dimension: DIMENSIONS.ROT_SPEED, unit: "rpm", baseVar: "n", aliases: ["Driver Speed", "Pinion Speed", "N_1", "n_1"] },
