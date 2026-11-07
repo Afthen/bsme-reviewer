@@ -15,7 +15,7 @@ export const GEAR_RELATION_GRAPH = [
   { id: "eq_addendum", name: "Full-Depth Addendum", canonicalTex: "a = \\frac{1}{P_d}", baseFormula: "a = 1 / P_d", nodes: ["a", "P_d"] },
   { id: "eq_do", name: "Outside Blank Diameter", canonicalTex: "D_o = D_1 + 2a", baseFormula: "D_o = D_P1 + 2*a", nodes: ["D_o", "D_P1", "a"] },
   { id: "eq_thick", name: "Circular Tooth Thickness", canonicalTex: "t = \\frac{P_c}{2}", baseFormula: "t = P_c / 2", nodes: ["t", "P_c"] },
-  { id: "eq_module_def", name: "Metric Module Definition", canonicalTex: "m = \\frac{D_1}{T_1}", baseFormula: "m = D_P1 / T_1", nodes: ["m", "D_P1", "T_1"] },
+  { id: "eq_module_def", name: "Module Definition", canonicalTex: "m = \\frac{D_1}{T_1}", baseFormula: "m = D_P1 / T_1", nodes: ["m", "D_P1", "T_1"] },
   { id: "eq_dp1", name: "Pinion Pitch Definition", canonicalTex: "D_1 = \\frac{T_1}{P_d}", baseFormula: "D_P1 = T_1 / P_d", nodes: ["D_P1", "T_1", "P_d"] },
   { id: "eq_dp2", name: "Gear Pitch Definition", canonicalTex: "D_2 = \\frac{T_2}{P_d}", baseFormula: "D_P2 = T_2 / P_d", nodes: ["D_P2", "T_2", "P_d"] },
   { id: "eq_c_teeth_sum", name: "Center Distance from Teeth Sum", canonicalTex: "C = \\frac{T_1 + T_2}{2 P_d}", baseFormula: "C = (T_1 + T_2) / (2 * P_d)", nodes: ["C", "T_1", "T_2", "P_d"] },
