@@ -1,13 +1,13 @@
 /**
  * src/core/derivation.js
  * Universal Graph + CAS Derivation Engine.
- * Supports cross-dimensional compound unit unpacking (psi -> lb/in^2, MPa -> N/mm^2).
+ * Formats mathematical substitution lines using pure atomic unit-bag markup.
  */
 
 import {
   casToTex, isolateVariable, substituteExpression,
-  simplifyExpression, solveUnitAlgebra, UNIT_ALGEBRA_DB,
-  resolveCanonicalKey, parseMathAST, tokenizeExpr, isDimEqual
+  simplifyExpression, solveUnitAlgebra,
+  resolveCanonicalKey, parseMathAST, tokenizeExpr
 } from "./cas.js";
 import { fmtSigFig } from "./dimensions.js";
 
@@ -121,7 +121,6 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
       const leftTex = astToLatex(node.left, substituteMap, varsDb);
       const rightTex = astToLatex(node.right, substituteMap, varsDb);
 
-      // Prevent number-gluing bugs (e.g. -2 and 1.5 turning into -21.5)
       const leftIsNum = /^[+-]?[\d.]+$/.test(leftTex.trim());
       const rightIsNum = /^[+-]?[\d.]+$/.test(rightTex.trim());
 
@@ -148,49 +147,6 @@ function astToLatex(node, substituteMap = null, varsDb = {}) {
   }
 
   return "";
-}
-
-/**
- * Formats units for numerical substitution.
- * Automatically unpacks compound units (psi -> lb/in^2, MPa -> N/mm^2) when cross-dimensional.
- */
-function formatUnitMarkup(unitKey, tok, unitAnalysis, isCrossDimensional = false) {
-  if (!unitKey || unitKey === "dimless" || unitKey === "ratio") return "";
-  if (unitKey === "deg" || unitKey === "°") return "°";
-
-  const info = UNIT_ALGEBRA_DB[unitKey];
-  const isFullyCanceled = unitAnalysis?.canceledTokens?.has(tok);
-
-  // Cross-dimensional compound unpacking
-  if (isCrossDimensional && info?.expandedTex) {
-    return `\\,${info.expandedTex}`;
-  }
-
-  if (unitKey === "teeth/in" && isCrossDimensional) {
-    return `\\,\\frac{\\cancel{\\text{teeth}}}{\\text{in}}`;
-  }
-
-  if (unitKey === "teeth" && (isCrossDimensional || isFullyCanceled)) {
-    return `\\,\\cancel{\\text{teeth}}`;
-  }
-
-  if (unitKey === "rpm" || unitKey === "rev/min") {
-    if (isFullyCanceled) return `\\,\\frac{\\cancel{\\text{rev}}}{\\cancel{\\text{min}}}`;
-    if (unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) return `\\,\\frac{\\text{rev}}{\\cancel{\\text{min}}}`;
-    return `\\,\\frac{\\text{rev}}{\\text{min}}`;
-  }
-
-  if (unitKey === "ft/min") {
-    if (isFullyCanceled) return `\\,\\frac{\\cancel{\\text{ft}}}{\\cancel{\\text{min}}}`;
-    if (unitAnalysis?.subTokenCancellations?.[tok]?.cancelMin) return `\\,\\frac{\\text{ft}}{\\cancel{\\text{min}}}`;
-    return `\\,\\frac{\\text{ft}}{\\text{min}}`;
-  }
-
-  if (isFullyCanceled) {
-    return `\\,\\cancel{\\text{${unitKey}}}`;
-  }
-
-  return info?.tex ? `\\,${info.tex}` : `\\text{ ${unitKey}}`;
 }
 
 // ========================================================
@@ -221,9 +177,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   const lines = [];
 
-  // ========================================================
-  // OPTION B: INPUT UNIT PRE-CONDITIONING FOR EMPIRICAL RULES
-  // ========================================================
+  // PURE ATOMIC UNIT-BAG ANALYSIS
   const unitAnalysis = solveUnitAlgebra(currentRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
   const preConvertedVals = {};
 
@@ -302,7 +256,6 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
 
   const substitutedValuesMap = {};
   const activeIds = tokenizeExpr(currentRhs).filter(t => t.type === "id").map(t => t.val);
-  const targetUnitInfo = UNIT_ALGEBRA_DB[targetUnit];
 
   activeIds.forEach(tok => {
     const mathConsts = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin"]);
@@ -321,11 +274,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     if (val === undefined || isNaN(val)) return;
 
     const formattedNum = fmtSigFig(val, 6);
-    const unitInfo = UNIT_ALGEBRA_DB[unit];
-
-    // Detect if input unit participates in cross-dimensional cancellation
-    const isCrossDimensional = unitInfo && targetUnitInfo && !isDimEqual(unitInfo.dim, targetUnitInfo.dim);
-    const unitTex = formatUnitMarkup(unit, tok, unitAnalysis, isCrossDimensional);
+    const unitTex = unitAnalysis.tokenMarkup?.[tok] || (unit && unit !== "dimless" ? `\\text{ ${unit}}` : "");
 
     const isAngle = unit === "deg" || unit === "°";
     if (isAngle || !unitTex) {
@@ -333,7 +282,7 @@ export function buildAlignedDerivation(step, S, allSteps = [], varsDb = {}, rela
     } else if (unitTex.includes("\\frac")) {
       substitutedValuesMap[tok] = `\\left(${formattedNum}\\,${unitTex}\\right)`;
     } else {
-      substitutedValuesMap[tok] = `(${formattedNum}${unitTex})`;
+      substitutedValuesMap[tok] = `(${formattedNum}${unitTex.startsWith("\\") ? `\\,${unitTex}` : ` ${unitTex}`})`;
     }
   });
 
