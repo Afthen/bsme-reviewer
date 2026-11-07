@@ -1,6 +1,7 @@
 /**
  * app.js
  * Universal Reviewer entrypoint & application lifecycle orchestrator (ES Module).
+ * Organizes topics under Subjects with dynamic optgroup rendering.
  */
 
 import {
@@ -21,10 +22,28 @@ import { solveDAG, pruneSolutionPath } from "./src/core/graph_solver.js";
 import { initSidebarView, renderMasteryBars } from "./src/ui/sidebar_view.js";
 import { initCarouselView } from "./src/ui/carousel_view.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
+import { validateTopic } from "./src/core/validator.js";
+
+// ========================================================
+// 1. SUBJECT & TOPIC REGISTRY
+// ========================================================
+export const SUBJECTS = Object.freeze({
+  machine_design: {
+    id: "machine_design",
+    title: "Machine Design",
+    topics: ["spur_gears", "helical_gears"]
+  },
+  powerplant_design: {
+    id: "powerplant_design",
+    title: "Powerplant Design",
+    topics: [] // Groundwork ready: "diesel_powerplant" will drop in here
+  }
+});
 
 export const TOPICS = Object.freeze({
   spur_gears: {
     id: "spur_gears",
+    subjectId: "machine_design",
     title: "Spur Gears",
     varsDb: GEAR_VARS_DB,
     relations: GEAR_RELATION_GRAPH,
@@ -32,6 +51,7 @@ export const TOPICS = Object.freeze({
   },
   helical_gears: {
     id: "helical_gears",
+    subjectId: "machine_design",
     title: "Helical Gears",
     varsDb: HELICAL_VARS_DB,
     relations: HELICAL_RELATION_GRAPH,
@@ -42,18 +62,25 @@ export const TOPICS = Object.freeze({
 let currentTopic = TOPICS.spur_gears;
 let activeProblem = null;
 
+// Expose validator for console debugging
+if (typeof window !== "undefined") {
+  window.validateTopic = validateTopic;
+  window.TOPICS = TOPICS;
+}
+
 export function generateNewProblem() {
   const S = currentTopic.createSystem();
-  const problemPlan = generateAutonomousProblem(currentTopic.relations, S, currentTopic.varsDb, getDecayedMastery);
+  const getMastery = id => getDecayedMastery(id, currentTopic.id);
 
-  const allRawSteps = solveDAG(problemPlan.givens, S, currentTopic.relations, currentTopic.varsDb, getDecayedMastery);
+  const problemPlan = generateAutonomousProblem(currentTopic.relations, S, currentTopic.varsDb, getMastery);
+  const allRawSteps = solveDAG(problemPlan.givens, S, currentTopic.relations, currentTopic.varsDb, getMastery);
   const requiredSteps = pruneSolutionPath(allRawSteps, problemPlan.goalVar);
 
   requiredSteps.forEach(st => {
     if (st.targetVar === problemPlan.goalVar) {
       st.isFaded = false;
     } else {
-      st.isFaded = getDecayedMastery(st.eqId) >= FADING_THRESHOLD;
+      st.isFaded = getMastery(st.eqId) >= FADING_THRESHOLD;
     }
   });
 
@@ -71,7 +98,7 @@ export function generateNewProblem() {
   });
 
   const visibleGoals = visibleSteps.map(s => s.targetVar);
-  const statement = buildProblemStatement(problemPlan.givens, visibleGoals, S, currentTopic.varsDb, currentTopic.title);
+  const statement = buildProblemStatement(problemPlan.givens, visibleGoals, S, currentTopic.varsDb, currentTopic);
   const goalMeta = currentTopic.varsDb[problemPlan.goalVar] || {};
 
   activeProblem = {
@@ -89,33 +116,58 @@ export function generateNewProblem() {
   renderProblemView(activeProblem, currentTopic.relations, currentTopic.id);
 }
 
+function populateTopicSelector() {
+  const select = document.getElementById("topic-selector");
+  if (!select) return;
+
+  select.innerHTML = "";
+  for (const [sKey, subj] of Object.entries(SUBJECTS)) {
+    const activeSubjTopics = subj.topics.filter(tId => TOPICS[tId]);
+    if (activeSubjTopics.length === 0) continue;
+
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = subj.title;
+
+    activeSubjTopics.forEach(tId => {
+      const top = TOPICS[tId];
+      const opt = document.createElement("option");
+      opt.value = top.id;
+      opt.textContent = top.title;
+      optgroup.appendChild(opt);
+    });
+
+    select.appendChild(optgroup);
+  }
+  select.value = currentTopic.id;
+}
+
 function initApp() {
   loadMastery(currentTopic.id);
 
-  initSidebarView(currentTopic.relations, getDecayedMastery);
+  populateTopicSelector();
+  initSidebarView(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
   initCarouselView(currentTopic.relations, currentTopic.varsDb);
-  renderMasteryBars(currentTopic.relations, getDecayedMastery);
+  renderMasteryBars(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
 
   document.getElementById("btn-generate-next")?.addEventListener("click", generateNewProblem);
 
   const topicSelect = document.getElementById("topic-selector");
   if (topicSelect) {
-    topicSelect.value = currentTopic.id;
     topicSelect.addEventListener("change", e => {
       const selectedId = e.target.value;
       if (TOPICS[selectedId]) {
         currentTopic = TOPICS[selectedId];
         loadMastery(currentTopic.id);
-        initSidebarView(currentTopic.relations, getDecayedMastery);
+        initSidebarView(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
         initCarouselView(currentTopic.relations, currentTopic.varsDb);
-        renderMasteryBars(currentTopic.relations, getDecayedMastery);
+        renderMasteryBars(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
         generateNewProblem();
       }
     });
   }
 
   document.getElementById("btn-export")?.addEventListener("click", () => {
-    const blob = new Blob([exportMasteryJSON()], { type: "application/json" });
+    const blob = new Blob([exportMasteryJSON(currentTopic.id)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -132,7 +184,7 @@ function initApp() {
     const reader = new FileReader();
     reader.onload = ev => {
       if (importMasteryJSON(ev.target.result, currentTopic.id)) {
-        renderMasteryBars(currentTopic.relations, getDecayedMastery);
+        renderMasteryBars(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
         alert("Mastery profile imported successfully!");
       } else {
         alert("Invalid JSON file.");

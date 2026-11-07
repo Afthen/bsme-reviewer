@@ -1,9 +1,9 @@
 /**
  * src/ui/carousel_view.js
- * Flashcard carousel with dynamic CAS isolation and topic-aware tooltips.
+ * Flashcard carousel with dynamic CAS isolation and single-listener initialization guard.
  */
 
-import { isolateVariable, SYMBOL_TO_KEY } from "../core/cas.js";
+import { isolateVariable } from "../core/cas.js";
 
 let currentCards = [];
 let currentCardIdx = 0;
@@ -11,10 +11,10 @@ let isolatedVarMap = {};
 let globalRelations = [];
 let activeSystemRef = null;
 let activeVarsDbRef = {};
+let isCarouselInitialized = false;
 
 function resolveMeta(varKey) {
-  const k = SYMBOL_TO_KEY[varKey] || varKey;
-  return activeVarsDbRef[k] || activeVarsDbRef[varKey] || { name: k, symbol: k, dimension: "Dimensionless" };
+  return activeVarsDbRef[varKey] || { name: varKey, symbol: varKey, dimension: "Dimensionless" };
 }
 
 export function initCarouselView(relations = [], varsDb = {}) {
@@ -22,6 +22,9 @@ export function initCarouselView(relations = [], varsDb = {}) {
   if (varsDb && Object.keys(varsDb).length > 0) {
     activeVarsDbRef = varsDb;
   }
+
+  // Prevent listener stacking on topic switches
+  if (isCarouselInitialized) return;
 
   document.getElementById("btn-back-to-problem")?.addEventListener("click", () => {
     document.getElementById("view-carousel").classList.remove("active");
@@ -41,6 +44,8 @@ export function initCarouselView(relations = [], varsDb = {}) {
       renderCurrentCard();
     }
   });
+
+  isCarouselInitialized = true;
 }
 
 export function openCarouselForVariable(varKey, system = null) {
@@ -68,7 +73,7 @@ function renderCurrentCard() {
   document.getElementById("c-counter").textContent = `${currentCardIdx + 1} / ${currentCards.length}`;
 
   const isolatedMeta = resolveMeta(currentIsolated);
-  document.getElementById("c-dimension").textContent = `[${isolatedMeta.dimension}]`;
+  document.getElementById("c-dimension").textContent = `[${isolatedMeta.dimension || "Dimensionless"}]`;
 
   let displayLatex = card.canonicalTex;
   if (currentIsolated !== canonicalKey) {
@@ -129,8 +134,6 @@ export function attachTooltips(activeSystem = null, currentSteps = [], varsDb = 
     el.addEventListener("mouseenter", () => {
       const rect = el.getBoundingClientRect();
       
-      // Look up canonical formula: prioritizes the equation targeting this variable,
-      // or the canonical defining relation from globalRelations.
       const activeStep = currentSteps.find(s => s.targetVar === varKey);
       const relatedStep = currentSteps.find(s => s.nodes && s.nodes.includes(varKey));
 
@@ -146,18 +149,16 @@ export function attachTooltips(activeSystem = null, currentSteps = [], varsDb = 
                    globalRelations.find(r => r.nodes && r.nodes.includes(varKey));
       }
 
-      // Always use canonicalTex so fractions are consistently formatted top-and-bottom (\frac)
       const canonicalFormula = targetEq?.canonicalTex || activeStep?.canonicalTex || "";
       const relFormula = canonicalFormula ? `\\[ ${canonicalFormula} \\]` : "";
 
       tooltip.innerHTML = `
         <div class="tt-name">${meta.name}</div>
-        <div class="tt-math">$${meta.symbol || varKey}$ &bull; [${meta.dimension}] (${unit})</div>
+        <div class="tt-math">$${meta.symbol || varKey}$ &bull; [${meta.dimension || "Dimensionless"}] (${unit})</div>
         ${relFormula ? `<div style="margin: 0.35rem 0;">${relFormula}</div>` : ""}
         <div class="tt-hint">Click variable to review canonical formula cards</div>
       `;
 
-      // Prevent tooltip overflow past screen right edge
       const left = Math.min(Math.max(8, rect.left), window.innerWidth - 330);
       tooltip.style.left = `${left}px`;
       tooltip.style.top = `${rect.bottom + 6}px`;

@@ -8,18 +8,27 @@ export const DIMENSIONS = Object.freeze({
   FORCE: "Force",
   TORQUE: "Torque",
   POWER: "Power",
-  STRESS: "Stress / Pressure",
+  PRESSURE: "Pressure / Stress",
+  STRESS: "Pressure / Stress",
   VELOCITY: "Linear Velocity",
   ROT_SPEED: "Rotational Speed",
   PITCH: "Tooth Pitch",
   ANGLE: "Angle",
-  COUNT: "Count (Teeth)",
+  COUNT: "Count",
+  ENERGY: "Energy / Work",
+  SPECIFIC_ENERGY: "Specific Energy / Enthalpy",
+  MASS: "Mass",
+  MASS_FLOW: "Mass Flow Rate",
+  VOLUME: "Volume",
+  VOLUME_FLOW: "Volume Flow Rate",
+  SPECIFIC_CONSUMPTION: "Specific Fuel Consumption",
+  TEMPERATURE: "Temperature",
   DIMENSIONLESS: "Dimensionless"
 });
 
 /**
  * Universal 6-Significant-Figures Formatter.
- * Automatically trims trailing zeroes to the right of the decimal.
+ * Trims trailing zeroes to the right of the decimal.
  */
 export function fmtSigFig(n, sigFigs = 6) {
   if (n === undefined || n === null) return "";
@@ -48,7 +57,7 @@ export function targetLabel(name, token, unit) {
   if (!unit || unit === "dimless" || unit === "ratio") {
     return `${name} (${token})`;
   }
-  if (unit === "deg") {
+  if (unit === "deg" || unit === "°") {
     return `${name} (${token}) in °`;
   }
   return `${name} (${token}) in ${unit}`;

@@ -1,7 +1,7 @@
 /**
  * src/core/problem_gen.js
  * Formula-as-Node Graph Walk Problem Generator.
- * Enforces 6-significant-figures formatting on all problem statement specifications.
+ * Enforces 6-significant-figures formatting with support for custom topic narrative builders.
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
@@ -9,9 +9,9 @@ import { PHI_INV, PHI_INV2 } from "../repetition/mastery.js";
 import { fmtSigFig } from "./dimensions.js";
 
 function determineGraphDistance(mastery) {
-  if (mastery < PHI_INV2) return 0; // < 38.2% -> d = 0 (single formula)
-  if (mastery < PHI_INV)  return 1; // 38.2% to 61.8% -> d = 1 (2 formulas, 1 bridge)
-  return Math.random() < 0.5 ? 2 : 3; // >= 61.8% -> d = 2 to 3 (synthesis chain)
+  if (mastery < PHI_INV2) return 0; // < 38.2% -> single formula
+  if (mastery < PHI_INV)  return 1; // 38.2% to 61.8% -> 2 formulas, 1 bridge
+  return Math.random() < 0.5 ? 2 : 3; // >= 61.8% -> synthesis chain
 }
 
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
@@ -28,13 +28,16 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
     const candidateGoals = [...targetNode.nodes].sort(() => Math.random() - 0.5);
 
     for (const goalVar of candidateGoals) {
+      if (targetNode.solvable && !targetNode.solvable.includes(goalVar)) {
+        continue;
+      }
       const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery, getMastery);
       if (problem) return problem;
     }
   }
 
   const fallback = scoredNodes[0].node;
-  const goalVar = fallback.nodes[0];
+  const goalVar = fallback.solvable ? fallback.solvable[0] : fallback.nodes[0];
   const givens = fallback.nodes.filter(n => n !== goalVar);
   return { goalVar, givens, distractors: [], targetEqId: fallback.id, hopDistance: 0 };
 }
@@ -98,7 +101,11 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, getMas
   };
 }
 
-export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicTitle = "Gear") {
+export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicConfig = {}) {
+  if (typeof topicConfig.statementBuilder === "function") {
+    return topicConfig.statementBuilder(givens, visibleGoals, S, varsDb);
+  }
+
   const parts = givens.map(v => {
     const val = S[v];
     const u = S._u?.[v] || varsDb[v]?.unit || "";
@@ -106,11 +113,10 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const sym = meta.symbol || v;
     const name = meta.name || v;
 
-    // Enforce 6 significant figures on all specifications in statement
     const formattedVal = fmtSigFig(val, 6);
     let valWithUnit = `$${formattedVal}$`;
     if (u && u !== "dimless" && u !== "ratio") {
-      valWithUnit = u === "deg" ? `$${formattedVal}^\\circ$` : `$${formattedVal}\\text{ ${u}}$`;
+      valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}°$` : `$${formattedVal}\\text{ ${u}}$`;
     }
 
     return `${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${sym}$</span> = ${valWithUnit})</span>`;
@@ -124,13 +130,14 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
     let uStr = "";
     if (u && u !== "dimless" && u !== "ratio") {
-      uStr = u === "deg" ? " in °" : ` in $\\text{${u}}$`;
+      uStr = (u === "deg" || u === "°") ? " in °" : ` in $\\text{${u}}$`;
     }
 
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
     return `${prefix}<strong>${name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${sym}$</span>)</span>${uStr}`;
   });
 
+  const topicTitle = topicConfig.title || "Gear";
   const driveType = topicTitle.toLowerCase().replace(/s$/, "");
   return `A ${driveType} drive operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
 }

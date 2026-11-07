@@ -1,7 +1,7 @@
 /**
  * src/core/graph_solver.js
  * Formulas-as-Nodes / Variables-as-Edges Solver Engine.
- * Supports sequential DAG propagation AND simultaneous systems of equations (2x2 parallel edges).
+ * Dynamically resolves SI/US variants and requiredUnits contracts.
  */
 
 import { isolateVariable } from "./cas.js";
@@ -26,9 +26,19 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
       const unknowns = eq.nodes.filter(n => !known.has(n));
       if (unknowns.length === 1) {
         const targetVar = unknowns[0];
+
+        if (eq.solvable && !eq.solvable.includes(targetVar)) {
+          continue;
+        }
+
         const inputVars = eq.nodes.filter(n => n !== targetVar);
 
-        const baseFormula = eq.baseFormula || (eq.canonical ? `${eq.canonical.lhs} = ${eq.canonical.rhs}` : "");
+        // Resolve system variant (SI vs US) if present
+        const activeVariant = (eq.variants && S && S.sys && eq.variants[S.sys]) ? eq.variants[S.sys] : null;
+        const baseFormula = activeVariant?.baseFormula || eq.baseFormula || (eq.canonical ? `${eq.canonical.lhs} = ${eq.canonical.rhs}` : "");
+        const canonicalTex = activeVariant?.canonicalTex || eq.canonicalTex || eq.canonical?.tex || eq.baseFormula || baseFormula;
+        const requiredUnits = activeVariant?.requiredUnits || eq.requiredUnits || null;
+
         const isolated = isolateVariable(baseFormula, targetVar, varsDb);
         const expectedVal = S[targetVar] !== undefined ? S[targetVar] : S[targetVar.replace(/_/g, "")];
 
@@ -51,7 +61,8 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
           eqId: eq.id,
           eqName: eq.name,
           baseFormula,
-          canonicalTex: eq.canonicalTex || eq.canonical?.tex || eq.baseFormula || baseFormula,
+          canonicalTex,
+          requiredUnits,
           equationTex: isolated.texEquation,
           rhsExpr: isolated.isolatedRhs,
           expectedVal,
