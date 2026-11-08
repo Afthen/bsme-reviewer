@@ -3,33 +3,13 @@
  * ============================================================================
  * ARCHITECTURAL PILLAR: Formula-as-Node Graph Problem Generator
  * ============================================================================
- * PHILOSOPHY:
- * 1. Cognitive Scaffolding:
- *    Problem hop distance scales dynamically based on Golden Ratio breakpoints:
- *      - Mastery < 38.2% (phi(-2)): Single direct formula (0 hops)
- *      - 38.2% to 61.8% (phi(-1)): Two formulas with 1 bridge variable (1 hop)
- *      - 61.8% to 76.4% (Fading): Multi-step synthesis chain (2 hops)
- *      - Mastery >= 76.4%: Deep graph walking (fib(4) hops)
- * 2. Strict Mathematical Minimality (Greedy Irreducibility):
- *    Extracts true root leaf nodes from the pruned solution DAG and greedily
- *    prunes redundant degrees of freedom, guaranteeing that non-distractor
- *    givens represent the exact minimum parameters needed to reach the goal.
- * 3. Board-Exam Distractor Injection (phi(-4)):
- *    Injects variables not needed in the solution path based on phi(-4) (~14.6%).
- * 4. Memory Constants Mode (isConstant):
- *    Automatically omits standard engineering constants (c_pw, etc.) from problem 
- *    statements once student mastery reaches FADING_THRESHOLD (76.4%).
- * 5. Polymorphic Variable & Symbol Randomization:
- *    Randomizes the human term name and symbol in the problem statement prompt
- *    to train student agility across board-exam synonym variations, while
- *    keeping algebraic derivations strictly anchored to canonical notation.
- * ============================================================================
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 import { parseMathAST } from "../cas/ast.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
+import { CONSTANTS_DB, getConstantValue, getConstantUnit } from "../topics/hvac/common/constants_registry.js";
 import { fmtSigFig } from "./dimensions.js";
 
 function determineGraphDistance(mastery) {
@@ -88,7 +68,7 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
             ...newInputs
           ]));
 
-          if (candidateSet.length <= fib(6) && canSolveTarget(candidateSet, goalVar, relations)) {
+          if (candidateSet.length <= fib(6) && canSolveTarget(candidateSet, goalVar, relations, S)) {
             expansions.push(candidateSet);
           }
         }
@@ -107,9 +87,7 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
   const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
   if (!usesTarget) return null;
 
-  // ==========================================================================
-  // PHASE 1: LEAF-NODE EXTRACTION (ERADICATES PHANTOM GIVENS)
-  // ==========================================================================
+  // Phase 1: Leaf-Node Extraction
   const producedVars = new Set(required.map(s => s.targetVar));
   const essentialGivensSet = new Set();
 
@@ -121,23 +99,19 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     });
   });
 
-  // ==========================================================================
-  // PHASE 2: GREEDY IRREDUCIBILITY PRUNING (GUARANTEES STRICT MINIMALITY)
-  // ==========================================================================
+  // Phase 2: Variant-Aware Greedy Irreducibility Pruning
   let minimalGivens = Array.from(essentialGivensSet);
 
   for (let i = minimalGivens.length - 1; i >= 0; i--) {
     const candidate = minimalGivens[i];
     const reducedSet = minimalGivens.filter(v => v !== candidate);
 
-    if (canSolveTarget(reducedSet, goalVar, relations)) {
+    if (canSolveTarget(reducedSet, goalVar, relations, S)) {
       minimalGivens = reducedSet;
     }
   }
 
-  // ==========================================================================
-  // PHASE 3: DISTRACTOR SELECTION (PHI^-4 THRESHOLD: ~14.6%)
-  // ==========================================================================
+  // Phase 3: Distractor Selection (phi^-4 threshold: ~14.6%)
   const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
   minimalGivens.forEach(g => usedVars.add(g));
 
@@ -167,7 +141,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   S._displaySymbols = S._displaySymbols || {};
 
   function getPolymorphicMeta(v) {
-    const meta = varsDb[v] || {};
+    const meta = varsDb[v] || CONSTANTS_DB[v] || {};
     
     if (!S._displayNames[v]) {
       const names = meta.nameAliases && meta.nameAliases.length > 0 ? meta.nameAliases : [meta.name || v];
@@ -187,7 +161,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
   const parts = givens.map(v => {
     const val = S[v];
-    const u = S._u?.[v] || varsDb[v]?.unit || "";
+    const u = S._u?.[v] || varsDb[v]?.unit || CONSTANTS_DB[v]?.unit || "";
     const poly = getPolymorphicMeta(v);
 
     const formattedVal = fmtSigFig(val, 6);
@@ -201,7 +175,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
   const goalStrings = visibleGoals.map((gVar, idx) => {
     const poly = getPolymorphicMeta(gVar);
-    const u = S._u?.[gVar] || varsDb[gVar]?.unit || "";
+    const u = S._u?.[gVar] || varsDb[gVar]?.unit || CONSTANTS_DB[gVar]?.unit || "";
 
     let uStr = "";
     if (u && u !== "dimless" && u !== "ratio") {
@@ -235,7 +209,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     const val = S_raw[g];
     if (typeof val !== "number") return;
     
-    const meta = varsDb[g] || {};
+    const meta = varsDb[g] || CONSTANTS_DB[g] || {};
     if (meta.isInteger) {
       S_neat[g] = Math.round(val);
     } else {
@@ -253,10 +227,8 @@ export function generateProblem(topic, getMastery = () => 0) {
     step.expectedVal = value;
   });
 
-  // Pass getMastery to pruneSolutionPath so cognitive fading activates!
   const solution = pruneSolutionPath(allSteps, path.goalVar, getMastery);
 
-  // Apply Fading: Pre-fill mastered foundation steps so the student focuses on synthesis
   solution.forEach(step => {
     if (step.isFaded) {
       step.isAnswered = true;
@@ -266,16 +238,16 @@ export function generateProblem(topic, getMastery = () => 0) {
   });
 
   // ==========================================================================
-  // MEMORY CONSTANTS MODE (ISCONSTANT)
-  // If a given is flagged as `isConstant: true` and student mastery >= 76.4%,
-  // omit it from the problem statement text (board exam recall mode).
+  // SEPARATE CONSTANTS MASTERY MODE (MEMORY RECALL)
+  // If a given is an engineering constant with separate `isConstant: true`,
+  // check its dedicated constant mastery. If >= 76.4%, omit from statement text.
   // ==========================================================================
   const statementGivens = path.givens.filter(g => {
-    const meta = varsDb[g] || {};
+    const meta = varsDb[g] || CONSTANTS_DB[g] || {};
     if (meta.isConstant) {
-      const mastery = getMastery({ id: g });
-      if (mastery >= FADING_THRESHOLD) {
-        return false; // Omitted from problem statement text, student must recall it!
+      const constantMastery = getMastery({ id: `const_${g}` });
+      if (constantMastery >= FADING_THRESHOLD) {
+        return false; // Memorized! Omit from problem statement.
       }
     }
     return true;
