@@ -1,11 +1,14 @@
 /**
  * src/core/validator.js
  * Automated Verification Harness for Topic Integrity.
- * Zero-regex: Pure AST self-reference tests, numerical evaluation against ground truth,
- * unregistered unit detection, and multi-goal DAG solvability tests.
+ * Zero-regex: Pure AST self-reference tests, unified physical evaluation
+ * against ground truth, unregistered unit detection, and multi-goal DAG solvability tests.
  */
 
-import { isolateVariable, astHasVariable, evalAST, parseMathAST, getUnitAtomBag } from "./cas.js";
+import {
+  isolateVariable, astHasVariable, parseMathAST,
+  getUnitAtomBag, evaluatePhysicalAST
+} from "./cas.js";
 import { solveDAG, pruneSolutionPath } from "./graph_solver.js";
 
 export function validateTopic(topic) {
@@ -72,6 +75,7 @@ export function validateTopic(topic) {
       report.testedPairs++;
       const activeVariant = (rel.variants && S && S.sys && rel.variants[S.sys]) ? rel.variants[S.sys] : null;
       const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
+      const requiredUnits = activeVariant?.requiredUnits || rel.requiredUnits || null;
 
       const isolated = isolateVariable(baseFormula, targetVar, varsDb);
 
@@ -83,32 +87,31 @@ export function validateTopic(topic) {
 
       // Check A: Pure AST check - target must NOT appear in isolated RHS
       const rhsAst = parseMathAST(isolated.isolatedRhs);
-      if (astHasVariable(rhsAst, targetVar, varsDb)) {
+      if (astHasVariable(rhsAst, targetVar)) {
         report.errors.push(`Self-reference: [${rel.id}] target "${targetVar}" still present in RHS: "${isolated.isolatedRhs}"`);
         relationPassed = false;
         continue;
       }
 
-      // Check B: Numerical evaluation against ground truth S
+      // Check B: Unified Physical Evaluation against Ground Truth S
       const expectedVal = S[targetVar];
       if (typeof expectedVal === "number" && !isNaN(expectedVal)) {
-        const computedVal = evalAST(rhsAst, S);
+        const { value: computedVal } = evaluatePhysicalAST(rhsAst, S, targetVar, varsDb, requiredUnits);
+
         if (isNaN(computedVal)) {
-          // Empirical formulas with requiredUnits may require pre-conversion; skip numerical error if flagged
-          if (!activeVariant?.requiredUnits && !rel.requiredUnits) {
-            report.errors.push(`Evaluation NaN: [${rel.id}] "${targetVar} = ${isolated.isolatedRhs}" returned NaN with ground truth S`);
-            relationPassed = false;
-            continue;
-          }
-        } else {
-          const denom = Math.abs(expectedVal) || 1;
-          const relErr = Math.abs(computedVal - expectedVal) / denom;
-          // Accept 0.05% relative tolerance on analytical inversions
-          if (relErr > 0.005) {
-            report.errors.push(`Numerical mismatch on [${rel.id}] solving "${targetVar}": computed ${computedVal}, expected ${expectedVal} (relErr: ${(relErr * 100).toFixed(3)}%)`);
-            relationPassed = false;
-            continue;
-          }
+          report.errors.push(`Evaluation NaN: [${rel.id}] "${targetVar} = ${isolated.isolatedRhs}" returned NaN with ground truth S`);
+          relationPassed = false;
+          continue;
+        }
+
+        const denom = Math.abs(expectedVal) || 1;
+        const relErr = Math.abs(computedVal - expectedVal) / denom;
+
+        // Allow 0.1% tolerance for float roundoffs
+        if (relErr > 0.001) {
+          report.errors.push(`Numerical mismatch on [${rel.id}] solving "${targetVar}": computed ${computedVal}, expected ${expectedVal} (relErr: ${(relErr * 100).toFixed(3)}%)`);
+          relationPassed = false;
+          continue;
         }
       }
 
@@ -122,7 +125,7 @@ export function validateTopic(topic) {
 
   // 4. Multi-Goal DAG Stress Test
   const candidateGoals = relations
-    .filter(r => !r.requiredUnits) // skip pure empirical sinks for DAG roots
+    .filter(r => !r.requiredUnits)
     .map(r => r.solvable ? r.solvable[0] : r.nodes[0])
     .filter(Boolean);
 
