@@ -3,15 +3,17 @@
  * ============================================================================
  * ARCHITECTURAL PILLAR: Aligned Multi-Line Derivation Generator
  * ============================================================================
- * Formats mathematical derivation steps to strict 6-significant-figure precision:
+ * Formats mathematical derivation steps to strict 6-significant-figure precision
+ * with explicit factor-label unit cancellation:
  *   Line 1: Symbolic isolated formula
- *   Line 2: Substituted numeric values (6 sig figs) + atomic unit cancellation
+ *   Line 2: Substituted numeric values (6 sig figs) WITH unit atoms + conversion factors
  *   Line 3: Final calculated answer (6 sig figs) + target unit
  * ============================================================================
  */
 
-import { resolveCanonicalKey, substituteExpression } from "../cas/algebra.js";
-import { casToTex } from "../cas/latex.js";
+import { parseMathAST } from "../cas/ast.js";
+import { resolveCanonicalKey } from "../cas/algebra.js";
+import { casToTex, astToLatex } from "../cas/latex.js";
 import { solveUnitAlgebra } from "../cas/units.js";
 import { fmtSigFig } from "./dimensions.js";
 
@@ -34,9 +36,7 @@ export function buildAlignedDerivation(
   const formulaRhs = rhsExpr || (baseFormula && baseFormula.includes("=") ? baseFormula.split("=")[1].trim() : baseFormula) || "";
   const unitAnalysis = solveUnitAlgebra(formulaRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
 
-  const subsMap = {};
   const evalState = { ...S };
-
   if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
     unitAnalysis.preConversions.forEach(pc => {
       evalState[pc.token] = pc.convertedVal;
@@ -44,10 +44,19 @@ export function buildAlignedDerivation(
     });
   }
 
-  // Universal 6-significant-figure precision for all numeric substitutions
+  // 1. Build Substitution Mapping with Explicit Unit Atoms for Visual Cancellation
+  const subsMap = {};
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
-      subsMap[k] = fmtSigFig(v, 6);
+      const formattedNum = fmtSigFig(v, 6);
+      const unitMarkup = unitAnalysis.tokenMarkup?.[k];
+
+      // Attach unit markup (e.g. 41.3767\,\cancel{\text{mm}}) so visual cancellation slashes match
+      if (unitMarkup && unitMarkup !== "") {
+        subsMap[k] = `${formattedNum}\\,${unitMarkup}`;
+      } else {
+        subsMap[k] = formattedNum;
+      }
     }
   }
 
@@ -55,9 +64,9 @@ export function buildAlignedDerivation(
   const symRhs = casToTex(formulaRhs, varsDb);
   const line1 = `${targetSymbol} &= ${symRhs}`;
 
-  // Line 2: Values substituted (6 sig figs) + conversion factors
-  const numRhs = substituteExpression(formulaRhs, subsMap, varsDb);
-  const numTex = casToTex(numRhs, varsDb);
+  // Line 2: Values substituted with units (6 sig figs) + conversion factors
+  const rhsAst = parseMathAST(formulaRhs);
+  const numTex = astToLatex(rhsAst, subsMap, varsDb);
   const convTex = unitAnalysis.conversionFactorTex || "";
   const line2 = `&= ${numTex}${convTex}`;
 
