@@ -21,7 +21,10 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
     for (const eq of sortedRelations) {
       if (usedEquations.has(eq.id)) continue;
 
-      const unknowns = eq.nodes.filter(n => !known.has(n));
+      const activeVariant = (eq.variants && S && S.sys && eq.variants[S.sys]) ? eq.variants[S.sys] : null;
+      const eqNodes = activeVariant?.nodes || eq.nodes;
+
+      const unknowns = eqNodes.filter(n => !known.has(n));
       if (unknowns.length === 1) {
         const targetVar = unknowns[0];
 
@@ -29,8 +32,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
           continue;
         }
 
-        const inputVars = eq.nodes.filter(n => n !== targetVar);
-        const activeVariant = (eq.variants && S && S.sys && eq.variants[S.sys]) ? eq.variants[S.sys] : null;
+        const inputVars = eqNodes.filter(n => n !== targetVar);
         const baseFormula = activeVariant?.baseFormula || eq.baseFormula || (eq.canonical ? `${eq.canonical.lhs} = ${eq.canonical.rhs}` : "");
         const canonicalTex = activeVariant?.canonicalTex || eq.canonicalTex || eq.canonical?.tex || eq.baseFormula || baseFormula;
         const requiredUnits = activeVariant?.requiredUnits || eq.requiredUnits || null;
@@ -62,7 +64,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
           equationTex: isolated.texEquation,
           rhsExpr: isolated.isolatedRhs,
           expectedVal,
-          nodes: eq.nodes,
+          nodes: eqNodes,
           parentIndices,
           ancestorIndices: Array.from(ancestorSet),
           isFaded: false
