@@ -16,8 +16,8 @@ export const TOWER_VARS_DB = Object.freeze({
   "h_2":   { name: "Leaving Air Enthalpy", symbol: "h_2", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg", aliases: ["Leaving Air Enthalpy", "Exhaust Air Enthalpy"] },
   "W_1":   { name: "Entering Humidity Ratio", symbol: "W_1", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", aliases: ["Entering Humidity Ratio", "Entering Moisture Content"] },
   "W_2":   { name: "Leaving Humidity Ratio", symbol: "W_2", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", aliases: ["Leaving Humidity Ratio", "Exhaust Moisture Content"] },
-  "c_pw":  { name: "Specific Heat of Water", symbol: "c_{pw}", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg-K", aliases: ["Specific Heat of Water", "Water Specific Heat"] },
+  "c_pw":  { name: "Specific Heat of Water", symbol: "c_{pw}", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg-K", isConstant: true, aliases: ["Specific Heat of Water", "Water Specific Heat", "c_{pw}"] },
   "R_ct":  { name: "Cooling Range", symbol: "Range", dimension: DIMENSIONS.TEMPERATURE, unit: "°C", aliases: ["Cooling Range", "Range", "Water Temperature Drop", "Actual Cooling"] },
   "A_ct":  { name: "Cooling Approach", symbol: "Approach", dimension: DIMENSIONS.TEMPERATURE, unit: "°C", aliases: ["Cooling Approach", "Approach", "Tower Approach"] },
-  "q_rej": { name: "Heat Rejected", symbol: "q_{rej}", dimension: DIMENSIONS.POWER, unit: "kW", aliases: ["Heat Rejected", "Cooling Tower Heat Load", "Heat Removed from Water", "Heat Absorbed by Air"] }
+  "Q_rej": { name: "Heat Rejected", symbol: "Q_{rej}", dimension: DIMENSIONS.POWER, unit: "kW", aliases: ["Heat Rejected", "Cooling Tower Heat Load", "Heat Removed from Water", "Heat Absorbed by Air", "Q_{rej}", "q_{rej}"] }
 });
