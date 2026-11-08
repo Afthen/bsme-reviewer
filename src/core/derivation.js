@@ -3,9 +3,10 @@
  * ============================================================================
  * ARCHITECTURAL PILLAR: Textbook-Grade Aligned Derivations
  * ============================================================================
- * 1. Canonical Implication: Displays Base => Isolated if algebraic manipulation occurred.
- * 2. Inline Factor-Label Units: Attaches units directly to substituted numbers.
- * 3. Typographical Spacing: Uses \cfrac for steps and \tfrac for final answer units.
+ * 1. Smart Implication: Omits arrow if canonical formula is already isolated for target.
+ * 2. Shared Unit Factoring: (23 + 69) \, \text{teeth} instead of clunky duplicates.
+ * 3. Factor Parenthesizing: Wraps subsequent multiplied factors in parens.
+ * 4. Boxed Final Answer: Repeats target symbol and encloses answer in \boxed{}.
  * ============================================================================
  */
 
@@ -42,7 +43,7 @@ export function buildAlignedDerivation(
     });
   }
 
-  // Build Substitution Mapping with Explicit Unit Atoms & Inline Conversions
+  // 1. Build Substitution Mapping with Factor Parenthesizing & Unit Atoms
   const subsMap = {};
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
@@ -51,7 +52,6 @@ export function buildAlignedDerivation(
       const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
 
       if (unitMarkup !== "" || inlineConv !== "") {
-        // e.g. 1200\,\cfrac{\text{rev}}{\text{min}} \cdot \cfrac{1\,\text{min}}{60\,\text{s}}
         subsMap[k] = `${formattedNum}\\,${unitMarkup}${inlineConv}`;
       } else {
         subsMap[k] = formattedNum;
@@ -59,27 +59,45 @@ export function buildAlignedDerivation(
     }
   }
 
-  // Line 1: Canonical Implication or Direct Isolation
+  // 2. Unit Factoring for Additions e.g. (23 + 69) \, \text{teeth}
+  const rhsAst = parseMathAST(formulaRhs);
+  if (rhsAst && rhsAst.type === "binary" && rhsAst.op === "/") {
+    const numNode = rhsAst.left;
+    if (numNode.type === "binary" && numNode.op === "+") {
+      const leftKey = numNode.left.type === "id" ? numNode.left.name : null;
+      const rightKey = numNode.right.type === "id" ? numNode.right.name : null;
+      if (leftKey && rightKey && evalState[leftKey] !== undefined && evalState[rightKey] !== undefined) {
+        const uL = S._u?.[leftKey] || varsDb[leftKey]?.unit || "";
+        const uR = S._u?.[rightKey] || varsDb[rightKey]?.unit || "";
+        if (uL === uR && uL !== "") {
+          const uMarkup = unitAnalysis.tokenMarkup?.[leftKey] || `\\text{${uL}}`;
+          subsMap[leftKey] = `(${fmtSigFig(evalState[leftKey], 6)} + ${fmtSigFig(evalState[rightKey], 6)})\\,${uMarkup}`;
+          subsMap[rightKey] = "0"; // Handled jointly in factored parenthetical
+        }
+      }
+    }
+  }
+
+  // 3. Smart Implication Arrow Logic
   const symRhs = casToTex(formulaRhs, varsDb);
-  const isolatedEq = `${targetSymbol} = ${symRhs}`;
   const displayCanonical = canonicalTex || casToTex(baseFormula, varsDb);
   
   let line1;
-  const norm = s => (s || "").replace(/\s+/g, "");
-  if (norm(displayCanonical) === norm(isolatedEq) || !baseFormula) {
-    line1 = `${targetSymbol} &= ${symRhs}`;
+  const norm = s => (s || "").replace(/\\left|\\right|\s/g, "");
+  const isAlreadyIsolated = norm(displayCanonical).startsWith(norm(targetSymbol) + "=");
+
+  const numTex = astToLatex(rhsAst, subsMap, varsDb).replace(/\+\s*0(?!\d)/g, ""); // strip joint unit factor zero
+  const globalConvTex = unitAnalysis.conversionFactorTex || "";
+
+  if (isAlreadyIsolated || !baseFormula) {
+    // Already isolated: substitute directly on Line 1!
+    line1 = `${displayCanonical} &= ${numTex}${globalConvTex}`;
   } else {
-    // A => B formatting
-    line1 = `${displayCanonical} \\quad \\Rightarrow \\quad ${targetSymbol} &= ${symRhs}`;
+    // Rearrangement occurred: Canonical => Isolated &= Substituted
+    line1 = `${displayCanonical} \\; \\Rightarrow \\; ${targetSymbol} &= ${symRhs} \\\\[6pt]\n  &= ${numTex}${globalConvTex}`;
   }
 
-  // Line 2: Substituted numeric values (6 sig figs) + target-level conversion factors
-  const rhsAst = parseMathAST(formulaRhs);
-  const numTex = astToLatex(rhsAst, subsMap, varsDb);
-  const globalConvTex = unitAnalysis.conversionFactorTex || "";
-  const line2 = `&= ${numTex}${globalConvTex}`;
-
-  // Line 3: Final calculated answer (6 sig figs) with \tfrac for units
+  // 4. Final Answer Line with Boxed Result & \tfrac for Units
   const val = step.expectedVal !== undefined ? step.expectedVal : S[canonicalTarget];
   const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
 
@@ -95,9 +113,9 @@ export function buildAlignedDerivation(
     }
   }
   
-  const line3 = `&= ${formattedVal}${unitTex}`;
+  const finalLine = `${targetSymbol} &= \\boxed{${formattedVal}${unitTex}}`;
 
-  return `$$\\begin{aligned}\n  ${line1} \\\\[6pt]\n  ${line2} \\\\[6pt]\n  ${line3}\n\\end{aligned}$$`;
+  return `$$\\begin{aligned}\n  ${line1} \\\\[6pt]\n  ${finalLine}\n\\end{aligned}$$`;
 }
 
 export const buildDerivationStep = buildAlignedDerivation;
