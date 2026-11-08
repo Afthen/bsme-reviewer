@@ -1,11 +1,10 @@
 /**
  * src/cas/units/definitions.js
  * Atomic units dictionary and unified compound definitions.
- * Units with natural 1:1 derivative forms omit factor and declare substituteTex.
  */
 
 export const BASE_DIMENSIONS = Object.freeze({
-  L: "Length", T: "Time", F: "Force", M: "Mass", Th: "Temperature", C: "Count"
+  L: "Length", T: "Time", F: "Force", M: "Mass", Th: "Temperature", C: "Count", E: "Energy"
 });
 
 export const ATOMIC_BASE_UNITS = Object.freeze({
@@ -29,6 +28,7 @@ export const ATOMIC_BASE_UNITS = Object.freeze({
   "°C":  { dim: "Th", scale: 1.0, tex: "^\\circ\\text{C}" },
   "°F":  { dim: "Th", scale: 5 / 9, tex: "^\\circ\\text{F}" },
   "°R":  { dim: "Th", scale: 5 / 9, tex: "^\\circ\\text{R}" },
+  Btu:   { dim: "E", scale: 1.0, tex: "\\text{Btu}" },
   teeth: { dim: "C", scale: 1.0, tex: "\\text{teeth}" },
   rad:   { dim: "C", scale: 1.0, tex: "\\text{rad}" },
   rev:   { dim: "C", scale: 1.0, tex: "\\text{rev}" },
@@ -38,7 +38,6 @@ export const ATOMIC_BASE_UNITS = Object.freeze({
 });
 
 export const COMPOUND_UNITS = Object.freeze({
-  // --- Pressure & Stress ---
   psi:        { atoms: { lb: 1, in: -2 }, displayTex: "\\text{psi}" },
   psf:        { atoms: { lb: 1, ft: -2 }, displayTex: "\\text{psf}" },
   MPa:        { atoms: { N: 1, mm: -2 }, displayTex: "\\text{MPa}", substituteTex: "\\cfrac{\\text{N}}{\\text{mm}^2}" },
@@ -46,76 +45,45 @@ export const COMPOUND_UNITS = Object.freeze({
   kPa:        { atoms: { kN: 1, m: -2 }, displayTex: "\\text{kPa}", substituteTex: "\\cfrac{\\text{kN}}{\\text{m}^2}" },
   bar:        { factor: 100000, atoms: { N: 1, m: -2 }, displayTex: "\\text{bar}" },
 
-  // --- Torque & Work ---
   "N-m":      { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
-  "N*m":      { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
-  "kN-m":     { atoms: { kN: 1, m: 1 }, displayTex: "\\text{kN}\\cdot\\text{m}" },
   "lb-in":    { atoms: { lb: 1, in: 1 }, displayTex: "\\text{lb}\\cdot\\text{in}" },
   "lb-ft":    { atoms: { lb: 1, ft: 1 }, displayTex: "\\text{lb}\\cdot\\text{ft}" },
   J:          { atoms: { N: 1, m: 1 }, displayTex: "\\text{J}" },
   kJ:         { atoms: { kN: 1, m: 1 }, displayTex: "\\text{kJ}" },
 
-  // --- Power (1:1 Drop-in derivative forms) ---
   W:          { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{W}", substituteTex: "\\cfrac{\\text{J}}{\\text{s}}" },
   kW:         { atoms: { kN: 1, m: 1, s: -1 }, displayTex: "\\text{kW}", substituteTex: "\\cfrac{\\text{kJ}}{\\text{s}}" },
   MW:         { factor: 1e6, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{MW}" },
   hp:         { factor: 33000, atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\text{hp}" },
 
-  // --- Area & Volume ---
   "m^2":      { atoms: { m: 2 }, displayTex: "\\text{m}^2" },
-  "mm^2":     { atoms: { mm: 2 }, displayTex: "\\text{mm}^2" },
   "in^2":     { atoms: { in: 2 }, displayTex: "\\text{in}^2" },
-  "cm^2":     { atoms: { cm: 2 }, displayTex: "\\text{cm}^2" },
-  "ft^2":     { atoms: { ft: 2 }, displayTex: "\\text{ft}^2" },
-
   "m^3":      { atoms: { m: 3 }, displayTex: "\\text{m}^3" },
-  "cm^3":     { atoms: { cm: 3 }, displayTex: "\\text{cm}^3" },
-  "in^3":     { atoms: { in: 3 }, displayTex: "\\text{in}^3" },
-  "ft^3":     { atoms: { ft: 3 }, displayTex: "\\text{ft}^3" },
   L:          { factor: 0.001, atoms: { m: 3 }, displayTex: "\\text{L}" },
   cfm:        { factor: 0.3048 ** 3 / 60, atoms: { m: 3, s: -1 }, displayTex: "\\text{cfm}" },
 
-  // --- Density ---
   "kg/m^3":   { atoms: { kg: 1, m: -3 }, displayTex: "\\cfrac{\\text{kg}}{\\text{m}^3}" },
-  "kg/L":     { factor: 1000, atoms: { kg: 1, m: -3 }, displayTex: "\\cfrac{\\text{kg}}{\\text{L}}" },
-  "g/cm^3":   { factor: 1000, atoms: { kg: 1, m: -3 }, displayTex: "\\cfrac{\\text{g}}{\\text{cm}^3}" },
   "lb/ft^3":  { atoms: { lb_m: 1, ft: -3 }, displayTex: "\\cfrac{\\text{lb}}{\\text{ft}^3}" },
 
-  // --- Specific Energy & Heat ---
   "kJ/kg":    { atoms: { kN: 1, m: 1, kg: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}}" },
-  Btu:        { factor: 1055.05585, atoms: { N: 1, m: 1 }, displayTex: "\\text{Btu}" },
-  "Btu/lb":   { factor: 2326, atoms: { N: 1, m: 1, kg: -1 }, displayTex: "\\cfrac{\\text{Btu}}{\\text{lb}}" },
-  "Btu/min":  { factor: 1055.05585 / 60, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{Btu}}{\\text{min}}" },
-  "Btu/h":    { factor: 1055.05585 / 3600, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{Btu}}{\\text{h}}" },
-  "Btu/hr":   { factor: 1055.05585 / 3600, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{Btu}}{\\text{h}}" },
+  
+  // US Thermal Units built cleanly from the atomic Btu
+  "Btu/lb":   { atoms: { Btu: 1, lb_m: -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}}" },
+  "Btu/min":  { atoms: { Btu: 1, min: -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{min}}" },
+  "Btu/h":    { atoms: { Btu: 1, h: -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{h}}" },
+  "Btu/hr":   { atoms: { Btu: 1, h: -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{h}}" },
 
-  kWh:        { factor: 3.6e6, atoms: { N: 1, m: 1 }, displayTex: "\\text{kWh}" },
-  "kg/kWh":   { factor: 1 / 3.6e6, atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{kWh}}" },
-  "g/kWh":    { factor: 0.001 / 3.6e6, atoms: { g: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{g}}{\\text{kWh}}" },
-  "lb/hp-h":  { factor: 0.45359237 / (745.69987 * 3600), atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{hp}\\cdot\\text{h}}" },
-  "lb/hp-hr": { factor: 0.45359237 / (745.69987 * 3600), atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{hp}\\cdot\\text{h}}" },
-
-  // --- Velocities & Flow Rates ---
   "m/s":      { atoms: { m: 1, s: -1 }, displayTex: "\\cfrac{\\text{m}}{\\text{s}}" },
   "ft/min":   { atoms: { ft: 1, min: -1 }, displayTex: "\\cfrac{\\text{ft}}{\\text{min}}" },
   "kg/s":     { atoms: { kg: 1, s: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{s}}" },
-  "g/s":      { atoms: { g: 1, s: -1 }, displayTex: "\\cfrac{\\text{g}}{\\text{s}}" },
-  "kg/min":   { atoms: { kg: 1, min: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{min}}" },
   "lb/min":   { atoms: { lb_m: 1, min: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{min}}" },
-  "lb/s":     { atoms: { lb_m: 1, s: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{s}}" },
 
-  // --- Rotational & Gearing ---
-  "teeth/in": { atoms: { teeth: 1, in: -1 }, displayTex: "\\cfrac{\\text{teeth}}{\\text{in}}" },
-  rpm:        { atoms: { min: -1 }, displayTex: "\\text{rpm}" },
-  "rev/s":    { atoms: { s: -1 }, displayTex: "\\cfrac{\\text{rev}}{\\text{s}}" },
-  "rev/min":  { atoms: { min: -1 }, displayTex: "\\cfrac{\\text{rev}}{\\text{min}}" },
-  "strokes/min": { atoms: { min: -1 }, displayTex: "\\text{strokes/min}" },
-
-  // --- Specific Heat ---
   "kJ/(kg*K)":{ factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
   "kJ/kg-K":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
-  "Btu/(lb*F)":{ factor: 4186.8, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot^\\circ\\text{F}}" },
-  "Btu/lb-F": { factor: 4186.8, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot^\\circ\\text{F}}" }
+  
+  // Valid KaTeX formatting for °F in denominator: {}\\cdot{}^\\circ\\text{F}
+  "Btu/(lb*F)": { atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot{}^\\circ\\text{F}}" },
+  "Btu/lb-F":   { atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot{}^\\circ\\text{F}}" }
 });
 
 export function getUnitAtomBag(uName) {
@@ -138,15 +106,7 @@ export function getUnitAtomBag(uName) {
         scale *= Math.pow(b.scale, p);
       }
     }
-    return {
-      factor,
-      atoms,
-      dimMap,
-      scale,
-      isDimensionless: false,
-      displayTex: c.displayTex,
-      substituteTex: c.substituteTex
-    };
+    return { factor, atoms, dimMap, scale, isDimensionless: false, displayTex: c.displayTex, substituteTex: c.substituteTex };
   }
   if (ATOMIC_BASE_UNITS[uName]) {
     const b = ATOMIC_BASE_UNITS[uName];
