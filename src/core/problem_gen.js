@@ -117,7 +117,19 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
   if (!usesTarget) return null;
 
   const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
-  bestPath.givens.forEach(g => usedVars.add(g));
+  const S_neat = { ...S_raw };
+  path.givens.forEach(g => {
+    const val = S_raw[g];
+    if (typeof val !== "number") return;
+    
+    const meta = varsDb[g] || {};
+    if (meta.isInteger) {
+      S_neat[g] = Math.round(val);
+    } else {
+      const formattedStr = fmtSigFig(val, 6);
+      S_neat[g] = parseFloat(formattedStr);
+    }
+  });
 
   const candidateDistractors = Object.keys(S).filter(k =>
     !k.startsWith("_") && !usedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
