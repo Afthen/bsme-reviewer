@@ -34,6 +34,16 @@ export function validateTopic(topic) {
     passedPairs: 0
   };
 
+  // 1. Duplicate Relation ID Check
+  const seenIds = new Set();
+  for (const rel of relations) {
+    if (seenIds.has(rel.id)) {
+      report.errors.push(`Duplicate relation ID found: "${rel.id}"`);
+    }
+    seenIds.add(rel.id);
+  }
+
+  // 2. Schema Node & Unit Verification
   for (const rel of relations) {
     for (const node of rel.nodes) {
       if (!varsDb[node]) {
@@ -51,95 +61,101 @@ export function validateTopic(topic) {
     }
   }
 
-  let S;
-  try {
-    S = createSystem();
-  } catch (err) {
-    report.errors.push(`createSystem() threw error: ${err.message}`);
-    return report;
-  }
+  // 3. Deterministic Dual-System Verification (Tests BOTH SI and US)
+  const systemsToTest = ["SI", "US"];
 
-  for (const [k, meta] of Object.entries(varsDb)) {
-    if (meta.isAbstract) continue;
-    if (S[k] === undefined && !k.startsWith("_")) {
-      report.warnings.push(`Variable "${k}" in varsDb was not defined in generated system S.`);
-    }
-    if (meta.unit && (!S._u || !S._u[k])) {
-      report.warnings.push(`Variable "${k}" has no unit in S._u.`);
-    }
-  }
-
-  for (const rel of relations) {
-    let relationPassed = true;
-    const activeVariant = (rel.variants && S && S.sys && rel.variants[S.sys]) ? rel.variants[S.sys] : null;
-    const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
-    const allowableTargets = rel.solvable || activeVariant?.nodes || rel.nodes;
-    const requiredUnits = activeVariant?.requiredUnits || rel.requiredUnits || null;
-
-    for (const targetVar of allowableTargets) {
-      report.testedPairs++;
-
-      const isolated = isolateVariable(baseFormula, targetVar, varsDb);
-
-      if (!isolated.success) {
-        report.errors.push(`Inversion failed: [${rel.id}] cannot isolate "${targetVar}" from "${baseFormula}"`);
-        relationPassed = false;
-        continue;
-      }
-
-      const rhsAst = parseMathAST(isolated.isolatedRhs);
-      if (astHasVariable(rhsAst, targetVar)) {
-        report.errors.push(`Self-reference: [${rel.id}] target "${targetVar}" still present in RHS: "${isolated.isolatedRhs}"`);
-        relationPassed = false;
-        continue;
-      }
-
-      const expectedVal = S[targetVar];
-      if (typeof expectedVal === "number" && !isNaN(expectedVal)) {
-        const { value: computedVal } = evaluatePhysicalAST(rhsAst, S, targetVar, varsDb, requiredUnits);
-
-        if (isNaN(computedVal)) {
-          report.errors.push(`Evaluation NaN: [${rel.id}] "${targetVar} = ${isolated.isolatedRhs}" returned NaN with ground truth S`);
-          relationPassed = false;
-          continue;
-        }
-
-        const denom = Math.abs(expectedVal) || 1;
-        const relErr = Math.abs(computedVal - expectedVal) / denom;
-
-        if (relErr > 0.001) {
-          report.errors.push(`Numerical mismatch on [${rel.id}] solving "${targetVar}": computed ${computedVal}, expected ${expectedVal} (relErr: ${(relErr * 100).toFixed(3)}%)`);
-          relationPassed = false;
-          continue;
-        }
-      }
-
-      report.passedPairs++;
-    }
-
-    if (relationPassed) {
-      report.passedRelations++;
-    }
-  }
-
-  const candidateGoals = relations
-    .filter(r => !r.requiredUnits)
-    .map(r => r.solvable ? r.solvable[0] : r.nodes[0])
-    .filter(Boolean);
-
-  const sampleGoals = candidateGoals.slice(0, 5);
-  for (const goalVar of sampleGoals) {
+  for (const sys of systemsToTest) {
+    let S;
     try {
-      const relForGoal = relations.find(r => (r.solvable || r.nodes).includes(goalVar));
-      const givens = relForGoal.nodes.filter(n => n !== goalVar);
-      const steps = solveDAG(givens, S, relations, varsDb, () => 0);
-      const required = pruneSolutionPath(steps, goalVar);
-
-      if (required.length === 0) {
-        report.errors.push(`solveDAG failed to solve for target "${goalVar}" via relation [${relForGoal.id}]`);
-      }
+      S = createSystem({ sys });
     } catch (err) {
-      report.errors.push(`solveDAG crashed testing goal "${goalVar}": ${err.message}`);
+      report.errors.push(`createSystem({ sys: "${sys}" }) threw error: ${err.message}`);
+      continue;
+    }
+
+    for (const [k, meta] of Object.entries(varsDb)) {
+      if (meta.isAbstract) continue;
+      if (S[k] === undefined && !k.startsWith("_")) {
+        report.warnings.push(`[${sys}] Variable "${k}" in varsDb was not defined in S.`);
+      }
+      if (meta.unit && (!S._u || !S._u[k])) {
+        report.warnings.push(`[${sys}] Variable "${k}" has no unit in S._u.`);
+      }
+    }
+
+    for (const rel of relations) {
+      let relationPassed = true;
+      const activeVariant = (rel.variants && rel.variants[sys]) ? rel.variants[sys] : null;
+      const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
+      const allowableTargets = rel.solvable || activeVariant?.nodes || rel.nodes;
+      const requiredUnits = activeVariant?.requiredUnits || rel.requiredUnits || null;
+
+      for (const targetVar of allowableTargets) {
+        report.testedPairs++;
+
+        const isolated = isolateVariable(baseFormula, targetVar, varsDb);
+
+        if (!isolated.success) {
+          report.errors.push(`[${sys}] Inversion failed: [${rel.id}] cannot isolate "${targetVar}" from "${baseFormula}"`);
+          relationPassed = false;
+          continue;
+        }
+
+        const rhsAst = parseMathAST(isolated.isolatedRhs);
+        if (astHasVariable(rhsAst, targetVar)) {
+          report.errors.push(`[${sys}] Self-reference: [${rel.id}] target "${targetVar}" still present in RHS: "${isolated.isolatedRhs}"`);
+          relationPassed = false;
+          continue;
+        }
+
+        const expectedVal = S[targetVar];
+        if (typeof expectedVal === "number" && !isNaN(expectedVal)) {
+          const { value: computedVal } = evaluatePhysicalAST(rhsAst, S, targetVar, varsDb, requiredUnits);
+
+          if (isNaN(computedVal)) {
+            report.errors.push(`[${sys}] Evaluation NaN: [${rel.id}] "${targetVar} = ${isolated.isolatedRhs}" returned NaN with ground truth S`);
+            relationPassed = false;
+            continue;
+          }
+
+          const denom = Math.abs(expectedVal) || 1;
+          const relErr = Math.abs(computedVal - expectedVal) / denom;
+
+          if (relErr > 0.001) {
+            report.errors.push(`[${sys}] Numerical mismatch on [${rel.id}] solving "${targetVar}": computed ${computedVal}, expected ${expectedVal} (relErr: ${(relErr * 100).toFixed(3)}%)`);
+            relationPassed = false;
+            continue;
+          }
+        }
+
+        report.passedPairs++;
+      }
+
+      if (relationPassed) {
+        report.passedRelations++;
+      }
+    }
+
+    // 4. Multi-Goal DAG Stress Test for this system
+    const candidateGoals = relations
+      .filter(r => !r.requiredUnits)
+      .map(r => r.solvable ? r.solvable[0] : r.nodes[0])
+      .filter(Boolean);
+
+    const sampleGoals = candidateGoals.slice(0, 5);
+    for (const goalVar of sampleGoals) {
+      try {
+        const relForGoal = relations.find(r => (r.solvable || r.nodes).includes(goalVar));
+        const givens = relForGoal.nodes.filter(n => n !== goalVar);
+        const steps = solveDAG(givens, S, relations, varsDb, () => 0);
+        const required = pruneSolutionPath(steps, goalVar);
+
+        if (required.length === 0) {
+          report.errors.push(`[${sys}] solveDAG failed to solve for target "${goalVar}" via relation [${relForGoal.id}]`);
+        }
+      } catch (err) {
+        report.errors.push(`[${sys}] solveDAG crashed testing goal "${goalVar}": ${err.message}`);
+      }
     }
   }
 

@@ -10,9 +10,10 @@ const Y_TABLE = Object.freeze({
   16: 0.255, 18: 0.270, 20: 0.284, 24: 0.305, 25: 0.310, 28: 0.325, 30: 0.330, 32: 0.340
 });
 
-export function createGroundTruthSystem() {
-  const isSI = Math.random() < 0.5;
-  const sys = isSI ? "SI" : "US";
+export function createGroundTruthSystem({ sys = null } = {}) {
+  const selectedSys = sys || (Math.random() < 0.5 ? "SI" : "US");
+  const isSI = selectedSys === "SI";
+  const currentSys = selectedSys;
   const phi = Math.random() < 0.5 ? 20 : 14.5;
   const kc = phi === 14.5 ? 0.157 : 0.25;
 
@@ -66,7 +67,7 @@ export function createGroundTruthSystem() {
 
     const k_f = 1.45;
     const S_n = 250;
-    const F_s = (S_n * b * m * Y) / k_f; // Pure coherent SI formula
+    const F_s = (S_n * b * m * Y) / k_f;
     const N_sf = F_s / F_D;
     const Q = (2 * T_2) / (T_1 + T_2);
     const K_w = 0.55;
@@ -82,7 +83,7 @@ export function createGroundTruthSystem() {
     };
 
     S = {
-      sys, P_d, m, phi, T_1, T_2, VR, n_1, n_2, D_P1, D_P2, C,
+      sys: currentSys, P_d, m, phi, T_1, T_2, VR, n_1, n_2, D_P1, D_P2, C,
       P_c, a, d, c, h, h_k, D_o, D_r, D_b, t, S_space, B, p_b, b, V_m, P, W_t, M_t, W_r, W, s, Y, y_form,
       F_D, C_d, k_f, S_n, F_s, N_sf, Q, K_w, F_w, _u, _names
     };
@@ -122,7 +123,7 @@ export function createGroundTruthSystem() {
 
     const k_f = 1.45;
     const S_n = 35000;
-    const F_s = (S_n * b * Y) / (k_f * P_d); // Pure coherent US formula
+    const F_s = (S_n * b * Y) / (k_f * P_d);
     const N_sf = F_s / F_D;
     const Q = (2 * T_2) / (T_1 + T_2);
     const K_w = 80;
@@ -138,7 +139,7 @@ export function createGroundTruthSystem() {
     };
 
     S = {
-      sys, P_d, m, phi, T_1, T_2, VR, n_1, n_2, D_P1, D_P2, C,
+      sys: currentSys, P_d, m, phi, T_1, T_2, VR, n_1, n_2, D_P1, D_P2, C,
       P_c, a, d, c, h, h_k, D_o, D_r, D_b, t, S_space, B, p_b, b, V_m, P, W_t, M_t, W_r, W, s, Y, y_form,
       F_D, C_d, k_f, S_n, F_s, N_sf, Q, K_w, F_w, _u, _names
     };

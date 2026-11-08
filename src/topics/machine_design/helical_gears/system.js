@@ -10,9 +10,10 @@ const Y_TABLE = Object.freeze({
   15: 0.245, 17: 0.264, 19: 0.277, 21: 0.289, 23: 0.300
 });
 
-export function createGroundTruthHelicalSystem() {
-  const isSI = Math.random() < 0.5;
-  const sys = isSI ? "SI" : "US";
+export function createGroundTruthHelicalSystem({ sys = null } = {}) {
+  const selectedSys = sys || (Math.random() < 0.5 ? "SI" : "US");
+  const isSI = selectedSys === "SI";
+  const currentSys = selectedSys;
 
   const psi = [15, 20, 25, 30][Math.floor(Math.random() * 4)];
   const phi_n = [14.5, 20][Math.floor(Math.random() * 2)];
@@ -49,7 +50,7 @@ export function createGroundTruthHelicalSystem() {
 
     const D_P1 = T_1 * m;
     const D_P2 = T_2 * m;
-    const C = (m_n * (T_1 + T_2)) / (2 * Math.cos(psiRad)); // Pure coherent SI formula
+    const C = (m_n * (T_1 + T_2)) / (2 * Math.cos(psiRad));
     const b = 10 * m_n;
 
     const L_lead = (Math.PI * D_P1) / Math.tan(psiRad);
@@ -67,7 +68,7 @@ export function createGroundTruthHelicalSystem() {
     const W = Math.sqrt(W_t ** 2 + W_r ** 2 + F_a ** 2);
 
     const s = 140;
-    const F_s = (s * b * m_n * Y) / k_f; // Pure coherent SI formula
+    const F_s = (s * b * m_n * Y) / k_f;
     const C_d = 400;
     const k_buck = 21;
     const F_D = W_t + (k_buck * V_m * (W_t + b * C_d * (Math.cos(psiRad) ** 2)) * Math.cos(psiRad)) /
@@ -84,7 +85,7 @@ export function createGroundTruthHelicalSystem() {
     };
 
     S = {
-      sys, psi, phi_n, phi, T_1, T_2, T_v, VR, n_1, n_2, D_P1, D_P2, C,
+      sys: currentSys, psi, phi_n, phi, T_1, T_2, T_v, VR, n_1, n_2, D_P1, D_P2, C,
       m, m_n, P_d, P_dn, P_c, P_cn, P_a, L_lead, m_F, b, V_m, P, W_t, M_t, F_a, W_r, W,
       s, Y, k_f, F_s, F_D, C_d, Q, K_w, F_w, _u, _names
     };
@@ -117,7 +118,7 @@ export function createGroundTruthHelicalSystem() {
     const W = Math.sqrt(W_t ** 2 + W_r ** 2 + F_a ** 2);
 
     const s = 25000;
-    const F_s = (s * b * Y) / (k_f * P_dn); // Pure coherent US formula
+    const F_s = (s * b * Y) / (k_f * P_dn);
     const C_d = 400;
     const k_buck = 0.05;
     const F_D = W_t + (k_buck * V_m * (W_t + b * C_d * (Math.cos(psiRad) ** 2)) * Math.cos(psiRad)) /
@@ -134,7 +135,7 @@ export function createGroundTruthHelicalSystem() {
     };
 
     S = {
-      sys, psi, phi_n, phi, T_1, T_2, T_v, VR, n_1, n_2, D_P1, D_P2, C,
+      sys: currentSys, psi, phi_n, phi, T_1, T_2, T_v, VR, n_1, n_2, D_P1, D_P2, C,
       m, m_n, P_d, P_dn, P_c, P_cn, P_a, L_lead, m_F, b, V_m, P, W_t, M_t, F_a, W_r, W,
       s, Y, k_f, F_s, F_D, C_d, Q, K_w, F_w, _u, _names
     };
