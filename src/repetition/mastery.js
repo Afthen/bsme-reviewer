@@ -63,6 +63,15 @@ export function incrementTopicTick(scopeKey = "common") {
   return map[scopeKey];
 }
 
+// Backward-compatibility aliases
+export function getGlobalTick() {
+  return getTopicTick("common");
+}
+
+export function incrementGlobalTick() {
+  return incrementTopicTick("common");
+}
+
 function snapToFibonacci(val) {
   return VALID_WINDOWS.reduce((prev, curr) => 
     Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev
@@ -73,13 +82,9 @@ function snapToFibonacci(val) {
 // 2. OPTION D DYNAMIC COGNITIVE DECAY EVALUATOR
 // ========================================================
 
-/**
- * Calculates topic decay rate lambda dynamically based on Option D:
- * T_1/2 = (Tokens_unique / e) + (Tokens_common / (e * Phi))
- */
 export function calculateTopicLambda(topic) {
   if (!topic || !Array.isArray(topic.relations) || topic.relations.length === 0) {
-    return PHI_INV7; // fallback
+    return PHI_INV7;
   }
 
   const commonRels = topic.relations.filter(r => r.id.startsWith("eq_base_"));
@@ -88,31 +93,24 @@ export function calculateTopicLambda(topic) {
   const tokensCommon = commonRels.reduce((acc, r) => acc + tokenizeExpr(r.baseFormula || "").length, 0);
   const tokensUnique = uniqueRels.reduce((acc, r) => acc + tokenizeExpr(r.baseFormula || "").length, 0);
 
-  // Option D Half-Life Anchor
   const halfLife = (tokensUnique / Math.E) + (tokensCommon / (Math.E * PHI));
-  const safeHalfLife = Math.max(FIB_21, halfLife); // floor at 21 ticks minimum
+  const safeHalfLife = Math.max(FIB_21, halfLife);
 
   return Math.LN2 / safeHalfLife;
 }
 
-/**
- * Calculates decayed mastery [0, 1] using Option D and local topic ticking.
- */
 export function getDecayedMastery(eq, topic = null) {
   if (!eq || !eq.id) return 0;
   
   const h = masteryState[eq.id];
   const history = h && Array.isArray(h.attempts) ? h.attempts : [];
   
-  // 1. AST Complexity Scaling: tokens / e snapped to Fibonacci
   const tokens = tokenizeExpr(eq.baseFormula || "").length;
   const windowSize = snapToFibonacci(tokens / Math.E);
   
-  // 2. Pad history with false if the student hasn't met the window requirement
   const recent = history.slice(-windowSize);
   const padded = [...Array(Math.max(0, windowSize - recent.length)).fill(false), ...recent];
 
-  // 3. Harmonic attempt weighting via Golden Ratio
   let weightSum = 0;
   let scoreSum = 0;
   for (let i = 0; i < windowSize; i++) {
@@ -122,7 +120,6 @@ export function getDecayedMastery(eq, topic = null) {
   }
   const baseMastery = weightSum > 0 ? scoreSum / weightSum : 0;
 
-  // 4. Local Topic Ticking Decay (Option D)
   const isCommon = eq.id.startsWith("eq_base_");
   const scopeKey = isCommon ? "common" : (topic?.id || "common");
   const currentTick = getTopicTick(scopeKey);
