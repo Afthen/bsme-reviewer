@@ -1,6 +1,6 @@
 /**
  * src/cas/units/definitions.js
- * Atomic units dictionary and unified compound definitions.
+ * Comprehensive engineering unit registry with affine offsets and compound scale definitions.
  */
 
 export const BASE_DIMENSIONS = Object.freeze({
@@ -21,12 +21,13 @@ export const ATOMIC_BASE_UNITS = Object.freeze({
   N:     { dim: "F", scale: 1.0, tex: "\\text{N}" },
   kN:    { dim: "F", scale: 1000.0, tex: "\\text{kN}" },
   lb:    { dim: "F", scale: 4.4482216, tex: "\\text{lb}" },
+  kip:   { dim: "F", scale: 4448.2216, tex: "\\text{kip}" },
   kg:    { dim: "M", scale: 1.0, tex: "\\text{kg}" },
   g:     { dim: "M", scale: 0.001, tex: "\\text{g}" },
   lb_m:  { dim: "M", scale: 0.45359237, tex: "\\text{lb}_m" },
   K:     { dim: "Th", scale: 1.0, tex: "\\text{K}" },
-  "°C":  { dim: "Th", scale: 1.0, tex: "^\\circ\\text{C}" },
-  "°F":  { dim: "Th", scale: 5 / 9, tex: "^{\\circ}\\text{F}" },
+  "°C":  { dim: "Th", scale: 1.0, offset: 273.15, tex: "^\\circ\\text{C}" },
+  "°F":  { dim: "Th", scale: 5 / 9, offset: 459.67, tex: "^{\\circ}\\text{F}" },
   "°R":  { dim: "Th", scale: 5 / 9, tex: "^{\\circ}\\text{R}" },
   Btu:   { dim: "E", scale: 1.0, tex: "\\text{Btu}" },
   teeth: { dim: "C", scale: 1.0, tex: "\\text{teeth}" },
@@ -40,6 +41,7 @@ export const ATOMIC_BASE_UNITS = Object.freeze({
 export const COMPOUND_UNITS = Object.freeze({
   psi:        { atoms: { lb: 1, in: -2 }, displayTex: "\\text{psi}" },
   psf:        { atoms: { lb: 1, ft: -2 }, displayTex: "\\text{psf}" },
+  ksi:        { factor: 6894757.29, atoms: { N: 1, m: -2 }, displayTex: "\\text{ksi}" },
   MPa:        { atoms: { N: 1, mm: -2 }, displayTex: "\\text{MPa}", substituteTex: "\\cfrac{\\text{N}}{\\text{mm}^2}" },
   Pa:         { atoms: { N: 1, m: -2 }, displayTex: "\\text{Pa}", substituteTex: "\\cfrac{\\text{N}}{\\text{m}^2}" },
   kPa:        { atoms: { kN: 1, m: -2 }, displayTex: "\\text{kPa}", substituteTex: "\\cfrac{\\text{kN}}{\\text{m}^2}" },
@@ -59,16 +61,12 @@ export const COMPOUND_UNITS = Object.freeze({
   hp:         { factor: 33000, atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\text{hp}" },
 
   "m^2":      { atoms: { m: 2 }, displayTex: "\\text{m}^2" },
-  "mm^2":     { atoms: { mm: 2 }, displayTex: "\\text{mm}^2" },
   "in^2":     { atoms: { in: 2 }, displayTex: "\\text{in}^2" },
-  "cm^2":     { atoms: { cm: 2 }, displayTex: "\\text{cm}^2" },
-  "ft^2":     { atoms: { ft: 2 }, displayTex: "\\text{ft}^2" },
-
   "m^3":      { atoms: { m: 3 }, displayTex: "\\text{m}^3" },
-  "cm^3":     { atoms: { cm: 3 }, displayTex: "\\text{cm}^3" },
-  "in^3":     { atoms: { in: 3 }, displayTex: "\\text{in}^3" },
-  "ft^3":     { atoms: { ft: 3 }, displayTex: "\\text{ft}^3" },
   L:          { factor: 0.001, atoms: { m: 3 }, displayTex: "\\text{L}" },
+  "m^3/s":    { atoms: { m: 3, s: -1 }, displayTex: "\\cfrac{\\text{m}^3}{\\text{s}}" },
+  "m^3/h":    { atoms: { m: 3, h: -1 }, displayTex: "\\cfrac{\\text{m}^3}{\\text{h}}" },
+  "L/h":      { factor: 0.001 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\cfrac{\\text{L}}{\\text{h}}" },
   cfm:        { factor: 0.3048 ** 3 / 60, atoms: { m: 3, s: -1 }, displayTex: "\\text{cfm}" },
 
   "kg/m^3":   { atoms: { kg: 1, m: -3 }, displayTex: "\\cfrac{\\text{kg}}{\\text{m}^3}" },
@@ -80,6 +78,13 @@ export const COMPOUND_UNITS = Object.freeze({
   "Btu/h":    { atoms: { Btu: 1, h: -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{h}}" },
   "Btu/hr":   { atoms: { Btu: 1, h: -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{h}}" },
 
+  kWh:        { factor: 3.6e6, atoms: { N: 1, m: 1 }, displayTex: "\\text{kWh}" },
+  "kg/kWh":   { factor: 1 / 3.6e6, atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{kWh}}" },
+  "g/kWh":    { factor: 0.001 / 3.6e6, atoms: { g: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{g}}{\\text{kWh}}" },
+  "kg/h":     { factor: 1 / 3600, atoms: { kg: 1, s: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{h}}" },
+  "lb/hp-h":  { factor: 0.45359237 / (745.69987 * 3600), atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{hp}\\cdot\\text{h}}" },
+  "lb/hp-hr": { factor: 0.45359237 / (745.69987 * 3600), atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{hp}\\cdot\\text{h}}" },
+
   "m/s":      { atoms: { m: 1, s: -1 }, displayTex: "\\cfrac{\\text{m}}{\\text{s}}" },
   "ft/min":   { atoms: { ft: 1, min: -1 }, displayTex: "\\cfrac{\\text{ft}}{\\text{min}}" },
   "kg/s":     { atoms: { kg: 1, s: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{s}}" },
@@ -88,7 +93,6 @@ export const COMPOUND_UNITS = Object.freeze({
   "lb/min":   { atoms: { lb_m: 1, min: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{min}}" },
   "lb/s":     { atoms: { lb_m: 1, s: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{s}}" },
 
-  // Restored Gear Units
   "teeth/in": { atoms: { teeth: 1, in: -1 }, displayTex: "\\cfrac{\\text{teeth}}{\\text{in}}" },
   rpm:        { atoms: { min: -1 }, displayTex: "\\text{rpm}" },
   "rev/s":    { atoms: { s: -1 }, displayTex: "\\cfrac{\\text{rev}}{\\text{s}}" },
@@ -125,7 +129,7 @@ export function getUnitAtomBag(uName) {
   }
   if (ATOMIC_BASE_UNITS[uName]) {
     const b = ATOMIC_BASE_UNITS[uName];
-    return { factor: 1.0, atoms: { [uName]: 1 }, dimMap: { [b.dim]: 1 }, scale: b.scale, isDimensionless: false, displayTex: b.tex };
+    return { factor: 1.0, atoms: { [uName]: 1 }, dimMap: { [b.dim]: 1 }, scale: b.scale, offset: b.offset || 0, isDimensionless: false, displayTex: b.tex };
   }
   return { factor: 1.0, atoms: {}, dimMap: {}, scale: 1.0, isDimensionless: false, isUnknown: true, rawUnit: uName };
 }
