@@ -53,31 +53,41 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
     let innerNode = node.expr;
     while (innerNode && innerNode.type === "group") innerNode = innerNode.expr;
     
-    // Smart Parens: No defensive parens around raw numbers, variables, or functions
+    // Smart Parens: numbers, variables, and function calls do not need outer parens
     if (innerNode.type === "num" || innerNode.type === "id" || innerNode.type === "call") {
       return astToLatex(innerNode, substituteMap, varsDb);
     }
-    return `\\left(${stripOuterParens(astToLatex(innerNode, substituteMap, varsDb))}\\right)`;
+    return `(${stripOuterParens(astToLatex(innerNode, substituteMap, varsDb))})`;
   }
   
   if (node.type === "call") {
-    const inner = stripOuterParens(astToLatex(unwrapGroup(node.arg), substituteMap, varsDb));
+    const argInner = unwrapGroup(node.arg);
+    const isSubstitutedNum = substituteMap && (
+      (argInner.type === "id" && substituteMap[argInner.name] !== undefined) ||
+      argInner.type === "num"
+    );
+    const innerTex = stripOuterParens(astToLatex(argInner, substituteMap, varsDb));
+
+    // Parens only added when substituted with numeric values e.g. \cos(30^\circ)
+    // Symbolic forms omit parens for standard Greek/variable names e.g. \cos\psi
+    const needsParens = isSubstitutedNum || argInner.type === "binary";
+    const wrappedArg = needsParens ? `(${innerTex})` : ` ${innerTex}`;
+
     switch (node.fn) {
-      case "sqrt": return `\\sqrt{${inner}}`; 
-      case "cos": return `\\cos(${inner})`; 
-      case "sin": return `\\sin(${inner})`;
-      case "tan": return `\\tan(${inner})`; 
-      case "atan": return `\\tan^{-1}\\left(${inner}\\right)`;
-      case "acos": return `\\cos^{-1}\\left(${inner}\\right)`; 
-      case "asin": return `\\sin^{-1}\\left(${inner}\\right)`;
-      case "exp": return `e^{${inner}}`; 
-      case "ln": return `\\ln\\left(${inner}\\right)`;
-      default: return `\\text{${node.fn}}\\left(${inner}\\right)`;
+      case "sqrt": return `\\sqrt{${innerTex}}`;
+      case "cos":  return `\\cos${wrappedArg}`;
+      case "sin":  return `\\sin${wrappedArg}`;
+      case "tan":  return `\\tan${wrappedArg}`;
+      case "atan": return `\\tan^{-1}\\left(${innerTex}\\right)`;
+      case "acos": return `\\cos^{-1}\\left(${innerTex}\\right)`;
+      case "asin": return `\\sin^{-1}\\left(${innerTex}\\right)`;
+      case "exp":  return `e^{${innerTex}}`;
+      case "ln":   return `\\ln\\left(${innerTex}\\right)`;
+      default:     return `\\text{${node.fn}}\\left(${innerTex}\\right)`;
     }
   }
   
   if (node.type === "binary") {
-    // Spaced continuous fractions
     if (node.op === "/") {
       return `\\cfrac{${stripOuterParens(astToLatex(node.left, substituteMap, varsDb))}}{${stripOuterParens(astToLatex(node.right, substituteMap, varsDb))}}`;
     }
@@ -88,15 +98,38 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
       const leftIsSimpleNum = /^[+-]?[\d.]+$/.test(L.trim());
       const rightIsSimpleNum = /^[+-]?[\d.]+$/.test(R.trim());
       
-      let sep = " ";
+      // Use clean \, thin spacing between factors
+      let sep = " \\, ";
       if (leftIsSimpleNum && rightIsSimpleNum) sep = " \\cdot ";
-      else if (R.startsWith("\\left(") || R.startsWith("(")) sep = "";
+      else if (R.startsWith("(") || R.startsWith("\\cos") || R.startsWith("\\sin") || R.startsWith("\\tan")) sep = " \\, ";
       
       return `${L}${sep}${R}`.trim();
     }
-    if (node.op === "+") return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
-    if (node.op === "-") return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
-    if (node.op === "^") return `{${astToLatex(node.left, substituteMap, varsDb)}}^{${stripOuterParens(astToLatex(node.right, substituteMap, varsDb))}}`;
+    if (node.op === "+") {
+      return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
+    }
+    if (node.op === "-") {
+      return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
+    }
+    if (node.op === "^") {
+      // Clean trig power formatting e.g. \cos^2\psi or \cos^2(25^\circ)
+      const uL = unwrapGroup(node.left);
+      if (uL.type === "call" && ["cos", "sin", "tan"].includes(uL.fn)) {
+        const expTex = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));
+        const argInner = unwrapGroup(uL.arg);
+        const isSubstitutedNum = substituteMap && (
+          (argInner.type === "id" && substituteMap[argInner.name] !== undefined) ||
+          argInner.type === "num"
+        );
+        const innerTex = stripOuterParens(astToLatex(argInner, substituteMap, varsDb));
+        const wrappedArg = (isSubstitutedNum || argInner.type === "binary") ? `(${innerTex})` : ` ${innerTex}`;
+        return `\\${uL.fn}^{${expTex}}${wrappedArg}`;
+      }
+
+      const leftTex = astToLatex(node.left, substituteMap, varsDb);
+      const expTex = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));
+      return `{${leftTex}}^{${expTex}}`;
+    }
   }
   return "";
 }
