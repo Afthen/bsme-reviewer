@@ -5,43 +5,45 @@
  * ============================================================================
  * PHILOSOPHY:
  * 1. Cognitive Scaffolding:
- *    Problem complexity (hop distance) dynamically scales based on decayed mastery:
- *      - Mastery < 38.2% (phi^-2): Single direct formula (0 hops)
- *      - 38.2% to 61.8% (phi^-1): Two formulas with 1 bridge variable (1 hop)
- *      - Mastery >= 61.8%: Multi-step synthesis chain (2-3 hops)
- *
- * 2. Board-Exam Distractor Variable Injection:
- *    With a 30% probability, realistic distractor variables from S that are NOT
- *    needed in the solution path are included in the given specifications to
- *    test whether the student can identify the correct relations.
- *
- * 3. 6-Significant-Figure Universal Precision:
- *    Values in problem statements and answers are formatted using fmtSigFig to
- *    prevent floating-point roundoff artifacts.
+ *    Problem hop distance scales dynamically based on Golden Ratio breakpoints:
+ *      - Mastery < 38.2% (Phi^-2): Single direct formula (0 hops)
+ *      - 38.2% to 61.8% (Phi^-1): Two formulas with 1 bridge variable (1 hop)
+ *      - 61.8% to 76.4% (Fading): Multi-step synthesis chain (2 hops)
+ *      - Mastery >= 76.4%: Deep graph walking (Fib_3 hops)
+ * 2. Board-Exam Distractor Injection:
+ *    Injects variables not needed in the solution path based on Phi^-3 (~23.6%).
+ * 3. Zero Arbitrary Magic Numbers:
+ *    All scoring, sorting, and BFS limits utilize Phi, e, and Fibonacci bounds.
  * ============================================================================
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
-import { PHI_INV, PHI_INV2 } from "../repetition/mastery.js";
+import { 
+  PHI_INV, PHI_INV2, PHI_INV3, PHI_INV6, PHI_INV7, FADING_THRESHOLD, 
+  FIB_3, FIB_8, FIB_13 
+} from "../repetition/mastery.js";
 import { fmtSigFig } from "./dimensions.js";
 
 /**
- * Determines problem graph distance (scaffolding level) from mastery score.
+ * Maps mastery [0, 1] to target hop distance (0 to 3) using Golden Thresholds.
  */
 function determineGraphDistance(mastery) {
-  if (mastery < PHI_INV2) return 0; // < 38.2% -> single direct formula
-  if (mastery < PHI_INV)  return 1; // 38.2% to 61.8% -> 2 formulas, 1 bridge
-  return Math.random() < 0.5 ? 2 : 3; // >= 61.8% -> synthesis chain
+  if (mastery < PHI_INV2) return 0;           // < 38.2%
+  if (mastery < PHI_INV) return 1;            // < 61.8%
+  if (mastery < FADING_THRESHOLD) return 2;   // < 76.4%
+  return FIB_3;                               // >= 76.4%
 }
 
-/**
- * Traverses the relation graph to build a solvable problem path.
- */
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
+  // 1. Strict Priority Sorting: Worst mastered formulas float to the top
   const scoredNodes = relations.map(node => {
-    const mastery = getMastery(node.id);
-    const weight = mastery === 0 ? 5.0 : Math.max(0.02, Math.pow(1 - mastery, 3));
-    const key = Math.pow(Math.random(), 1 / weight);
+    const mastery = getMastery(node);
+    // Base weight skewed heavily toward unmastered nodes (bounded by 1 + Phi^-6 to prevent 0)
+    const weight = Math.max(PHI_INV7, Math.pow((1 + PHI_INV6) - mastery, FIB_3));
+    
+    // Jitter identity: (Phi^-1 + Phi^-2 * rand) scales between exactly 0.618 and 1.000
+    const key = weight * (PHI_INV + PHI_INV2 * Math.random());
+    
     return { node, weight, key, mastery };
   });
 
@@ -54,79 +56,87 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
       if (targetNode.solvable && !targetNode.solvable.includes(goalVar)) {
         continue;
       }
-      const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery, getMastery);
+      const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery);
       if (problem) return problem;
     }
   }
 
+  // Fallback if graph is completely constrained
   const fallback = scoredNodes[0].node;
   const goalVar = fallback.solvable ? fallback.solvable[0] : fallback.nodes[0];
   const givens = fallback.nodes.filter(n => n !== goalVar);
   return { goalVar, givens, distractors: [], targetEqId: fallback.id, hopDistance: 0 };
 }
 
-function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, getMastery) {
-  let givens = targetNode.nodes.filter(n => n !== goalVar);
+/**
+ * Aggressive Breadth-First Search (BFS) bounded by Fibonacci limits.
+ */
+function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
+  let currentGivens = targetNode.nodes.filter(n => n !== goalVar);
   const desiredHops = determineGraphDistance(targetMastery);
 
-  let hops = 0;
-  let attempts = 0;
+  let bestPath = { givens: currentGivens, hops: 0 };
 
-  while (hops < desiredHops && attempts < 15) {
-    attempts++;
+  for (let h = 0; h < desiredHops; h++) {
+    let expansions = [];
+    
+    // Find all valid ways to replace a given variable with another formula's inputs
+    for (const g of currentGivens) {
+      const neighborRels = relations.filter(r => r.id !== targetNode.id && r.nodes.includes(g));
+      
+      for (const nRel of neighborRels) {
+        const newInputs = nRel.nodes.filter(n => n !== g);
+        
+        // Prevent cycles and immediately solving the goal
+        if (!newInputs.includes(goalVar)) {
+          const candidateSet = Array.from(new Set([
+            ...currentGivens.filter(x => x !== g),
+            ...newInputs
+          ]));
 
-    const bridgeableEdges = givens.filter(edgeVar =>
-      relations.some(r => r.id !== targetNode.id && r.nodes.includes(edgeVar))
-    );
-    if (bridgeableEdges.length === 0) break;
-
-    const chosenEdge = bridgeableEdges[Math.floor(Math.random() * bridgeableEdges.length)];
-    const neighborNodes = relations.filter(r => r.id !== targetNode.id && r.nodes.includes(chosenEdge));
-    const neighbor = neighborNodes[Math.floor(Math.random() * neighborNodes.length)];
-    const neighborGivens = neighbor.nodes.filter(n => n !== chosenEdge);
-
-    if (!neighborGivens.includes(goalVar) && !neighborGivens.includes(chosenEdge)) {
-      const candidateSet = Array.from(new Set([
-        ...givens.filter(g => g !== chosenEdge),
-        ...neighborGivens
-      ]));
-
-      if (candidateSet.length <= 6 && canSolveTarget(candidateSet, goalVar, relations, getMastery)) {
-        givens = candidateSet;
-        hops++;
+          // Enforce a sensible Fibonacci upper bound on graph width
+          if (candidateSet.length <= FIB_8 && canSolveTarget(candidateSet, goalVar, relations)) {
+            expansions.push(candidateSet);
+          }
+        }
       }
     }
+
+    if (expansions.length === 0) break;
+
+    // Pick a random valid expansion branch to continue
+    currentGivens = expansions[Math.floor(Math.random() * expansions.length)];
+    bestPath = { givens: currentGivens, hops: h + 1 };
   }
 
-  const steps = solveDAG(givens, S, relations, {}, getMastery);
+  const steps = solveDAG(bestPath.givens, S, relations, {}, () => 0);
   const required = pruneSolutionPath(steps, goalVar);
 
+  // Ensure our target node wasn't pruned out
   const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
   if (!usesTarget) return null;
 
   const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
-  givens.forEach(g => usedVars.add(g));
+  bestPath.givens.forEach(g => usedVars.add(g));
 
   const candidateDistractors = Object.keys(S).filter(k =>
     !k.startsWith("_") && !usedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
   );
 
-  const distractors = candidateDistractors.length > 0 && Math.random() < 0.30
+  // Inject distractors based on Golden Ratio Probability (~23.6%)
+  const distractors = candidateDistractors.length > 0 && Math.random() < PHI_INV3
     ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
     : [];
 
   return {
     goalVar,
-    givens: Array.from(new Set([...givens, ...distractors])).sort(),
+    givens: Array.from(new Set([...bestPath.givens, ...distractors])).sort(),
     distractors,
     targetEqId: targetNode.id,
-    hopDistance: hops
+    hopDistance: bestPath.hops
   };
 }
 
-/**
- * Builds the natural language problem statement narrative.
- */
 export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicConfig = {}) {
   if (typeof topicConfig.statementBuilder === "function") {
     return topicConfig.statementBuilder(givens, visibleGoals, S, varsDb);
@@ -142,7 +152,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const formattedVal = fmtSigFig(val, 6);
     let valWithUnit = `$${formattedVal}$`;
     if (u && u !== "dimless" && u !== "ratio") {
-      valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}°$` : `$${formattedVal}\\text{ ${u}}$`;
+      valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}^\\circ$` : `$${formattedVal}\\text{ ${u}}$`;
     }
 
     return `${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${sym}$</span> = ${valWithUnit})</span>`;
@@ -156,7 +166,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
     let uStr = "";
     if (u && u !== "dimless" && u !== "ratio") {
-      uStr = (u === "deg" || u === "°") ? " in °" : ` in $\\text{${u}}$`;
+      uStr = (u === "deg" || u === "°") ? " in ^\\circ" : ` in $\\text{${u}}$`;
     }
 
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
@@ -167,22 +177,16 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   return `A ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
 }
 
-/**
- * Top-Level Universal Problem Orchestrator.
- * Connects the topic schema, ground-truth generator, graph solver, and narrative builder.
- */
 export function generateProblem(topic, getMastery = () => 0) {
   const { title, varsDb, relations, createSystem } = topic;
   const S = createSystem();
 
-  // 1. Walk graph to determine given variables and target goal
   const path = generateAutonomousProblem(relations, S, varsDb, getMastery);
 
-  // 2. Solve DAG and prune solution steps to the target goal
-  const allSteps = solveDAG(path.givens, S, relations, varsDb, getMastery);
+  // solveDAG for algebraic pathing doesn't need decayed mastery
+  const allSteps = solveDAG(path.givens, S, relations, varsDb, () => 0);
   const solution = pruneSolutionPath(allSteps, path.goalVar);
 
-  // 3. Build problem statement narrative
   const visibleGoals = [path.goalVar];
   const statement = buildProblemStatement(path.givens, visibleGoals, S, varsDb, topic);
 
@@ -190,12 +194,13 @@ export function generateProblem(topic, getMastery = () => 0) {
     title: `${title} Design Problem`,
     statement,
     solution,
-    solutionSteps: solution, // Alias for step submit handlers
+    solutionSteps: solution,
     allSteps,
     givens: path.givens,
     distractors: path.distractors,
     system: S,
     varsDb,
-    topicId: topic.id
+    topicId: topic.id,
+    hopDistance: path.hopDistance
   };
 }
