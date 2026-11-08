@@ -1,13 +1,11 @@
 /**
  * src/core/derivation.js
  * ============================================================================
- * ARCHITECTURAL PILLAR: Aligned Multi-Line Derivation Generator
+ * ARCHITECTURAL PILLAR: Textbook-Grade Aligned Derivations
  * ============================================================================
- * Formats mathematical derivation steps to strict 6-significant-figure precision
- * with explicit factor-label unit cancellation:
- *   Line 1: Symbolic isolated formula
- *   Line 2: Substituted numeric values (6 sig figs) WITH unit atoms + conversion factors
- *   Line 3: Final calculated answer (6 sig figs) + target unit
+ * 1. Canonical Implication: Displays Base => Isolated if algebraic manipulation occurred.
+ * 2. Inline Factor-Label Units: Attaches units directly to substituted numbers.
+ * 3. Typographical Spacing: Uses \cfrac for steps and \tfrac for final answer units.
  * ============================================================================
  */
 
@@ -26,7 +24,7 @@ export function buildAlignedDerivation(
   answeredVars = new Set(),
   givens = []
 ) {
-  const { targetVar, baseFormula, equationTex, rhsExpr, requiredUnits } = step;
+  const { targetVar, baseFormula, canonicalTex, rhsExpr, requiredUnits } = step;
 
   const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
   const targetMeta = varsDb[canonicalTarget] || varsDb[targetVar] || {};
@@ -44,41 +42,60 @@ export function buildAlignedDerivation(
     });
   }
 
-  // 1. Build Substitution Mapping with Explicit Unit Atoms for Visual Cancellation
+  // Build Substitution Mapping with Explicit Unit Atoms & Inline Conversions
   const subsMap = {};
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
       const formattedNum = fmtSigFig(v, 6);
-      const unitMarkup = unitAnalysis.tokenMarkup?.[k];
+      const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
+      const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
 
-      // Attach unit markup (e.g. 41.3767\,\cancel{\text{mm}}) so visual cancellation slashes match
-      if (unitMarkup && unitMarkup !== "") {
-        subsMap[k] = `${formattedNum}\\,${unitMarkup}`;
+      if (unitMarkup !== "" || inlineConv !== "") {
+        // e.g. 1200\,\cfrac{\text{rev}}{\text{min}} \cdot \cfrac{1\,\text{min}}{60\,\text{s}}
+        subsMap[k] = `${formattedNum}\\,${unitMarkup}${inlineConv}`;
       } else {
         subsMap[k] = formattedNum;
       }
     }
   }
 
-  // Line 1: Symbolic formula
+  // Line 1: Canonical Implication or Direct Isolation
   const symRhs = casToTex(formulaRhs, varsDb);
-  const line1 = `${targetSymbol} &= ${symRhs}`;
+  const isolatedEq = `${targetSymbol} = ${symRhs}`;
+  const displayCanonical = canonicalTex || casToTex(baseFormula, varsDb);
+  
+  let line1;
+  const norm = s => (s || "").replace(/\s+/g, "");
+  if (norm(displayCanonical) === norm(isolatedEq) || !baseFormula) {
+    line1 = `${targetSymbol} &= ${symRhs}`;
+  } else {
+    // A => B formatting
+    line1 = `${displayCanonical} \\quad \\Rightarrow \\quad ${targetSymbol} &= ${symRhs}`;
+  }
 
-  // Line 2: Values substituted with units (6 sig figs) + conversion factors
+  // Line 2: Substituted numeric values (6 sig figs) + target-level conversion factors
   const rhsAst = parseMathAST(formulaRhs);
   const numTex = astToLatex(rhsAst, subsMap, varsDb);
-  const convTex = unitAnalysis.conversionFactorTex || "";
-  const line2 = `&= ${numTex}${convTex}`;
+  const globalConvTex = unitAnalysis.conversionFactorTex || "";
+  const line2 = `&= ${numTex}${globalConvTex}`;
 
-  // Line 3: Final evaluated answer (6 sig figs)
+  // Line 3: Final calculated answer (6 sig figs) with \tfrac for units
   const val = step.expectedVal !== undefined ? step.expectedVal : S[canonicalTarget];
   const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
 
   let unitTex = "";
   if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
-    unitTex = (targetUnit === "deg" || targetUnit === "°") ? "^\\circ" : `\\text{ ${targetUnit}}`;
+    if (targetUnit === "deg" || targetUnit === "°") {
+      unitTex = "^\\circ";
+    } else if (targetUnit.includes("/")) {
+      const [num, den] = targetUnit.split("/");
+      unitTex = `\\,\\tfrac{\\text{${num}}}{\\text{${den}}}`;
+    } else {
+      unitTex = `\\,\\text{${targetUnit}}`;
+    }
   }
-  const line3 = `&= ${formattedVal}${unitTex ? " " + unitTex : ""}`;
+  
+  const line3 = `&= ${formattedVal}${unitTex}`;
 
   return `$$\\begin{aligned}\n  ${line1} \\\\[6pt]\n  ${line2} \\\\[6pt]\n  ${line3}\n\\end{aligned}$$`;
 }
