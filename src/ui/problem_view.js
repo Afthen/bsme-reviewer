@@ -117,7 +117,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     });
   }
 
-  attachTooltips(activeProblem.system, activeProblem.solution, activeProblem.varsDb);
+  attachTooltips(activeProblem, relations);
 }
 
 function refreshStepDerivations(activeProblem, relations) {
