@@ -18,7 +18,7 @@
 import { TOPICS, ALL_TOPICS } from "./src/topics/index.js";
 import { generateProblem } from "./src/core/problem_gen.js";
 import {
-  loadMastery, getDecayedMastery, incrementTopicTick,
+  loadMastery, getDecayedMastery, recordAttempt, incrementGlobalTick,
   exportMasteryJSON, importMasteryJSON
 } from "./src/repetition/mastery.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
@@ -30,18 +30,16 @@ let currentProblem = null;
 export { TOPICS };
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadMastery(currentTopic.id);
+  // 1. Load Global Unified Mastery File
+  loadMastery();
 
-  // 1. Dynamic Black-Box Topic Selector Population (<optgroup> by Subject)
   setupTopicSelector();
 
-  // 2. Initialize Spaced Repetition Sidebar Drawer
-  initSidebarView(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
+  // 2. Initialize Spaced Repetition Sidebar Drawer (Passing full eq object!)
+  initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq));
 
-  // 3. Hook Action Buttons (Matching index.html Element IDs)
   setupHeaderActions();
 
-  // 4. Hook Carousel Return Navigation
   const btnBack = document.getElementById("btn-back-to-problem");
   if (btnBack) {
     btnBack.addEventListener("click", () => {
@@ -50,14 +48,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 5. Generate Initial Problem
   generateNewProblem();
 });
 
-/**
- * Dynamically builds <optgroup> sections based on topic.subject metadata.
- * Scales automatically when new subjects (like Powerplant) are registered.
- */
 function setupTopicSelector() {
   const selector = document.getElementById("topic-selector");
   if (!selector) return;
@@ -91,24 +84,20 @@ function setupTopicSelector() {
     const selectedId = e.target.value;
     if (TOPICS[selectedId]) {
       currentTopic = TOPICS[selectedId];
-      loadMastery(currentTopic.id);
-      initSidebarView(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
+      initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq));
       generateNewProblem();
     }
   });
 }
 
-/**
- * Hooks Export, Import, and Next Problem buttons to their matching IDs in index.html.
- */
 function setupHeaderActions() {
   const exportBtn = document.getElementById("btn-export");
   if (exportBtn) {
     exportBtn.addEventListener("click", () => {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(exportMasteryJSON(currentTopic.id));
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(exportMasteryJSON());
       const dl = document.createElement("a");
       dl.setAttribute("href", dataStr);
-      dl.setAttribute("download", `mastery_${currentTopic.id}.json`);
+      dl.setAttribute("download", `mastery_global.json`);
       dl.click();
     });
   }
@@ -124,10 +113,10 @@ function setupHeaderActions() {
       if (!file) return;
       const reader = new FileReader();
       reader.onload = ev => {
-        const res = importMasteryJSON(ev.target.result, currentTopic.id);
+        const res = importMasteryJSON(ev.target.result);
         if (res.success) {
-          alert("Mastery profile imported successfully!");
-          renderSidebar(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
+          alert("Global Mastery profile imported successfully!");
+          renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq));
         } else {
           alert(`Import failed: ${res.reason}`);
         }
@@ -142,17 +131,14 @@ function setupHeaderActions() {
   }
 }
 
-/**
- * Orchestrates problem generation, renders interactive steps, and updates mastery bars.
- */
 function generateNewProblem() {
-  incrementTopicTick(currentTopic.id);
+  incrementGlobalTick();
 
-  currentProblem = generateProblem(currentTopic, id => getDecayedMastery(id, currentTopic.id));
+  // Full eq object sent to getMastery evaluator
+  currentProblem = generateProblem(currentTopic, eq => getDecayedMastery(eq));
 
-  // Correct signature: renderProblemView(activeProblem, relations, topicId)
   renderProblemView(currentProblem, currentTopic.relations, currentTopic.id);
 
-  // Update sidebar mastery bars
-  renderSidebar(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
+  // Update sidebar mastery bars with full eq object evaluation
+  renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq));
 }
