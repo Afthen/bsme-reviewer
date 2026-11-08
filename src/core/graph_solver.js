@@ -83,8 +83,11 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
   return steps;
 }
 
-export function canSolveTarget(givensArray, targetVar, relations = []) {
-  const steps = solveDAG(givensArray, {}, relations, {}, () => 0);
+/**
+ * Variant-aware reachability check passing system context S.
+ */
+export function canSolveTarget(givensArray, targetVar, relations = [], S = {}) {
+  const steps = solveDAG(givensArray, S, relations, {}, () => 0);
   return steps.some(s => s.targetVar === targetVar);
 }
 
@@ -98,7 +101,6 @@ export function pruneSolutionPath(steps = [], goalVar, getMastery = () => 0) {
   const requiredIndices = new Set([goalIdx, ...(steps[goalIdx].ancestorIndices || [])]);
   const solution = steps.filter(s => requiredIndices.has(s.stepIdx));
 
-  // Activate Fading on intermediate steps when mastery exceeds FADING_THRESHOLD (76.4%)
   const fadedAncestorEqIds = [];
   solution.forEach(step => {
     const isGoal = step.targetVar === goalVar;
