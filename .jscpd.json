@@ -1,0 +1,13 @@
+{
+  "threshold": 5,
+  "reporters": ["console"],
+  "ignore": [
+    "node_modules/**",
+    "test/**",
+    "*.json",
+    "package.json"
+  ],
+  "format": ["javascript", "css"],
+  "minLines": 5,
+  "minTokens": 50
+}
