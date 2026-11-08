@@ -66,7 +66,8 @@ export function renderMasteryBars(containerOrRelations, maybeRelations, maybeGet
   el.innerHTML = "";
 
   relations.forEach(eq => {
-    const mastery = getMastery(eq.id);
+    // Passes the full equation object so AST token complexity can be evaluated
+    const mastery = getMastery(eq);
     const pct = Math.round(mastery * 100);
 
     const row = document.createElement("div");
