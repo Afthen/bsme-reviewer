@@ -1,26 +1,16 @@
 /**
  * test/run_tests.js
- * ============================================================================
- * ARCHITECTURAL PILLAR: Comprehensive Headless CI Test Runner
- * ============================================================================
- * 1. Topic Verification Suite:
- *    Audits AST inversion, self-reference, and physical ground-truth accuracy.
- * 2. Zero-Dependency UI Module Integrity Suite:
- *    Simulates minimal browser globals so Node.js imports and statically verifies
- *    every single frontend UI module (problem_view, sidebar_view, carousel_view, app.js).
- *    Guarantees no missing exports, broken paths, or syntax errors reach production.
- * ============================================================================
+ * Comprehensive Headless CI Test Runner.
  */
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { ALL_TOPICS } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
+import { generateProblem } from "../src/core/problem_gen.js";
+import { buildAlignedDerivation } from "../src/core/derivation.js";
 
-// ========================================================
-// 1. MINIMAL HEADLESS BROWSER MOCKS (ZERO NPM DEPENDENCIES)
-// ========================================================
-
+// Minimal Headless Browser Mocks
 if (typeof globalThis.window === "undefined") {
   globalThis.window = globalThis;
 }
@@ -30,12 +20,7 @@ if (typeof globalThis.document === "undefined") {
     id,
     tagName: tag.toUpperCase(),
     style: {},
-    classList: {
-      add: () => {},
-      remove: () => {},
-      toggle: () => {},
-      contains: () => false
-    },
+    classList: { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false },
     appendChild: () => {},
     querySelectorAll: () => [],
     querySelector: () => null,
@@ -68,13 +53,10 @@ if (typeof globalThis.localStorage === "undefined") {
   };
 }
 
-// ========================================================
-// 2. TOPIC SCHEMAS & PHYSICAL GROUND-TRUTH SUITE
-// ========================================================
-
+// 1. Dual-System Deterministic Validation Suite
 describe("Engineering Topics Ground Truth & AST Inversion Suite", () => {
   for (const topic of ALL_TOPICS) {
-    test(`Topic: ${topic.title} (${topic.id})`, () => {
+    test(`Topic: ${topic.title} (${topic.id}) - Deterministic SI & US`, () => {
       const report = validateTopic(topic);
 
       if (report.errors.length > 0) {
@@ -91,33 +73,55 @@ describe("Engineering Topics Ground Truth & AST Inversion Suite", () => {
   }
 });
 
-// ========================================================
-// 3. UI MODULE & STATIC EXPORT INTEGRITY SUITE
-// ========================================================
+// 2. Derivation Fidelity Test Suite
+describe("Derivation Fidelity & Factor-Label Typesetting", () => {
+  for (const topic of ALL_TOPICS) {
+    test(`Derivation output for ${topic.title}`, () => {
+      const problem = generateProblem(topic, () => 0.5);
+      assert.ok(problem.solution.length > 0, "Problem generated zero solution steps");
 
+      for (const step of problem.solution) {
+        const derivLatex = buildAlignedDerivation(
+          step,
+          problem.system,
+          problem.allSteps,
+          problem.varsDb,
+          topic.relations
+        );
+
+        assert.ok(derivLatex.includes("\\boxed{"), "Derivation step missing boxed answer");
+        assert.ok(derivLatex.includes("="), "Derivation step missing equality");
+        // Verify no nested fraction towers
+        assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), "Derivation produced illegal nested fraction tower");
+      }
+    });
+  }
+});
+
+// 3. UI Module & Static Export Integrity Suite
 describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
   test("Verify src/ui/sidebar_view.js integrity and exports", async () => {
     const mod = await import("../src/ui/sidebar_view.js");
-    assert.equal(typeof mod.initSidebarView, "function", "Missing initSidebarView export");
-    assert.equal(typeof mod.renderSidebar, "function", "Missing renderSidebar export");
-    assert.equal(typeof mod.renderMasteryBars, "function", "Missing renderMasteryBars export");
+    assert.equal(typeof mod.initSidebarView, "function");
+    assert.equal(typeof mod.renderSidebar, "function");
+    assert.equal(typeof mod.renderMasteryBars, "function");
   });
 
   test("Verify src/ui/carousel_view.js integrity and exports", async () => {
     const mod = await import("../src/ui/carousel_view.js");
-    assert.equal(typeof mod.attachTooltips, "function", "Missing attachTooltips export");
-    assert.equal(typeof mod.openCarouselForVariable, "function", "Missing openCarouselForVariable export");
+    assert.equal(typeof mod.attachTooltips, "function");
+    assert.equal(typeof mod.openCarouselForVariable, "function");
   });
 
   test("Verify src/ui/problem_view.js integrity and exports", async () => {
     const mod = await import("../src/ui/problem_view.js");
-    assert.equal(typeof mod.renderProblemView, "function", "Missing renderProblemView export");
+    assert.equal(typeof mod.renderProblemView, "function");
   });
 
   test("Verify app.js entry point integrity and topic export", async () => {
     const mod = await import("../app.js");
-    assert.ok(mod.TOPICS, "app.js failed to export TOPICS dictionary");
-    assert.ok(mod.TOPICS.spur_gears, "app.js missing spur_gears topic registration");
-    assert.ok(mod.TOPICS.helical_gears, "app.js missing helical_gears topic registration");
+    assert.ok(mod.TOPICS);
+    assert.ok(mod.TOPICS.spur_gears);
+    assert.ok(mod.TOPICS.helical_gears);
   });
 });
