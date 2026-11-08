@@ -1,15 +1,12 @@
 /**
  * src/cas/units.js
- * ============================================================================
- * ARCHITECTURAL PILLARS:
- * - PILLAR II: The Universal Scale Law & Atomic Unit Bags
- * - PILLAR V: The Option B Empirical Contract
- * ============================================================================
+ * Physics & Dimensional Analysis Engine.
+ * Atomic unit bags, dimensional cancellation, and universal physical evaluation.
  */
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "./ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "./algebra.js";
-import { fmtSigFig } from "../core/dimensions.js"; // For conversion numbers
+import { fmtSigFig } from "../core/dimensions.js";
 
 export const BASE_DIMENSIONS = Object.freeze({
   L: "Length", T: "Time", F: "Force", M: "Mass", Th: "Temperature", C: "Count"
@@ -171,7 +168,7 @@ function evalExprUnitAST(node, S, varsDb) {
 export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const ast = (typeof exprOrAST === "string") ? parseMathAST(exprOrAST) : exprOrAST;
   const selectedConversions = [];
-  const tokenConversions = {}; // Maps inline conversions directly to tokens
+  const tokenConversions = {};
   const preConversions = [];
 
   if (requiredUnits && typeof requiredUnits === "object") {
@@ -209,6 +206,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const targetWantsTeeth = (targetBag.atoms["teeth"] || 0) > 0;
   const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false, preserved: false }));
 
+  // Direct Identical Atom Cancellation
   for (let i = 0; i < atomList.length; i++) {
     for (let j = i + 1; j < atomList.length; j++) {
       const a1 = atomList[i], a2 = atomList[j];
@@ -227,7 +225,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const remaining = atomList.filter(a => !a.canceled && !a.preserved);
   const dimsPresent = Array.from(new Set(remaining.map(a => a.dim)));
 
-  // Inline Internal Dimension Clashes (e.g. min vs s)
+  // Inline Internal Dimension Clashes
   dimsPresent.forEach(dim => {
     const dimAtoms = remaining.filter(a => a.dim === dim);
     const pos = dimAtoms.find(a => a.power > 0), neg = dimAtoms.find(a => a.power < 0);
@@ -246,7 +244,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
   });
 
-  // Global Target Scale Mismatch (e.g. converting entire net expression to hp or kW)
+  // Global Target Scale Mismatch
   if (Math.abs(numericConversionFactor - 1.0) > 1e-4) {
     atomList.filter(a => !a.canceled && !a.preserved).forEach(a => {
       for (const [tAtom, tPower] of Object.entries(targetBag.atoms)) {
@@ -263,7 +261,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     });
   }
 
-  // Token Markup Builder
+  // Token Markup Builder (with Contextual Compound Unit Expansion)
   const tokenMarkup = {}, tokenGroups = {};
   atomList.forEach(a => { (tokenGroups[a.token] = tokenGroups[a.token] || []).push(a); });
   
@@ -279,7 +277,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       tokenMarkup[tok] = atoms[0]?.canceled ? `\\cancel{\\text{${atoms[0]?.atom}}}` : `\\text{${atoms[0]?.atom}}`; 
       continue; 
     }
-    
+
+    // Contextual expansion: expand compound units (e.g. psi -> lb / in^2) so visual cancellation is clear
     const numStr = atoms.filter(a => a.power > 0).map(a => a.canceled ? `\\cancel{\\text{${a.atom}}}` : `\\text{${a.atom}}`).join("\\cdot");
     const denStr = atoms.filter(a => a.power < 0).map(a => a.canceled ? `\\cancel{\\text{${a.atom}}}` : `\\text{${a.atom}}`).join("\\cdot");
     const prefix = compound.factor && compound.factor !== 1 ? `${compound.factor}\\,` : "";
