@@ -3,7 +3,8 @@
  * Flashcard carousel with pure AST isolation and disabled pills for empirical non-invertibles.
  */
 
-import { isolateVariable } from "../core/cas.js";
+import { isolateVariable } from "../cas/algebra.js";
+import { casToTex } from "../cas/latex.js";
 
 let currentCards = [];
 let currentCardIdx = 0;
