@@ -20,11 +20,11 @@
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 import { parseMathAST } from "../cas/ast.js";
-import { evaluatePhysicalAST } from "../cas/units.js";
+import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { 
   PHI_INV, PHI_INV2, PHI_INV3, PHI_INV6, PHI_INV7, FADING_THRESHOLD, 
   FIB_3, FIB_8, FIB_13 
-} from "../repetition/mastery.js";
+} from "../cas/units/index.js";
 import { fmtSigFig } from "./dimensions.js";
 
 function determineGraphDistance(mastery) {

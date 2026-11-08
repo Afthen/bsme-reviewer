@@ -8,7 +8,7 @@ import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
   incrementTopicTick, PHI_INV8, getDecayedMastery
-} from "../repetition/mastery.js";
+} from ".../mastery/index.js";
 import { attachTooltips } from "./carousel_view.js";
 import { renderMasteryBars } from "./sidebar_view.js";
 

@@ -13,7 +13,7 @@
 import { parseMathAST } from "../cas/ast.js";
 import { resolveCanonicalKey } from "../cas/algebra.js";
 import { casToTex, astToLatex } from "../cas/latex.js";
-import { solveUnitAlgebra } from "../cas/units.js";
+import { solveUnitAlgebra } from "../cas/units/index.js";
 import { fmtSigFig } from "./dimensions.js";
 
 export function buildAlignedDerivation(

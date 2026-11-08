@@ -5,7 +5,7 @@
  * renderMasteryBars(container, relations, getMastery).
  */
 
-import { FADING_THRESHOLD, PHI_INV2 } from "../repetition/mastery.js";
+import { FADING_THRESHOLD, PHI_INV2 } from "../mastery/index.js";
 
 let activeRelations = [];
 let activeGetMastery = () => 0;
