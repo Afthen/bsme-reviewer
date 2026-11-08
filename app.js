@@ -22,7 +22,6 @@ import { solveDAG, pruneSolutionPath } from "./src/core/graph_solver.js";
 import { initSidebarView, renderMasteryBars } from "./src/ui/sidebar_view.js";
 import { initCarouselView } from "./src/ui/carousel_view.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
-import { validateTopic } from "./src/core/validator.js";
 
 // ========================================================
 // 1. SUBJECT & TOPIC REGISTRY
