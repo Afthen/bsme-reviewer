@@ -1,6 +1,8 @@
 /**
  * src/ui/sidebar_view.js
  * Sidebar drawer controller with single-listener initialization guard.
+ * Supports flexible signature: renderMasteryBars(relations, getMastery) or
+ * renderMasteryBars(container, relations, getMastery).
  */
 
 import { FADING_THRESHOLD, PHI_INV2 } from "../repetition/mastery.js";
@@ -45,8 +47,21 @@ export function initSidebarView(relations = [], getMastery = () => 0) {
   isInitialized = true;
 }
 
-export function renderMasteryBars(relations = [], getMastery = () => 0) {
-  const el = document.getElementById("weight-bars-el");
+export function renderMasteryBars(containerOrRelations, maybeRelations, maybeGetMastery) {
+  const relations = Array.isArray(containerOrRelations)
+    ? containerOrRelations
+    : (Array.isArray(maybeRelations) ? maybeRelations : []);
+
+  const getMastery = typeof containerOrRelations === "function"
+    ? containerOrRelations
+    : (typeof maybeRelations === "function"
+        ? maybeRelations
+        : (typeof maybeGetMastery === "function" ? maybeGetMastery : () => 0));
+
+  const el = (containerOrRelations && containerOrRelations.nodeType === 1)
+    ? containerOrRelations.querySelector("#weight-bars-el") || document.getElementById("weight-bars-el")
+    : document.getElementById("weight-bars-el");
+
   if (!el) return;
   el.innerHTML = "";
 
