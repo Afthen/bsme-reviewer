@@ -34,7 +34,6 @@ export function validateTopic(topic) {
     passedPairs: 0
   };
 
-  // 1. Schema Node & Registered Unit Verification
   for (const rel of relations) {
     for (const node of rel.nodes) {
       if (!varsDb[node]) {
@@ -52,7 +51,6 @@ export function validateTopic(topic) {
     }
   }
 
-  // 2. Ground-Truth System Generation Verification
   let S;
   try {
     S = createSystem();
@@ -71,16 +69,15 @@ export function validateTopic(topic) {
     }
   }
 
-  // 3. Formula Solvability, AST Inversion & Numerical Verification
   for (const rel of relations) {
     let relationPassed = true;
-    const allowableTargets = rel.solvable || rel.nodes;
+    const activeVariant = (rel.variants && S && S.sys && rel.variants[S.sys]) ? rel.variants[S.sys] : null;
+    const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
+    const allowableTargets = rel.solvable || activeVariant?.nodes || rel.nodes;
+    const requiredUnits = activeVariant?.requiredUnits || rel.requiredUnits || null;
 
     for (const targetVar of allowableTargets) {
       report.testedPairs++;
-      const activeVariant = (rel.variants && S && S.sys && rel.variants[S.sys]) ? rel.variants[S.sys] : null;
-      const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
-      const requiredUnits = activeVariant?.requiredUnits || rel.requiredUnits || null;
 
       const isolated = isolateVariable(baseFormula, targetVar, varsDb);
 
@@ -90,7 +87,6 @@ export function validateTopic(topic) {
         continue;
       }
 
-      // Check A: Pure AST check (Variable must NOT be present in RHS)
       const rhsAst = parseMathAST(isolated.isolatedRhs);
       if (astHasVariable(rhsAst, targetVar)) {
         report.errors.push(`Self-reference: [${rel.id}] target "${targetVar}" still present in RHS: "${isolated.isolatedRhs}"`);
@@ -98,7 +94,6 @@ export function validateTopic(topic) {
         continue;
       }
 
-      // Check B: Numerical evaluation against ground truth S
       const expectedVal = S[targetVar];
       if (typeof expectedVal === "number" && !isNaN(expectedVal)) {
         const { value: computedVal } = evaluatePhysicalAST(rhsAst, S, targetVar, varsDb, requiredUnits);
@@ -127,7 +122,6 @@ export function validateTopic(topic) {
     }
   }
 
-  // 4. Multi-Goal DAG Stress Test
   const candidateGoals = relations
     .filter(r => !r.requiredUnits)
     .map(r => r.solvable ? r.solvable[0] : r.nodes[0])
