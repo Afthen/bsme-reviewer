@@ -7,10 +7,6 @@
 import { parseMathAST, evalAST, getAstIdentifiers } from "./ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "./algebra.js";
 
-// ========================================================
-// 1. ATOMIC BASE & COMPOUND UNIT REGISTRY
-// ========================================================
-
 export const BASE_DIMENSIONS = Object.freeze({
   L: "Length", T: "Time", F: "Force", M: "Mass", Th: "Temperature", C: "Count"
 });
@@ -127,11 +123,9 @@ function evalExprUnitAST(node, S, varsDb) {
   if (node.type === "group") return evalExprUnitAST(node.expr, S, varsDb);
 
   if (node.type === "call") {
-    // Trig functions return dimensionless
     if (["sin", "cos", "tan"].includes(node.fn)) {
       return { factor: 1.0, atoms: [] };
     }
-    // Inverse trig functions return angles in radians
     if (["atan", "acos", "asin"].includes(node.fn)) {
       return {
         factor: 1.0,
@@ -161,7 +155,6 @@ function evalExprUnitAST(node, S, varsDb) {
   return { factor: 1.0, atoms: [] };
 }
 
-// Accepts either an AST Node OR a string expression
 export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const ast = (typeof exprOrAST === "string") ? parseMathAST(exprOrAST) : exprOrAST;
   const selectedConversions = [];
@@ -193,7 +186,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
   const targetBag = getUnitAtomBag(targetUnit);
 
-  // 1. Universal Physical Scale (product of ALL atomic scales)
   let exprScale = exprAnalysis.factor;
   exprAnalysis.atoms.forEach(a => {
     exprScale *= Math.pow(a.scale, a.power);
@@ -202,7 +194,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   let targetScale = targetBag.scale || 1.0;
   const numericConversionFactor = targetScale > 0 ? (exprScale / targetScale) : 1.0;
 
-  // 2. KaTeX Unit Visual Cancellation & Formatting
   const targetWantsTeeth = (targetBag.atoms["teeth"] || 0) > 0;
   const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false, preserved: false }));
 
@@ -298,11 +289,11 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     });
   }
 
-  // Hook unitResolver to check whether argument to trig function is in degrees
   const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
   const rawNum = evalAST(node, evalState, unitResolver);
   if (isNaN(rawNum)) return { value: NaN, unitAnalysis };
 
   const finalValue = rawNum * (unitAnalysis.numericConversionFactor || 1.0);
   return { value: finalValue, unitAnalysis };
+}
 }
