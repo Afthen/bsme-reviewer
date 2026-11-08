@@ -11,7 +11,7 @@
  * ============================================================================
  */
 
-import { parseMathAST, evalAST, getAstIdentifiers } from "./ast.js";
+import { parseMathAST, evalAST, getAstIdentifiers, astHasVariable } from "./ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "./algebra.js";
 import { fmtSigFig } from "../core/dimensions.js";
 
@@ -225,7 +225,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         if (isDimEqual(currBag.dimMap, reqBag.dimMap)) {
           const ratio = currBag.scale / reqBag.scale;
           const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-          // Denominator uses unit symbol directly without leading "1"
           const denTex = `\\cancel{\\text{${currU}}}`;
           preConversions.push({
             token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
@@ -277,10 +276,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       const ratio = pos.scale / neg.scale;
       let convLatex = "";
       if (ratio < 1) {
-        // e.g. \cdot \cfrac{1\,\cancel{\text{s}}}{60\,\cancel{\text{min}}}
         convLatex = `\\cdot \\cfrac{\\cancel{\\text{${neg.atom}}}}{${fmtSigFig(1/ratio)}\\,\\cancel{\\text{${pos.atom}}}}`;
       } else {
-        // e.g. \cdot \cfrac{25.4\,\cancel{\text{mm}}}{\text{in}}  (No "1 in" in denominator!)
         convLatex = `\\cdot \\cfrac{${fmtSigFig(ratio)}\\,\\cancel{\\text{${pos.atom}}}}{\\text{${neg.atom}}}`;
       }
       if (!tokenConversions[pos.token]) tokenConversions[pos.token] = [];
@@ -291,7 +288,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   });
 
   // Explicit Horizontal Factor-Label Conversion Bracket for Non-Unity Units (hp, kW, bar)
-  // Maintains fraction stack budget <= 2 by appending horizontally
   const allExprTokens = Array.from(new Set(getAstIdentifiers(ast)));
   allExprTokens.forEach(tok => {
     const cKey = resolveCanonicalKey(tok, varsDb);
@@ -299,7 +295,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const compound = COMPOUND_UNITS[uName];
 
     if (compound && compound.factor && compound.factor !== 1) {
-      // Build atom representation for the conversion numerator/denominator
       const numAtoms = [];
       const denAtoms = [];
       for (const [aName, p] of Object.entries(compound.atoms)) {
@@ -314,16 +309,13 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       const denStr = denAtoms.join("\\cdot");
       const baseUnitsTex = denStr ? `\\cfrac{${numStr || "1"}}{${denStr}}` : numStr;
 
-      // Check if token is in denominator of the AST equation
       const isInDenominator = ast && ast.type === "binary" && ast.op === "/" && astHasVariable(ast.right, tok);
 
       if (!isInDenominator) {
-        // e.g. \cdot \cfrac{33000 \, \cfrac{\text{ft}\cdot\cancel{\text{lb}}}{\text{min}}}{\cancel{\text{hp}}}
         selectedConversions.push({
           latex: `\\cfrac{${fmtSigFig(compound.factor)}\\,${baseUnitsTex}}{\\cancel{\\text{${uName}}}}`
         });
       } else {
-        // e.g. \cdot \cfrac{\cancel{\text{kW}}}{1000 \, \cfrac{\text{N}\cdot\text{m}}{\text{s}}}
         selectedConversions.push({
           latex: `\\cfrac{\\cancel{\\text{${uName}}}}{${fmtSigFig(compound.factor)}\\,${baseUnitsTex}}`
         });
@@ -331,12 +323,11 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
   });
 
-  // Global Target Scale Mismatch (e.g. converting expression to target prefix)
+  // Global Target Scale Mismatch
   if (Math.abs(numericConversionFactor - 1.0) > 1e-4 && selectedConversions.length === 0) {
     if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
       const invFactor = 1 / numericConversionFactor;
       if (invFactor > 1) {
-        // e.g. \cfrac{\text{kW}}{1000}
         selectedConversions.push({
           latex: `\\cfrac{\\text{${targetUnit}}}{${fmtSigFig(invFactor)}}`
         });
@@ -348,9 +339,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
   }
 
-  // Token Markup Builder:
-  // - Scaled units (factor !== 1) retain clean native symbol e.g. \cancel{\text{hp}}
-  // - Identity units (factor === 1) expand in place e.g. \cfrac{\text{lb}}{\cancel{\text{in}}^2}
+  // Token Markup Builder: Scaled units retain clean symbol; Identity units expand in place
   const tokenMarkup = {};
 
   for (const tok of allExprTokens) {
@@ -369,13 +358,11 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
     const bag = getUnitAtomBag(uName);
 
-    // Rule: Scaled compound units MUST NOT expand in place!
     if (bag.factor && bag.factor !== 1) {
       tokenMarkup[tok] = `\\cancel{\\text{${uName}}}`;
       continue;
     }
 
-    // Coherent Identity units (factor === 1) expand in place cleanly
     const formatAtom = (atomName, p) => {
       const isCanceled = atomList.some(a => a.token === tok && a.atom === atomName && a.canceled);
       const expStr = Math.abs(p) > 1 ? `^{${Math.abs(p)}}` : "";
