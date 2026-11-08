@@ -66,12 +66,15 @@ export function flattenFractions(node) {
         return flattenFractions({
           type: "binary",
           op: "/",
-          left: A,
+          left: { type: "group", expr: A },
           right: {
-            type: "binary",
-            op: "*",
-            left: { type: "group", expr: B },
-            right: { type: "group", expr: C }
+            type: "group",
+            expr: {
+              type: "binary",
+              op: "*",
+              left: { type: "group", expr: B },
+              right: { type: "group", expr: C }
+            }
           }
         });
       }
@@ -85,12 +88,15 @@ export function flattenFractions(node) {
           type: "binary",
           op: "/",
           left: {
-            type: "binary",
-            op: "*",
-            left: { type: "group", expr: A },
-            right: { type: "group", expr: C }
+            type: "group",
+            expr: {
+              type: "binary",
+              op: "*",
+              left: { type: "group", expr: A },
+              right: { type: "group", expr: C }
+            }
           },
-          right: B
+          right: { type: "group", expr: B }
         });
       }
     }
