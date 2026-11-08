@@ -4,12 +4,9 @@
  * Empirical equations are protected from symbolic inlining; units rendered via pure atomic bags.
  */
 
-import {
-  casToTex, isolateVariable, substituteExpression,
-  simplifyExpression, solveUnitAlgebra,
-  resolveCanonicalKey, parseMathAST, tokenizeExpr,
-  astToLatex, stripOuterParens
-} from "./cas.js";
+import { resolveCanonicalKey, substituteExpression, simplifyExpression } from "../cas/algebra.js";
+import { casToTex } from "../cas/latex.js";
+import { solveUnitAlgebra, getUnitAtomBag } from "../cas/units.js";
 import { fmtSigFig } from "./dimensions.js";
 
 // ========================================================
