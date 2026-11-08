@@ -159,7 +159,11 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   });
 
   const systemNoun = topicConfig.noun || `${topicConfig.title || "Mechanical"} system`;
-  return `A ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
+  const goalsFormatted = goalStrings.length > 2 
+    ? goalStrings.slice(0, -1).join(", ") + ", and " + goalStrings[goalStrings.length - 1]
+    : goalStrings.join(" and ");
+
+  return `A ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalsFormatted}.`;
 }
 
 export function generateProblem(topic, getMastery = () => 0) {
@@ -168,7 +172,6 @@ export function generateProblem(topic, getMastery = () => 0) {
 
   const path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
 
-  // Find the exact relation / formula being tested (matches the mastery sidebar)
   const targetRel = relations.find(r => r.id === path.targetEqId);
   const problemTitle = targetRel ? targetRel.name : `${title} Design Problem`;
 
@@ -196,12 +199,24 @@ export function generateProblem(topic, getMastery = () => 0) {
     step.expectedVal = value;
   });
 
-  const solution = pruneSolutionPath(allSteps, path.goalVar);
-  const visibleGoals = [path.goalVar];
+  // Pass getMastery to pruneSolutionPath so cognitive fading activates!
+  const solution = pruneSolutionPath(allSteps, path.goalVar, getMastery);
+
+  // Apply Fading: Pre-fill mastered foundation steps so the student focuses on synthesis
+  solution.forEach(step => {
+    if (step.isFaded) {
+      step.isAnswered = true;
+      step.isRevealed = true;
+      step.userVal = step.expectedVal;
+    }
+  });
+
+  // Only the active, non-faded steps should appear in the "Determine: X, Y, and Z" prompt!
+  const visibleGoals = solution.filter(s => !s.isFaded).map(s => s.targetVar);
   const statement = buildProblemStatement(path.givens, visibleGoals, S_neat, varsDb, topic);
 
   return {
-    title: problemTitle, // Displays the exact mastery relation name
+    title: problemTitle,
     statement,
     solution,
     solutionSteps: solution,
