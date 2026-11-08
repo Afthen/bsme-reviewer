@@ -1,120 +1,144 @@
 /**
  * src/repetition/mastery.js
- * Golden Ratio (Φ) harmonic decay spaced repetition engine and persistence layer.
- * Scoped per topic to prevent cross-subject mastery degradation.
+ * ============================================================================
+ * ARCHITECTURAL PILLAR IV: Harmonic Decay & Complexity-Scaled Repetition
+ * ============================================================================
+ * 1. Global Unified Mastery: A single student profile across all subjects.
+ * 2. AST Complexity Scaling: Tokenizing an equation determines its cognitive 
+ *    complexity. The required history window is calculated purely via Euler's 
+ *    number (tokens / e) and snapped to the nearest Fibonacci number.
+ * 3. Harmonic Weights: Recent attempts weigh exponentially more via the Golden Ratio.
+ * ============================================================================
  */
 
-// ========================================================
-// 1. GOLDEN RATIO CONSTANTS & PEDAGOGICAL PARAMETERS
-// ========================================================
-export const PHI = (1 + Math.sqrt(5)) / 2;             // 1.6180339887...
-export const PHI_INV = 1 / PHI;                         // 0.6180339887... (Harmonic discount)
+import { tokenizeExpr } from "../cas/ast.js";
+
+// The Golden Ratio & Harmonic Discounts
+export const PHI = (1 + Math.sqrt(5)) / 2;              // 1.6180339887...
+export const PHI_INV = 1 / PHI;                         // 0.6180339887...
 export const PHI_INV2 = PHI_INV * PHI_INV;              // 0.3819660113...
 export const PHI_INV3 = PHI_INV2 * PHI_INV;             // 0.2360679775...
-export const PHI_INV6 = Math.pow(PHI_INV, 6);           // 0.0557280900... (Min selection floor)
-export const PHI_INV7 = Math.pow(PHI_INV, 7);           // 0.0344418537... (Decay constant λ)
-export const PHI_INV8 = Math.pow(PHI_INV, 8);           // 0.0212862363... (Relative error tolerance ~2.13%)
+export const PHI_INV6 = Math.pow(PHI_INV, 6);           // 0.0557280900...
+export const PHI_INV7 = Math.pow(PHI_INV, 7);           // 0.0344418537... (Decay λ)
+export const PHI_INV8 = Math.pow(PHI_INV, 8);           // 0.0212862363...
 
-export const FADING_THRESHOLD = 1 - PHI_INV3;           // 1 - φ⁻³ ≈ 0.7639 (Golden Fading Threshold)
-export const HISTORY_WINDOW_SIZE = 8;                   // F_6 = 8 (Fibonacci attempt buffer)
-export const TICK_DECAY_LAMBDA = PHI_INV7;              // Half-life ≈ 20.13 ticks
+export const FADING_THRESHOLD = 1 - PHI_INV3;           // 0.7639320225...
 
-const STORAGE_KEY_TICK_PREFIX = "me_topic_tick_";
-const STORAGE_KEY_PREFIX = "me_mastery_";
+// Fibonacci Sequence Constants
+export const FIB_2 = 2;
+export const FIB_3 = 3;
+export const FIB_5 = 5;
+export const FIB_8 = 8;
+export const FIB_13 = 13;
+export const FIB_21 = 21;
 
-let currentActiveTopicId = "spur_gears";
+export const VALID_WINDOWS = [FIB_2, FIB_3, FIB_5, FIB_8, FIB_13, FIB_21];
+
+export const TICK_DECAY_LAMBDA = PHI_INV7;
+export const MAX_HISTORY = FIB_21; 
+
+const STORAGE_KEY_TICK = "me_global_tick";
+const STORAGE_KEY_MASTERY = "me_mastery_global";
+
 let masteryState = {};
 
-// ========================================================
-// 2. TOPIC-SCOPED TICK MANAGEMENT & DECAY CALCULATIONS
-// ========================================================
-
-export function getTopicTick(topicId = currentActiveTopicId) {
-  return parseInt(localStorage.getItem(`${STORAGE_KEY_TICK_PREFIX}${topicId}`) || "0", 10);
+export function getGlobalTick() {
+  return parseInt(localStorage.getItem(STORAGE_KEY_TICK) || "0", 10);
 }
 
-export function incrementTopicTick(topicId = currentActiveTopicId) {
-  const next = getTopicTick(topicId) + 1;
-  localStorage.setItem(`${STORAGE_KEY_TICK_PREFIX}${topicId}`, next.toString());
+export function incrementGlobalTick() {
+  const next = getGlobalTick() + 1;
+  localStorage.setItem(STORAGE_KEY_TICK, next.toString());
   return next;
 }
 
 /**
- * Calculates decayed mastery in [0, 1] using harmonic weights and topic-scoped tick decay.
+ * Snaps a target float value to the nearest mathematically valid Fibonacci window size.
  */
-export function getDecayedMastery(eqId, topicId = currentActiveTopicId) {
-  const h = masteryState[eqId];
-  if (!h || !Array.isArray(h.attempts) || h.attempts.length === 0) return 0;
+function snapToFibonacci(val) {
+  return VALID_WINDOWS.reduce((prev, curr) => 
+    Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev
+  );
+}
 
-  // 1. Harmonic attempt weighting using powers of PHI_INV
+/**
+ * Calculates decayed mastery [0, 1] using AST Token Complexity via Euler's number
+ * snapped to the Fibonacci sequence.
+ */
+export function getDecayedMastery(eq) {
+  if (!eq || !eq.id) return 0;
+  
+  const h = masteryState[eq.id];
+  const history = h && Array.isArray(h.attempts) ? h.attempts : [];
+  
+  // 1. Pure Mathematical Scaling: tokens / e, snapped to nearest Fibonacci
+  const tokens = tokenizeExpr(eq.baseFormula || "").length;
+  const targetSize = tokens / Math.E;
+  const windowSize = snapToFibonacci(targetSize);
+  
+  // 2. Pad history with false if the student hasn't met the window requirement
+  const recent = history.slice(-windowSize);
+  const padded = [...Array(Math.max(0, windowSize - recent.length)).fill(false), ...recent];
+
+  // 3. Harmonic attempt weighting via Golden Ratio
   let weightSum = 0;
   let scoreSum = 0;
-  const len = h.attempts.length;
-  for (let i = 0; i < len; i++) {
-    const w = Math.pow(PHI_INV, len - 1 - i);
+  for (let i = 0; i < windowSize; i++) {
+    const w = Math.pow(PHI_INV, windowSize - 1 - i);
     weightSum += w;
-    scoreSum += (h.attempts[i] ? 1 : 0) * w;
+    scoreSum += (padded[i] ? 1 : 0) * w;
   }
   const baseMastery = weightSum > 0 ? scoreSum / weightSum : 0;
 
-  // 2. Exponential interference decay across problem ticks for this topic
-  const currentTick = getTopicTick(topicId);
-  const lastTick = typeof h.lastTick === "number" ? h.lastTick : currentTick;
+  // 4. Exponential interference decay across global problem ticks
+  const currentTick = getGlobalTick();
+  const lastTick = h && typeof h.lastTick === "number" ? h.lastTick : currentTick;
   const deltaTicks = Math.max(0, currentTick - lastTick);
   const decayMultiplier = Math.exp(-TICK_DECAY_LAMBDA * deltaTicks);
 
   return baseMastery * decayMultiplier;
 }
 
-// ========================================================
-// 3. ATTEMPT RECORDING & ANCESTOR BLAME
-// ========================================================
-
-export function recordAttempt(eqId, success, topicId = currentActiveTopicId) {
-  const currentTick = getTopicTick(topicId);
+export function recordAttempt(eqId, success) {
+  const currentTick = getGlobalTick();
   if (!masteryState[eqId]) {
     masteryState[eqId] = { attempts: [], lastTick: currentTick };
   }
   masteryState[eqId].attempts.push(!!success);
-  if (masteryState[eqId].attempts.length > HISTORY_WINDOW_SIZE) {
+  if (masteryState[eqId].attempts.length > MAX_HISTORY) {
     masteryState[eqId].attempts.shift();
   }
   masteryState[eqId].lastTick = currentTick;
-  saveMastery(topicId);
+  saveMastery();
 }
 
-export function penalizeAncestors(ancestorEqIds = [], topicId = currentActiveTopicId) {
-  const currentTick = getTopicTick(topicId);
+export function penalizeAncestors(ancestorEqIds = []) {
+  const currentTick = getGlobalTick();
   ancestorEqIds.forEach(eqId => {
     if (!masteryState[eqId]) {
       masteryState[eqId] = { attempts: [], lastTick: currentTick };
     }
     masteryState[eqId].attempts.push(false);
-    if (masteryState[eqId].attempts.length > HISTORY_WINDOW_SIZE) {
+    if (masteryState[eqId].attempts.length > MAX_HISTORY) {
       masteryState[eqId].attempts.shift();
     }
     masteryState[eqId].lastTick = currentTick;
   });
-  saveMastery(topicId);
+  saveMastery();
 }
 
-export function reinforceAncestors(ancestorEqIds = [], topicId = currentActiveTopicId) {
-  const currentTick = getTopicTick(topicId);
+export function reinforceAncestors(ancestorEqIds = []) {
+  const currentTick = getGlobalTick();
   ancestorEqIds.forEach(eqId => {
     if (masteryState[eqId]) {
       masteryState[eqId].lastTick = currentTick;
     }
   });
-  saveMastery(topicId);
+  saveMastery();
 }
 
-// ========================================================
-// 4. STORAGE & BACKUP (WITH TOPIC-SAFETY VALIDATION)
-// ========================================================
-
-export function loadMastery(topicId = "spur_gears") {
-  currentActiveTopicId = topicId;
-  const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${topicId}`);
+export function loadMastery() {
+  const raw = localStorage.getItem(STORAGE_KEY_MASTERY);
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
@@ -128,36 +152,27 @@ export function loadMastery(topicId = "spur_gears") {
   return masteryState;
 }
 
-export function saveMastery(topicId = currentActiveTopicId) {
-  localStorage.setItem(`${STORAGE_KEY_PREFIX}${topicId}`, JSON.stringify(masteryState));
+export function saveMastery() {
+  localStorage.setItem(STORAGE_KEY_MASTERY, JSON.stringify(masteryState));
 }
 
-export function exportMasteryJSON(topicId = currentActiveTopicId) {
+export function exportMasteryJSON() {
   const payload = {
-    version: 1,
-    topicId,
+    version: 2,
     exportedAt: new Date().toISOString(),
+    globalTick: getGlobalTick(),
     masteryState
   };
   return JSON.stringify(payload, null, 2);
 }
 
-export function importMasteryJSON(jsonStr, targetTopicId = currentActiveTopicId) {
+export function importMasteryJSON(jsonStr) {
   try {
     const data = JSON.parse(jsonStr);
     if (!data || typeof data !== "object") return { success: false, reason: "Malformed JSON" };
 
-    // Topic safety guard: Prevent importing spur gears profile into diesel
-    if (data.topicId && data.topicId !== targetTopicId) {
-      return {
-        success: false,
-        reason: `Topic mismatch: file is for "${data.topicId}", but active topic is "${targetTopicId}"`
-      };
-    }
-
     const state = (data.masteryState && typeof data.masteryState === "object") ? data.masteryState : data;
     
-    // Validate each record has a valid attempts array
     const cleanState = {};
     let validRecords = 0;
     for (const [k, v] of Object.entries(state)) {
@@ -170,13 +185,15 @@ export function importMasteryJSON(jsonStr, targetTopicId = currentActiveTopicId)
       }
     }
 
-    // Don't overwrite if payload contained zero valid records
     if (validRecords === 0 && Object.keys(state).length > 0) {
       return { success: false, reason: "No valid mastery records found in file" };
     }
 
     masteryState = cleanState;
-    saveMastery(targetTopicId);
+    if (data.globalTick !== undefined) {
+      localStorage.setItem(STORAGE_KEY_TICK, data.globalTick.toString());
+    }
+    saveMastery();
     return { success: true };
   } catch (err) {
     return { success: false, reason: err.message };
