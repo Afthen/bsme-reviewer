@@ -3,10 +3,10 @@
  * ============================================================================
  * ARCHITECTURAL PILLAR: Aligned Multi-Line Derivation Generator
  * ============================================================================
- * Generates beautiful, aligned 3-line KaTeX derivation steps for students:
+ * Formats mathematical derivation steps to strict 6-significant-figure precision:
  *   Line 1: Symbolic isolated formula
- *   Line 2: Substituted numeric values with atomic unit cancellation factors
- *   Line 3: Evaluated answer formatted to significant figures with target unit
+ *   Line 2: Substituted numeric values (6 sig figs) + atomic unit cancellation
+ *   Line 3: Final calculated answer (6 sig figs) + target unit
  * ============================================================================
  */
 
@@ -15,9 +15,6 @@ import { casToTex } from "../cas/latex.js";
 import { solveUnitAlgebra } from "../cas/units.js";
 import { fmtSigFig } from "./dimensions.js";
 
-/**
- * Builds an aligned KaTeX derivation environment for problem_view.js.
- */
 export function buildAlignedDerivation(
   step,
   S = {},
@@ -29,17 +26,14 @@ export function buildAlignedDerivation(
 ) {
   const { targetVar, baseFormula, equationTex, rhsExpr, requiredUnits } = step;
 
-  // 1. Resolve Target Metadata
   const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
   const targetMeta = varsDb[canonicalTarget] || varsDb[targetVar] || {};
   const targetSymbol = targetMeta.symbol || targetVar;
   const targetUnit = S._u?.[canonicalTarget] || S._u?.[targetVar] || targetMeta.unit || "";
 
-  // 2. Unit Analysis & Conversion Factors
   const formulaRhs = rhsExpr || (baseFormula && baseFormula.includes("=") ? baseFormula.split("=")[1].trim() : baseFormula) || "";
   const unitAnalysis = solveUnitAlgebra(formulaRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
 
-  // 3. Prepare Substituted Numeric Values
   const subsMap = {};
   const evalState = { ...S };
 
@@ -50,24 +44,24 @@ export function buildAlignedDerivation(
     });
   }
 
+  // Universal 6-significant-figure precision for all numeric substitutions
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
-      subsMap[k] = fmtSigFig(v, 4);
+      subsMap[k] = fmtSigFig(v, 6);
     }
   }
 
-  // 4. Construct Aligned KaTeX Lines
   // Line 1: Symbolic formula
   const symRhs = casToTex(formulaRhs, varsDb);
   const line1 = `${targetSymbol} &= ${symRhs}`;
 
-  // Line 2: Numbers substituted + conversion factors
+  // Line 2: Values substituted (6 sig figs) + conversion factors
   const numRhs = substituteExpression(formulaRhs, subsMap, varsDb);
   const numTex = casToTex(numRhs, varsDb);
   const convTex = unitAnalysis.conversionFactorTex || "";
   const line2 = `&= ${numTex}${convTex}`;
 
-  // Line 3: Final calculated answer
+  // Line 3: Final evaluated answer (6 sig figs)
   const val = step.expectedVal !== undefined ? step.expectedVal : S[canonicalTarget];
   const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
 
@@ -80,5 +74,4 @@ export function buildAlignedDerivation(
   return `$$\\begin{aligned}\n  ${line1} \\\\[6pt]\n  ${line2} \\\\[6pt]\n  ${line3}\n\\end{aligned}$$`;
 }
 
-// Backward-compatibility alias
 export const buildDerivationStep = buildAlignedDerivation;
