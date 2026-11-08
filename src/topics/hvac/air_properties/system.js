@@ -39,7 +39,7 @@ export function createAirPropertiesSystem() {
   const _u = {
     P_v: "kPa", P_sat: "kPa", P_wb: "kPa", P_t: "kPa", P_a: "kPa",
     t_db: "°C", t_wb: "°C", t_dp: "°C",
-    W: "dimless", RH: "dimless", h: "kJ/kg", v: "m^3",
+    W: "dimless", RH: "dimless", h: "kJ/kg", v: "m^3/kg",
     SHR: "dimless", Q_s: "kW", Q_l: "kW", Q_t: "kW"
   };
 

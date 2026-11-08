@@ -117,7 +117,7 @@ export const HVAC_BASE_VARS = Object.freeze({
     symbolAliases: ["v", "V_s"],
     aliases: ["Specific Volume of Moist Air", "Moist Air Specific Volume", "v"],
     dimension: DIMENSIONS.VOLUME,
-    unit: "m^3"
+    unit: "m^3/kg"
   },
 
   // --- Sensible & Latent Heat Ratios ---

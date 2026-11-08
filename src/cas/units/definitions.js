@@ -70,7 +70,9 @@ export const COMPOUND_UNITS = Object.freeze({
   cfm:        { factor: 0.3048 ** 3 / 60, atoms: { m: 3, s: -1 }, displayTex: "\\text{cfm}" },
 
   "kg/m^3":   { atoms: { kg: 1, m: -3 }, displayTex: "\\cfrac{\\text{kg}}{\\text{m}^3}" },
+  "m^3/kg":   { atoms: { m: 3, kg: -1 }, displayTex: "\\cfrac{\\text{m}^3}{\\text{kg}}" },
   "lb/ft^3":  { atoms: { lb_m: 1, ft: -3 }, displayTex: "\\cfrac{\\text{lb}}{\\text{ft}^3}" },
+  "ft^3/lb":  { atoms: { ft: 3, lb_m: -1 }, displayTex: "\\cfrac{\\text{ft}^3}{\\text{lb}}" },
 
   "kJ/kg":    { atoms: { kN: 1, m: 1, kg: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}}" },
   "Btu/lb":   { atoms: { Btu: 1, lb_m: -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}}" },
