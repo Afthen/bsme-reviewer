@@ -1,6 +1,6 @@
 /**
- * src/repetition/storage.js
- * Persistence, topic-scoped ticking engine, and JSON backup/restore.
+ * src/mastery/storage.js
+ * Low-level persistence, topic-scoped ticks, and JSON payload serialization.
  */
 
 export const STORAGE_KEY_TOPIC_TICKS = "me_topic_ticks";
@@ -34,7 +34,7 @@ export function incrementGlobalTick() {
   return incrementTopicTick("common");
 }
 
-export function loadMastery() {
+export function readMasteryStore() {
   const raw = localStorage.getItem(STORAGE_KEY_MASTERY);
   if (raw) {
     try {
@@ -47,11 +47,11 @@ export function loadMastery() {
   return {};
 }
 
-export function saveMastery(masteryState) {
+export function writeMasteryStore(masteryState) {
   localStorage.setItem(STORAGE_KEY_MASTERY, JSON.stringify(masteryState));
 }
 
-export function exportMasteryJSON(masteryState) {
+export function serializeMasteryPayload(masteryState) {
   const payload = {
     version: 2,
     exportedAt: new Date().toISOString(),
@@ -61,7 +61,7 @@ export function exportMasteryJSON(masteryState) {
   return JSON.stringify(payload, null, 2);
 }
 
-export function importMasteryJSON(jsonStr, onStateImported) {
+export function parseMasteryPayload(jsonStr) {
   try {
     const data = JSON.parse(jsonStr);
     if (!data || typeof data !== "object") return { success: false, reason: "Malformed JSON" };
@@ -88,12 +88,7 @@ export function importMasteryJSON(jsonStr, onStateImported) {
       localStorage.setItem(STORAGE_KEY_TOPIC_TICKS, JSON.stringify(data.topicTicks));
     }
 
-    if (typeof onStateImported === "function") {
-      onStateImported(newState);
-    }
-
-    saveMastery(newState);
-    return { success: true };
+    return { success: true, newState };
   } catch (err) {
     return { success: false, reason: err.message };
   }
