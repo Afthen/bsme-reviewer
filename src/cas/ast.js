@@ -1,3 +1,13 @@
+/**
+ * src/cas/ast.js
+ * Pure mathematical AST primitives, lexer, parser, and numeric evaluator.
+ * Fully decoupled from specific topics or domain schemas.
+ */
+
+// ========================================================
+// 1. LEXER & PARSER
+// ========================================================
+
 export function tokenizeExpr(str) {
   const tokens = [];
   let i = 0;
@@ -69,6 +79,10 @@ export function astToExprStr(node) {
   return "";
 }
 
+// ========================================================
+// 2. TREE TRAVERSAL & INSPECTION
+// ========================================================
+
 export function getAstIdentifiers(node) {
   const ids = [];
   function walk(n) {
@@ -116,7 +130,11 @@ export function unwrapGroup(node) {
   return n;
 }
 
-export function evalAST(node, S = {}) {
+// ========================================================
+// 3. NUMERIC AST EVALUATOR (WITH UNIT CONTEXT HOOK)
+// ========================================================
+
+export function evalAST(node, S = {}, unitResolver = null) {
   if (!node) return NaN;
   if (node.type === "num") return parseFloat(node.val);
   if (node.type === "id") {
@@ -125,24 +143,46 @@ export function evalAST(node, S = {}) {
     const val = S[node.name];
     return typeof val === "number" ? val : NaN;
   }
-  if (node.type === "group") return evalAST(node.expr, S);
+  if (node.type === "group") return evalAST(node.expr, S, unitResolver);
+
   if (node.type === "call") {
-    const a = evalAST(node.arg, S);
+    let a = evalAST(node.arg, S, unitResolver);
     if (isNaN(a)) return NaN;
+
+    // Physical contract: trig functions expect radians; if argument unit is degrees, scale to radians
+    if (["sin", "cos", "tan"].includes(node.fn)) {
+      if (unitResolver && unitResolver(node.arg)) {
+        a = (a * Math.PI) / 180;
+      }
+    }
+
     switch (node.fn) {
-      case "sin": return Math.sin(a); case "cos": return Math.cos(a); case "tan": return Math.tan(a);
-      case "asin": return Math.asin(a); case "acos": return Math.acos(a); case "atan": return Math.atan(a);
-      case "sqrt": return Math.sqrt(a); case "exp": return Math.exp(a); case "ln": case "log": return Math.log(a);
-      case "abs": return Math.abs(a); default: return NaN;
+      case "sin": return Math.sin(a);
+      case "cos": return Math.cos(a);
+      case "tan": return Math.tan(a);
+      case "asin": return Math.asin(a);
+      case "acos": return Math.acos(a);
+      case "atan": return Math.atan(a);
+      case "sqrt": return Math.sqrt(a);
+      case "exp": return Math.exp(a);
+      case "ln":
+      case "log": return Math.log(a);
+      case "abs": return Math.abs(a);
+      default: return NaN;
     }
   }
+
   if (node.type === "binary") {
-    const L = evalAST(node.left, S);
-    const R = evalAST(node.right, S);
+    const L = evalAST(node.left, S, unitResolver);
+    const R = evalAST(node.right, S, unitResolver);
     if (isNaN(L) || isNaN(R)) return NaN;
     switch (node.op) {
-      case "+": return L + R; case "-": return L - R; case "*": return L * R;
-      case "/": return R !== 0 ? L / R : NaN; case "^": return Math.pow(L, R); default: return NaN;
+      case "+": return L + R;
+      case "-": return L - R;
+      case "*": return L * R;
+      case "/": return R !== 0 ? L / R : NaN;
+      case "^": return Math.pow(L, R);
+      default: return NaN;
     }
   }
   return NaN;
