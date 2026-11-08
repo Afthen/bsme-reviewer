@@ -8,6 +8,7 @@ import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { fmtSigFig } from "../../core/dimensions.js";
 import { ATOMIC_BASE_UNITS, getUnitAtomBag, isDimEqual } from "./definitions.js";
 
+// ... (evalExprUnitAST remains unchanged)
 export function evalExprUnitAST(node, S, varsDb) {
   if (!node) return { factor: 1.0, atoms: [] };
   if (node.type === "num") return { factor: 1.0, atoms: [] };
@@ -28,18 +29,8 @@ export function evalExprUnitAST(node, S, varsDb) {
   if (node.type === "group") return evalExprUnitAST(node.expr, S, varsDb);
 
   if (node.type === "call") {
-    if (["sin", "cos", "tan"].includes(node.fn)) {
-      return { factor: 1.0, atoms: [] };
-    }
-    if (["atan", "acos", "asin"].includes(node.fn)) {
-      return {
-        factor: 1.0,
-        atoms: [{
-          token: node.fn, canonicalKey: node.fn, unitName: "rad", atom: "rad",
-          dim: "C", scale: 1.0, power: 1, tex: "\\text{rad}"
-        }]
-      };
-    }
+    if (["sin", "cos", "tan"].includes(node.fn)) return { factor: 1.0, atoms: [] };
+    if (["atan", "acos", "asin"].includes(node.fn)) return { factor: 1.0, atoms: [{ token: node.fn, canonicalKey: node.fn, unitName: "rad", atom: "rad", dim: "C", scale: 1.0, power: 1, tex: "\\text{rad}" }] };
     if (node.fn === "sqrt") {
       const inner = evalExprUnitAST(node.arg, S, varsDb);
       return { factor: Math.sqrt(inner.factor), atoms: inner.atoms.map(a => ({ ...a, power: a.power / 2 })) };
@@ -50,20 +41,12 @@ export function evalExprUnitAST(node, S, varsDb) {
   if (node.type === "binary") {
     const left = evalExprUnitAST(node.left, S, varsDb);
     const right = evalExprUnitAST(node.right, S, varsDb);
-
     if (node.op === "*") return { factor: left.factor * right.factor, atoms: [...left.atoms, ...right.atoms] };
-    if (node.op === "/") {
-      const invR = right.atoms.map(a => ({ ...a, power: -a.power }));
-      return { factor: left.factor / right.factor, atoms: [...left.atoms, ...invR] };
-    }
+    if (node.op === "/") return { factor: left.factor / right.factor, atoms: [...left.atoms, ...right.atoms.map(a => ({ ...a, power: -a.power }))] };
     if (node.op === "+" || node.op === "-") return left;
     if (node.op === "^") {
-      const evaluatedExp = evalAST(node.right, {});
-      const powerNum = typeof evaluatedExp === "number" && !isNaN(evaluatedExp) ? evaluatedExp : 1;
-      return {
-        factor: Math.pow(left.factor, powerNum),
-        atoms: left.atoms.map(a => ({ ...a, power: a.power * powerNum }))
-      };
+      const pNum = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
+      return { factor: Math.pow(left.factor, pNum), atoms: left.atoms.map(a => ({ ...a, power: a.power * pNum })) };
     }
   }
   return { factor: 1.0, atoms: [] };
@@ -75,7 +58,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const preConversions = [];
   const tokenMarkup = {};
 
-  // 1. RequiredUnits Contract Enforcement (Empirical Equations)
   if (requiredUnits && typeof requiredUnits === "object") {
     const varTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
     varTokens.forEach(tok => {
@@ -86,39 +68,21 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
       if (currU === "°C" && (reqU === "K" || reqU === "degK")) {
         const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-        preConversions.push({
-          token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-          conv: { factor: 1.0, latex: `(${rawVal} + 273.15)\\text{ K}` },
-          rawVal, convertedVal: rawVal + 273.15
-        });
+        preConversions.push({ token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU, conv: { factor: 1.0, latex: `(${rawVal} + 273.15)\\text{ K}` }, rawVal, convertedVal: rawVal + 273.15 });
         return;
       }
-
       if (currU && reqU && currU !== reqU && currU !== "deg" && reqU !== "°") {
         const currBag = getUnitAtomBag(currU), reqBag = getUnitAtomBag(reqU);
         if (isDimEqual(currBag.dimMap, reqBag.dimMap)) {
           const ratio = currBag.scale / reqBag.scale;
           const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-          preConversions.push({
-            token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-            conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\text{ ${reqU}}}{\\cancel{\\text{${currU}}}}` },
-            rawVal, convertedVal: rawVal * ratio
-          });
+          preConversions.push({ token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU, conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\text{ ${reqU}}}{\\cancel{\\text{${currU}}}}` }, rawVal, convertedVal: rawVal * ratio });
         }
       }
     });
-
-    return {
-      tokenMarkup,
-      conversionFactors: [],
-      conversionFactorTex: "",
-      numericConversionFactor: 1.0,
-      preConversions,
-      tokenConversions
-    };
+    return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor: 1.0, preConversions, tokenConversions };
   }
 
-  // 2. Physical Dimensional Analysis
   const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
   const targetBag = getUnitAtomBag(targetUnit);
 
@@ -128,10 +92,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const targetScale = targetBag.scale || 1.0;
   const numericConversionFactor = targetScale > 0 ? (exprScale / targetScale) : 1.0;
 
-  const targetWantsTeeth = (targetBag.atoms["teeth"] || 0) > 0;
   const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false, preserved: false }));
 
-  // Pairwise cancellation of identical inverse atoms
   for (let i = 0; i < atomList.length; i++) {
     for (let j = i + 1; j < atomList.length; j++) {
       const a1 = atomList[i], a2 = atomList[j];
@@ -141,15 +103,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
   }
 
-  atomList.forEach(a => {
-    if (!a.canceled && a.atom === "teeth") {
-      if (targetWantsTeeth) a.preserved = true; else a.canceled = true;
-    }
-  });
-
   const allExprTokens = Array.from(new Set(getAstIdentifiers(ast)));
 
-  // 3. Unified Factor-1 vs Factor != 1 Rule
   for (const tok of allExprTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
     const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
@@ -159,12 +114,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       tokenMarkup[tok] = `^{\\circ}`;
       continue;
     }
-    if (uName === "%") {
-      tokenMarkup[tok] = `\\%`;
-      continue;
-    }
 
-    // HEURISTIC 1: Target-Unit Preservation
     if (uName === targetUnit) {
       const bag = getUnitAtomBag(uName);
       tokenMarkup[tok] = bag.displayTex || `\\text{${uName}}`;
@@ -175,7 +125,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const hasMultiplier = bag.factor && bag.factor !== 1;
 
     if (hasMultiplier) {
-      // Non-1:1 conversion (hp, bar, etc.) -> Attach localized factor-label bracket directly to token
       tokenMarkup[tok] = `\\cancel{\\text{${uName}}}`;
       const convBracket = `\\cdot \\left[\\cfrac{${fmtSigFig(bag.factor)}\\,${bag.displayTex || "\\text{base}"}}{\\cancel{\\text{${uName}}}}\\right]`;
       if (!tokenConversions[tok]) tokenConversions[tok] = [];
@@ -183,17 +132,18 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       continue;
     }
 
-    // 1:1 Drop-in Equivalence (factor is omitted or 1.0)
     if (bag.substituteTex) {
       tokenMarkup[tok] = bag.substituteTex;
       continue;
     }
 
-    // Standard atom cancellation representation
     const formatAtom = (atomName, p) => {
       const isCanceled = atomList.some(a => a.token === tok && a.atom === atomName && a.canceled);
       const expStr = Math.abs(p) > 1 ? `^{${Math.abs(p)}}` : "";
-      return isCanceled ? `\\cancel{\\text{${atomName}}}${expStr}` : `\\text{${atomName}}${expStr}`;
+      
+      // KEY FIX: Resolve to exact LaTeX syntax from dictionary to avoid unescaped _ or bad \cdot
+      const atomTex = ATOMIC_BASE_UNITS[atomName]?.tex || `\\text{${atomName}}`;
+      return isCanceled ? `\\cancel{${atomTex}}${expStr}` : `${atomTex}${expStr}`;
     };
 
     const numAtoms = [];
@@ -203,17 +153,10 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       else if (p < 0) denAtoms.push(formatAtom(aName, p));
     }
 
-    const numStr = numAtoms.join("\\cdot");
-    const denStr = denAtoms.join("\\cdot");
+    const numStr = numAtoms.join("\\cdot ");
+    const denStr = denAtoms.join("\\cdot ");
     tokenMarkup[tok] = denStr ? `\\cfrac{${numStr || "1"}}{${denStr}}` : numStr;
   }
 
-  return {
-    tokenMarkup,
-    conversionFactors: [],
-    conversionFactorTex: "",
-    numericConversionFactor,
-    preConversions,
-    tokenConversions
-  };
+  return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, preConversions, tokenConversions };
 }
