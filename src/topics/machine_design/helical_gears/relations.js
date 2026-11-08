@@ -1,6 +1,7 @@
 /**
  * src/topics/machine_design/helical_gears/relations.js
- * Helical Gear Relations with empirical requiredUnits and SI/US variants.
+ * Helical Gear Relations with native SI (module) and US (diametral pitch) variants.
+ * Zero hardcoded conversion factors in physical equations.
  */
 
 import { BASE_GEAR_RELATIONS } from "../common/gear_base_relations.js";
@@ -15,11 +16,51 @@ export const HELICAL_RELATION_GRAPH = [
   { id: "eq_helical_formative_teeth", name: "Formative Number of Teeth", canonicalTex: "T_v = \\frac{T_1}{\\cos^3\\psi}", baseFormula: "T_v = T_1 / (cos(psi)^3)", nodes: ["T_v", "T_1", "psi"] },
   { id: "eq_helical_dp1", name: "Pinion Pitch Diameter from Transverse Pitch", canonicalTex: "D_1 = \\frac{T_1}{P_d}", baseFormula: "D_P1 = T_1 / P_d", nodes: ["D_P1", "T_1", "P_d"] },
   { id: "eq_helical_dp2", name: "Gear Pitch Diameter from Transverse Pitch", canonicalTex: "D_2 = \\frac{T_2}{P_d}", baseFormula: "D_P2 = T_2 / P_d", nodes: ["D_P2", "T_2", "P_d"] },
-  { id: "eq_helical_center_dist_teeth", name: "Center Distance from Normal Pitch", canonicalTex: "C = \\frac{T_1 + T_2}{2 P_{dn} \\cos\\psi}", baseFormula: "C = (T_1 + T_2) / (2 * P_dn * cos(psi))", nodes: ["C", "T_1", "T_2", "P_dn", "psi"] },
+
+  {
+    id: "eq_helical_center_dist_teeth",
+    name: "Center Distance from Normal Pitch",
+    variants: {
+      US: {
+        canonicalTex: "C = \\frac{T_1 + T_2}{2 P_{dn} \\cos\\psi}",
+        baseFormula: "C = (T_1 + T_2) / (2 * P_dn * cos(psi))",
+        nodes: ["C", "T_1", "T_2", "P_dn", "psi"]
+      },
+      SI: {
+        canonicalTex: "C = \\frac{m_n (T_1 + T_2)}{2 \\cos\\psi}",
+        baseFormula: "C = (m_n * (T_1 + T_2)) / (2 * cos(psi))",
+        nodes: ["C", "m_n", "T_1", "T_2", "psi"]
+      }
+    },
+    canonicalTex: "C = \\frac{T_1 + T_2}{2 P_{dn} \\cos\\psi}",
+    baseFormula: "C = (T_1 + T_2) / (2 * P_dn * cos(psi))",
+    nodes: ["C", "T_1", "T_2", "P_dn", "psi"]
+  },
+
   { id: "eq_helical_axial_force", name: "Axial Thrust Load", canonicalTex: "F_a = F_t \\tan\\psi", baseFormula: "F_a = W_t * tan(psi)", nodes: ["F_a", "W_t", "psi"] },
   { id: "eq_helical_radial_force", name: "Radial Force from Tangential", canonicalTex: "F_r = F_t \\tan\\phi", baseFormula: "W_r = W_t * tan(phi)", nodes: ["W_r", "W_t", "phi"] },
   { id: "eq_helical_fn_3d", name: "Resultant 3D Normal Tooth Load", canonicalTex: "F_n = \\sqrt{F_t^2 + F_r^2 + F_a^2}", baseFormula: "W = sqrt(W_t^2 + W_r^2 + F_a^2)", nodes: ["W", "W_t", "W_r", "F_a"] },
-  { id: "eq_helical_lewis_fatigue", name: "Beam Fatigue Strength (Helical)", canonicalTex: "F_s = \\frac{s b Y}{k_f P_{dn}}", baseFormula: "F_s = (s * b * Y) / (k_f * P_dn)", nodes: ["F_s", "s", "b", "Y", "k_f", "P_dn"] },
+
+  {
+    id: "eq_helical_lewis_fatigue",
+    name: "Beam Fatigue Strength (Helical)",
+    variants: {
+      US: {
+        canonicalTex: "F_s = \\frac{s b Y}{k_f P_{dn}}",
+        baseFormula: "F_s = (s * b * Y) / (k_f * P_dn)",
+        nodes: ["F_s", "s", "b", "Y", "k_f", "P_dn"]
+      },
+      SI: {
+        canonicalTex: "F_s = \\frac{s b m_n Y}{k_f}",
+        baseFormula: "F_s = (s * b * m_n * Y) / k_f",
+        nodes: ["F_s", "s", "b", "m_n", "Y", "k_f"]
+      }
+    },
+    canonicalTex: "F_s = \\frac{s b Y}{k_f P_{dn}}",
+    baseFormula: "F_s = (s * b * Y) / (k_f * P_dn)",
+    nodes: ["F_s", "s", "b", "Y", "k_f", "P_dn"]
+  },
+
   { 
     id: "eq_helical_buckingham", 
     name: "Buckingham Dynamic Load (Helical)", 
@@ -41,6 +82,7 @@ export const HELICAL_RELATION_GRAPH = [
     baseFormula: "F_D = W_t + (0.05 * V_m * (W_t + b * C_d * cos(psi)^2) * cos(psi)) / (0.05 * V_m + sqrt(W_t + b * C_d * cos(psi)^2))",
     requiredUnits: { V_m: "ft/min", b: "in", W_t: "lb", C_d: "lb", psi: "°", F_D: "lb" }
   },
+
   { id: "eq_helical_ratio_factor", name: "Ratio Factor for Gearing", canonicalTex: "Q = \\frac{2 T_2}{T_1 + T_2}", baseFormula: "Q = (2 * T_2) / (T_1 + T_2)", nodes: ["Q", "T_1", "T_2"] },
   { id: "eq_helical_wear_load", name: "Limiting Wear Load (Helical)", canonicalTex: "F_w = \\frac{D_1 b Q K_w}{\\cos^2\\psi}", baseFormula: "F_w = (D_P1 * b * Q * K_w) / (cos(psi)^2)", nodes: ["F_w", "D_P1", "b", "Q", "K_w", "psi"] }
 ];
