@@ -5,10 +5,6 @@
  * - PILLAR I: The "Onion Peeler" + Linear Rational Polynomial Factoring
  * - PILLAR III: Case-Sensitive Physical Nomenclature
  * ============================================================================
- * Solves single-occurrence equations via recursive unwrapping and multi-occurrence
- * linear rational equations (e.g. Q = (2*T2)/(T1+T2) -> T2 = (Q*T1)/(2-Q))
- * via symbolic term collection and factoring.
- * ============================================================================
  */
 
 import {
@@ -48,7 +44,6 @@ export function invertEquationAST(lhsNode, rhsNode, targetVar) {
 
   if (totalCount === 0) return { success: false, reason: "Target not found" };
 
-  // If variable appears more than once, attempt linear rational factoring
   if (totalCount > 1) {
     return solveLinearRationalAST(lhsNode, rhsNode, targetVar);
   }
@@ -125,9 +120,6 @@ export function invertEquationAST(lhsNode, rhsNode, targetVar) {
 // 2. LINEAR RATIONAL POLYNOMIAL FACTORING
 // ========================================================
 
-/**
- * Extracts linear coefficients (coeff * x + const) from an AST expression.
- */
 function extractLinearCoeffs(node, targetVar) {
   if (!node) return null;
   const n = unwrapGroup(node);
@@ -160,7 +152,7 @@ function extractLinearCoeffs(node, targetVar) {
     if (n.op === "*") {
       const hasL = astHasVariable(n.left, targetVar);
       const hasR = astHasVariable(n.right, targetVar);
-      if (hasL && hasR) return null; // non-linear (degree >= 2)
+      if (hasL && hasR) return null;
 
       const sub = hasL ? extractLinearCoeffs(n.left, targetVar) : extractLinearCoeffs(n.right, targetVar);
       const k = hasL ? n.right : n.left;
@@ -201,10 +193,6 @@ function negateNode(A) {
   return { type: "binary", op: "-", left: { type: "num", val: "0" }, right: { type: "group", expr: A } };
 }
 
-/**
- * Solves linear rational expressions:
- * Y = (N) / (D)  ===>  Y * D - N = 0  ===>  coeff * x + const = 0  ===>  x = -const / coeff
- */
 export function solveLinearRationalAST(lhsNode, rhsNode, targetVar) {
   let N_L = lhsNode, D_L = { type: "num", val: "1" };
   let N_R = rhsNode, D_R = { type: "num", val: "1" };
@@ -215,20 +203,17 @@ export function solveLinearRationalAST(lhsNode, rhsNode, targetVar) {
   if (uL.type === "binary" && uL.op === "/") { N_L = uL.left; D_L = uL.right; }
   if (uR.type === "binary" && uR.op === "/") { N_R = uR.left; D_R = uR.right; }
 
-  // Clear fractions: N_L * D_R - N_R * D_L = 0
   const term1 = (D_R.val === "1") ? N_L : { type: "binary", op: "*", left: { type: "group", expr: N_L }, right: { type: "group", expr: D_R } };
   const term2 = (D_L.val === "1") ? N_R : { type: "binary", op: "*", left: { type: "group", expr: N_R }, right: { type: "group", expr: D_L } };
 
   const diffNode = { type: "binary", op: "-", left: { type: "group", expr: term1 }, right: { type: "group", expr: term2 } };
 
   const lin = extractLinearCoeffs(diffNode, targetVar);
-  if (!lin || lin.coeff.val === "0") return { success: false, reason: "Non-linear or degenerate equation" };
+  if (!lin || lin.coeff.val === "0") return { success: false, reason: "Non-linear equation" };
 
-  // coeff * x + constant = 0  ===>  x = -constant / coeff
   let numerator = negateNode(lin.constant);
   let denominator = lin.coeff;
 
-  // Clean double negations e.g. - ( - A ) -> A
   if (numerator.type === "binary" && numerator.op === "-" && numerator.left.val === "0") {
     numerator = unwrapGroup(numerator.right);
     denominator = negateNode(denominator);
@@ -269,12 +254,24 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   return { targetVar, isolatedRhs: rawRhs, isolatedAST: rhsAst, success: false };
 }
 
+/**
+ * Substitutes expressions without wrapping simple numbers or tokens in redundant parentheses.
+ */
 export function astSubstitute(node, subsObj = {}, varsDb = {}) {
   if (!node) return null;
   if (node.type === "id") {
     const k = resolveCanonicalKey(node.name, varsDb);
     const repl = subsObj[node.name] || subsObj[k];
-    return repl !== undefined ? (parseMathAST(repl) ? { type: "group", expr: parseMathAST(repl) } : node) : node;
+    if (repl !== undefined) {
+      const subAst = parseMathAST(repl);
+      if (!subAst) return node;
+      // Only wrap in a group if the replacement is a compound sum or difference
+      if (subAst.type === "binary" && (subAst.op === "+" || subAst.op === "-")) {
+        return { type: "group", expr: subAst };
+      }
+      return subAst;
+    }
+    return node;
   }
   if (node.type === "group") return { type: "group", expr: astSubstitute(node.expr, subsObj, varsDb) };
   if (node.type === "call") return { type: "call", fn: node.fn, arg: astSubstitute(node.arg, subsObj, varsDb) };
