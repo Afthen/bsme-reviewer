@@ -12,7 +12,11 @@
  *      - Mastery >= 76.4%: Deep graph walking (fib(4) hops)
  * 2. Board-Exam Distractor Injection:
  *    Injects variables not needed in the solution path based on phi(-3) (~23.6%).
- * 3. The "Textbook Curation" Principle (Neat Givens):
+ * 3. Polymorphic Variable & Symbol Randomization:
+ *    Randomizes the human term name and symbol in the problem statement prompt
+ *    to train student agility across board-exam synonym variations, while
+ *    keeping algebraic derivations strictly anchored to canonical notation.
+ * 4. The "Textbook Curation" Principle (Neat Givens):
  *    Rounds givens to clean numbers using fmtSigFig, then re-evaluates the
  *    downstream AST path so student answers match calculated values perfectly.
  * ============================================================================
@@ -124,12 +128,33 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     return topicConfig.statementBuilder(givens, visibleGoals, S, varsDb);
   }
 
+  S._displayNames = S._displayNames || {};
+  S._displaySymbols = S._displaySymbols || {};
+
+  // Polymorphic Selection Helper: Pick a random human name and symbol from aliases
+  function getPolymorphicMeta(v) {
+    const meta = varsDb[v] || {};
+    
+    if (!S._displayNames[v]) {
+      const names = meta.nameAliases && meta.nameAliases.length > 0 ? meta.nameAliases : [meta.name || v];
+      S._displayNames[v] = names[Math.floor(Math.random() * names.length)];
+    }
+    
+    if (!S._displaySymbols[v]) {
+      const symbols = meta.symbolAliases && meta.symbolAliases.length > 0 ? meta.symbolAliases : [meta.symbol || v];
+      S._displaySymbols[v] = symbols[Math.floor(Math.random() * symbols.length)];
+    }
+
+    return {
+      name: S._displayNames[v],
+      symbol: S._displaySymbols[v]
+    };
+  }
+
   const parts = givens.map(v => {
     const val = S[v];
     const u = S._u?.[v] || varsDb[v]?.unit || "";
-    const meta = varsDb[v] || {};
-    const sym = meta.symbol || v;
-    const name = meta.name || v;
+    const poly = getPolymorphicMeta(v);
 
     const formattedVal = fmtSigFig(val, 6);
     let valWithUnit = `$${formattedVal}$`;
@@ -137,14 +162,12 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
       valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}^\\circ$` : `$${formattedVal}\\text{ ${u}}$`;
     }
 
-    return `${name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${sym}$</span> = ${valWithUnit})</span>`;
+    return `${poly.name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${poly.symbol}$</span> = ${valWithUnit})</span>`;
   });
 
   const goalStrings = visibleGoals.map((gVar, idx) => {
-    const meta = varsDb[gVar] || {};
-    const sym = meta.symbol || gVar;
-    const name = meta.name || gVar;
-    const u = S._u?.[gVar] || meta.unit || "";
+    const poly = getPolymorphicMeta(gVar);
+    const u = S._u?.[gVar] || varsDb[gVar]?.unit || "";
 
     let uStr = "";
     if (u && u !== "dimless" && u !== "ratio") {
@@ -152,7 +175,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     }
 
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
-    return `${prefix}<strong>${name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${sym}$</span>)</span>${uStr}`;
+    return `${prefix}<strong>${poly.name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${poly.symbol}$</span>)</span>${uStr}`;
   });
 
   const systemNoun = topicConfig.noun || `${topicConfig.title || "Mechanical"} system`;
@@ -208,7 +231,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     }
   });
 
-  // Only the active, non-faded steps should appear in the "Determine: X, Y, and Z" prompt!
+  // Only active, non-faded steps appear in the "Determine: X, Y, and Z" prompt!
   const visibleGoals = solution.filter(s => !s.isFaded).map(s => s.targetVar);
   const statement = buildProblemStatement(path.givens, visibleGoals, S_neat, varsDb, topic);
 
