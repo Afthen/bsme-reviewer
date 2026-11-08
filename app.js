@@ -4,7 +4,7 @@
  * Organizes topics under Subjects with dynamic optgroup rendering.
  */
 
-import { TOPICS, ALL_TOPICS } from "./src/topics/registry.js";
+import { TOPICS, ALL_TOPICS } from "./src/topics/index.js";
 import { generateProblem } from "./src/core/problem_gen.js";
 import {
   loadMastery, getDecayedMastery, recordAttempt, incrementTopicTick,
