@@ -2,7 +2,7 @@
  * src/cas/algebra.js
  * ============================================================================
  * ARCHITECTURAL PILLARS:
- * - PILLAR I: The "Onion Peeler" + Linear Rational Polynomial Factoring
+ * - PILLAR I: The "Onion Peeler" + Linear Rational Factoring + Fraction Flattener
  * - PILLAR III: Case-Sensitive Physical Nomenclature
  * ============================================================================
  */
@@ -34,7 +34,74 @@ export function resolveCanonicalKey(token, varsDb = {}) {
 }
 
 // ========================================================
-// 1. RECURSIVE ONION PEELER (SINGLE-OCCURRENCE INVERSION)
+// 1. AST FRACTION FLATTENER (KILLS NESTED FRACTION TOWERS)
+// ========================================================
+
+/**
+ * Recursively simplifies compound division ASTs:
+ *   (A / B) / C  ===>  A / (B * C)
+ *   A / (B / C)  ===>  (A * C) / B
+ */
+export function flattenFractions(node) {
+  if (!node) return null;
+  if (node.type === "group") {
+    return { type: "group", expr: flattenFractions(node.expr) };
+  }
+  if (node.type === "call") {
+    return { type: "call", fn: node.fn, arg: flattenFractions(node.arg) };
+  }
+  if (node.type === "binary") {
+    let left = flattenFractions(node.left);
+    let right = flattenFractions(node.right);
+
+    if (node.op === "/") {
+      let uLeft = unwrapGroup(left);
+      let uRight = unwrapGroup(right);
+
+      // (A / B) / C ===> A / (B * C)
+      if (uLeft.type === "binary" && uLeft.op === "/") {
+        const A = uLeft.left;
+        const B = uLeft.right;
+        const C = right;
+        return flattenFractions({
+          type: "binary",
+          op: "/",
+          left: A,
+          right: {
+            type: "binary",
+            op: "*",
+            left: { type: "group", expr: B },
+            right: { type: "group", expr: C }
+          }
+        });
+      }
+
+      // A / (B / C) ===> (A * C) / B
+      if (uRight.type === "binary" && uRight.op === "/") {
+        const A = left;
+        const B = uRight.left;
+        const C = uRight.right;
+        return flattenFractions({
+          type: "binary",
+          op: "/",
+          left: {
+            type: "binary",
+            op: "*",
+            left: { type: "group", expr: A },
+            right: { type: "group", expr: C }
+          },
+          right: B
+        });
+      }
+    }
+
+    return { type: "binary", op: node.op, left, right };
+  }
+  return node;
+}
+
+// ========================================================
+// 2. RECURSIVE ONION PEELER (SINGLE-OCCURRENCE INVERSION)
 // ========================================================
 
 export function invertEquationAST(lhsNode, rhsNode, targetVar) {
@@ -55,7 +122,7 @@ export function invertEquationAST(lhsNode, rhsNode, targetVar) {
     E = unwrapGroup(E);
 
     if (E.type === "id" && E.name === targetVar) {
-      return { success: true, isolatedAST: Y };
+      return { success: true, isolatedAST: flattenFractions(Y) };
     }
 
     if (E.type === "call") {
@@ -117,7 +184,7 @@ export function invertEquationAST(lhsNode, rhsNode, targetVar) {
 }
 
 // ========================================================
-// 2. LINEAR RATIONAL POLYNOMIAL FACTORING
+// 3. LINEAR RATIONAL POLYNOMIAL FACTORING
 // ========================================================
 
 function extractLinearCoeffs(node, targetVar) {
@@ -219,12 +286,12 @@ export function solveLinearRationalAST(lhsNode, rhsNode, targetVar) {
     denominator = negateNode(denominator);
   }
 
-  const isolatedAST = {
+  const isolatedAST = flattenFractions({
     type: "binary",
     op: "/",
     left: { type: "group", expr: numerator },
     right: { type: "group", expr: denominator }
-  };
+  });
 
   return { success: true, isolatedAST };
 }
@@ -239,24 +306,23 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
 
   const res = invertEquationAST(lhsAst, rhsAst, targetVar);
   if (res.success) {
+    const flattened = flattenFractions(res.isolatedAST);
     return {
       targetVar,
-      isolatedRhs: astToExprStr(res.isolatedAST),
-      isolatedAST: res.isolatedAST,
+      isolatedRhs: astToExprStr(flattened),
+      isolatedAST: flattened,
       success: true
     };
   }
 
   if (resolveCanonicalKey(rawLhs, varsDb) === canonicalTarget) {
-    return { targetVar, isolatedRhs: rawRhs, isolatedAST: rhsAst, success: true };
+    const flattened = flattenFractions(rhsAst);
+    return { targetVar, isolatedRhs: astToExprStr(flattened), isolatedAST: flattened, success: true };
   }
 
   return { targetVar, isolatedRhs: rawRhs, isolatedAST: rhsAst, success: false };
 }
 
-/**
- * Substitutes expressions without wrapping simple numbers or tokens in redundant parentheses.
- */
 export function astSubstitute(node, subsObj = {}, varsDb = {}) {
   if (!node) return null;
   if (node.type === "id") {
@@ -265,7 +331,6 @@ export function astSubstitute(node, subsObj = {}, varsDb = {}) {
     if (repl !== undefined) {
       const subAst = parseMathAST(repl);
       if (!subAst) return node;
-      // Only wrap in a group if the replacement is a compound sum or difference
       if (subAst.type === "binary" && (subAst.op === "+" || subAst.op === "-")) {
         return { type: "group", expr: subAst };
       }
