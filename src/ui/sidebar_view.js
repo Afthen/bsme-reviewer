@@ -5,7 +5,7 @@
  * renderMasteryBars(container, relations, getMastery).
  */
 
-import { FADING_THRESHOLD, PHI_INV2 } from "../mastery/index.js";
+import { FADING_THRESHOLD, phi } from "../mastery/index.js";
 
 let activeRelations = [];
 let activeGetMastery = () => 0;
@@ -101,7 +101,7 @@ export function renderMasteryBars(containerOrRelations, maybeRelations, maybeGet
     barFill.style.width = `${pct}%`;
     barFill.style.background = mastery >= FADING_THRESHOLD
       ? "var(--success)"
-      : (mastery >= PHI_INV2 ? "var(--warning)" : "var(--accent-math)");
+      : (mastery >= phi(-2) ? "var(--warning)" : "var(--accent-math)");
     barFill.style.transition = "width 0.3s ease";
 
     barBg.appendChild(barFill);
