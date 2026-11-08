@@ -69,7 +69,7 @@
     }
     .btn:hover { background: var(--border); color: #fff; }
 
-    /* Custom Collapsible Dropdown Component */
+    /* Custom 3-Tier Collapsible Dropdown Component */
     .custom-dropdown {
       position: relative;
     }
@@ -122,6 +122,8 @@
     .dropdown-menu.active {
       display: flex;
     }
+
+    /* Level 1: Subject Folder */
     .subject-group {
       display: flex;
       flex-direction: column;
@@ -162,16 +164,65 @@
     .subject-group.open .topic-list {
       display: flex;
     }
-    .topic-item {
-      padding: 0.42rem 0.85rem 0.42rem 2.1rem;
-      font-size: 0.83rem;
+
+    /* Level 2: Sub-category Folder (e.g. Air Handling) */
+    .category-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .category-header {
+      padding: 0.4rem 0.85rem 0.4rem 1.4rem;
+      font-size: 0.80rem;
+      font-weight: 600;
       color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      user-select: none;
+      transition: background 0.12s ease;
+    }
+    .category-header:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: #fff;
+    }
+    .category-chevron {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      transition: transform 0.2s ease;
+      display: inline-block;
+      width: 10px;
+      text-align: center;
+    }
+    .category-group.open .category-chevron {
+      transform: rotate(90deg);
+      color: var(--accent-math);
+    }
+    .category-list {
+      display: none;
+      flex-direction: column;
+    }
+    .category-group.open .category-list {
+      display: flex;
+    }
+
+    /* Topic Items (Levels 2 and 3) */
+    .topic-item {
+      font-size: 0.83rem;
+      color: var(--text-muted);
       cursor: pointer;
       user-select: none;
       transition: background 0.12s ease, color 0.12s ease;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+    .topic-item.level-2 {
+      padding: 0.42rem 0.85rem 0.42rem 1.4rem;
+      color: var(--text);
+    }
+    .topic-item.level-3 {
+      padding: 0.38rem 0.85rem 0.38rem 2.3rem;
     }
     .topic-item:hover {
       background: var(--card);
@@ -182,7 +233,12 @@
       color: var(--accent-math);
       font-weight: 600;
       border-left: 2px solid var(--accent-math);
-      padding-left: calc(2.1rem - 2px);
+    }
+    .topic-item.level-2.selected {
+      padding-left: calc(1.4rem - 2px);
+    }
+    .topic-item.level-3.selected {
+      padding-left: calc(2.3rem - 2px);
     }
 
     .workspace {
@@ -584,7 +640,7 @@
     <div class="header-left">
       <button class="btn" id="btn-hamburger">☰ Mastery</button>
 
-      <!-- Custom Collapsible Dropdown Container -->
+      <!-- Custom 3-Tier Dropdown -->
       <div class="custom-dropdown" id="topic-dropdown-container">
         <button class="dropdown-toggle" id="topic-dropdown-toggle" type="button">
           <span id="topic-dropdown-label">Loading...</span>
