@@ -1,7 +1,7 @@
 /**
  * src/topics/machine_design/helical_gears/system.js
  * Clean ground truth helical gear system generator (SI and US Imperial).
- * Populates transverse and normal module across both unit branches.
+ * Evaluates pure physical relations natively without hardcoded conversion factors.
  */
 
 import { HELICAL_VARS_DB } from "./schema.js";
@@ -49,7 +49,7 @@ export function createGroundTruthHelicalSystem() {
 
     const D_P1 = T_1 * m;
     const D_P2 = T_2 * m;
-    const C = (D_P1 + D_P2) / 2;
+    const C = (m_n * (T_1 + T_2)) / (2 * Math.cos(psiRad)); // Pure coherent SI formula
     const b = 10 * m_n;
 
     const L_lead = (Math.PI * D_P1) / Math.tan(psiRad);
@@ -67,7 +67,7 @@ export function createGroundTruthHelicalSystem() {
     const W = Math.sqrt(W_t ** 2 + W_r ** 2 + F_a ** 2);
 
     const s = 140;
-    const F_s = (s * b * Y) / (k_f * (P_dn / 25.4));
+    const F_s = (s * b * m_n * Y) / k_f; // Pure coherent SI formula
     const C_d = 400;
     const k_buck = 21;
     const F_D = W_t + (k_buck * V_m * (W_t + b * C_d * (Math.cos(psiRad) ** 2)) * Math.cos(psiRad)) /
@@ -117,7 +117,7 @@ export function createGroundTruthHelicalSystem() {
     const W = Math.sqrt(W_t ** 2 + W_r ** 2 + F_a ** 2);
 
     const s = 25000;
-    const F_s = (s * b * Y) / (k_f * P_dn);
+    const F_s = (s * b * Y) / (k_f * P_dn); // Pure coherent US formula
     const C_d = 400;
     const k_buck = 0.05;
     const F_D = W_t + (k_buck * V_m * (W_t + b * C_d * (Math.cos(psiRad) ** 2)) * Math.cos(psiRad)) /
