@@ -6,12 +6,12 @@
  * PHILOSOPHY:
  * 1. Cognitive Scaffolding:
  *    Problem hop distance scales dynamically based on Golden Ratio breakpoints:
- *      - Mastery < 38.2% (Phi^-2): Single direct formula (0 hops)
- *      - 38.2% to 61.8% (Phi^-1): Two formulas with 1 bridge variable (1 hop)
+ *      - Mastery < 38.2% (phi(-2)): Single direct formula (0 hops)
+ *      - 38.2% to 61.8% (phi(-1)): Two formulas with 1 bridge variable (1 hop)
  *      - 61.8% to 76.4% (Fading): Multi-step synthesis chain (2 hops)
- *      - Mastery >= 76.4%: Deep graph walking (Fib_3 hops)
+ *      - Mastery >= 76.4%: Deep graph walking (fib(4) hops)
  * 2. Board-Exam Distractor Injection:
- *    Injects variables not needed in the solution path based on Phi^-3 (~23.6%).
+ *    Injects variables not needed in the solution path based on phi(-3) (~23.6%).
  * 3. The "Textbook Curation" Principle (Neat Givens):
  *    Rounds givens to clean numbers using fmtSigFig, then re-evaluates the
  *    downstream AST path so student answers match calculated values perfectly.
@@ -21,24 +21,21 @@
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 import { parseMathAST } from "../cas/ast.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
-import { 
-  PHI_INV, PHI_INV2, PHI_INV3, PHI_INV6, PHI_INV7, FADING_THRESHOLD, 
-  FIB_3, FIB_8, FIB_13 
-} from "../cas/units/index.js";
+import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { fmtSigFig } from "./dimensions.js";
 
 function determineGraphDistance(mastery) {
-  if (mastery < PHI_INV2) return 0;           // < 38.2%
-  if (mastery < PHI_INV) return 1;            // < 61.8%
+  if (mastery < phi(-2)) return 0;           // < 38.2%
+  if (mastery < phi(-1)) return 1;            // < 61.8%
   if (mastery < FADING_THRESHOLD) return 2;   // < 76.4%
-  return FIB_3;                               // >= 76.4%
+  return fib(4);                              // >= 76.4% (3 hops)
 }
 
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
   const scoredNodes = relations.map(node => {
     const mastery = getMastery(node);
-    const weight = Math.max(PHI_INV7, Math.pow((1 + PHI_INV6) - mastery, FIB_3));
-    const key = weight * (PHI_INV + PHI_INV2 * Math.random());
+    const weight = Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
+    const key = weight * (phi(-1) + phi(-2) * Math.random());
     return { node, weight, key, mastery };
   });
 
@@ -83,7 +80,7 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
             ...newInputs
           ]));
 
-          if (candidateSet.length <= FIB_8 && canSolveTarget(candidateSet, goalVar, relations)) {
+          if (candidateSet.length <= fib(6) && canSolveTarget(candidateSet, goalVar, relations)) {
             expansions.push(candidateSet);
           }
         }
@@ -109,7 +106,7 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     !k.startsWith("_") && !usedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
   );
 
-  const distractors = candidateDistractors.length > 0 && Math.random() < PHI_INV3
+  const distractors = candidateDistractors.length > 0 && Math.random() < phi(-3)
     ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
     : [];
 
