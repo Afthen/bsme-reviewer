@@ -5,14 +5,11 @@
  * - PILLAR II: The Universal Scale Law & Atomic Unit Bags
  * - PILLAR V: The Option B Empirical Contract
  * ============================================================================
- * Handles atomic unit bags, dimensional cancellation, and universal physical evaluation.
- * Evaluates arbitrary power exponents (integers, fractions, expressions) to ensure
- * fractional powers (e.g. square roots of sums) correctly scale units.
- * ============================================================================
  */
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "./ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "./algebra.js";
+import { fmtSigFig } from "../core/dimensions.js"; // For conversion numbers
 
 export const BASE_DIMENSIONS = Object.freeze({
   L: "Length", T: "Time", F: "Force", M: "Mass", Th: "Temperature", C: "Count"
@@ -61,24 +58,24 @@ export const COMPOUND_UNITS = Object.freeze({
   MW:         { factor: 1e6, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{MW}" },
   hp:         { factor: 33000, atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\text{hp}" },
   kWh:        { factor: 3.6e6, atoms: { N: 1, m: 1 }, displayTex: "\\text{kWh}" },
-  "kg/kWh":   { factor: 1 / 3.6e6, atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{kWh}}" },
-  "g/kWh":    { factor: 0.001 / 3.6e6, atoms: { g: 1, N: -1, m: -1 }, displayTex: "\\frac{\\text{g}}{\\text{kWh}}" },
-  "m/s":      { atoms: { m: 1, s: -1 }, displayTex: "\\frac{\\text{m}}{\\text{s}}" },
-  "ft/min":   { atoms: { ft: 1, min: -1 }, displayTex: "\\frac{\\text{ft}}{\\text{min}}" },
-  "teeth/in": { atoms: { teeth: 1, in: -1 }, displayTex: "\\frac{\\text{teeth}}{\\text{in}}" },
+  "kg/kWh":   { factor: 1 / 3.6e6, atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{kWh}}" },
+  "g/kWh":    { factor: 0.001 / 3.6e6, atoms: { g: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{g}}{\\text{kWh}}" },
+  "m/s":      { atoms: { m: 1, s: -1 }, displayTex: "\\cfrac{\\text{m}}{\\text{s}}" },
+  "ft/min":   { atoms: { ft: 1, min: -1 }, displayTex: "\\cfrac{\\text{ft}}{\\text{min}}" },
+  "teeth/in": { atoms: { teeth: 1, in: -1 }, displayTex: "\\cfrac{\\text{teeth}}{\\text{in}}" },
   rpm:        { atoms: { min: -1 }, displayTex: "\\text{rpm}" },
-  "rev/min":  { atoms: { rev: 1, min: -1 }, displayTex: "\\frac{\\text{rev}}{\\text{min}}" },
-  "kg/s":     { atoms: { kg: 1, s: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{s}}" },
-  "kg/h":     { atoms: { kg: 1, h: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{h}}" },
-  "kJ/kg":    { factor: 1000, atoms: { N: 1, m: 1, kg: -1 }, displayTex: "\\frac{\\text{kJ}}{\\text{kg}}" },
-  "kJ/(kg*K)":{ factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\frac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
-  "kJ/kg-K":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\frac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
+  "rev/min":  { atoms: { rev: 1, min: -1 }, displayTex: "\\cfrac{\\text{rev}}{\\text{min}}" },
+  "kg/s":     { atoms: { kg: 1, s: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{s}}" },
+  "kg/h":     { atoms: { kg: 1, h: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{h}}" },
+  "kJ/kg":    { factor: 1000, atoms: { N: 1, m: 1, kg: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}}" },
+  "kJ/(kg*K)":{ factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
+  "kJ/kg-K":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
   "m^3":      { atoms: { m: 3 }, displayTex: "\\text{m}^3" },
   L:          { factor: 0.001, atoms: { m: 3 }, displayTex: "\\text{L}" },
-  "m^3/s":    { atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{m}^3}{\\text{s}}" },
-  "m^3/h":    { factor: 1 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{m}^3}{\\text{h}}" },
-  "L/s":      { factor: 0.001, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{s}}" },
-  "L/h":      { factor: 0.001 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{h}}" }
+  "m^3/s":    { atoms: { m: 3, s: -1 }, displayTex: "\\cfrac{\\text{m}^3}{\\text{s}}" },
+  "m^3/h":    { factor: 1 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\cfrac{\\text{m}^3}{\\text{h}}" },
+  "L/s":      { factor: 0.001, atoms: { m: 3, s: -1 }, displayTex: "\\cfrac{\\text{L}}{\\text{s}}" },
+  "L/h":      { factor: 0.001 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\cfrac{\\text{L}}{\\text{h}}" }
 });
 
 export function getUnitAtomBag(uName) {
@@ -153,18 +150,13 @@ function evalExprUnitAST(node, S, varsDb) {
     const left = evalExprUnitAST(node.left, S, varsDb);
     const right = evalExprUnitAST(node.right, S, varsDb);
 
-    if (node.op === "*") {
-      return { factor: left.factor * right.factor, atoms: [...left.atoms, ...right.atoms] };
-    }
+    if (node.op === "*") return { factor: left.factor * right.factor, atoms: [...left.atoms, ...right.atoms] };
     if (node.op === "/") {
       const invR = right.atoms.map(a => ({ ...a, power: -a.power }));
       return { factor: left.factor / right.factor, atoms: [...left.atoms, ...invR] };
     }
-    if (node.op === "+" || node.op === "-") {
-      return left;
-    }
+    if (node.op === "+" || node.op === "-") return left;
     if (node.op === "^") {
-      // Evaluates any numerical or fractional power (e.g. 2, 3, 1/2, 1/3)
       const evaluatedExp = evalAST(node.right, {});
       const powerNum = typeof evaluatedExp === "number" && !isNaN(evaluatedExp) ? evaluatedExp : 1;
       return {
@@ -179,6 +171,7 @@ function evalExprUnitAST(node, S, varsDb) {
 export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const ast = (typeof exprOrAST === "string") ? parseMathAST(exprOrAST) : exprOrAST;
   const selectedConversions = [];
+  const tokenConversions = {}; // Maps inline conversions directly to tokens
   const preConversions = [];
 
   if (requiredUnits && typeof requiredUnits === "object") {
@@ -195,22 +188,20 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
           const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
           preConversions.push({
             token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-            conv: { factor: ratio, latex: `\\frac{1\\text{ ${reqU}}}{${(1 / ratio).toFixed(4).replace(/\.?0+$/, "")}\\,\\cancel{\\text{${currU}}}}` },
+            conv: { factor: ratio, latex: `\\cfrac{1\\text{ ${reqU}}}{${fmtSigFig(1/ratio)}\\,\\cancel{\\text{${currU}}}}` },
             rawVal, convertedVal: rawVal * ratio
           });
         }
       }
     });
-    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor: 1.0, preConversions };
+    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor: 1.0, preConversions, tokenConversions };
   }
 
   const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
   const targetBag = getUnitAtomBag(targetUnit);
 
   let exprScale = exprAnalysis.factor;
-  exprAnalysis.atoms.forEach(a => {
-    exprScale *= Math.pow(a.scale, a.power);
-  });
+  exprAnalysis.atoms.forEach(a => { exprScale *= Math.pow(a.scale, a.power); });
 
   let targetScale = targetBag.scale || 1.0;
   const numericConversionFactor = targetScale > 0 ? (exprScale / targetScale) : 1.0;
@@ -236,20 +227,26 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const remaining = atomList.filter(a => !a.canceled && !a.preserved);
   const dimsPresent = Array.from(new Set(remaining.map(a => a.dim)));
 
+  // Inline Internal Dimension Clashes (e.g. min vs s)
   dimsPresent.forEach(dim => {
     const dimAtoms = remaining.filter(a => a.dim === dim);
     const pos = dimAtoms.find(a => a.power > 0), neg = dimAtoms.find(a => a.power < 0);
     if (pos && neg && pos.atom !== neg.atom) {
       const ratio = pos.scale / neg.scale;
-      selectedConversions.push({
-        latex: ratio < 1
-          ? `\\frac{1\\,\\cancel{\\text{${neg.atom}}}}{${(1 / ratio).toFixed(4).replace(/\.?0+$/, "")}\\,\\cancel{\\text{${pos.atom}}}}`
-          : `\\frac{${ratio.toFixed(4).replace(/\.?0+$/, "")}\\,\\cancel{\\text{${neg.atom}}}}{1\\,\\cancel{\\text{${pos.atom}}}}`
-      });
+      let convLatex = "";
+      if (ratio < 1) {
+        convLatex = `\\cdot \\cfrac{1\\,\\cancel{\\text{${neg.atom}}}}{${fmtSigFig(1/ratio)}\\,\\cancel{\\text{${pos.atom}}}}`;
+      } else {
+        convLatex = `\\cdot \\cfrac{${fmtSigFig(ratio)}\\,\\cancel{\\text{${pos.atom}}}}{1\\,\\cancel{\\text{${neg.atom}}}}`;
+      }
+      if (!tokenConversions[pos.token]) tokenConversions[pos.token] = [];
+      tokenConversions[pos.token].push(convLatex);
+      
       pos.canceled = true; neg.canceled = true;
     }
   });
 
+  // Global Target Scale Mismatch (e.g. converting entire net expression to hp or kW)
   if (Math.abs(numericConversionFactor - 1.0) > 1e-4) {
     atomList.filter(a => !a.canceled && !a.preserved).forEach(a => {
       for (const [tAtom, tPower] of Object.entries(targetBag.atoms)) {
@@ -257,8 +254,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         if (tBase && tBase.dim === a.dim && Math.abs(tPower - a.power) < 1e-4 && a.atom !== tAtom) {
           selectedConversions.push({
             latex: a.power < 0
-              ? (tBase.scale / a.scale > 1 ? `\\frac{${(tBase.scale / a.scale).toFixed(4).replace(/\.?0+$/, "")}\\,\\cancel{\\text{${a.atom}}}}{1\\text{ ${tAtom}}}` : `\\frac{1\\,\\cancel{\\text{${a.atom}}}}{${(a.scale / tBase.scale).toFixed(4).replace(/\.?0+$/, "")}\\text{ ${tAtom}}}`)
-              : (a.scale / tBase.scale > 1 ? `\\frac{${(a.scale / tBase.scale).toFixed(4).replace(/\.?0+$/, "")}\\text{ ${tAtom}}}{1\\,\\cancel{\\text{${a.atom}}}}` : `\\frac{1\\text{ ${tAtom}}}{${(tBase.scale / a.scale).toFixed(4).replace(/\.?0+$/, "")}\\,\\cancel{\\text{${a.atom}}}}`)
+              ? (tBase.scale / a.scale > 1 ? `\\cfrac{${fmtSigFig(tBase.scale / a.scale)}\\,\\cancel{\\text{${a.atom}}}}{1\\text{ ${tAtom}}}` : `\\cfrac{1\\,\\cancel{\\text{${a.atom}}}}{${fmtSigFig(a.scale / tBase.scale)}\\text{ ${tAtom}}}`)
+              : (a.scale / tBase.scale > 1 ? `\\cfrac{${fmtSigFig(a.scale / tBase.scale)}\\text{ ${tAtom}}}{1\\,\\cancel{\\text{${a.atom}}}}` : `\\cfrac{1\\text{ ${tAtom}}}{${fmtSigFig(tBase.scale / a.scale)}\\,\\cancel{\\text{${a.atom}}}}`)
           });
           a.canceled = true;
         }
@@ -266,21 +263,33 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     });
   }
 
+  // Token Markup Builder
   const tokenMarkup = {}, tokenGroups = {};
   atomList.forEach(a => { (tokenGroups[a.token] = tokenGroups[a.token] || []).push(a); });
+  
   for (const [tok, atoms] of Object.entries(tokenGroups)) {
-    const uName = atoms[0]?.unitName, compound = COMPOUND_UNITS[uName];
-    if (!compound) { tokenMarkup[tok] = atoms[0]?.canceled ? `\\cancel{${atoms[0]?.tex}}` : atoms[0]?.tex; continue; }
-    const numStr = atoms.filter(a => a.power > 0).map(a => a.canceled ? `\\cancel{${a.tex}}` : a.tex).join("\\cdot");
-    const denStr = atoms.filter(a => a.power < 0).map(a => a.canceled ? `\\cancel{${a.tex}}` : a.tex).join("\\cdot");
+    const uName = atoms[0]?.unitName;
+    if (uName === "deg" || uName === "°") {
+      tokenMarkup[tok] = `^{\\circ}`;
+      continue;
+    }
+    
+    const compound = COMPOUND_UNITS[uName];
+    if (!compound) { 
+      tokenMarkup[tok] = atoms[0]?.canceled ? `\\cancel{\\text{${atoms[0]?.atom}}}` : `\\text{${atoms[0]?.atom}}`; 
+      continue; 
+    }
+    
+    const numStr = atoms.filter(a => a.power > 0).map(a => a.canceled ? `\\cancel{\\text{${a.atom}}}` : `\\text{${a.atom}}`).join("\\cdot");
+    const denStr = atoms.filter(a => a.power < 0).map(a => a.canceled ? `\\cancel{\\text{${a.atom}}}` : `\\text{${a.atom}}`).join("\\cdot");
     const prefix = compound.factor && compound.factor !== 1 ? `${compound.factor}\\,` : "";
-    tokenMarkup[tok] = denStr ? `\\frac{${prefix}${numStr || "1"}}{${denStr}}` : `${prefix}${numStr}`;
+    tokenMarkup[tok] = denStr ? `\\cfrac{${prefix}${numStr || "1"}}{${denStr}}` : `${prefix}${numStr}`;
   }
 
   return {
     tokenMarkup, conversionFactors: selectedConversions,
     conversionFactorTex: selectedConversions.map(cf => ` \\cdot ${cf.latex}`).join(""),
-    numericConversionFactor, preConversions
+    numericConversionFactor, preConversions, tokenConversions
   };
 }
 
