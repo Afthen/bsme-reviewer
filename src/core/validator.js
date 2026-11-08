@@ -5,10 +5,9 @@
  * against ground truth, unregistered unit detection, and multi-goal DAG solvability tests.
  */
 
-import {
-  isolateVariable, astHasVariable, parseMathAST,
-  getUnitAtomBag, evaluatePhysicalAST
-} from "./cas.js";
+import { astHasVariable, parseMathAST } from "../cas/ast.js";
+import { isolateVariable } from "../cas/algebra.js";
+import { getUnitAtomBag, evaluatePhysicalAST } from "../cas/units.js";
 import { solveDAG, pruneSolutionPath } from "./graph_solver.js";
 
 export function validateTopic(topic) {
