@@ -5,8 +5,9 @@
  * ============================================================================
  * 1. Smart Implication: Omits arrow if canonical formula is already isolated for target.
  * 2. Shared Unit Factoring: (23 + 69) \, \text{teeth} instead of clunky duplicates.
- * 3. Factor Parenthesizing: Wraps subsequent multiplied factors in parens.
- * 4. Boxed Final Answer: Repeats target symbol and encloses answer in \boxed{}.
+ * 3. 1:1 Drop-in Equivalence: kW directly renders as kJ/s without multiplier clutter.
+ * 4. Localized Inline Factor-Labels: Multipliers placed directly adjacent to the variable.
+ * 5. Boxed Final Answer: Repeats target symbol and encloses answer in \boxed{}.
  * ============================================================================
  */
 
@@ -43,7 +44,7 @@ export function buildAlignedDerivation(
     });
   }
 
-  // 1. Build Substitution Mapping with Factor Parenthesizing & Unit Atoms
+  // 1. Build Localized Substitution Mapping with Inline Conversion Brackets
   const subsMap = {};
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
@@ -59,7 +60,7 @@ export function buildAlignedDerivation(
     }
   }
 
-  // 2. Unit Factoring for Additions e.g. (23 + 69) \, \text{teeth}
+  // 2. Unit Factoring for Additive Groups e.g. (23 + 69) \, \text{teeth}
   const rhsAst = parseMathAST(formulaRhs);
   if (rhsAst && rhsAst.type === "binary" && rhsAst.op === "/") {
     const numNode = rhsAst.left;
@@ -86,18 +87,16 @@ export function buildAlignedDerivation(
   const norm = s => (s || "").replace(/\\left|\\right|\s/g, "");
   const isAlreadyIsolated = norm(displayCanonical).startsWith(norm(targetSymbol) + "=");
 
+  // Conversions are attached locally inline, so global trailing multipliers are eliminated
   const numTex = astToLatex(rhsAst, subsMap, varsDb).replace(/\+\s*0(?!\d)/g, "");
-  const globalConvTex = unitAnalysis.conversionFactorTex || "";
 
   if (isAlreadyIsolated || !baseFormula) {
-    // Already isolated: substitute directly on Line 1!
-    line1 = `${displayCanonical} &= ${numTex}${globalConvTex}`;
+    line1 = `${displayCanonical} &= ${numTex}`;
   } else {
-    // Rearrangement occurred: Canonical => Isolated &= Substituted
-    line1 = `${displayCanonical} \\; \\Rightarrow \\; ${targetSymbol} &= ${symRhs} \\\\[6pt]\n  &= ${numTex}${globalConvTex}`;
+    line1 = `${displayCanonical} \\; \\Rightarrow \\; ${targetSymbol} &= ${symRhs} \\\\[6pt]\n  &= ${numTex}`;
   }
 
-  // 4. Final Answer Line with Boxed Result & \tfrac for Units
+  // 4. Final Boxed Answer
   const val = step.expectedVal !== undefined ? step.expectedVal : S[canonicalTarget];
   const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
 
