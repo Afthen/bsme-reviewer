@@ -4,7 +4,7 @@
  * Dynamically resolves SI/US variants and requiredUnits contracts.
  */
 
-import { isolateVariable } from "./cas.js";
+import { isolateVariable } from "../cas/algebra.js";
 
 export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery = () => 0) {
   const known = new Set(givensArray);
