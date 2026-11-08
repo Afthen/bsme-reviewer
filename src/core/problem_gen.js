@@ -101,6 +101,7 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, getMas
   };
 }
 
+// In src/core/problem_gen.js:
 export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicConfig = {}) {
   if (typeof topicConfig.statementBuilder === "function") {
     return topicConfig.statementBuilder(givens, visibleGoals, S, varsDb);
@@ -137,7 +138,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     return `${prefix}<strong>${name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${sym}$</span>)</span>${uStr}`;
   });
 
-  const topicTitle = topicConfig.title || "Gear";
-  const driveType = topicTitle.toLowerCase().replace(/s$/, "");
-  return `A ${driveType} drive operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
+  // Use explicit topic noun if provided, else fallback gracefully
+  const systemNoun = topicConfig.noun || `${topicConfig.title || "Mechanical"} system`;
+  return `A ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
 }
