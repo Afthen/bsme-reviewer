@@ -40,24 +40,58 @@ export function stripOuterParens(texStr) {
 
 export function astToLatex(node, substituteMap = null, varsDb = {}) {
   if (!node) return "";
+  
   if (node.type === "num") return node.val;
-  if (node.type === "id") return (substituteMap && substituteMap[node.name] !== undefined) ? substituteMap[node.name] : toLatexSymbol(node.name, varsDb);
-  if (node.type === "group") return `(${stripOuterParens(astToLatex(unwrapGroup(node), substituteMap, varsDb))})`;
+  
+  if (node.type === "id") {
+    return (substituteMap && substituteMap[node.name] !== undefined) 
+      ? substituteMap[node.name] 
+      : toLatexSymbol(node.name, varsDb);
+  }
+  
+  if (node.type === "group") {
+    let innerNode = node.expr;
+    while (innerNode && innerNode.type === "group") innerNode = innerNode.expr;
+    
+    // Smart Parens: No defensive parens around raw numbers, variables, or functions
+    if (innerNode.type === "num" || innerNode.type === "id" || innerNode.type === "call") {
+      return astToLatex(innerNode, substituteMap, varsDb);
+    }
+    return `\\left(${stripOuterParens(astToLatex(innerNode, substituteMap, varsDb))}\\right)`;
+  }
+  
   if (node.type === "call") {
     const inner = stripOuterParens(astToLatex(unwrapGroup(node.arg), substituteMap, varsDb));
     switch (node.fn) {
-      case "sqrt": return `\\sqrt{${inner}}`; case "cos": return `\\cos(${inner})`; case "sin": return `\\sin(${inner})`;
-      case "tan": return `\\tan(${inner})`; case "atan": return `\\tan^{-1}\\left(${inner}\\right)`;
-      case "acos": return `\\cos^{-1}\\left(${inner}\\right)`; case "asin": return `\\sin^{-1}\\left(${inner}\\right)`;
-      case "exp": return `e^{${inner}}`; case "ln": return `\\ln\\left(${inner}\\right)`;
+      case "sqrt": return `\\sqrt{${inner}}`; 
+      case "cos": return `\\cos(${inner})`; 
+      case "sin": return `\\sin(${inner})`;
+      case "tan": return `\\tan(${inner})`; 
+      case "atan": return `\\tan^{-1}\\left(${inner}\\right)`;
+      case "acos": return `\\cos^{-1}\\left(${inner}\\right)`; 
+      case "asin": return `\\sin^{-1}\\left(${inner}\\right)`;
+      case "exp": return `e^{${inner}}`; 
+      case "ln": return `\\ln\\left(${inner}\\right)`;
       default: return `\\text{${node.fn}}\\left(${inner}\\right)`;
     }
   }
+  
   if (node.type === "binary") {
-    if (node.op === "/") return `\\frac{${stripOuterParens(astToLatex(node.left, substituteMap, varsDb))}}{${stripOuterParens(astToLatex(node.right, substituteMap, varsDb))}}`;
+    // Spaced continuous fractions
+    if (node.op === "/") {
+      return `\\cfrac{${stripOuterParens(astToLatex(node.left, substituteMap, varsDb))}}{${stripOuterParens(astToLatex(node.right, substituteMap, varsDb))}}`;
+    }
     if (node.op === "*") {
-      const L = astToLatex(node.left, substituteMap, varsDb), R = astToLatex(node.right, substituteMap, varsDb);
-      const sep = (/^[+-]?[\d.]+$/.test(L.trim()) && /^[+-]?[\d.]+$/.test(R.trim())) ? " \\cdot " : (R.startsWith("\\left(") || R.startsWith("(") ? "" : " ");
+      const L = astToLatex(node.left, substituteMap, varsDb);
+      const R = astToLatex(node.right, substituteMap, varsDb);
+      
+      const leftIsSimpleNum = /^[+-]?[\d.]+$/.test(L.trim());
+      const rightIsSimpleNum = /^[+-]?[\d.]+$/.test(R.trim());
+      
+      let sep = " ";
+      if (leftIsSimpleNum && rightIsSimpleNum) sep = " \\cdot ";
+      else if (R.startsWith("\\left(") || R.startsWith("(")) sep = "";
+      
       return `${L}${sep}${R}`.trim();
     }
     if (node.op === "+") return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
