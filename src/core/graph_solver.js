@@ -5,6 +5,7 @@
  */
 
 import { isolateVariable } from "../cas/algebra.js";
+import { FADING_THRESHOLD } from "../repetition/mastery.js";
 
 export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery = () => 0) {
   const known = new Set(givensArray);
@@ -13,7 +14,6 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
   const producedBy = {};
   let keepPropagating = true;
 
-  // Passes full equation object to getMastery for AST complexity evaluation
   const sortedRelations = [...relations].sort((a, b) => getMastery(a) - getMastery(b));
 
   while (keepPropagating) {
@@ -83,14 +83,35 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
   return steps;
 }
 
-export function canSolveTarget(givensArray, targetVar, relations = [], getMastery = () => 0) {
-  const steps = solveDAG(givensArray, {}, relations, {}, getMastery);
+export function canSolveTarget(givensArray, targetVar, relations = []) {
+  const steps = solveDAG(givensArray, {}, relations, {}, () => 0);
   return steps.some(s => s.targetVar === targetVar);
 }
 
-export function pruneSolutionPath(steps = [], goalVar) {
+/**
+ * Prunes solution steps to the goal and activates Golden Ratio cognitive fading.
+ */
+export function pruneSolutionPath(steps = [], goalVar, getMastery = () => 0) {
   const goalIdx = steps.findIndex(s => s.targetVar === goalVar);
   if (goalIdx < 0) return [];
+
   const requiredIndices = new Set([goalIdx, ...(steps[goalIdx].ancestorIndices || [])]);
-  return steps.filter(s => requiredIndices.has(s.stepIdx));
+  const solution = steps.filter(s => requiredIndices.has(s.stepIdx));
+
+  // Activate Fading on intermediate steps when mastery exceeds FADING_THRESHOLD (76.4%)
+  const fadedAncestorEqIds = [];
+  solution.forEach(step => {
+    const isGoal = step.targetVar === goalVar;
+    const mastery = getMastery(step);
+
+    if (!isGoal && mastery >= FADING_THRESHOLD) {
+      step.isFaded = true;
+      fadedAncestorEqIds.push(step.eqId);
+    } else {
+      step.isFaded = false;
+    }
+    step.fadedAncestorEqIds = [...fadedAncestorEqIds];
+  });
+
+  return solution;
 }
