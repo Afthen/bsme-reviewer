@@ -1,24 +1,45 @@
 /**
  * src/core/derivation.js
- * Universal Graph + CAS Derivation Engine.
- * Empirical equations are protected from symbolic inlining; units rendered via pure atomic bags.
+ * ============================================================================
+ * ARCHITECTURAL PILLAR: Aligned Multi-Line Derivation Generator
+ * ============================================================================
+ * Generates beautiful, aligned 3-line KaTeX derivation steps for students:
+ *   Line 1: Symbolic isolated formula
+ *   Line 2: Substituted numeric values with atomic unit cancellation factors
+ *   Line 3: Evaluated answer formatted to significant figures with target unit
+ * ============================================================================
  */
 
-import { resolveCanonicalKey, substituteExpression, simplifyExpression } from "../cas/algebra.js";
+import { resolveCanonicalKey, substituteExpression } from "../cas/algebra.js";
 import { casToTex } from "../cas/latex.js";
-import { solveUnitAlgebra, getUnitAtomBag } from "../cas/units.js";
+import { solveUnitAlgebra } from "../cas/units.js";
 import { fmtSigFig } from "./dimensions.js";
 
-export function buildDerivationStep(step, S, varsDb = {}) {
+/**
+ * Builds an aligned KaTeX derivation environment for problem_view.js.
+ */
+export function buildAlignedDerivation(
+  step,
+  S = {},
+  allSteps = [],
+  varsDb = {},
+  relations = [],
+  answeredVars = new Set(),
+  givens = []
+) {
   const { targetVar, baseFormula, equationTex, rhsExpr, requiredUnits } = step;
+
+  // 1. Resolve Target Metadata
   const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
   const targetMeta = varsDb[canonicalTarget] || varsDb[targetVar] || {};
   const targetSymbol = targetMeta.symbol || targetVar;
   const targetUnit = S._u?.[canonicalTarget] || S._u?.[targetVar] || targetMeta.unit || "";
 
-  const symbolicTex = equationTex || `${targetSymbol} = ${casToTex(rhsExpr || baseFormula, varsDb)}`;
-  const unitAnalysis = solveUnitAlgebra(rhsExpr || baseFormula, S, targetVar, targetUnit, varsDb, requiredUnits);
+  // 2. Unit Analysis & Conversion Factors
+  const formulaRhs = rhsExpr || (baseFormula && baseFormula.includes("=") ? baseFormula.split("=")[1].trim() : baseFormula) || "";
+  const unitAnalysis = solveUnitAlgebra(formulaRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
 
+  // 3. Prepare Substituted Numeric Values
   const subsMap = {};
   const evalState = { ...S };
 
@@ -35,21 +56,29 @@ export function buildDerivationStep(step, S, varsDb = {}) {
     }
   }
 
-  const substitutedTexStr = substituteExpression(rhsExpr || baseFormula, subsMap, varsDb);
-  const substitutedTex = `${targetSymbol} = ${casToTex(substitutedTexStr, varsDb)}${unitAnalysis.conversionFactorTex || ""}`;
+  // 4. Construct Aligned KaTeX Lines
+  // Line 1: Symbolic formula
+  const symRhs = casToTex(formulaRhs, varsDb);
+  const line1 = `${targetSymbol} &= ${symRhs}`;
 
-  const val = S[canonicalTarget] !== undefined ? S[canonicalTarget] : S[targetVar];
-  const formattedVal = typeof val === "number" ? fmtSigFig(val, 4) : val;
-  let unitTex = targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio" ? `\\text{ ${targetUnit}}` : "";
-  if (targetUnit === "deg" || targetUnit === "°") unitTex = "^\\circ";
+  // Line 2: Numbers substituted + conversion factors
+  const numRhs = substituteExpression(formulaRhs, subsMap, varsDb);
+  const numTex = casToTex(numRhs, varsDb);
+  const convTex = unitAnalysis.conversionFactorTex || "";
+  const line2 = `&= ${numTex}${convTex}`;
 
-  const resultTex = `${targetSymbol} = ${formattedVal}${unitTex ? " " + unitTex : ""}`;
+  // Line 3: Final calculated answer
+  const val = step.expectedVal !== undefined ? step.expectedVal : S[canonicalTarget];
+  const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
 
-  return {
-    symbolicTex,
-    substitutedTex,
-    resultTex,
-    unitAnalysis,
-    expectedVal: val
-  };
+  let unitTex = "";
+  if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
+    unitTex = (targetUnit === "deg" || targetUnit === "°") ? "^\\circ" : `\\text{ ${targetUnit}}`;
+  }
+  const line3 = `&= ${formattedVal}${unitTex ? " " + unitTex : ""}`;
+
+  return `$$\\begin{aligned}\n  ${line1} \\\\[6pt]\n  ${line2} \\\\[6pt]\n  ${line3}\n\\end{aligned}$$`;
 }
+
+// Backward-compatibility alias
+export const buildDerivationStep = buildAlignedDerivation;
