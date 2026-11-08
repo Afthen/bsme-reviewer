@@ -79,10 +79,6 @@ export function astToExprStr(node) {
   return "";
 }
 
-// ========================================================
-// 2. TREE TRAVERSAL & INSPECTION
-// ========================================================
-
 export function getAstIdentifiers(node) {
   const ids = [];
   function walk(n) {
@@ -130,10 +126,6 @@ export function unwrapGroup(node) {
   return n;
 }
 
-// ========================================================
-// 3. NUMERIC AST EVALUATOR (WITH UNIT CONTEXT HOOK)
-// ========================================================
-
 export function evalAST(node, S = {}, unitResolver = null) {
   if (!node) return NaN;
   if (node.type === "num") return parseFloat(node.val);
@@ -149,7 +141,6 @@ export function evalAST(node, S = {}, unitResolver = null) {
     let a = evalAST(node.arg, S, unitResolver);
     if (isNaN(a)) return NaN;
 
-    // Physical contract: trig functions expect radians; if argument unit is degrees, scale to radians
     if (["sin", "cos", "tan"].includes(node.fn)) {
       if (unitResolver && unitResolver(node.arg)) {
         a = (a * Math.PI) / 180;
