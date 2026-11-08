@@ -7,7 +7,7 @@ import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
-  incrementTopicTick, PHI_INV8, getDecayedMastery
+  incrementGlobalTick, PHI_INV8, getDecayedMastery
 } from "../repetition/mastery.js";
 import { attachTooltips } from "./carousel_view.js";
 import { renderMasteryBars } from "./sidebar_view.js";
@@ -69,13 +69,13 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     }
 
     input.addEventListener("keydown", e => {
-      if (e.key === "Enter") checkStepAnswer(idx, input, activeProblem, relations, topicId);
+      if (e.key === "Enter") checkStepAnswer(idx, input, activeProblem, relations);
     });
 
     summary.addEventListener("click", e => {
       if (e.target === input || e.target.closest(".interactive-var")) return;
       if (!item.classList.contains("open") && !step.isAnswered) {
-        revealStepAnswer(idx, input, activeProblem, relations, topicId);
+        revealStepAnswer(idx, input, activeProblem, relations);
       } else {
         item.classList.toggle("open");
         refreshStepDerivations(activeProblem, relations);
@@ -154,22 +154,18 @@ function refreshStepDerivations(activeProblem, relations) {
   }
 }
 
-function checkStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
+function checkStepAnswer(idx, inputEl, activeProblem, relations) {
   const step = activeProblem.solution[idx];
   const raw = inputEl.value.trim();
-  if (raw === "") return revealStepAnswer(idx, inputEl, activeProblem, relations, topicId);
+  if (raw === "") return revealStepAnswer(idx, inputEl, activeProblem, relations);
 
-  incrementTopicTick(topicId);
+  incrementGlobalTick();
   const val = parseFloat(raw);
   if (isNaN(val)) return;
 
   const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
   const expected = step.expectedVal;
 
-  // Adaptive relative tolerance:
-  // 1. Integer quantities (teeth, cylinders) get +/- 0.5 rounding window.
-  // 2. Custom tolerance defined in schema gets precedence.
-  // 3. Otherwise, use PHI_INV8 (~2.13% relative error) with a 1e-4 numeric epsilon floor.
   let tol;
   if (meta.isInteger) {
     tol = 0.5;
@@ -188,33 +184,32 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
     step.isAnswered = true;
     step.userVal = val;
     
-    // Credit both equations if this was a coupled system
     if (step.systemEqIds) {
-      step.systemEqIds.forEach(id => recordAttempt(id, true, topicId));
+      step.systemEqIds.forEach(id => recordAttempt(id, true));
     } else {
-      recordAttempt(step.eqId, true, topicId);
+      recordAttempt(step.eqId, true);
     }
     
-    reinforceAncestors(step.fadedAncestorEqIds || [], topicId);
+    reinforceAncestors(step.fadedAncestorEqIds || []);
     document.getElementById(`step-item-${idx}`).classList.add("open");
   } else {
     inputEl.classList.add("state-wrong", "shake-trigger");
     if (step.systemEqIds) {
-      step.systemEqIds.forEach(id => recordAttempt(id, false, topicId));
+      step.systemEqIds.forEach(id => recordAttempt(id, false));
     } else {
-      recordAttempt(step.eqId, false, topicId);
+      recordAttempt(step.eqId, false);
     }
-    penalizeAncestors(step.fadedAncestorEqIds || [], topicId);
+    penalizeAncestors(step.fadedAncestorEqIds || []);
     setTimeout(() => inputEl.classList.remove("shake-trigger"), 400);
   }
 
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
-  renderMasteryBars(relations, id => getDecayedMastery(id, topicId));
+  renderMasteryBars(relations, eq => getDecayedMastery(eq));
   updateToggleAllButton(activeProblem);
 }
 
-function revealStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
+function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   const step = activeProblem.solution[idx];
   step.isAnswered = true;
   step.isRevealed = true;
@@ -224,16 +219,16 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations, topicId) {
   inputEl.disabled = true;
 
   if (step.systemEqIds) {
-    step.systemEqIds.forEach(id => recordAttempt(id, false, topicId));
+    step.systemEqIds.forEach(id => recordAttempt(id, false));
   } else {
-    recordAttempt(step.eqId, false, topicId);
+    recordAttempt(step.eqId, false);
   }
-  penalizeAncestors(step.fadedAncestorEqIds || [], topicId);
+  penalizeAncestors(step.fadedAncestorEqIds || []);
 
   document.getElementById(`step-item-${idx}`).classList.add("open");
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
-  renderMasteryBars(relations, id => getDecayedMastery(id, topicId));
+  renderMasteryBars(relations, eq => getDecayedMastery(eq));
   updateToggleAllButton(activeProblem);
 }
 
