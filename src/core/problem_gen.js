@@ -16,13 +16,13 @@
  *    givens represent the exact minimum parameters needed to reach the goal.
  * 3. Board-Exam Distractor Injection (phi(-4)):
  *    Injects variables not needed in the solution path based on phi(-4) (~14.6%).
- * 4. Polymorphic Variable & Symbol Randomization:
+ * 4. Memory Constants Mode (isConstant):
+ *    Automatically omits standard engineering constants (c_pw, etc.) from problem 
+ *    statements once student mastery reaches FADING_THRESHOLD (76.4%).
+ * 5. Polymorphic Variable & Symbol Randomization:
  *    Randomizes the human term name and symbol in the problem statement prompt
  *    to train student agility across board-exam synonym variations, while
  *    keeping algebraic derivations strictly anchored to canonical notation.
- * 5. The "Textbook Curation" Principle (Neat Givens):
- *    Rounds givens to clean numbers using fmtSigFig, then re-evaluates the
- *    downstream AST path so student answers match calculated values perfectly.
  * ============================================================================
  */
 
@@ -115,8 +115,6 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
 
   required.forEach(step => {
     (step.nodes || []).forEach(n => {
-      // If a variable is needed by a step, but never produced by any prior step,
-      // it is a root dependency that must be provided in the givens.
       if (n !== step.targetVar && !producedVars.has(n)) {
         essentialGivensSet.add(n);
       }
@@ -132,7 +130,6 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     const candidate = minimalGivens[i];
     const reducedSet = minimalGivens.filter(v => v !== candidate);
 
-    // If the goal is still 100% solvable without this given, it is mathematically redundant!
     if (canSolveTarget(reducedSet, goalVar, relations)) {
       minimalGivens = reducedSet;
     }
@@ -169,7 +166,6 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   S._displayNames = S._displayNames || {};
   S._displaySymbols = S._displaySymbols || {};
 
-  // Polymorphic Selection Helper: Pick a random human name and symbol from aliases
   function getPolymorphicMeta(v) {
     const meta = varsDb[v] || {};
     
@@ -269,9 +265,24 @@ export function generateProblem(topic, getMastery = () => 0) {
     }
   });
 
-  // Only active, non-faded steps appear in the "Determine: X, Y, and Z" prompt!
+  // ==========================================================================
+  // MEMORY CONSTANTS MODE (ISCONSTANT)
+  // If a given is flagged as `isConstant: true` and student mastery >= 76.4%,
+  // omit it from the problem statement text (board exam recall mode).
+  // ==========================================================================
+  const statementGivens = path.givens.filter(g => {
+    const meta = varsDb[g] || {};
+    if (meta.isConstant) {
+      const mastery = getMastery({ id: g });
+      if (mastery >= FADING_THRESHOLD) {
+        return false; // Omitted from problem statement text, student must recall it!
+      }
+    }
+    return true;
+  });
+
   const visibleGoals = solution.filter(s => !s.isFaded).map(s => s.targetVar);
-  const statement = buildProblemStatement(path.givens, visibleGoals, S_neat, varsDb, topic);
+  const statement = buildProblemStatement(statementGivens, visibleGoals, S_neat, varsDb, topic);
 
   return {
     title: problemTitle,
