@@ -1,0 +1,79 @@
+:root {
+  --bg: #141517;
+  --panel: #1a1b1e;
+  --card: #202124;
+  --border: #2e3035;
+  --border-subtle: #25262a;
+  --text: #e4e5e7;
+  --text-muted: #909296;
+  --text-dim: #606266;
+  --accent-math: #93c5fd;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --font-base: 0.95rem;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.75rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.header-actions { 
+  display: flex; 
+  gap: 0.4rem; 
+  align-items: center; 
+}
+
+.workspace {
+  display: block;
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+main {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2.25rem 1.5rem 3rem;
+  flex: 1;
+}
+
+.panel-view { display: none; }
+.panel-view.active { display: block; }
+.article-container { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.75rem; }
+
+@media (max-width: 768px) {
+  body { height: 100dvh; overflow-y: auto; }
+  header { padding: 0.5rem 0.75rem; flex-direction: column; gap: 0.5rem; align-items: stretch; }
+  .header-actions { justify-content: center; flex-wrap: wrap; gap: 0.35rem; }
+  main { padding: 1.25rem 0.75rem 3rem; }
+}
