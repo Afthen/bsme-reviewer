@@ -5,7 +5,7 @@
  */
 
 import { isolateVariable } from "../cas/algebra.js";
-import { FADING_THRESHOLD } from "../src/mastery/index.js";
+import { FADING_THRESHOLD } from "../mastery/index.js";
 
 export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery = () => 0) {
   const known = new Set(givensArray);
