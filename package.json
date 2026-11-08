@@ -1,0 +1,9 @@
+{
+  "name": "engineering-reviewer",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Graph-based engineering problem generator and mastery reviewer",
+  "scripts": {
+    "test": "node --test test/**/*.test.js"
+  }
+}
