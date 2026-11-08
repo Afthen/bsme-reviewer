@@ -1,7 +1,9 @@
 /**
  * src/core/unit_sampler.js
- * 40% SI / 40% US / 20% Mixed Unit Sampler with 50/50 dimensional variable split.
+ * 40% SI / 40% US / 20% Mixed Unit Sampler with phi(-3) Intra-System Unit Variation Trap.
  */
+
+import { phi } from "../mastery/index.js";
 
 export const DIMENSION_PALETTES = Object.freeze({
   SI: {
@@ -14,7 +16,7 @@ export const DIMENSION_PALETTES = Object.freeze({
     "Temperature": ["°C"]
   },
   US: {
-    "Length": ["in", "ft"],
+    "Length": ["in", "ft", "yd"],
     "Force": ["lb"],
     "Pressure / Stress": ["psi", "psf"],
     "Power": ["hp", "Btu/min"],
@@ -24,10 +26,6 @@ export const DIMENSION_PALETTES = Object.freeze({
   }
 });
 
-/**
- * Samples overall system mode:
- * 40% Pure SI, 40% Pure US, 20% Mixed
- */
 export function sampleSystemMode(requestedSys = null) {
   if (requestedSys === "SI" || requestedSys === "US" || requestedSys === "MIXED") {
     return requestedSys;
@@ -38,44 +36,40 @@ export function sampleSystemMode(requestedSys = null) {
   return "MIXED";
 }
 
-/**
- * Samples randomized units for a system:
- * In MIXED mode, guarantees an EXACT 50/50 split of dimensional variables between SI and US.
- */
 export function sampleUnitMap(varsDb = {}, forcedSys = null) {
   const mode = sampleSystemMode(forcedSys);
   const _u = {};
 
-  // Filter variables that possess a real physical dimension
   const dimensionalKeys = Object.keys(varsDb).filter(k => {
     const meta = varsDb[k] || {};
     return meta.dimension && meta.dimension !== "Dimensionless" && !meta.isAbstract;
   });
 
+  let siKeys = new Set();
+  let usKeys = new Set();
+
   if (mode === "MIXED") {
-    // Shuffle dimensional variables
     const shuffled = [...dimensionalKeys].sort(() => Math.random() - 0.5);
     const halfCount = Math.floor(shuffled.length / 2);
-    const siKeys = new Set(shuffled.slice(0, halfCount));
-    const usKeys = new Set(shuffled.slice(halfCount));
-
-    dimensionalKeys.forEach(k => {
-      const meta = varsDb[k] || {};
-      const targetSys = siKeys.has(k) ? "SI" : "US";
-      const palette = DIMENSION_PALETTES[targetSys][meta.dimension];
-      _u[k] = palette ? palette[Math.floor(Math.random() * palette.length)] : (meta.unit || "dimless");
-    });
-  } else {
-    // Pure SI or Pure US with sensible palette randomization
-    const sys = mode;
-    dimensionalKeys.forEach(k => {
-      const meta = varsDb[k] || {};
-      const palette = DIMENSION_PALETTES[sys]?.[meta.dimension];
-      _u[k] = palette ? palette[Math.floor(Math.random() * palette.length)] : (meta.unit || "dimless");
-    });
+    siKeys = new Set(shuffled.slice(0, halfCount));
+    usKeys = new Set(shuffled.slice(halfCount));
   }
 
-  // Dimensionless variables remain dimensionless
+  dimensionalKeys.forEach(k => {
+    const meta = varsDb[k] || {};
+    const targetSys = (mode === "MIXED") ? (siKeys.has(k) ? "SI" : "US") : mode;
+    const palette = DIMENSION_PALETTES[targetSys]?.[meta.dimension] || [meta.unit].filter(Boolean);
+    const defaultUnit = meta.unit || palette[0] || "dimless";
+
+    // INTRA-SYSTEM UNIT TRAP: phi(-3) (~23.6%) chance to trigger an alternative unit from the same system palette
+    if (palette.length > 1 && Math.random() < phi(-3)) {
+      const alternates = palette.filter(u => u !== defaultUnit);
+      _u[k] = alternates.length > 0 ? alternates[Math.floor(Math.random() * alternates.length)] : defaultUnit;
+    } else {
+      _u[k] = defaultUnit;
+    }
+  });
+
   Object.keys(varsDb).forEach(k => {
     if (!_u[k]) _u[k] = varsDb[k]?.unit || "dimless";
   });
