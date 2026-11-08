@@ -16,5 +16,10 @@ export const MIXED_AIR_VARS_DB = Object.freeze({
   "m_o": HVAC_BASE_VARS.m_o,
   "m_r": HVAC_BASE_VARS.m_r,
   "m_m": HVAC_BASE_VARS.m_m,
-  "q_c": HVAC_BASE_VARS.q_c
+  "q_c": HVAC_BASE_VARS.q_c,
+  "y":   HVAC_BASE_VARS.y,
+  "V_o": HVAC_BASE_VARS.V_o,
+  "v_o": HVAC_BASE_VARS.v_o,
+  "V_m": HVAC_BASE_VARS.V_m,
+  "v_m": HVAC_BASE_VARS.v_m
 });

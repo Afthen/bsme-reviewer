@@ -117,7 +117,7 @@ export const HVAC_BASE_VARS = Object.freeze({
     symbolAliases: ["v", "V_s"],
     aliases: ["Specific Volume of Moist Air", "Moist Air Specific Volume", "v"],
     dimension: DIMENSIONS.VOLUME,
-    unit: "m^3"
+    unit: "m^3/kg"
   },
 
   // --- Sensible & Latent Heat Ratios ---
@@ -158,17 +158,31 @@ export const HVAC_BASE_VARS = Object.freeze({
     unit: "kW"
   },
 
-  // --- Air Handling Stream Nodes (for compatibility) ---
+  // --- Air Handling Stream Nodes ---
   "t_o": { name: "Outside Air Temp", symbol: "t_o", dimension: DIMENSIONS.TEMPERATURE, unit: "°C", aliases: ["Outside Air Temperature", "Outdoor Air Temp", "Ambient Air Temp"] },
   "t_r": { name: "Return Air Temp", symbol: "t_r", dimension: DIMENSIONS.TEMPERATURE, unit: "°C", aliases: ["Return Air Temperature", "Room Air Temp", "Indoor Air Temp"] },
   "t_m": { name: "Mixed Air Temp", symbol: "t_m", dimension: DIMENSIONS.TEMPERATURE, unit: "°C", aliases: ["Mixed Air Temperature", "Entering Coil Temp", "Mixture Temp"] },
   "t_s": { name: "Supply Air Temp", symbol: "t_s", dimension: DIMENSIONS.TEMPERATURE, unit: "°C", aliases: ["Supply Air Temperature", "Leaving Coil Temp", "Conditioned Air Temp"] },
+  "t_rh": { name: "Reheated Air Temp", symbol: "t_{rh}", dimension: DIMENSIONS.TEMPERATURE, unit: "°C", aliases: ["Reheated Air Temperature", "Supply Air Temp after Reheater"] },
   "h_o": { name: "Outside Air Enthalpy", symbol: "h_o", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg", aliases: ["Outside Air Enthalpy", "Outdoor Enthalpy"] },
   "h_r": { name: "Return Air Enthalpy", symbol: "h_r", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg", aliases: ["Return Air Enthalpy", "Room Enthalpy"] },
   "h_m": { name: "Mixed Air Enthalpy", symbol: "h_m", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg", aliases: ["Mixed Air Enthalpy", "Entering Coil Enthalpy"] },
   "h_s": { name: "Supply Air Enthalpy", symbol: "h_s", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg", aliases: ["Supply Air Enthalpy", "Leaving Coil Enthalpy"] },
+  "h_rh": { name: "Reheated Air Enthalpy", symbol: "h_{rh}", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg", aliases: ["Reheated Air Enthalpy", "Supply Air Enthalpy after Reheater"] },
   "m_o": { name: "Outside Air Mass Flow", symbol: "\\dot{m}_o", dimension: DIMENSIONS.MASS_FLOW, unit: "kg/s", aliases: ["Outside Air Mass Flow", "Ventilation Air Rate"] },
   "m_r": { name: "Return Air Mass Flow", symbol: "\\dot{m}_r", dimension: DIMENSIONS.MASS_FLOW, unit: "kg/s", aliases: ["Return Air Mass Flow", "Recirculated Air Rate"] },
   "m_m": { name: "Mixed Air Mass Flow", symbol: "\\dot{m}_m", dimension: DIMENSIONS.MASS_FLOW, unit: "kg/s", aliases: ["Mixed Air Mass Flow", "Total Supply Air Rate"] },
-  "q_c": { name: "Cooling Coil Load", symbol: "q_c", dimension: DIMENSIONS.POWER, unit: "kW", aliases: ["Cooling Coil Load", "Coil Capacity", "Refrigerating Capacity"] }
+  "q_c": { name: "Cooling Coil Load", symbol: "q_c", dimension: DIMENSIONS.POWER, unit: "kW", aliases: ["Cooling Coil Load", "Coil Capacity", "Refrigerating Capacity"] },
+  "q_rh": { name: "Reheater Load", symbol: "q_{rh}", dimension: DIMENSIONS.POWER, unit: "kW", aliases: ["Reheater Heat Load", "Reheating Capacity"] },
+  
+  // --- Fan and Air Proportion Nodes ---
+  "y": { name: "Outside Air Fraction", symbol: "y", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", aliases: ["Outside Air Fraction", "Fresh Air Ratio", "Make-up Air Fraction"] },
+  "V_o": { name: "Outside Air Volume", symbol: "V_o", dimension: DIMENSIONS.VOLUME_FLOW, unit: "m^3/s", aliases: ["Outside Air Volume Flow", "Fresh Air Fan Capacity"] },
+  "V_m": { name: "Mixed Air Volume", symbol: "V_m", dimension: DIMENSIONS.VOLUME_FLOW, unit: "m^3/s", aliases: ["Mixed Air Volume Flow", "Entering Coil Volume Flow"] },
+  "V_s": { name: "Supply Air Volume", symbol: "V_s", dimension: DIMENSIONS.VOLUME_FLOW, unit: "m^3/s", aliases: ["Supply Air Volume Flow", "Supply Fan Capacity"] },
+  "V_r": { name: "Return Air Volume", symbol: "V_r", dimension: DIMENSIONS.VOLUME_FLOW, unit: "m^3/s", aliases: ["Return Air Volume Flow", "Return Fan Capacity"] },
+  "v_o": { name: "Outside Air Specific Volume", symbol: "v_o", dimension: DIMENSIONS.VOLUME, unit: "m^3/kg", aliases: ["Specific Volume of Outside Air"] },
+  "v_m": { name: "Mixed Air Specific Volume", symbol: "v_m", dimension: DIMENSIONS.VOLUME, unit: "m^3/kg", aliases: ["Specific Volume of Mixed Air"] },
+  "v_s": { name: "Supply Air Specific Volume", symbol: "v_s", dimension: DIMENSIONS.VOLUME, unit: "m^3/kg", aliases: ["Specific Volume of Supply Air"] },
+  "c_pa": { name: "Specific Heat of Air", symbol: "c_{pa}", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg-K", isConstant: true, aliases: ["Specific Heat of Air", "Air Specific Heat", "c_{pa}"] }
 });

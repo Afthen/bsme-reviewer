@@ -3,12 +3,6 @@
  * ============================================================================
  * ARCHITECTURAL PILLAR: Textbook-Grade Aligned Derivations
  * ============================================================================
- * 1. Smart Implication: Omits arrow if canonical formula is already isolated for target.
- * 2. Shared Unit Factoring: (23 + 69) \, \text{teeth} instead of clunky duplicates.
- * 3. 1:1 Drop-in Equivalence: kW directly renders as kJ/s without multiplier clutter.
- * 4. Localized Inline Factor-Labels: Multipliers placed directly adjacent to the variable.
- * 5. Boxed Final Answer: Repeats target symbol and encloses answer in \boxed{}.
- * ============================================================================
  */
 
 import { parseMathAST } from "../cas/ast.js";
@@ -103,7 +97,7 @@ export function buildAlignedDerivation(
   let unitTex = "";
   if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
     if (targetUnit === "deg" || targetUnit === "°") {
-      unitTex = "^\\circ";
+      unitTex = "°";
     } else if (targetUnit.includes("/")) {
       const [num, den] = targetUnit.split("/");
       unitTex = `\\,\\tfrac{\\text{${num}}}{\\text{${den}}}`;

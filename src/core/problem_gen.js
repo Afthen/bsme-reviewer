@@ -87,7 +87,6 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
   const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
   if (!usesTarget) return null;
 
-  // Phase 1: Leaf-Node Extraction
   const producedVars = new Set(required.map(s => s.targetVar));
   const essentialGivensSet = new Set();
 
@@ -99,7 +98,6 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     });
   });
 
-  // Phase 2: Variant-Aware Greedy Irreducibility Pruning
   let minimalGivens = Array.from(essentialGivensSet);
 
   for (let i = minimalGivens.length - 1; i >= 0; i--) {
@@ -111,7 +109,6 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     }
   }
 
-  // Phase 3: Distractor Selection (phi^-4 threshold: ~14.6%)
   const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
   minimalGivens.forEach(g => usedVars.add(g));
 
@@ -167,7 +164,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const formattedVal = fmtSigFig(val, 6);
     let valWithUnit = `$${formattedVal}$`;
     if (u && u !== "dimless" && u !== "ratio") {
-      valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}^\\circ$` : `$${formattedVal}\\text{ ${u}}$`;
+      valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}°$` : `$${formattedVal}\\text{ ${u}}$`;
     }
 
     return `${poly.name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${poly.symbol}$</span> = ${valWithUnit})</span>`;
@@ -179,7 +176,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
     let uStr = "";
     if (u && u !== "dimless" && u !== "ratio") {
-      uStr = (u === "deg" || u === "°") ? " in ^\\circ" : ` in $\\text{${u}}$`;
+      uStr = (u === "deg" || u === "°") ? " in °" : ` in $\\text{${u}}$`;
     }
 
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
@@ -203,7 +200,6 @@ export function generateProblem(topic, getMastery = () => 0) {
   const targetRel = relations.find(r => r.id === path.targetEqId);
   const problemTitle = targetRel ? targetRel.name : `${title} Design Problem`;
 
-  // --- TEXTBOOK NEATNESS PASS ---
   const S_neat = { ...S_raw };
   path.givens.forEach(g => {
     const val = S_raw[g];
@@ -237,17 +233,12 @@ export function generateProblem(topic, getMastery = () => 0) {
     }
   });
 
-  // ==========================================================================
-  // SEPARATE CONSTANTS MASTERY MODE (MEMORY RECALL)
-  // If a given is an engineering constant with separate `isConstant: true`,
-  // check its dedicated constant mastery. If >= 76.4%, omit from statement text.
-  // ==========================================================================
   const statementGivens = path.givens.filter(g => {
     const meta = varsDb[g] || CONSTANTS_DB[g] || {};
     if (meta.isConstant) {
       const constantMastery = getMastery({ id: `const_${g}` });
       if (constantMastery >= FADING_THRESHOLD) {
-        return false; // Memorized! Omit from problem statement.
+        return false;
       }
     }
     return true;

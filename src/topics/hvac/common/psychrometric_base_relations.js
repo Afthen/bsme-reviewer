@@ -89,7 +89,7 @@ export const PSYCHROMETRIC_BASE_RELATIONS = Object.freeze([
     canonicalTex: "v = \\frac{0.287 (t_{db} + 273.15)}{P_t - P_v}",
     baseFormula: "v = 0.287 * (t_db + 273.15) / (P_t - P_v)",
     nodes: ["v", "t_db", "P_t", "P_v"],
-    requiredUnits: { v: "m^3", t_db: "°C", P_t: "kPa", P_v: "kPa" }
+    requiredUnits: { v: "m^3/kg", t_db: "°C", P_t: "kPa", P_v: "kPa" }
   },
 
   // 10. Sensible Heat Ratio (SHR) - Pure Ratio

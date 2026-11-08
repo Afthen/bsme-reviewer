@@ -8,7 +8,6 @@ import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { fmtSigFig } from "../../core/dimensions.js";
 import { ATOMIC_BASE_UNITS, getUnitAtomBag, isDimEqual } from "./definitions.js";
 
-// ... (evalExprUnitAST remains unchanged)
 export function evalExprUnitAST(node, S, varsDb) {
   if (!node) return { factor: 1.0, atoms: [] };
   if (node.type === "num") return { factor: 1.0, atoms: [] };
@@ -111,7 +110,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     if (!uName || uName === "dimless" || uName === "ratio") continue;
 
     if (uName === "deg" || uName === "°") {
-      tokenMarkup[tok] = `^{\\circ}`;
+      tokenMarkup[tok] = `°`;
       continue;
     }
 
@@ -141,7 +140,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       const isCanceled = atomList.some(a => a.token === tok && a.atom === atomName && a.canceled);
       const expStr = Math.abs(p) > 1 ? `^{${Math.abs(p)}}` : "";
       
-      // KEY FIX: Resolve to exact LaTeX syntax from dictionary to avoid unescaped _ or bad \cdot
       const atomTex = ATOMIC_BASE_UNITS[atomName]?.tex || `\\text{${atomName}}`;
       return isCanceled ? `\\cancel{${atomTex}}${expStr}` : `${atomTex}${expStr}`;
     };
