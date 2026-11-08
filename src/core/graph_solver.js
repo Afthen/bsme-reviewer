@@ -5,7 +5,6 @@
  */
 
 import { isolateVariable } from "./cas.js";
-import { fmtSigFig } from "./dimensions.js";
 
 export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery = () => 0) {
   const known = new Set(givensArray);
@@ -19,7 +18,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
   while (keepPropagating) {
     keepPropagating = false;
 
-    // 1. Standard Sequential 1-Unknown Formula Propagation
+    // Standard Sequential 1-Unknown Formula Propagation
     for (const eq of sortedRelations) {
       if (usedEquations.has(eq.id)) continue;
 
@@ -40,7 +39,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
         const requiredUnits = activeVariant?.requiredUnits || eq.requiredUnits || null;
 
         const isolated = isolateVariable(baseFormula, targetVar, varsDb);
-        const expectedVal = S[targetVar] !== undefined ? S[targetVar] : S[targetVar.replace(/_/g, "")];
+        const expectedVal = S[targetVar];
 
         const parentIndices = inputVars.map(v => producedBy[v]).filter(idx => idx !== undefined);
         const ancestorSet = new Set();
@@ -77,63 +76,6 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
         usedEquations.add(eq.id);
         keepPropagating = true;
         break;
-      }
-    }
-
-    // 2. Systems of Equations Resolver (Coupled 2x2 Parallel Edges)
-    if (!keepPropagating) {
-      for (let i = 0; i < sortedRelations.length; i++) {
-        const eq1 = sortedRelations[i];
-        if (usedEquations.has(eq1.id)) continue;
-        const unk1 = eq1.nodes.filter(n => !known.has(n));
-        if (unk1.length !== 2) continue;
-
-        for (let j = i + 1; j < sortedRelations.length; j++) {
-          const eq2 = sortedRelations[j];
-          if (usedEquations.has(eq2.id)) continue;
-          const unk2 = eq2.nodes.filter(n => !known.has(n));
-          if (unk2.length !== 2) continue;
-
-          const sharedUnknowns = unk1.filter(u => unk2.includes(u));
-          if (sharedUnknowns.length === 2 && typeof nerdamer !== "undefined") {
-            const [varA, varB] = sharedUnknowns;
-            try {
-              const solObj = nerdamer.solveEquations([eq1.baseFormula, eq2.baseFormula], [varA, varB]);
-              if (solObj && solObj.length > 0) {
-                usedEquations.add(eq1.id);
-                usedEquations.add(eq2.id);
-
-                [varA, varB].forEach(targetVar => {
-                  const expectedVal = S[targetVar];
-                  const stepIdx = steps.length;
-                  steps.push({
-                    stepIdx,
-                    type: "system",
-                    systemEqIds: [eq1.id, eq2.id],
-                    targetVar,
-                    eqId: eq1.id,
-                    eqName: `${eq1.name} & ${eq2.name} (Simultaneous System)`,
-                    canonicalTex: `\\begin{cases} ${eq1.canonicalTex || eq1.baseFormula} \\\\[4pt] ${eq2.canonicalTex || eq2.baseFormula} \\end{cases}`,
-                    equationTex: `${targetVar} = ${fmtSigFig(expectedVal, 6)}`,
-                    rhsExpr: eq1.baseFormula,
-                    expectedVal,
-                    nodes: Array.from(new Set([...eq1.nodes, ...eq2.nodes])),
-                    parentIndices: [],
-                    ancestorIndices: [],
-                    isFaded: false
-                  });
-
-                  producedBy[targetVar] = stepIdx;
-                  known.add(targetVar);
-                });
-
-                keepPropagating = true;
-                break;
-              }
-            } catch (err) {}
-          }
-        }
-        if (keepPropagating) break;
       }
     }
   }
