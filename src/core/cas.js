@@ -1,39 +1,46 @@
 /**
  * src/core/cas.js
- * Universal Computer Algebra System (CAS) with True Atomic Unit-Bag Algebra.
- * Pure native AST implementation with zero external dependencies.
+ * Universal Computer Algebra System (CAS) with Recursive AST Inversion
+ * and True Atomic Unit-Bag Algebra.
+ * Pure native AST implementation with zero regex manipulation of math terms.
  */
 
-export function toCasToken(v) {
-  if (!v) return "";
-  return v.replace(/[^a-zA-Z0-9]/g, "");
+// ========================================================
+// 1. CANONICAL KEY & KEYWORD PROTECTION
+// ========================================================
+
+export const RESERVED_MATH_TOKENS = Object.freeze(new Set([
+  "pi", "e",
+  "sin", "cos", "tan", "asin", "acos", "atan",
+  "sqrt", "exp", "ln", "log", "abs"
+]));
+
+export function isReservedMathToken(token) {
+  return RESERVED_MATH_TOKENS.has(token);
 }
 
-export function fromCasToken(v) {
-  return v || "";
-}
-
+/**
+ * Strict canonical key resolver.
+ * Case-sensitive exact match first, then explicit alias match.
+ * Never performs case-insensitive guessing or underscore stripping.
+ */
 export function resolveCanonicalKey(token, varsDb = {}) {
   if (!token) return "";
-  const clean = fromCasToken(token);
-  if (varsDb[clean]) return clean;
+  if (isReservedMathToken(token)) return token;
   if (varsDb[token]) return token;
 
-  const normToken = clean.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-  for (const k of Object.keys(varsDb)) {
-    const normK = k.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-    if (normK === normToken) return k;
+  // Search explicit aliases in varsDb
+  for (const [key, meta] of Object.entries(varsDb)) {
+    if (meta.aliases && meta.aliases.includes(token)) {
+      return key;
+    }
   }
-  return clean;
-}
 
-export function sanitizeExpr(exprStr) {
-  if (!exprStr) return "";
-  return exprStr.replace(/([a-zA-Z]+)_(\w+)/g, "$1$2");
+  return token;
 }
 
 // ========================================================
-// 1. AST EXPRESSION PARSER & STRINGIFIER
+// 2. AST EXPRESSION PARSER & STRINGIFIER
 // ========================================================
 
 export function tokenizeExpr(str) {
@@ -45,7 +52,7 @@ export function tokenizeExpr(str) {
       i++;
       continue;
     }
-    if ("+-*/^()=".includes(ch)) {
+    if ("+-*/^()=,".includes(ch)) {
       tokens.push({ type: "op", val: ch });
       i++;
     } else if (/[0-9]/.test(ch) || (ch === "." && /[0-9]/.test(str[i + 1] || ""))) {
@@ -155,7 +162,10 @@ export function astToExprStr(node) {
   return "";
 }
 
-function getAstIdentifiers(node) {
+/**
+ * Collect all identifier tokens from an AST (pure tree walk, zero regex).
+ */
+export function getAstIdentifiers(node) {
   const ids = [];
   function walk(n) {
     if (!n) return;
@@ -169,22 +179,53 @@ function getAstIdentifiers(node) {
   return ids;
 }
 
-function flattenMultiplication(node) {
-  const factors = [];
-  function collect(n) {
-    if (!n) return;
-    if (n.type === "binary" && n.op === "*") {
-      collect(n.left);
-      collect(n.right);
-    } else {
-      factors.push(n);
+/**
+ * Checks whether an AST contains a given variable (pure tree walk, zero regex).
+ */
+export function astHasVariable(node, targetVar, varsDb = {}) {
+  if (!node) return false;
+  const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
+
+  function walk(n) {
+    if (!n) return false;
+    if (n.type === "id") {
+      return resolveCanonicalKey(n.name, varsDb) === canonicalTarget;
     }
+    if (n.type === "group") return walk(n.expr);
+    if (n.type === "call") return walk(n.arg);
+    if (n.type === "binary") return walk(n.left) || walk(n.right);
+    return false;
   }
-  collect(node);
-  return factors;
+
+  return walk(node);
 }
 
-function unwrapGroup(node) {
+/**
+ * Counts occurrences of a variable in an AST.
+ */
+export function countVariableOccurrences(node, targetVar, varsDb = {}) {
+  if (!node) return 0;
+  const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
+  let count = 0;
+
+  function walk(n) {
+    if (!n) return;
+    if (n.type === "id" && resolveCanonicalKey(n.name, varsDb) === canonicalTarget) {
+      count++;
+    }
+    if (n.type === "group") walk(n.expr);
+    if (n.type === "call") walk(n.arg);
+    if (n.type === "binary") {
+      walk(n.left);
+      walk(n.right);
+    }
+  }
+
+  walk(node);
+  return count;
+}
+
+export function unwrapGroup(node) {
   let n = node;
   while (n && n.type === "group") {
     n = n.expr;
@@ -192,181 +233,206 @@ function unwrapGroup(node) {
   return n;
 }
 
-export function astSubstitute(node, subsObj = {}) {
-  if (!node) return null;
+// ========================================================
+// 3. PURE AST EVALUATOR (GROUND TRUTH NUMERICAL VERIFICATION)
+// ========================================================
+
+/**
+ * Evaluates an AST numerically given a system S.
+ * Supports standard constants (pi, e) and trigonometric/exponential functions.
+ */
+export function evalAST(node, S = {}) {
+  if (!node) return NaN;
+
+  if (node.type === "num") {
+    return parseFloat(node.val);
+  }
+
   if (node.type === "id") {
-    const repl = subsObj[node.name] || subsObj[resolveCanonicalKey(node.name)];
-    if (repl !== undefined) {
-      const subAst = parseMathAST(repl);
-      return subAst ? { type: "group", expr: subAst } : node;
-    }
-    return node;
+    if (node.name === "pi") return Math.PI;
+    if (node.name === "e") return Math.E;
+    const val = S[node.name];
+    return typeof val === "number" ? val : NaN;
   }
+
   if (node.type === "group") {
-    return { type: "group", expr: astSubstitute(node.expr, subsObj) };
+    return evalAST(node.expr, S);
   }
+
   if (node.type === "call") {
-    return { type: "call", fn: node.fn, arg: astSubstitute(node.arg, subsObj) };
+    const argVal = evalAST(node.arg, S);
+    if (isNaN(argVal)) return NaN;
+
+    switch (node.fn) {
+      case "sin": return Math.sin(argVal);
+      case "cos": return Math.cos(argVal);
+      case "tan": return Math.tan(argVal);
+      case "asin": return Math.asin(argVal);
+      case "acos": return Math.acos(argVal);
+      case "atan": return Math.atan(argVal);
+      case "sqrt": return Math.sqrt(argVal);
+      case "exp": return Math.exp(argVal);
+      case "ln":
+      case "log": return Math.log(argVal);
+      case "abs": return Math.abs(argVal);
+      default: return NaN;
+    }
   }
+
   if (node.type === "binary") {
-    return {
-      type: "binary",
-      op: node.op,
-      left: astSubstitute(node.left, subsObj),
-      right: astSubstitute(node.right, subsObj)
-    };
+    const L = evalAST(node.left, S);
+    const R = evalAST(node.right, S);
+    if (isNaN(L) || isNaN(R)) return NaN;
+
+    switch (node.op) {
+      case "+": return L + R;
+      case "-": return L - R;
+      case "*": return L * R;
+      case "/": return R !== 0 ? L / R : NaN;
+      case "^": return Math.pow(L, R);
+      default: return NaN;
+    }
   }
-  return node;
-}
 
-export function substituteExpression(exprStr, subsObj = {}) {
-  if (!exprStr) return "";
-  const ast = parseMathAST(exprStr);
-  if (!ast) return exprStr;
-  const newAst = astSubstitute(ast, subsObj);
-  return astToExprStr(newAst);
-}
-
-export function simplifyExpression(exprStr) {
-  return exprStr || "";
+  return NaN;
 }
 
 // ========================================================
-// 2. ELEMENTARY ALGEBRAIC ISOLATION (HUMAN BALANCER)
+// 4. RECURSIVE AST INVERSION ENGINE ("ONION PEELER")
 // ========================================================
 
-function tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb = {}) {
-  const targetCanon = resolveCanonicalKey(targetVar, varsDb);
-  const lhsCanon = resolveCanonicalKey(rawLhs.trim(), varsDb);
+/**
+ * Inverts an equation AST step by step until the target variable is isolated.
+ * General for any tree where targetVar appears exactly once.
+ */
+function invertEquationAST(lhsNode, rhsNode, targetVar, varsDb = {}) {
+  const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
 
-  if (lhsCanon === targetCanon) {
-    return { isolatedRhs: rawRhs.trim(), success: true };
-  }
+  const leftCount = countVariableOccurrences(lhsNode, targetVar, varsDb);
+  const rightCount = countVariableOccurrences(rhsNode, targetVar, varsDb);
+  const totalCount = leftCount + rightCount;
 
-  const ast = parseMathAST(rawRhs);
-  if (!ast) return { success: false };
+  if (totalCount === 0) return { success: false, reason: "Target not in equation" };
+  if (totalCount > 1) return { success: false, reason: "Target appears multiple times (non-invertible)" };
 
-  // SHAPE 1, 3 & 4: FRACTIONS & RATIONAL SUMS (LHS = Num / Den)
-  if (ast.type === "binary" && ast.op === "/") {
-    const rawNum = unwrapGroup(ast.left);
-    const rawDen = unwrapGroup(ast.right);
+  let E = leftCount === 1 ? lhsNode : rhsNode;
+  let Y = leftCount === 1 ? rhsNode : lhsNode;
 
-    const numIds = getAstIdentifiers(rawNum);
-    const denIds = getAstIdentifiers(rawDen);
+  while (true) {
+    E = unwrapGroup(E);
 
-    const targetInNum = numIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
-    const targetInDen = denIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
+    // Terminal condition: E is the target variable
+    if (E.type === "id" && resolveCanonicalKey(E.name, varsDb) === canonicalTarget) {
+      return { success: true, isolatedAST: Y };
+    }
 
-    // Target only in Denominator (e.g. Q = 2*T2 / (T1 + T2))
-    if (targetInDen && !targetInNum) {
-      if (rawDen.type === "id") {
-        const numStr = astToExprStr(rawNum);
-        return { isolatedRhs: `(${numStr}) / (${rawLhs.trim()})`, success: true };
+    // Layer: Function call f(A) = Y
+    if (E.type === "call") {
+      const inner = E.arg;
+      switch (E.fn) {
+        case "sqrt":
+          Y = { type: "binary", op: "^", left: { type: "group", expr: Y }, right: { type: "num", val: "2" } };
+          break;
+        case "sin":
+          Y = { type: "call", fn: "asin", arg: Y };
+          break;
+        case "cos":
+          Y = { type: "call", fn: "acos", arg: Y };
+          break;
+        case "tan":
+          Y = { type: "call", fn: "atan", arg: Y };
+          break;
+        case "asin":
+          Y = { type: "call", fn: "sin", arg: Y };
+          break;
+        case "acos":
+          Y = { type: "call", fn: "cos", arg: Y };
+          break;
+        case "atan":
+          Y = { type: "call", fn: "tan", arg: Y };
+          break;
+        case "ln":
+        case "log":
+          Y = { type: "call", fn: "exp", arg: Y };
+          break;
+        case "exp":
+          Y = { type: "call", fn: "ln", arg: Y };
+          break;
+        default:
+          return { success: false, reason: `Unsupported inverse function: ${E.fn}` };
       }
+      E = inner;
+      continue;
+    }
 
-      if (rawDen.type === "binary" && (rawDen.op === "+" || rawDen.op === "-")) {
-        const leftIds = getAstIdentifiers(rawDen.left);
-        const rightIds = getAstIdentifiers(rawDen.right);
-        const targetInLeft = leftIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
-        const targetInRight = rightIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
-        const denTerm = `((${astToExprStr(rawNum)}) / (${rawLhs.trim()}))`;
+    // Layer: Binary operation (A op B) = Y
+    if (E.type === "binary") {
+      const targetInLeft = astHasVariable(E.left, targetVar, varsDb);
+      const targetInRight = astHasVariable(E.right, targetVar, varsDb);
 
-        if (rawDen.op === "+") {
-          if (targetInLeft) return { isolatedRhs: `${denTerm} - (${astToExprStr(rawDen.right)})`, success: true };
-          if (targetInRight) return { isolatedRhs: `${denTerm} - (${astToExprStr(rawDen.left)})`, success: true };
-        } else if (rawDen.op === "-") {
-          if (targetInLeft) return { isolatedRhs: `${denTerm} + (${astToExprStr(rawDen.right)})`, success: true };
-          if (targetInRight) return { isolatedRhs: `(${astToExprStr(rawDen.left)}) - ${denTerm}`, success: true };
+      if (targetInLeft && !targetInRight) {
+        // Target is in left branch (A op B = Y)
+        const B = E.right;
+        switch (E.op) {
+          case "+":
+            Y = { type: "binary", op: "-", left: Y, right: { type: "group", expr: B } };
+            break;
+          case "-":
+            Y = { type: "binary", op: "+", left: Y, right: { type: "group", expr: B } };
+            break;
+          case "*":
+            Y = { type: "binary", op: "/", left: { type: "group", expr: Y }, right: { type: "group", expr: B } };
+            break;
+          case "/":
+            Y = { type: "binary", op: "*", left: { type: "group", expr: Y }, right: { type: "group", expr: B } };
+            break;
+          case "^":
+            // A ^ n = Y => A = Y ^ (1 / n)
+            Y = {
+              type: "binary",
+              op: "^",
+              left: { type: "group", expr: Y },
+              right: {
+                type: "group",
+                expr: { type: "binary", op: "/", left: { type: "num", val: "1" }, right: { type: "group", expr: B } }
+              }
+            };
+            break;
+          default:
+            return { success: false, reason: `Unsupported binary operator: ${E.op}` };
         }
-      }
-
-      if (rawDen.type === "call") {
-        const fn = rawDen.fn;
-        const argId = rawDen.arg?.name;
-        if (resolveCanonicalKey(argId, varsDb) === targetCanon) {
-          const numStr = astToExprStr(rawNum);
-          const ratio = `(${numStr}) / (${rawLhs.trim()})`;
-          if (fn === "tan") return { isolatedRhs: `atan(${ratio})`, success: true };
-          if (fn === "cos") return { isolatedRhs: `acos(${ratio})`, success: true };
-          if (fn === "sin") return { isolatedRhs: `asin(${ratio})`, success: true };
+        E = E.left;
+        continue;
+      } else if (targetInRight && !targetInLeft) {
+        // Target is in right branch (A op B = Y)
+        const A = E.left;
+        switch (E.op) {
+          case "+":
+            // A + B = Y => B = Y - A
+            Y = { type: "binary", op: "-", left: Y, right: { type: "group", expr: A } };
+            break;
+          case "-":
+            // A - B = Y => B = A - Y
+            Y = { type: "binary", op: "-", left: { type: "group", expr: A }, right: { type: "group", expr: Y } };
+            break;
+          case "*":
+            // A * B = Y => B = Y / A
+            Y = { type: "binary", op: "/", left: { type: "group", expr: Y }, right: { type: "group", expr: A } };
+            break;
+          case "/":
+            // A / B = Y => B = A / Y
+            Y = { type: "binary", op: "/", left: { type: "group", expr: A }, right: { type: "group", expr: Y } };
+            break;
+          default:
+            return { success: false, reason: `Unsupported binary operator in right branch: ${E.op}` };
         }
+        E = E.right;
+        continue;
       }
     }
 
-    // Target only in Numerator (e.g. C = (T1 + T2) / (2*Pd))
-    if (targetInNum && !targetInDen) {
-      if (rawNum.type === "id") {
-        const denStr = astToExprStr(rawDen);
-        return { isolatedRhs: `${rawLhs.trim()} * ${denStr}`, success: true };
-      }
-
-      if (rawNum.type === "binary" && (rawNum.op === "+" || rawNum.op === "-")) {
-        const leftIds = getAstIdentifiers(rawNum.left);
-        const rightIds = getAstIdentifiers(rawNum.right);
-        const targetInLeft = leftIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
-        const targetInRight = rightIds.some(id => resolveCanonicalKey(id, varsDb) === targetCanon);
-        const numTerm = `((${rawLhs.trim()}) * (${astToExprStr(rawDen)}))`;
-
-        if (rawNum.op === "+") {
-          if (targetInLeft) return { isolatedRhs: `${numTerm} - (${astToExprStr(rawNum.right)})`, success: true };
-          if (targetInRight) return { isolatedRhs: `${numTerm} - (${astToExprStr(rawNum.left)})`, success: true };
-        } else if (rawNum.op === "-") {
-          if (targetInLeft) return { isolatedRhs: `${numTerm} + (${astToExprStr(rawNum.right)})`, success: true };
-          if (targetInRight) return { isolatedRhs: `(${astToExprStr(rawNum.left)}) - ${numTerm}`, success: true };
-        }
-      }
-    }
+    return { success: false, reason: "Unhandled AST node type" };
   }
-
-  // SHAPE 1: MULTIPLICATION (LHS = A * B * C...)
-  if (ast.type === "binary" && ast.op === "*") {
-    const factors = flattenMultiplication(ast);
-    const targetIdx = factors.findIndex(f => f.type === "id" && resolveCanonicalKey(f.name, varsDb) === targetCanon);
-
-    if (targetIdx !== -1) {
-      const otherFactors = factors.filter((_, i) => i !== targetIdx);
-      const otherStr = otherFactors.map(f => astToExprStr(f)).join(" * ");
-      return { isolatedRhs: `(${rawLhs.trim()}) / (${otherStr})`, success: true };
-    }
-
-    const trigIdx = factors.findIndex(f => f.type === "call" && ["sin", "cos", "tan"].includes(f.fn) && f.arg?.type === "id" && resolveCanonicalKey(f.arg.name, varsDb) === targetCanon);
-    if (trigIdx !== -1) {
-      const trigNode = factors[trigIdx];
-      const otherFactors = factors.filter((_, i) => i !== trigIdx);
-      const otherStr = otherFactors.length > 0 ? otherFactors.map(f => astToExprStr(f)).join(" * ") : "1";
-      const ratio = `(${rawLhs.trim()}) / (${otherStr})`;
-      if (trigNode.fn === "tan") return { isolatedRhs: `atan(${ratio})`, success: true };
-      if (trigNode.fn === "cos") return { isolatedRhs: `acos(${ratio})`, success: true };
-      if (trigNode.fn === "sin") return { isolatedRhs: `asin(${ratio})`, success: true };
-    }
-  }
-
-  // SHAPE 2: LINEAR SUM & DIFFERENCE (LHS = A + B or A - B)
-  if (ast.type === "binary" && ast.op === "+") {
-    if (ast.left.type === "id" && resolveCanonicalKey(ast.left.name, varsDb) === targetCanon) {
-      return { isolatedRhs: `(${rawLhs.trim()}) - (${astToExprStr(ast.right)})`, success: true };
-    }
-    if (ast.right.type === "id" && resolveCanonicalKey(ast.right.name, varsDb) === targetCanon) {
-      return { isolatedRhs: `(${rawLhs.trim()}) - (${astToExprStr(ast.left)})`, success: true };
-    }
-  }
-  if (ast.type === "binary" && ast.op === "-") {
-    if (ast.left.type === "id" && resolveCanonicalKey(ast.left.name, varsDb) === targetCanon) {
-      return { isolatedRhs: `(${rawLhs.trim()}) + (${astToExprStr(ast.right)})`, success: true };
-    }
-    if (ast.right.type === "id" && resolveCanonicalKey(ast.right.name, varsDb) === targetCanon) {
-      return { isolatedRhs: `(${astToExprStr(ast.left)}) - (${rawLhs.trim()})`, success: true };
-    }
-  }
-
-  // SHAPE 5: SQUARE ROOT (LHS = sqrt(A))
-  if (ast.type === "call" && ast.fn === "sqrt") {
-    if (ast.arg?.type === "id" && resolveCanonicalKey(ast.arg.name, varsDb) === targetCanon) {
-      return { isolatedRhs: `(${rawLhs.trim()})^2`, success: true };
-    }
-  }
-
-  return { success: false };
 }
 
 export function isolateVariable(eqStr, targetVar, varsDb = {}) {
@@ -378,26 +444,96 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   const targetMeta = varsDb[canonicalTarget] || varsDb[targetVar] || {};
   const targetTex = targetMeta.symbol || targetVar;
 
-  const elem = tryElementaryIsolate(rawLhs, rawRhs, targetVar, varsDb);
-  if (elem.success) {
-    const texRight = casToTex(elem.isolatedRhs, varsDb);
+  const lhsAst = parseMathAST(rawLhs);
+  const rhsAst = parseMathAST(rawRhs);
+
+  if (!lhsAst || !rhsAst) {
     return {
       targetVar,
-      isolatedRhs: elem.isolatedRhs,
-      texEquation: `${targetTex} = ${texRight}`
+      isolatedRhs: rawRhs,
+      texEquation: `${targetTex} = ${casToTex(rawRhs, varsDb)}`,
+      success: false
+    };
+  }
+
+  const result = invertEquationAST(lhsAst, rhsAst, targetVar, varsDb);
+
+  if (result.success && result.isolatedAST) {
+    const isolatedExpr = astToExprStr(result.isolatedAST);
+    const texRight = astToLatex(result.isolatedAST, null, varsDb);
+    return {
+      targetVar,
+      isolatedRhs: isolatedExpr,
+      isolatedAST: result.isolatedAST,
+      texEquation: `${targetTex} = ${texRight}`,
+      success: true
+    };
+  }
+
+  // Fallback if already isolated
+  const lhsCanon = resolveCanonicalKey(rawLhs, varsDb);
+  if (lhsCanon === canonicalTarget) {
+    return {
+      targetVar,
+      isolatedRhs: rawRhs,
+      isolatedAST: rhsAst,
+      texEquation: `${targetTex} = ${casToTex(rawRhs, varsDb)}`,
+      success: true
     };
   }
 
   return {
     targetVar,
     isolatedRhs: rawRhs,
-    texEquation: `${targetTex} = ${casToTex(rawRhs, varsDb)}`
+    isolatedAST: rhsAst,
+    texEquation: `${targetTex} = ${casToTex(rawRhs, varsDb)}`,
+    success: false
   };
 }
 
 // ========================================================
-// 3. PURE AST TO LATEX CONVERTER (ZERO NERDAMER)
+// 5. AST SUBSTITUTION & LATEX FORMATTER
 // ========================================================
+
+export function astSubstitute(node, subsObj = {}, varsDb = {}) {
+  if (!node) return null;
+  if (node.type === "id") {
+    const canonicalKey = resolveCanonicalKey(node.name, varsDb);
+    const repl = subsObj[node.name] || subsObj[canonicalKey];
+    if (repl !== undefined) {
+      const subAst = parseMathAST(repl);
+      return subAst ? { type: "group", expr: subAst } : node;
+    }
+    return node;
+  }
+  if (node.type === "group") {
+    return { type: "group", expr: astSubstitute(node.expr, subsObj, varsDb) };
+  }
+  if (node.type === "call") {
+    return { type: "call", fn: node.fn, arg: astSubstitute(node.arg, subsObj, varsDb) };
+  }
+  if (node.type === "binary") {
+    return {
+      type: "binary",
+      op: node.op,
+      left: astSubstitute(node.left, subsObj, varsDb),
+      right: astSubstitute(node.right, subsObj, varsDb)
+    };
+  }
+  return node;
+}
+
+export function substituteExpression(exprStr, subsObj = {}, varsDb = {}) {
+  if (!exprStr) return "";
+  const ast = parseMathAST(exprStr);
+  if (!ast) return exprStr;
+  const newAst = astSubstitute(ast, subsObj, varsDb);
+  return astToExprStr(newAst);
+}
+
+export function simplifyExpression(exprStr) {
+  return exprStr || "";
+}
 
 function toLatexSymbol(name, varsDb = {}) {
   const canonical = resolveCanonicalKey(name, varsDb);
@@ -496,6 +632,9 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
     if (node.fn === "tan") return `\\tan(${inner})`;
     if (node.fn === "atan") return `\\tan^{-1}\\left(${inner}\\right)`;
     if (node.fn === "acos") return `\\cos^{-1}\\left(${inner}\\right)`;
+    if (node.fn === "asin") return `\\sin^{-1}\\left(${inner}\\right)`;
+    if (node.fn === "exp") return `e^{${inner}}`;
+    if (node.fn === "ln") return `\\ln\\left(${inner}\\right)`;
     return `\\text{${node.fn}}\\left(${inner}\\right)`;
   }
 
@@ -545,7 +684,7 @@ export function casToTex(exprStr, varsDb = {}) {
 }
 
 // ========================================================
-// 4. ATOMIC BASE UNIT & COMPOUND UNIT REGISTRY (DATA-DRIVEN)
+// 6. ATOMIC BASE UNIT & COMPOUND UNIT REGISTRY (DATA-DRIVEN)
 // ========================================================
 
 export const BASE_DIMENSIONS = Object.freeze({
@@ -588,39 +727,48 @@ export const ATOMIC_BASE_UNITS = Object.freeze({
 });
 
 export const COMPOUND_UNITS = Object.freeze({
-  psi:      { atoms: { lb: 1, in: -2 }, displayTex: "\\text{psi}" },
-  MPa:      { atoms: { N: 1, mm: -2 }, displayTex: "\\text{MPa}" },
-  Pa:       { atoms: { N: 1, m: -2 }, displayTex: "\\text{Pa}" },
-  kPa:      { atoms: { kN: 1, m: -2 }, displayTex: "\\text{kPa}" },
-  bar:      { factor: 100000, atoms: { N: 1, m: -2 }, displayTex: "\\text{bar}" },
+  psi:        { atoms: { lb: 1, in: -2 }, displayTex: "\\text{psi}" },
+  MPa:        { atoms: { N: 1, mm: -2 }, displayTex: "\\text{MPa}" },
+  Pa:         { atoms: { N: 1, m: -2 }, displayTex: "\\text{Pa}" },
+  kPa:        { factor: 1000, atoms: { N: 1, m: -2 }, displayTex: "\\text{kPa}" },
+  bar:        { factor: 100000, atoms: { N: 1, m: -2 }, displayTex: "\\text{bar}" },
 
-  "N-m":    { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
-  "N*m":    { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
-  "kN-m":   { atoms: { kN: 1, m: 1 }, displayTex: "\\text{kN}\\cdot\\text{m}" },
-  "lb-in":  { atoms: { lb: 1, in: 1 }, displayTex: "\\text{lb}\\cdot\\text{in}" },
-  "lb-ft":  { atoms: { lb: 1, ft: 1 }, displayTex: "\\text{lb}\\cdot\\text{ft}" },
-  J:        { atoms: { N: 1, m: 1 }, displayTex: "\\text{J}" },
-  kJ:       { factor: 1000, atoms: { N: 1, m: 1 }, displayTex: "\\text{kJ}" },
+  "N-m":      { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
+  "N*m":      { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
+  "kN-m":     { atoms: { kN: 1, m: 1 }, displayTex: "\\text{kN}\\cdot\\text{m}" },
+  "lb-in":    { atoms: { lb: 1, in: 1 }, displayTex: "\\text{lb}\\cdot\\text{in}" },
+  "lb-ft":    { atoms: { lb: 1, ft: 1 }, displayTex: "\\text{lb}\\cdot\\text{ft}" },
+  J:          { atoms: { N: 1, m: 1 }, displayTex: "\\text{J}" },
+  kJ:         { factor: 1000, atoms: { N: 1, m: 1 }, displayTex: "\\text{kJ}" },
 
-  W:        { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{W}" },
-  kW:       { factor: 1000, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{kW}" },
-  MW:       { factor: 1e6, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{MW}" },
-  hp:       { factor: 33000, atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\text{hp}" },
+  W:          { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{W}" },
+  kW:         { factor: 1000, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{kW}" },
+  MW:         { factor: 1e6, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{MW}" },
+  hp:         { factor: 33000, atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\text{hp}" },
 
-  "m/s":    { atoms: { m: 1, s: -1 }, displayTex: "\\frac{\\text{m}}{\\text{s}}" },
-  "ft/min": { atoms: { ft: 1, min: -1 }, displayTex: "\\frac{\\text{ft}}{\\text{min}}" },
+  kWh:        { factor: 3.6e6, atoms: { N: 1, m: 1 }, displayTex: "\\text{kWh}" },
+  "kg/kWh":   { factor: 1 / 3.6e6, atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{kWh}}" },
+  "g/kWh":    { factor: 0.001 / 3.6e6, atoms: { g: 1, N: -1, m: -1 }, displayTex: "\\frac{\\text{g}}{\\text{kWh}}" },
+
+  "m/s":      { atoms: { m: 1, s: -1 }, displayTex: "\\frac{\\text{m}}{\\text{s}}" },
+  "ft/min":   { atoms: { ft: 1, min: -1 }, displayTex: "\\frac{\\text{ft}}{\\text{min}}" },
 
   "teeth/in": { atoms: { teeth: 1, in: -1 }, displayTex: "\\frac{\\text{teeth}}{\\text{in}}" },
-  rpm:      { atoms: { min: -1 }, displayTex: "\\text{rpm}" },
-  "rev/min":{ atoms: { rev: 1, min: -1 }, displayTex: "\\frac{\\text{rev}}{\\text{min}}" },
+  rpm:        { atoms: { min: -1 }, displayTex: "\\text{rpm}" },
+  "rev/min":  { atoms: { rev: 1, min: -1 }, displayTex: "\\frac{\\text{rev}}{\\text{min}}" },
 
-  "kg/s":   { atoms: { kg: 1, s: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{s}}" },
-  "kg/h":   { atoms: { kg: 1, h: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{h}}" },
-  "kJ/kg":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1 }, displayTex: "\\frac{\\text{kJ}}{\\text{kg}}" },
-  "m^3":    { atoms: { m: 3 }, displayTex: "\\text{m}^3" },
-  L:        { factor: 0.001, atoms: { m: 3 }, displayTex: "\\text{L}" },
-  "m^3/s":  { atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{m}^3}{\\text{s}}" },
-  "L/s":    { factor: 0.001, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{s}}" }
+  "kg/s":     { atoms: { kg: 1, s: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{s}}" },
+  "kg/h":     { atoms: { kg: 1, h: -1 }, displayTex: "\\frac{\\text{kg}}{\\text{h}}" },
+  "kJ/kg":    { factor: 1000, atoms: { N: 1, m: 1, kg: -1 }, displayTex: "\\frac{\\text{kJ}}{\\text{kg}}" },
+  "kJ/(kg*K)":{ factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\frac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
+  "kJ/kg-K":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\frac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
+
+  "m^3":      { atoms: { m: 3 }, displayTex: "\\text{m}^3" },
+  L:          { factor: 0.001, atoms: { m: 3 }, displayTex: "\\text{L}" },
+  "m^3/s":    { atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{m}^3}{\\text{s}}" },
+  "m^3/h":    { factor: 1 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{m}^3}{\\text{h}}" },
+  "L/s":      { factor: 0.001, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{s}}" },
+  "L/h":      { factor: 0.001 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{h}}" }
 });
 
 export function getUnitAtomBag(uName) {
@@ -657,7 +805,8 @@ export function getUnitAtomBag(uName) {
     };
   }
 
-  return { factor: 1.0, atoms: {}, dimMap: {}, scale: 1.0, isDimensionless: true };
+  // Flag as un-registered unit for validator alerting
+  return { factor: 1.0, atoms: {}, dimMap: {}, scale: 1.0, isDimensionless: false, isUnknown: true, rawUnit: uName };
 }
 
 export function isDimEqual(aMap, bMap) {
@@ -669,7 +818,7 @@ export function isDimEqual(aMap, bMap) {
 }
 
 // ========================================================
-// 5. AST ATOMIC UNIT COLLECTOR & CANCELLATION ENGINE
+// 7. AST ATOMIC UNIT COLLECTOR & CANCELLATION ENGINE
 // ========================================================
 
 function evalExprUnitAST(node, S, varsDb) {
@@ -756,9 +905,9 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
   // A. EMPIRICAL EQUATIONS (Option B Pre-Conditioning Contract)
   // ========================================================
   if (requiredUnits && typeof requiredUnits === "object") {
-    const tokens = exprStr.match(/[a-zA-Z][a-zA-Z0-9_]*/g) || [];
-    const mathConstants = new Set(["pi", "sin", "cos", "tan", "sqrt", "abs", "atan", "acos", "asin"]);
-    const varTokens = Array.from(new Set(tokens.filter(t => !mathConstants.has(t))));
+    // Pure AST identifier extraction (zero regex)
+    const allTokens = getAstIdentifiers(ast);
+    const varTokens = Array.from(new Set(allTokens.filter(t => !isReservedMathToken(t))));
 
     varTokens.forEach(tok => {
       const canonicalKey = resolveCanonicalKey(tok, varsDb);
@@ -810,7 +959,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
   const targetWantsTeeth = (targetBag.atoms["teeth"] || 0) > 0;
   const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false, preserved: false }));
 
-  // PASS 1: Direct Identical Atom Cancellation (Opposite Powers)
+  // PASS 1: Direct Identical Atom Cancellation
   for (let i = 0; i < atomList.length; i++) {
     for (let j = i + 1; j < atomList.length; j++) {
       const a1 = atomList[i];
@@ -836,7 +985,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
     }
   });
 
-  // PASS 3: Internal Same-Dimension Clash (e.g. Length in Numerator vs Length in Denominator)
+  // PASS 3: Internal Same-Dimension Clash
   const remainingAtoms = atomList.filter(a => !a.canceled && !a.preserved);
   const dimsPresent = Array.from(new Set(remainingAtoms.map(a => a.dim)));
 
@@ -863,7 +1012,7 @@ export function solveUnitAlgebra(exprStr, S, targetVar, targetUnit, varsDb = {},
     }
   });
 
-  // PASS 4: Target Unit Reconciliation (Expr Atoms vs Target Atoms)
+  // PASS 4: Target Unit Reconciliation
   const netExprDims = {};
   let netExprScale = exprAnalysis.factor;
 
