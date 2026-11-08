@@ -1,82 +1,169 @@
 /**
  * src/ui/carousel_view.js
- * Flashcard carousel with dynamic AST variable isolation and graph-aware educational tooltips.
+ * Flashcard carousel with dynamic AST variable isolation,
+ * interactive variable click navigation, and clean educational tooltips.
  */
 
 import { isolateVariable } from "../cas/algebra.js";
 import { casToTex } from "../cas/latex.js";
 
-export function renderCarouselPills(containerEl, relations, varsDb, onSelectRelation) {
-  if (!containerEl) return;
-  containerEl.innerHTML = "";
+/**
+ * Filters raw schema aliases to only human descriptive synonyms.
+ * Strips out code keys, LaTeX commands, technical symbols, and the currently used name.
+ */
+function getCleanHumanAliases(meta = {}, varKey = "", primaryName = "") {
+  const all = meta.aliases || [];
+  const primaryLower = (primaryName || "").trim().toLowerCase();
+  const keyLower = (varKey || "").trim().toLowerCase();
+  const symAlpha = (meta.symbol || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 
-  relations.forEach((rel, idx) => {
-    const pill = document.createElement("button");
-    pill.className = `carousel-pill ${idx === 0 ? "active" : ""}`;
-    pill.dataset.relId = rel.id;
-    pill.textContent = rel.name || `Equation ${idx + 1}`;
+  const seen = new Set();
+  const result = [];
 
-    pill.addEventListener("click", () => {
-      containerEl.querySelectorAll(".carousel-pill").forEach(p => p.classList.remove("active"));
-      pill.classList.add("active");
-      if (typeof onSelectRelation === "function") {
-        onSelectRelation(rel);
-      }
-    });
+  for (const alias of all) {
+    if (!alias) continue;
+    const aTrim = alias.trim();
+    const aLower = aTrim.toLowerCase();
 
-    containerEl.appendChild(pill);
-  });
-}
+    // 1. Skip if it matches the name already shown at the top of the tooltip
+    if (aLower === primaryLower) continue;
 
-export function renderCarouselCard(cardEl, rel, varsDb, activeTarget = null, S = null) {
-  if (!cardEl || !rel) return;
+    // 2. Skip LaTeX commands e.g. \phi, \psi
+    if (aTrim.startsWith("\\")) continue;
 
-  const allowableTargets = rel.solvable || rel.nodes;
-  const target = activeTarget || allowableTargets[0];
-  const activeVariant = (rel.variants && S && S.sys && rel.variants[S.sys]) ? rel.variants[S.sys] : null;
-  const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
+    // 3. Skip variable keys or raw symbol representations e.g. phi, Q, D_1, W_t, D_p
+    if (aLower === keyLower) continue;
+    if (aTrim === meta.symbol) continue;
+    const aAlpha = aTrim.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    if (aAlpha === keyLower || aAlpha === symAlpha) continue;
 
-  const isolated = isolateVariable(baseFormula, target, varsDb);
-  const targetMeta = varsDb[target] || {};
-  const targetSymbol = targetMeta.symbol || target;
+    // 4. Skip short technical abbreviations (<= 3 chars without spaces, e.g. "Q", "SR", "N_p")
+    if (aTrim.length <= 3 && !aTrim.includes(" ")) continue;
 
-  const targetSelectorHtml = allowableTargets.map(tVar => {
-    const sym = varsDb[tVar]?.symbol || tVar;
-    const isAct = tVar === target;
-    return `<button class="carousel-var-pill ${isAct ? 'active' : ''}" data-target="${tVar}">$${sym}$</button>`;
-  }).join(" ");
-
-  cardEl.innerHTML = `
-    <div class="carousel-card-title">${rel.name}</div>
-    <div class="carousel-targets-row">
-      <span class="carousel-targets-label">Solve for:</span>
-      ${targetSelectorHtml}
-    </div>
-    <div class="carousel-equation-display" id="carouselEqDisplay">
-      $$${targetSymbol} = ${casToTex(isolated.isolatedRhs, varsDb)}$$
-    </div>
-  `;
-
-  if (window.renderMathInElement) {
-    window.renderMathInElement(cardEl, {
-      delimiters: [
-        { left: "$$", right: "$$", display: true },
-        { left: "$", right: "$", display: false }
-      ]
-    });
+    if (!seen.has(aLower)) {
+      seen.add(aLower);
+      result.push(aTrim);
+    }
   }
 
-  cardEl.querySelectorAll(".carousel-var-pill").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const newTarget = btn.dataset.target;
-      renderCarouselCard(cardEl, rel, varsDb, newTarget, S);
-    });
-  });
+  return result;
 }
 
 /**
- * Attaches graph-aware educational tooltips to all interactive variables across the problem.
- * Discovers the relevant formula from the active problem's solution graph and orders aliases.
+ * Controller to open and display the interactive carousel flashcard for a clicked variable.
+ */
+export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S = {}) {
+  const matchingRels = relations.filter(r => r.nodes && r.nodes.includes(varKey));
+  if (matchingRels.length === 0) return;
+
+  const problemView = document.getElementById("view-problem");
+  const carouselView = document.getElementById("view-carousel");
+  if (!problemView || !carouselView) return;
+
+  problemView.classList.remove("active");
+  carouselView.classList.add("active");
+
+  let currentRelIdx = 0;
+  let activeTarget = varKey;
+
+  const varTitleEl = document.getElementById("c-var-title");
+  const counterEl = document.getElementById("c-counter");
+  const dimEl = document.getElementById("c-dimension");
+  const formulaEl = document.getElementById("c-formula");
+  const notesEl = document.getElementById("c-notes");
+  const varsContainerEl = document.getElementById("c-vars-container");
+  const prevBtn = document.getElementById("c-prev");
+  const nextBtn = document.getElementById("c-next");
+  const dotsEl = document.getElementById("c-dots");
+
+  function renderCard() {
+    const rel = matchingRels[currentRelIdx];
+    const meta = varsDb[activeTarget] || {};
+    const allowableTargets = rel.solvable || rel.nodes;
+
+    if (varTitleEl) {
+      varTitleEl.innerHTML = `${meta.name || activeTarget} &nbsp;<span style="color: var(--accent-math)">$${meta.symbol || activeTarget}$</span>`;
+    }
+
+    if (counterEl) {
+      counterEl.textContent = `${currentRelIdx + 1} / ${matchingRels.length}`;
+    }
+
+    if (dimEl) {
+      const u = S._u?.[activeTarget] || meta.unit || "";
+      dimEl.textContent = `${meta.dimension || "Dimensionless"}${u ? ` (${u})` : ""}`;
+    }
+
+    if (notesEl) {
+      notesEl.textContent = rel.name || "";
+    }
+
+    // Isolate activeTarget in the current relation
+    const activeVariant = (rel.variants && S && S.sys && rel.variants[S.sys]) ? rel.variants[S.sys] : null;
+    const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
+    const isolated = isolateVariable(baseFormula, activeTarget, varsDb);
+    const targetSymbol = meta.symbol || activeTarget;
+
+    if (formulaEl) {
+      formulaEl.innerHTML = `$$${targetSymbol} = ${casToTex(isolated.isolatedRhs, varsDb)}$$`;
+    }
+
+    // Build rearrange pills for all variables in this equation
+    if (varsContainerEl) {
+      varsContainerEl.innerHTML = allowableTargets.map(tVar => {
+        const tMeta = varsDb[tVar] || {};
+        const isAct = tVar === activeTarget;
+        return `<button class="var-pill ${isAct ? 'active' : ''}" data-target="${tVar}">$${tMeta.symbol || tVar}$</button>`;
+      }).join(" ");
+
+      varsContainerEl.querySelectorAll(".var-pill").forEach(btn => {
+        btn.addEventListener("click", () => {
+          activeTarget = btn.dataset.target;
+          renderCard();
+        });
+      });
+    }
+
+    // Build navigation dots
+    if (dotsEl) {
+      dotsEl.innerHTML = matchingRels.map((_, i) => `<span class="dot ${i === currentRelIdx ? 'active' : ''}"></span>`).join("");
+    }
+
+    if (window.renderMathInElement) {
+      window.renderMathInElement(carouselView, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ]
+      });
+    }
+  }
+
+  if (prevBtn) {
+    prevBtn.onclick = () => {
+      currentRelIdx = (currentRelIdx - 1 + matchingRels.length) % matchingRels.length;
+      const rel = matchingRels[currentRelIdx];
+      if (rel.nodes.includes(varKey)) activeTarget = varKey;
+      else activeTarget = rel.nodes[0];
+      renderCard();
+    };
+  }
+
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      currentRelIdx = (currentRelIdx + 1) % matchingRels.length;
+      const rel = matchingRels[currentRelIdx];
+      if (rel.nodes.includes(varKey)) activeTarget = varKey;
+      else activeTarget = rel.nodes[0];
+      renderCard();
+    };
+  }
+
+  renderCard();
+}
+
+/**
+ * Attaches hover tooltips and variable click navigation to .interactive-var tokens.
  */
 export function attachTooltips(problemOrSystem, maybeSolution, maybeVarsDb, maybeRelations) {
   const tooltip = document.getElementById("tooltip");
@@ -111,57 +198,44 @@ export function attachTooltips(problemOrSystem, maybeSolution, maybeVarsDb, mayb
     const unit = S._u?.[varKey] || meta.unit || "";
     const unitStr = (unit && unit !== "dimless" && unit !== "ratio") ? ` (${unit})` : "";
 
-    // 1. Dynamic Graph-Aware Formula Discovery
+    // 1. Dynamic Graph-Aware Formula Discovery (from this specific problem)
     let relFormulaTex = "";
-    let relEqName = "";
 
-    // Check A: Is varKey solved in a solution step?
     const targetStep = solution.find(s => s.targetVar === varKey);
     if (targetStep) {
       relFormulaTex = targetStep.canonicalTex || (targetStep.baseFormula ? casToTex(targetStep.baseFormula, varsDb) : "");
-      relEqName = targetStep.eqName || "";
     } else {
-      // Check B: Is varKey an input to a solution step in this problem?
       const consumingStep = solution.find(s => s.nodes && s.nodes.includes(varKey));
       if (consumingStep) {
         relFormulaTex = consumingStep.canonicalTex || (consumingStep.baseFormula ? casToTex(consumingStep.baseFormula, varsDb) : "");
-        relEqName = consumingStep.eqName || "";
       } else {
-        // Check C: Fallback to topic relations defining/using this variable
         const fallbackRel = relations.find(r => r.nodes && r.nodes.includes(varKey));
         if (fallbackRel) {
           relFormulaTex = fallbackRel.canonicalTex || (fallbackRel.baseFormula ? casToTex(fallbackRel.baseFormula, varsDb) : "");
-          relEqName = fallbackRel.name || "";
         }
       }
     }
 
-    // 2. Build Aliases List (Active problem name first, followed by unique synonyms)
-    const allAliases = [primaryName, meta.name, ...(meta.aliases || [])].filter(Boolean);
-    const uniqueAliases = [];
-    const seen = new Set();
-    for (const name of allAliases) {
-      const lower = name.toLowerCase().trim();
-      if (!seen.has(lower)) {
-        seen.add(lower);
-        uniqueAliases.push(name);
-      }
-    }
+    // 2. Human Descriptive Synonyms Filter
+    const humanAliases = getCleanHumanAliases(meta, varKey, primaryName);
+
+    // Click handler to enter flashcard carousel mode
+    el.addEventListener("click", e => {
+      e.stopPropagation();
+      tooltip.style.display = "none";
+      openCarouselForVariable(varKey, relations, varsDb, S);
+    });
 
     el.addEventListener("mouseenter", () => {
+      // Formula speaks for itself (no preamble text)
       const formulaHtml = relFormulaTex ? `
-        <div class="tt-section-label">Relevant Formula${relEqName ? ` (${relEqName})` : ""}:</div>
         <div class="tt-formula-box">$$${relFormulaTex}$$</div>
       ` : "";
 
-      const aliasesHtml = uniqueAliases.length > 1 ? `
+      const aliasesHtml = humanAliases.length > 0 ? `
         <div class="tt-section-label">Aliases / Synonyms:</div>
         <div class="tt-aliases-list">
-          ${uniqueAliases.map((a, i) => `
-            <div class="tt-alias-item ${i === 0 ? "active" : ""}">
-              • ${a}${i === 0 ? ` <span class="tt-tag-used">(in problem)</span>` : ""}
-            </div>
-          `).join("")}
+          ${humanAliases.map(a => `<div class="tt-alias-item">• ${a}</div>`).join("")}
         </div>
       ` : "";
 
@@ -192,7 +266,6 @@ export function attachTooltips(problemOrSystem, maybeSolution, maybeVarsDb, mayb
       let left = e.clientX + 14;
       let top = e.clientY + 14;
 
-      // Screen edge collision avoidance
       if (left + ttWidth > window.innerWidth - 12) {
         left = e.clientX - ttWidth - 12;
       }
@@ -209,3 +282,7 @@ export function attachTooltips(problemOrSystem, maybeSolution, maybeVarsDb, mayb
     });
   });
 }
+
+// Retain compatibility
+export function renderCarouselPills() {}
+export function renderCarouselCard() {}
