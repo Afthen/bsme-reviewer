@@ -1,5 +1,15 @@
+/**
+ * src/cas/units.js
+ * Physics & Dimensional Analysis Engine.
+ * Atomic unit bags, dimensional cancellation, and universal physical evaluation.
+ */
+
 import { parseMathAST, evalAST, getAstIdentifiers } from "./ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "./algebra.js";
+
+// ========================================================
+// 1. ATOMIC BASE & COMPOUND UNIT REGISTRY
+// ========================================================
 
 export const BASE_DIMENSIONS = Object.freeze({
   L: "Length", T: "Time", F: "Force", M: "Mass", Th: "Temperature", C: "Count"
@@ -115,14 +125,29 @@ function evalExprUnitAST(node, S, varsDb) {
     return { factor: bag.factor, atoms };
   }
   if (node.type === "group") return evalExprUnitAST(node.expr, S, varsDb);
+
   if (node.type === "call") {
-    if (["sin", "cos", "tan", "atan", "acos", "asin"].includes(node.fn)) return { factor: 1.0, atoms: [] };
+    // Trig functions return dimensionless
+    if (["sin", "cos", "tan"].includes(node.fn)) {
+      return { factor: 1.0, atoms: [] };
+    }
+    // Inverse trig functions return angles in radians
+    if (["atan", "acos", "asin"].includes(node.fn)) {
+      return {
+        factor: 1.0,
+        atoms: [{
+          token: node.fn, canonicalKey: node.fn, unitName: "rad", atom: "rad",
+          dim: "C", scale: 1.0, power: 1, tex: "\\text{rad}"
+        }]
+      };
+    }
     if (node.fn === "sqrt") {
       const inner = evalExprUnitAST(node.arg, S, varsDb);
       return { factor: Math.sqrt(inner.factor), atoms: inner.atoms.map(a => ({ ...a, power: a.power / 2 })) };
     }
     return evalExprUnitAST(node.arg, S, varsDb);
   }
+
   if (node.type === "binary") {
     const left = evalExprUnitAST(node.left, S, varsDb);
     const right = evalExprUnitAST(node.right, S, varsDb);
@@ -167,6 +192,17 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
   const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
   const targetBag = getUnitAtomBag(targetUnit);
+
+  // 1. Universal Physical Scale (product of ALL atomic scales)
+  let exprScale = exprAnalysis.factor;
+  exprAnalysis.atoms.forEach(a => {
+    exprScale *= Math.pow(a.scale, a.power);
+  });
+
+  let targetScale = targetBag.scale || 1.0;
+  const numericConversionFactor = targetScale > 0 ? (exprScale / targetScale) : 1.0;
+
+  // 2. KaTeX Unit Visual Cancellation & Formatting
   const targetWantsTeeth = (targetBag.atoms["teeth"] || 0) > 0;
   const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false, preserved: false }));
 
@@ -202,11 +238,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
   });
 
-  let netExprScale = exprAnalysis.factor;
-  atomList.filter(a => !a.canceled).forEach(a => { netExprScale *= Math.pow(a.scale, a.power); });
-
-  const numericConversionFactor = targetBag.scale > 0 ? (netExprScale / targetBag.scale) : 1.0;
-
   if (Math.abs(numericConversionFactor - 1.0) > 1e-4) {
     atomList.filter(a => !a.canceled && !a.preserved).forEach(a => {
       for (const [tAtom, tPower] of Object.entries(targetBag.atoms)) {
@@ -241,12 +272,22 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   };
 }
 
+export function isExpressionInDegrees(node, S, varsDb) {
+  if (!node) return false;
+  if (node.type === "id") {
+    const cKey = resolveCanonicalKey(node.name, varsDb);
+    const u = S._u?.[cKey] || S._u?.[node.name] || varsDb[cKey]?.unit || varsDb[node.name]?.unit;
+    return u === "deg" || u === "°";
+  }
+  if (node.type === "group") return isExpressionInDegrees(node.expr, S, varsDb);
+  return false;
+}
+
 export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUnits = null) {
   if (!node) return { value: NaN, unitAnalysis: null };
   const cTarget = resolveCanonicalKey(targetVar, varsDb);
   const targetUnit = S._u?.[cTarget] || S._u?.[targetVar] || varsDb[cTarget]?.unit || varsDb[targetVar]?.unit || "dimless";
 
-  // Calls solveUnitAlgebra with the AST directly (no undefined, no string roundtrips)
   const unitAnalysis = solveUnitAlgebra(node, S, targetVar, targetUnit, varsDb, requiredUnits);
 
   const evalState = { ...S };
@@ -257,7 +298,9 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     });
   }
 
-  const rawNum = evalAST(node, evalState);
+  // Hook unitResolver to check whether argument to trig function is in degrees
+  const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
+  const rawNum = evalAST(node, evalState, unitResolver);
   if (isNaN(rawNum)) return { value: NaN, unitAnalysis };
 
   const finalValue = rawNum * (unitAnalysis.numericConversionFactor || 1.0);
