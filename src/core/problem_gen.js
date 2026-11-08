@@ -168,6 +168,10 @@ export function generateProblem(topic, getMastery = () => 0) {
 
   const path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
 
+  // Find the exact relation / formula being tested (matches the mastery sidebar)
+  const targetRel = relations.find(r => r.id === path.targetEqId);
+  const problemTitle = targetRel ? targetRel.name : `${title} Design Problem`;
+
   // --- TEXTBOOK NEATNESS PASS ---
   const S_neat = { ...S_raw };
   path.givens.forEach(g => {
@@ -197,7 +201,7 @@ export function generateProblem(topic, getMastery = () => 0) {
   const statement = buildProblemStatement(path.givens, visibleGoals, S_neat, varsDb, topic);
 
   return {
-    title: `${title} Design Problem`,
+    title: problemTitle, // Displays the exact mastery relation name
     statement,
     solution,
     solutionSteps: solution,
