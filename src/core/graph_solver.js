@@ -13,7 +13,8 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
   const producedBy = {};
   let keepPropagating = true;
 
-  const sortedRelations = [...relations].sort((a, b) => getMastery(a.id) - getMastery(b.id));
+  // Passes full equation object to getMastery for AST complexity evaluation
+  const sortedRelations = [...relations].sort((a, b) => getMastery(a) - getMastery(b));
 
   while (keepPropagating) {
     keepPropagating = false;
