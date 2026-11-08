@@ -1,6 +1,6 @@
 /**
  * app.js
- * Application Lifecycle & Black-Box Topic Orchestrator.
+ * Application Lifecycle & Multi-Tier Topic Orchestrator.
  */
 
 import { TOPICS, ALL_TOPICS } from "./src/topics/index.js";
@@ -45,84 +45,121 @@ function setupTopicSelector() {
   const label = document.getElementById("topic-dropdown-label");
   const menu = document.getElementById("topic-dropdown-menu");
 
-  // Group topics dynamically by Subject
+  // Multi-tier hierarchy: Subject -> Category (optional subfolder) -> Topic
   const subjects = {};
   ALL_TOPICS.forEach(topic => {
     const subj = topic.subject || "General Engineering";
-    if (!subjects[subj]) subjects[subj] = [];
-    subjects[subj].push(topic);
+    if (!subjects[subj]) subjects[subj] = { categories: {}, standalone: [] };
+
+    if (topic.category) {
+      if (!subjects[subj].categories[topic.category]) {
+        subjects[subj].categories[topic.category] = [];
+      }
+      subjects[subj].categories[topic.category].push(topic);
+    } else {
+      subjects[subj].standalone.push(topic);
+    }
   });
 
   menu.innerHTML = "";
 
-  // Build the collapsible nested UI with arrow toggles
-  for (const [subjName, topics] of Object.entries(subjects)) {
-    const group = document.createElement("div");
-    
-    // Auto-expand the folder containing the currently active topic
-    const hasActiveTopic = topics.some(t => t.id === currentTopic.id);
-    group.className = `subject-group ${hasActiveTopic ? "open" : ""}`;
+  function createTopicItem(t, levelClass) {
+    const item = document.createElement("div");
+    item.className = `topic-item ${levelClass}`;
+    if (t.id === currentTopic.id) {
+      item.classList.add("selected");
+    }
+    item.textContent = t.title;
 
-    const header = document.createElement("div");
-    header.className = "subject-header";
-    header.innerHTML = `<span class="subject-chevron">▶</span><span>${subjName}</span>`;
-
-    // Folder collapse / expand toggle
-    header.addEventListener("click", (e) => {
+    item.addEventListener("click", (e) => {
       e.stopPropagation();
-      group.classList.toggle("open");
+
+      currentTopic = t;
+
+      label.textContent = t.category ? `${t.category}: ${t.title}` : t.title;
+      menu.querySelectorAll(".topic-item").forEach(el => el.classList.remove("selected"));
+      item.classList.add("selected");
+
+      menu.classList.remove("active");
+      toggleBtn.classList.remove("active");
+
+      initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
+      generateNewProblem();
     });
 
-    const list = document.createElement("div");
-    list.className = "topic-list";
-
-    topics.forEach(t => {
-      const item = document.createElement("div");
-      item.className = "topic-item";
-      if (t.id === currentTopic.id) {
-        item.classList.add("selected");
-      }
-      item.textContent = t.title;
-
-      // Click handler passes the direct topic object reference (kills the key-lookup bug!)
-      item.addEventListener("click", (e) => {
-        e.stopPropagation();
-
-        currentTopic = t;
-
-        // Update UI states
-        label.textContent = t.title;
-        menu.querySelectorAll(".topic-item").forEach(el => el.classList.remove("selected"));
-        item.classList.add("selected");
-
-        // Close dropdown menu
-        menu.classList.remove("active");
-        toggleBtn.classList.remove("active");
-
-        // Reset sidebar mastery weights and generate new problem
-        initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
-        generateNewProblem();
-      });
-
-      list.appendChild(item);
-    });
-
-    group.appendChild(header);
-    group.appendChild(list);
-    menu.appendChild(group);
+    return item;
   }
 
-  // Display initial active topic label
-  label.textContent = currentTopic.title;
+  for (const [subjName, { categories, standalone }] of Object.entries(subjects)) {
+    const subjectGroup = document.createElement("div");
 
-  // Toggle Dropdown Menu visibility
+    // Auto-open subject if currentTopic belongs to it
+    const inStandalone = standalone.some(t => t.id === currentTopic.id);
+    const inCategories = Object.values(categories).some(list => list.some(t => t.id === currentTopic.id));
+    const isSubjectActive = inStandalone || inCategories;
+
+    subjectGroup.className = `subject-group ${isSubjectActive ? "open" : ""}`;
+
+    const subjectHeader = document.createElement("div");
+    subjectHeader.className = "subject-header";
+    subjectHeader.innerHTML = `<span class="subject-chevron">▶</span><span>${subjName}</span>`;
+
+    subjectHeader.addEventListener("click", (e) => {
+      e.stopPropagation();
+      subjectGroup.classList.toggle("open");
+    });
+
+    const subjectList = document.createElement("div");
+    subjectList.className = "topic-list";
+
+    // 1. Sub-categories (e.g. Air Handling collapsible folder)
+    for (const [catName, catTopics] of Object.entries(categories)) {
+      const catGroup = document.createElement("div");
+      const isCatActive = catTopics.some(t => t.id === currentTopic.id);
+      catGroup.className = `category-group ${isCatActive ? "open" : ""}`;
+
+      const catHeader = document.createElement("div");
+      catHeader.className = "category-header";
+      catHeader.innerHTML = `<span class="category-chevron">▶</span><span>${catName}</span>`;
+
+      catHeader.addEventListener("click", (e) => {
+        e.stopPropagation();
+        catGroup.classList.toggle("open");
+      });
+
+      const catList = document.createElement("div");
+      catList.className = "category-list";
+
+      catTopics.forEach(t => {
+        catList.appendChild(createTopicItem(t, "level-3"));
+      });
+
+      catGroup.appendChild(catHeader);
+      catGroup.appendChild(catList);
+      subjectList.appendChild(catGroup);
+    }
+
+    // 2. Standalone topics under subject (e.g. Cooling Towers, Spur Gears)
+    standalone.forEach(t => {
+      subjectList.appendChild(createTopicItem(t, "level-2"));
+    });
+
+    subjectGroup.appendChild(subjectHeader);
+    subjectGroup.appendChild(subjectList);
+    menu.appendChild(subjectGroup);
+  }
+
+  // Set initial label
+  label.textContent = currentTopic.category ? `${currentTopic.category}: ${currentTopic.title}` : currentTopic.title;
+
+  // Toggle dropdown
   toggleBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     const isOpen = menu.classList.toggle("active");
     toggleBtn.classList.toggle("active", isOpen);
   });
 
-  // Click outside to dismiss menu
+  // Click outside to dismiss
   document.addEventListener("click", (e) => {
     if (!container.contains(e.target)) {
       menu.classList.remove("active");
@@ -173,7 +210,6 @@ function setupHeaderActions() {
 }
 
 function generateNewProblem() {
-  // Advance local topic tick and shared common tick
   incrementTopicTick(currentTopic.id);
   incrementTopicTick("common");
 
