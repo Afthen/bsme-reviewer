@@ -1,7 +1,14 @@
 /**
  * src/cas/units.js
- * Physics & Dimensional Analysis Engine.
- * Atomic unit bags, dimensional cancellation, and universal physical evaluation.
+ * ============================================================================
+ * ARCHITECTURAL PILLARS:
+ * - PILLAR II: The Universal Scale Law & Atomic Unit Bags
+ * - PILLAR V: The Option B Empirical Contract
+ * ============================================================================
+ * Handles atomic unit bags, dimensional cancellation, and universal physical evaluation.
+ * Evaluates arbitrary power exponents (integers, fractions, expressions) to ensure
+ * fractional powers (e.g. square roots of sums) correctly scale units.
+ * ============================================================================
  */
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "./ast.js";
@@ -71,7 +78,7 @@ export const COMPOUND_UNITS = Object.freeze({
   "m^3/s":    { atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{m}^3}{\\text{s}}" },
   "m^3/h":    { factor: 1 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{m}^3}{\\text{h}}" },
   "L/s":      { factor: 0.001, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{s}}" },
-  "L/h":      { factor: 0.001 / 3.6e6, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{h}}" }
+  "L/h":      { factor: 0.001 / 3600, atoms: { m: 3, s: -1 }, displayTex: "\\frac{\\text{L}}{\\text{h}}" }
 });
 
 export function getUnitAtomBag(uName) {
@@ -157,7 +164,9 @@ function evalExprUnitAST(node, S, varsDb) {
       return left;
     }
     if (node.op === "^") {
-      const powerNum = node.right && node.right.type === "num" ? parseFloat(node.right.val) : 1;
+      // Evaluates any numerical or fractional power (e.g. 2, 3, 1/2, 1/3)
+      const evaluatedExp = evalAST(node.right, {});
+      const powerNum = typeof evaluatedExp === "number" && !isNaN(evaluatedExp) ? evaluatedExp : 1;
       return {
         factor: Math.pow(left.factor, powerNum),
         atoms: left.atoms.map(a => ({ ...a, power: a.power * powerNum }))
