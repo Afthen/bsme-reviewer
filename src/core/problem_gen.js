@@ -9,7 +9,7 @@ import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 import { parseMathAST } from "../cas/ast.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
-import { CONSTANTS_DB, getConstantValue, getConstantUnit } from "../topics/hvac/common/constants_registry.js";
+import { CONSTANTS_DB, getConstantValue, getConstantUnit } from "./constants_registry.js";
 import { fmtSigFig } from "./dimensions.js";
 
 function determineGraphDistance(mastery) {
