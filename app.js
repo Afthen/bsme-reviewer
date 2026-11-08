@@ -8,7 +8,7 @@ import { generateProblem } from "./src/core/problem_gen.js";
 import {
   loadMastery, getDecayedMastery, incrementTopicTick,
   exportMasteryJSON, importMasteryJSON
-} from "./src/repetition/mastery.js";
+} from "./src/mastery/index.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
 import { initSidebarView, renderSidebar } from "./src/ui/sidebar_view.js";
 
