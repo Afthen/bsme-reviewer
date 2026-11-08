@@ -86,7 +86,7 @@ export function buildAlignedDerivation(
   const norm = s => (s || "").replace(/\\left|\\right|\s/g, "");
   const isAlreadyIsolated = norm(displayCanonical).startsWith(norm(targetSymbol) + "=");
 
-  const numTex = astToLatex(rhsAst, subsMap, varsDb).replace(/\+\s*0(?!\d)/g, ""); // strip joint unit factor zero
+  const numTex = astToLatex(rhsAst, subsMap, varsDb).replace(/\+\s*0(?!\d)/g, "");
   const globalConvTex = unitAnalysis.conversionFactorTex || "";
 
   if (isAlreadyIsolated || !baseFormula) {
