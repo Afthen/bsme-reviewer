@@ -18,7 +18,6 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
   while (keepPropagating) {
     keepPropagating = false;
 
-    // Standard Sequential 1-Unknown Formula Propagation
     for (const eq of sortedRelations) {
       if (usedEquations.has(eq.id)) continue;
 
@@ -31,8 +30,6 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
         }
 
         const inputVars = eq.nodes.filter(n => n !== targetVar);
-
-        // Resolve system variant (SI vs US) if present
         const activeVariant = (eq.variants && S && S.sys && eq.variants[S.sys]) ? eq.variants[S.sys] : null;
         const baseFormula = activeVariant?.baseFormula || eq.baseFormula || (eq.canonical ? `${eq.canonical.lhs} = ${eq.canonical.rhs}` : "");
         const canonicalTex = activeVariant?.canonicalTex || eq.canonicalTex || eq.canonical?.tex || eq.baseFormula || baseFormula;
@@ -91,7 +88,6 @@ export function canSolveTarget(givensArray, targetVar, relations = [], getMaster
 export function pruneSolutionPath(steps = [], goalVar) {
   const goalIdx = steps.findIndex(s => s.targetVar === goalVar);
   if (goalIdx < 0) return [];
-
   const requiredIndices = new Set([goalIdx, ...(steps[goalIdx].ancestorIndices || [])]);
   return steps.filter(s => requiredIndices.has(s.stepIdx));
 }
