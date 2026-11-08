@@ -1,6 +1,6 @@
 /**
  * src/ui/carousel_view.js
- * Flashcard carousel with dynamic AST variable isolation,
+ * Flashcard carousel modal with dynamic AST variable isolation,
  * interactive variable click navigation, and clean educational tooltips.
  */
 
@@ -50,21 +50,28 @@ function getCleanHumanAliases(meta = {}, varKey = "", primaryName = "") {
 }
 
 /**
- * Controller to open and display the interactive carousel flashcard for a clicked variable.
+ * Controller to open and display the interactive carousel flashcard modal.
+ * Syncs the initial slide to the formula shown in the tooltip, and defaults to canonical textbook formulas.
  */
-export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S = {}) {
+export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S = {}, initialRelId = null) {
   const matchingRels = relations.filter(r => r.nodes && r.nodes.includes(varKey));
   if (matchingRels.length === 0) return;
 
-  const problemView = document.getElementById("view-problem");
-  const carouselView = document.getElementById("view-carousel");
-  if (!problemView || !carouselView) return;
+  const carouselModal = document.getElementById("view-carousel");
+  if (!carouselModal) return;
 
-  problemView.classList.remove("active");
-  carouselView.classList.add("active");
+  // Open modal overlay
+  carouselModal.classList.add("active");
 
+  // Sync initial slide to the relation shown in the tooltip
   let currentRelIdx = 0;
-  let activeTarget = varKey;
+  if (initialRelId) {
+    const idx = matchingRels.findIndex(r => r.id === initialRelId);
+    if (idx >= 0) currentRelIdx = idx;
+  }
+
+  // Active isolated target is null by default so canonical formula is shown first
+  let isolatedTarget = null;
 
   const varTitleEl = document.getElementById("c-var-title");
   const counterEl = document.getElementById("c-counter");
@@ -75,14 +82,36 @@ export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S =
   const prevBtn = document.getElementById("c-prev");
   const nextBtn = document.getElementById("c-next");
   const dotsEl = document.getElementById("c-dots");
+  const backBtn = document.getElementById("btn-back-to-problem");
+
+  function closeModal() {
+    carouselModal.classList.remove("active");
+    document.removeEventListener("keydown", handleKeyDown);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Escape") closeModal();
+    if (e.key === "ArrowLeft") prevBtn?.click();
+    if (e.key === "ArrowRight") nextBtn?.click();
+  }
+  document.addEventListener("keydown", handleKeyDown);
+
+  // Close on backdrop click (outside container)
+  carouselModal.onclick = (e) => {
+    if (e.target === carouselModal) closeModal();
+  };
+
+  if (backBtn) {
+    backBtn.onclick = closeModal;
+  }
 
   function renderCard() {
     const rel = matchingRels[currentRelIdx];
-    const meta = varsDb[activeTarget] || {};
+    const meta = varsDb[varKey] || {};
     const allowableTargets = rel.solvable || rel.nodes;
 
     if (varTitleEl) {
-      varTitleEl.innerHTML = `${meta.name || activeTarget} &nbsp;<span style="color: var(--accent-math)">$${meta.symbol || activeTarget}$</span>`;
+      varTitleEl.innerHTML = `${meta.name || varKey} &nbsp;<span style="color: var(--accent-math)">$${meta.symbol || varKey}$</span>`;
     }
 
     if (counterEl) {
@@ -90,7 +119,7 @@ export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S =
     }
 
     if (dimEl) {
-      const u = S._u?.[activeTarget] || meta.unit || "";
+      const u = S._u?.[varKey] || meta.unit || "";
       dimEl.textContent = `${meta.dimension || "Dimensionless"}${u ? ` (${u})` : ""}`;
     }
 
@@ -98,39 +127,47 @@ export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S =
       notesEl.textContent = rel.name || "";
     }
 
-    // Isolate activeTarget in the current relation
     const activeVariant = (rel.variants && S && S.sys && rel.variants[S.sys]) ? rel.variants[S.sys] : null;
     const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
-    const isolated = isolateVariable(baseFormula, activeTarget, varsDb);
-    const targetSymbol = meta.symbol || activeTarget;
 
-    if (formulaEl) {
-      formulaEl.innerHTML = `$$${targetSymbol} = ${casToTex(isolated.isolatedRhs, varsDb)}$$`;
+    // By default, display the canonical formula as taught in textbooks
+    if (!isolatedTarget) {
+      const canonicalTex = activeVariant?.canonicalTex || rel.canonicalTex || casToTex(baseFormula, varsDb);
+      if (formulaEl) {
+        formulaEl.innerHTML = `$$${canonicalTex}$$`;
+      }
+    } else {
+      // Manual isolation triggered by student clicking a pill
+      const isolated = isolateVariable(baseFormula, isolatedTarget, varsDb);
+      const targetSymbol = varsDb[isolatedTarget]?.symbol || isolatedTarget;
+      if (formulaEl) {
+        formulaEl.innerHTML = `$$${targetSymbol} = ${casToTex(isolated.isolatedRhs, varsDb)}$$`;
+      }
     }
 
     // Build rearrange pills for all variables in this equation
     if (varsContainerEl) {
       varsContainerEl.innerHTML = allowableTargets.map(tVar => {
         const tMeta = varsDb[tVar] || {};
-        const isAct = tVar === activeTarget;
+        const isAct = tVar === isolatedTarget;
         return `<button class="var-pill ${isAct ? 'active' : ''}" data-target="${tVar}">$${tMeta.symbol || tVar}$</button>`;
       }).join(" ");
 
       varsContainerEl.querySelectorAll(".var-pill").forEach(btn => {
         btn.addEventListener("click", () => {
-          activeTarget = btn.dataset.target;
+          isolatedTarget = (isolatedTarget === btn.dataset.target) ? null : btn.dataset.target;
           renderCard();
         });
       });
     }
 
-    // Build navigation dots
+    // Navigation dots
     if (dotsEl) {
       dotsEl.innerHTML = matchingRels.map((_, i) => `<span class="dot ${i === currentRelIdx ? 'active' : ''}"></span>`).join("");
     }
 
     if (window.renderMathInElement) {
-      window.renderMathInElement(carouselView, {
+      window.renderMathInElement(carouselModal, {
         delimiters: [
           { left: "$$", right: "$$", display: true },
           { left: "$", right: "$", display: false }
@@ -142,9 +179,7 @@ export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S =
   if (prevBtn) {
     prevBtn.onclick = () => {
       currentRelIdx = (currentRelIdx - 1 + matchingRels.length) % matchingRels.length;
-      const rel = matchingRels[currentRelIdx];
-      if (rel.nodes.includes(varKey)) activeTarget = varKey;
-      else activeTarget = rel.nodes[0];
+      isolatedTarget = null; // Reset to canonical formula on slide change
       renderCard();
     };
   }
@@ -152,9 +187,7 @@ export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S =
   if (nextBtn) {
     nextBtn.onclick = () => {
       currentRelIdx = (currentRelIdx + 1) % matchingRels.length;
-      const rel = matchingRels[currentRelIdx];
-      if (rel.nodes.includes(varKey)) activeTarget = varKey;
-      else activeTarget = rel.nodes[0];
+      isolatedTarget = null; // Reset to canonical formula on slide change
       renderCard();
     };
   }
@@ -163,7 +196,7 @@ export function openCarouselForVariable(varKey, relations = [], varsDb = {}, S =
 }
 
 /**
- * Attaches hover tooltips and variable click navigation to .interactive-var tokens.
+ * Attaches hover tooltips and click navigation to .interactive-var tokens.
  */
 export function attachTooltips(problemOrSystem, maybeSolution, maybeVarsDb, maybeRelations) {
   const tooltip = document.getElementById("tooltip");
@@ -198,20 +231,24 @@ export function attachTooltips(problemOrSystem, maybeSolution, maybeVarsDb, mayb
     const unit = S._u?.[varKey] || meta.unit || "";
     const unitStr = (unit && unit !== "dimless" && unit !== "ratio") ? ` (${unit})` : "";
 
-    // 1. Dynamic Graph-Aware Formula Discovery (from this specific problem)
+    // 1. Dynamic Graph-Aware Formula Discovery
     let relFormulaTex = "";
+    let matchedRelId = null;
 
     const targetStep = solution.find(s => s.targetVar === varKey);
     if (targetStep) {
       relFormulaTex = targetStep.canonicalTex || (targetStep.baseFormula ? casToTex(targetStep.baseFormula, varsDb) : "");
+      matchedRelId = targetStep.eqId;
     } else {
       const consumingStep = solution.find(s => s.nodes && s.nodes.includes(varKey));
       if (consumingStep) {
         relFormulaTex = consumingStep.canonicalTex || (consumingStep.baseFormula ? casToTex(consumingStep.baseFormula, varsDb) : "");
+        matchedRelId = consumingStep.eqId;
       } else {
         const fallbackRel = relations.find(r => r.nodes && r.nodes.includes(varKey));
         if (fallbackRel) {
           relFormulaTex = fallbackRel.canonicalTex || (fallbackRel.baseFormula ? casToTex(fallbackRel.baseFormula, varsDb) : "");
+          matchedRelId = fallbackRel.id;
         }
       }
     }
@@ -219,15 +256,14 @@ export function attachTooltips(problemOrSystem, maybeSolution, maybeVarsDb, mayb
     // 2. Human Descriptive Synonyms Filter
     const humanAliases = getCleanHumanAliases(meta, varKey, primaryName);
 
-    // Click handler to enter flashcard carousel mode
+    // Click handler: opens carousel directly on the relation shown in the tooltip
     el.addEventListener("click", e => {
       e.stopPropagation();
       tooltip.style.display = "none";
-      openCarouselForVariable(varKey, relations, varsDb, S);
+      openCarouselForVariable(varKey, relations, varsDb, S, matchedRelId);
     });
 
     el.addEventListener("mouseenter", () => {
-      // Formula speaks for itself (no preamble text)
       const formulaHtml = relFormulaTex ? `
         <div class="tt-formula-box">$$${relFormulaTex}$$</div>
       ` : "";
@@ -283,6 +319,5 @@ export function attachTooltips(problemOrSystem, maybeSolution, maybeVarsDb, mayb
   });
 }
 
-// Retain compatibility
 export function renderCarouselPills() {}
 export function renderCarouselCard() {}
