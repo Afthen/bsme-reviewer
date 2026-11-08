@@ -109,7 +109,7 @@ export function reinforceAncestors(ancestorEqIds = [], topicId = currentActiveTo
 }
 
 // ========================================================
-// 4. STORAGE & BACKUP (WITH STRICT VALIDATION)
+// 4. STORAGE & BACKUP (WITH TOPIC-SAFETY VALIDATION)
 // ========================================================
 
 export function loadMastery(topicId = "spur_gears") {
@@ -145,26 +145,40 @@ export function exportMasteryJSON(topicId = currentActiveTopicId) {
 export function importMasteryJSON(jsonStr, targetTopicId = currentActiveTopicId) {
   try {
     const data = JSON.parse(jsonStr);
-    if (!data || typeof data !== "object") return false;
+    if (!data || typeof data !== "object") return { success: false, reason: "Malformed JSON" };
 
-    // Support both wrapped export payload and legacy raw JSON
-    const state = data.masteryState && typeof data.masteryState === "object" ? data.masteryState : data;
+    // Topic safety guard: Prevent importing spur gears profile into diesel
+    if (data.topicId && data.topicId !== targetTopicId) {
+      return {
+        success: false,
+        reason: `Topic mismatch: file is for "${data.topicId}", but active topic is "${targetTopicId}"`
+      };
+    }
+
+    const state = (data.masteryState && typeof data.masteryState === "object") ? data.masteryState : data;
     
-    // Ensure every record has an attempts array
+    // Validate each record has a valid attempts array
     const cleanState = {};
+    let validRecords = 0;
     for (const [k, v] of Object.entries(state)) {
       if (v && Array.isArray(v.attempts)) {
         cleanState[k] = {
           attempts: v.attempts.map(Boolean),
           lastTick: typeof v.lastTick === "number" ? v.lastTick : 0
         };
+        validRecords++;
       }
+    }
+
+    // Don't overwrite if payload contained zero valid records
+    if (validRecords === 0 && Object.keys(state).length > 0) {
+      return { success: false, reason: "No valid mastery records found in file" };
     }
 
     masteryState = cleanState;
     saveMastery(targetTopicId);
-    return true;
-  } catch {
-    return false;
+    return { success: true };
+  } catch (err) {
+    return { success: false, reason: err.message };
   }
 }
