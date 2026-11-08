@@ -1,19 +1,42 @@
 /**
  * src/core/problem_gen.js
- * Formula-as-Node Graph Walk Problem Generator.
- * Enforces 6-significant-figures formatting with support for custom topic narrative builders.
+ * ============================================================================
+ * ARCHITECTURAL PILLAR: Formula-as-Node Graph Problem Generator
+ * ============================================================================
+ * PHILOSOPHY:
+ * 1. Cognitive Scaffolding:
+ *    Problem complexity (hop distance) dynamically scales based on decayed mastery:
+ *      - Mastery < 38.2% (phi^-2): Single direct formula (0 hops)
+ *      - 38.2% to 61.8% (phi^-1): Two formulas with 1 bridge variable (1 hop)
+ *      - Mastery >= 61.8%: Multi-step synthesis chain (2-3 hops)
+ *
+ * 2. Board-Exam Distractor Variable Injection:
+ *    With a 30% probability, realistic distractor variables from S that are NOT
+ *    needed in the solution path are included in the given specifications to
+ *    test whether the student can identify the correct relations.
+ *
+ * 3. 6-Significant-Figure Universal Precision:
+ *    Values in problem statements and answers are formatted using fmtSigFig to
+ *    prevent floating-point roundoff artifacts.
+ * ============================================================================
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 import { PHI_INV, PHI_INV2 } from "../repetition/mastery.js";
 import { fmtSigFig } from "./dimensions.js";
 
+/**
+ * Determines problem graph distance (scaffolding level) from mastery score.
+ */
 function determineGraphDistance(mastery) {
-  if (mastery < PHI_INV2) return 0; // < 38.2% -> single formula
+  if (mastery < PHI_INV2) return 0; // < 38.2% -> single direct formula
   if (mastery < PHI_INV)  return 1; // 38.2% to 61.8% -> 2 formulas, 1 bridge
   return Math.random() < 0.5 ? 2 : 3; // >= 61.8% -> synthesis chain
 }
 
+/**
+ * Traverses the relation graph to build a solvable problem path.
+ */
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
   const scoredNodes = relations.map(node => {
     const mastery = getMastery(node.id);
@@ -101,7 +124,9 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, getMas
   };
 }
 
-// In src/core/problem_gen.js:
+/**
+ * Builds the natural language problem statement narrative.
+ */
 export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicConfig = {}) {
   if (typeof topicConfig.statementBuilder === "function") {
     return topicConfig.statementBuilder(givens, visibleGoals, S, varsDb);
@@ -138,7 +163,39 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     return `${prefix}<strong>${name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${sym}$</span>)</span>${uStr}`;
   });
 
-  // Use explicit topic noun if provided, else fallback gracefully
   const systemNoun = topicConfig.noun || `${topicConfig.title || "Mechanical"} system`;
   return `A ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalStrings.join(", and ")}.`;
+}
+
+/**
+ * Top-Level Universal Problem Orchestrator.
+ * Connects the topic schema, ground-truth generator, graph solver, and narrative builder.
+ */
+export function generateProblem(topic, getMastery = () => 0) {
+  const { title, varsDb, relations, createSystem } = topic;
+  const S = createSystem();
+
+  // 1. Walk graph to determine given variables and target goal
+  const path = generateAutonomousProblem(relations, S, varsDb, getMastery);
+
+  // 2. Solve DAG and prune solution steps to the target goal
+  const allSteps = solveDAG(path.givens, S, relations, varsDb, getMastery);
+  const solution = pruneSolutionPath(allSteps, path.goalVar);
+
+  // 3. Build problem statement narrative
+  const visibleGoals = [path.goalVar];
+  const statement = buildProblemStatement(path.givens, visibleGoals, S, varsDb, topic);
+
+  return {
+    title: `${title} Design Problem`,
+    statement,
+    solution,
+    solutionSteps: solution, // Alias for step submit handlers
+    allSteps,
+    givens: path.givens,
+    distractors: path.distractors,
+    system: S,
+    varsDb,
+    topicId: topic.id
+  };
 }
