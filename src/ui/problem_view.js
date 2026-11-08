@@ -7,7 +7,7 @@ import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
-  incrementGlobalTick, PHI_INV8, getDecayedMastery
+  incrementTopicTick, PHI_INV8, getDecayedMastery
 } from "../repetition/mastery.js";
 import { attachTooltips } from "./carousel_view.js";
 import { renderMasteryBars } from "./sidebar_view.js";
@@ -159,7 +159,10 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
   const raw = inputEl.value.trim();
   if (raw === "") return revealStepAnswer(idx, inputEl, activeProblem, relations);
 
-  incrementGlobalTick();
+  const topicScope = activeProblem.topicId || "common";
+  incrementTopicTick(topicScope);
+  incrementTopicTick("common");
+
   const val = parseFloat(raw);
   if (isNaN(val)) return;
 
@@ -185,27 +188,29 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
     step.userVal = val;
     
     if (step.systemEqIds) {
-      step.systemEqIds.forEach(id => recordAttempt(id, true));
+      step.systemEqIds.forEach(id => recordAttempt(id, true, topicScope));
     } else {
-      recordAttempt(step.eqId, true);
+      recordAttempt(step.eqId, true, topicScope);
     }
     
-    reinforceAncestors(step.fadedAncestorEqIds || []);
+    reinforceAncestors(step.fadedAncestorEqIds || [], topicScope);
     document.getElementById(`step-item-${idx}`).classList.add("open");
   } else {
     inputEl.classList.add("state-wrong", "shake-trigger");
     if (step.systemEqIds) {
-      step.systemEqIds.forEach(id => recordAttempt(id, false));
+      step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
     } else {
-      recordAttempt(step.eqId, false);
+      recordAttempt(step.eqId, false, topicScope);
     }
-    penalizeAncestors(step.fadedAncestorEqIds || []);
+    penalizeAncestors(step.fadedAncestorEqIds || [], topicScope);
     setTimeout(() => inputEl.classList.remove("shake-trigger"), 400);
   }
 
+  const activeTopic = { id: activeProblem.topicId, relations };
+
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
-  renderMasteryBars(relations, eq => getDecayedMastery(eq));
+  renderMasteryBars(relations, eq => getDecayedMastery(eq, activeTopic));
   updateToggleAllButton(activeProblem);
 }
 
@@ -218,17 +223,20 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   inputEl.classList.add("state-revealed");
   inputEl.disabled = true;
 
+  const topicScope = activeProblem.topicId || "common";
   if (step.systemEqIds) {
-    step.systemEqIds.forEach(id => recordAttempt(id, false));
+    step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
   } else {
-    recordAttempt(step.eqId, false);
+    recordAttempt(step.eqId, false, topicScope);
   }
-  penalizeAncestors(step.fadedAncestorEqIds || []);
+  penalizeAncestors(step.fadedAncestorEqIds || [], topicScope);
+
+  const activeTopic = { id: activeProblem.topicId, relations };
 
   document.getElementById(`step-item-${idx}`).classList.add("open");
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
-  renderMasteryBars(relations, eq => getDecayedMastery(eq));
+  renderMasteryBars(relations, eq => getDecayedMastery(eq, activeTopic));
   updateToggleAllButton(activeProblem);
 }
 
