@@ -5,7 +5,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { ALL_TOPICS } from "../src/topics/registry.js";
+import { ALL_TOPICS } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
 
 describe("Engineering Topics Ground Truth & AST Inversion Suite", () => {
