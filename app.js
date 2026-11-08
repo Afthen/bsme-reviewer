@@ -1,24 +1,12 @@
 /**
  * app.js
- * ============================================================================
- * ARCHITECTURAL PILLAR: Application Lifecycle & Black-Box Topic Orchestrator
- * ============================================================================
- * Treats src/topics/index.js as a modular black box:
- * 1. Dynamic Subject Grouping:
- *    Auto-populates <optgroup> dropdowns directly from topic metadata
- *    (e.g. Machine Design -> Spur, Helical; Powerplant -> Diesel).
- * 2. Strict DOM Alignment:
- *    Matches IDs in index.html exactly (#topic-selector, #btn-generate-next, etc.).
- * 3. Verified Problem View Calling Convention:
- *    Calls renderProblemView(currentProblem, relations, topicId) without
- *    phantom container arguments to eliminate silent early returns.
- * ============================================================================
+ * Application Lifecycle & Black-Box Topic Orchestrator.
  */
 
 import { TOPICS, ALL_TOPICS } from "./src/topics/index.js";
 import { generateProblem } from "./src/core/problem_gen.js";
 import {
-  loadMastery, getDecayedMastery, recordAttempt, incrementGlobalTick,
+  loadMastery, getDecayedMastery, incrementTopicTick,
   exportMasteryJSON, importMasteryJSON
 } from "./src/repetition/mastery.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
@@ -30,13 +18,11 @@ let currentProblem = null;
 export { TOPICS };
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Load Global Unified Mastery File
   loadMastery();
 
   setupTopicSelector();
 
-  // 2. Initialize Spaced Repetition Sidebar Drawer (Passing full eq object!)
-  initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq));
+  initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
 
   setupHeaderActions();
 
@@ -84,7 +70,7 @@ function setupTopicSelector() {
     const selectedId = e.target.value;
     if (TOPICS[selectedId]) {
       currentTopic = TOPICS[selectedId];
-      initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq));
+      initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
       generateNewProblem();
     }
   });
@@ -116,7 +102,7 @@ function setupHeaderActions() {
         const res = importMasteryJSON(ev.target.result);
         if (res.success) {
           alert("Global Mastery profile imported successfully!");
-          renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq));
+          renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
         } else {
           alert(`Import failed: ${res.reason}`);
         }
@@ -132,13 +118,12 @@ function setupHeaderActions() {
 }
 
 function generateNewProblem() {
-  incrementGlobalTick();
+  // Advance local topic tick and shared common tick
+  incrementTopicTick(currentTopic.id);
+  incrementTopicTick("common");
 
-  // Full eq object sent to getMastery evaluator
-  currentProblem = generateProblem(currentTopic, eq => getDecayedMastery(eq));
+  currentProblem = generateProblem(currentTopic, eq => getDecayedMastery(eq, currentTopic));
 
   renderProblemView(currentProblem, currentTopic.relations, currentTopic.id);
-
-  // Update sidebar mastery bars with full eq object evaluation
-  renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq));
+  renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
 }
