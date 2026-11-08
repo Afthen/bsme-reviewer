@@ -7,8 +7,8 @@ import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
-  incrementTopicTick, PHI_INV8, getDecayedMastery
-} from ".../mastery/index.js";
+  incrementTopicTick, phi, getDecayedMastery
+} from "../mastery/index.js";
 import { attachTooltips } from "./carousel_view.js";
 import { renderMasteryBars } from "./sidebar_view.js";
 
@@ -175,7 +175,7 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
   } else if (typeof meta.tolerance === "number") {
     tol = meta.tolerance;
   } else {
-    tol = Math.max(PHI_INV8 * Math.abs(expected), 1e-4);
+    tol = Math.max(phi(-8) * Math.abs(expected), 1e-4);
   }
 
   const isCorrect = Math.abs(val - expected) <= tol;
