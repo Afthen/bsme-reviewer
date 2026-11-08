@@ -18,7 +18,7 @@
 
 import { astHasVariable, parseMathAST } from "../src/cas/ast.js";
 import { isolateVariable } from "../src/cas/algebra.js";
-import { getUnitAtomBag, evaluatePhysicalAST } from "../src/cas/units.js";
+import { getUnitAtomBag, evaluatePhysicalAST } from "../src/cas/units/index.js";
 import { solveDAG, pruneSolutionPath } from "../src/core/graph_solver.js";
 
 export function validateTopic(topic) {
