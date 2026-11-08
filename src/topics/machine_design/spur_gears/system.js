@@ -1,6 +1,7 @@
 /**
  * src/topics/machine_design/spur_gears/system.js
  * Clean ground truth spur gear system generator (SI and US Imperial).
+ * Evaluates pure physical relations natively without hardcoded conversion factors.
  */
 
 import { GEAR_VARS_DB } from "./schema.js";
@@ -36,7 +37,7 @@ export function createGroundTruthSystem() {
     const n_2 = n_1 / VR;
     const D_P1 = T_1 * m;
     const D_P2 = T_2 * m;
-    const C = (D_P1 + D_P2) / 2;
+    const C = (m * (T_1 + T_2)) / 2;
     const P_c = Math.PI * m;
     const a = 1.0 * m;
     const c = kc * m;
@@ -65,7 +66,7 @@ export function createGroundTruthSystem() {
 
     const k_f = 1.45;
     const S_n = 250;
-    const F_s = (S_n * b * Y) / (k_f * P_d);
+    const F_s = (S_n * b * m * Y) / k_f; // Pure coherent SI formula
     const N_sf = F_s / F_D;
     const Q = (2 * T_2) / (T_1 + T_2);
     const K_w = 0.55;
@@ -121,7 +122,7 @@ export function createGroundTruthSystem() {
 
     const k_f = 1.45;
     const S_n = 35000;
-    const F_s = (S_n * b * Y) / (k_f * P_d);
+    const F_s = (S_n * b * Y) / (k_f * P_d); // Pure coherent US formula
     const N_sf = F_s / F_D;
     const Q = (2 * T_2) / (T_1 + T_2);
     const K_w = 80;
