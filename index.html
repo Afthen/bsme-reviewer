@@ -314,20 +314,85 @@
 
     #tooltip {
       position: fixed;
-      background: #1e1f23;
-      border: 1px solid #373a40;
-      border-radius: 4px;
-      padding: 0.5rem 0.75rem;
+      background: #1b1c20;
+      border: 1px solid #383a42;
+      border-radius: 6px;
+      padding: 0.75rem 0.9rem;
       font-size: 0.75rem;
-      max-width: 320px;
+      width: 320px;
+      max-width: 90vw;
       z-index: 1000;
       pointer-events: none;
       display: none;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      line-height: 1.4;
     }
-    #tooltip .tt-name { font-weight: 600; color: #fff; margin-bottom: 0.2rem; }
-    #tooltip .tt-math { margin: 0.25rem 0; color: var(--accent-math); }
-    #tooltip .tt-hint { font-size: 0.68rem; color: var(--text-dim); }
+    .tt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+    .tt-name { font-weight: 700; color: #fff; font-size: 0.85rem; }
+    .tt-dim {
+      background: rgba(147, 197, 253, 0.12);
+      color: var(--accent-math);
+      border: 1px solid rgba(147, 197, 253, 0.3);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .tt-symbol {
+      color: var(--accent-math);
+      font-size: 0.9rem;
+      margin-bottom: 0.4rem;
+    }
+    .tt-section-label {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.5rem;
+      margin-bottom: 0.2rem;
+      font-weight: 600;
+    }
+    .tt-formula-box {
+      background: #141517;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 0.4rem 0.5rem;
+      text-align: center;
+      margin: 0.25rem 0;
+      overflow-x: auto;
+    }
+    .tt-formula-box .katex-display {
+      margin: 0.2rem 0 !important;
+      font-size: 1.05em !important;
+    }
+    .tt-aliases-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 0.25rem;
+    }
+    .tt-alias-item {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .tt-alias-item.active {
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+    .tt-tag-used {
+      color: var(--accent-math);
+      font-size: 0.68rem;
+      font-weight: normal;
+    }
 
     /* Flashcard Carousel Modal & Interactive Variable Pills */
     .carousel-container { max-width: 520px; margin: 1.5rem auto; display: flex; flex-direction: column; gap: 1rem; }
