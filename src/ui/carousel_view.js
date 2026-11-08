@@ -1,6 +1,6 @@
 /**
  * src/ui/carousel_view.js
- * Flashcard carousel with pure AST isolation and disabled pills for empirical non-invertibles.
+ * Flashcard carousel with dynamic AST variable isolation and interactive variable tooltips.
  */
 
 import { isolateVariable } from "../cas/algebra.js";
@@ -65,6 +65,44 @@ export function renderCarouselCard(cardEl, rel, varsDb, activeTarget = null, S =
     btn.addEventListener("click", () => {
       const newTarget = btn.dataset.target;
       renderCarouselCard(cardEl, rel, varsDb, newTarget, S);
+    });
+  });
+}
+
+/**
+ * Attaches hover tooltips to all interactive variables across problem statements and derivations.
+ */
+export function attachTooltips(S = {}, solution = [], varsDb = {}) {
+  const tooltip = document.getElementById("tooltip");
+  if (!tooltip) return;
+
+  document.querySelectorAll(".interactive-var").forEach(el => {
+    const varKey = el.dataset.var;
+    if (!varKey) return;
+
+    const meta = varsDb[varKey] || {};
+    const val = S[varKey];
+    const unit = S._u?.[varKey] || meta.unit || "";
+
+    el.addEventListener("mouseenter", () => {
+      tooltip.innerHTML = `
+        <div class="tt-name">${meta.name || varKey}</div>
+        <div class="tt-math">$${meta.symbol || varKey}$</div>
+        ${val !== undefined && typeof val === "number" ? `<div class="tt-hint">Value: ${val} ${unit}</div>` : ""}
+      `;
+      tooltip.style.display = "block";
+      if (window.renderMathInElement) {
+        window.renderMathInElement(tooltip, { delimiters: [{ left: "$", right: "$", display: false }] });
+      }
+    });
+
+    el.addEventListener("mousemove", e => {
+      tooltip.style.left = `${e.clientX + 14}px`;
+      tooltip.style.top = `${e.clientY + 14}px`;
+    });
+
+    el.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
     });
   });
 }
