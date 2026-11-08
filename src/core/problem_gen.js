@@ -10,13 +10,17 @@
  *      - 38.2% to 61.8% (phi(-1)): Two formulas with 1 bridge variable (1 hop)
  *      - 61.8% to 76.4% (Fading): Multi-step synthesis chain (2 hops)
  *      - Mastery >= 76.4%: Deep graph walking (fib(4) hops)
- * 2. Board-Exam Distractor Injection:
- *    Injects variables not needed in the solution path based on phi(-3) (~23.6%).
- * 3. Polymorphic Variable & Symbol Randomization:
+ * 2. Strict Mathematical Minimality (Greedy Irreducibility):
+ *    Extracts true root leaf nodes from the pruned solution DAG and greedily
+ *    prunes redundant degrees of freedom, guaranteeing that non-distractor
+ *    givens represent the exact minimum parameters needed to reach the goal.
+ * 3. Board-Exam Distractor Injection (phi(-4)):
+ *    Injects variables not needed in the solution path based on phi(-4) (~14.6%).
+ * 4. Polymorphic Variable & Symbol Randomization:
  *    Randomizes the human term name and symbol in the problem statement prompt
  *    to train student agility across board-exam synonym variations, while
  *    keeping algebraic derivations strictly anchored to canonical notation.
- * 4. The "Textbook Curation" Principle (Neat Givens):
+ * 5. The "Textbook Curation" Principle (Neat Givens):
  *    Rounds givens to clean numbers using fmtSigFig, then re-evaluates the
  *    downstream AST path so student answers match calculated values perfectly.
  * ============================================================================
@@ -103,20 +107,54 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
   const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
   if (!usesTarget) return null;
 
+  // ==========================================================================
+  // PHASE 1: LEAF-NODE EXTRACTION (ERADICATES PHANTOM GIVENS)
+  // ==========================================================================
+  const producedVars = new Set(required.map(s => s.targetVar));
+  const essentialGivensSet = new Set();
+
+  required.forEach(step => {
+    (step.nodes || []).forEach(n => {
+      // If a variable is needed by a step, but never produced by any prior step,
+      // it is a root dependency that must be provided in the givens.
+      if (n !== step.targetVar && !producedVars.has(n)) {
+        essentialGivensSet.add(n);
+      }
+    });
+  });
+
+  // ==========================================================================
+  // PHASE 2: GREEDY IRREDUCIBILITY PRUNING (GUARANTEES STRICT MINIMALITY)
+  // ==========================================================================
+  let minimalGivens = Array.from(essentialGivensSet);
+
+  for (let i = minimalGivens.length - 1; i >= 0; i--) {
+    const candidate = minimalGivens[i];
+    const reducedSet = minimalGivens.filter(v => v !== candidate);
+
+    // If the goal is still 100% solvable without this given, it is mathematically redundant!
+    if (canSolveTarget(reducedSet, goalVar, relations)) {
+      minimalGivens = reducedSet;
+    }
+  }
+
+  // ==========================================================================
+  // PHASE 3: DISTRACTOR SELECTION (PHI^-4 THRESHOLD: ~14.6%)
+  // ==========================================================================
   const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
-  bestPath.givens.forEach(g => usedVars.add(g));
+  minimalGivens.forEach(g => usedVars.add(g));
 
   const candidateDistractors = Object.keys(S).filter(k =>
     !k.startsWith("_") && !usedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
   );
 
-  const distractors = candidateDistractors.length > 0 && Math.random() < phi(-3)
+  const distractors = candidateDistractors.length > 0 && Math.random() < phi(-4)
     ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
     : [];
 
   return {
     goalVar,
-    givens: Array.from(new Set([...bestPath.givens, ...distractors])).sort(),
+    givens: Array.from(new Set([...minimalGivens, ...distractors])).sort(),
     distractors,
     targetEqId: targetNode.id,
     hopDistance: bestPath.hops
