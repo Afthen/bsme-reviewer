@@ -94,3 +94,6 @@ export function renderMasteryBars(relations = [], getMastery = () => 0) {
     el.appendChild(row);
   });
 }
+
+// Named alias for app.js import
+export const renderSidebar = renderMasteryBars;
