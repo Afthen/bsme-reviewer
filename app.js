@@ -183,11 +183,12 @@ function initApp() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      if (importMasteryJSON(ev.target.result, currentTopic.id)) {
+      const res = importMasteryJSON(ev.target.result, currentTopic.id);
+      if (res.success) {
         renderMasteryBars(currentTopic.relations, id => getDecayedMastery(id, currentTopic.id));
         alert("Mastery profile imported successfully!");
       } else {
-        alert("Invalid JSON file.");
+        alert(`Import failed: ${res.reason || "Invalid JSON file"}`);
       }
     };
     reader.readAsText(file);
