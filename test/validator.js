@@ -1,3 +1,21 @@
+/**
+ * test/validator.js
+ * ============================================================================
+ * ARCHITECTURAL PILLAR VI: The Uncompromising "Hound" Test Suite
+ * ============================================================================
+ * PHILOSOPHY:
+ * 1. Zero False Passes:
+ *    The test harness uses direct AST tree inspection to guarantee that target
+ *    variables are 100% absent from the isolated right-hand side.
+ * 2. Ground-Truth Numerical Fidelity:
+ *    Every invertible (equation, target) pair is evaluated through the physical
+ *    unit engine against ground truth S. Relative error must remain <= 0.1%.
+ * 3. Multi-Hop Graph Solvability:
+ *    Ensures that the DAG solver can connect given variables across multiple
+ *    hops to reach solution targets cleanly.
+ * ============================================================================
+ */
+
 import { astHasVariable, parseMathAST } from "../src/cas/ast.js";
 import { isolateVariable } from "../src/cas/algebra.js";
 import { getUnitAtomBag, evaluatePhysicalAST } from "../src/cas/units.js";
@@ -16,6 +34,7 @@ export function validateTopic(topic) {
     passedPairs: 0
   };
 
+  // 1. Schema Node & Registered Unit Verification
   for (const rel of relations) {
     for (const node of rel.nodes) {
       if (!varsDb[node]) {
@@ -33,6 +52,7 @@ export function validateTopic(topic) {
     }
   }
 
+  // 2. Ground-Truth System Generation Verification
   let S;
   try {
     S = createSystem();
@@ -51,6 +71,7 @@ export function validateTopic(topic) {
     }
   }
 
+  // 3. Formula Solvability, AST Inversion & Numerical Verification
   for (const rel of relations) {
     let relationPassed = true;
     const allowableTargets = rel.solvable || rel.nodes;
@@ -69,6 +90,7 @@ export function validateTopic(topic) {
         continue;
       }
 
+      // Check A: Pure AST check (Variable must NOT be present in RHS)
       const rhsAst = parseMathAST(isolated.isolatedRhs);
       if (astHasVariable(rhsAst, targetVar)) {
         report.errors.push(`Self-reference: [${rel.id}] target "${targetVar}" still present in RHS: "${isolated.isolatedRhs}"`);
@@ -76,6 +98,7 @@ export function validateTopic(topic) {
         continue;
       }
 
+      // Check B: Numerical evaluation against ground truth S
       const expectedVal = S[targetVar];
       if (typeof expectedVal === "number" && !isNaN(expectedVal)) {
         const { value: computedVal } = evaluatePhysicalAST(rhsAst, S, targetVar, varsDb, requiredUnits);
@@ -104,6 +127,7 @@ export function validateTopic(topic) {
     }
   }
 
+  // 4. Multi-Goal DAG Stress Test
   const candidateGoals = relations
     .filter(r => !r.requiredUnits)
     .map(r => r.solvable ? r.solvable[0] : r.nodes[0])
