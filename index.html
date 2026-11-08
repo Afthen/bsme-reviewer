@@ -394,10 +394,50 @@
       font-weight: normal;
     }
 
-    /* Flashcard Carousel Modal & Interactive Variable Pills */
-    .carousel-container { max-width: 520px; margin: 1.5rem auto; display: flex; flex-direction: column; gap: 1rem; }
+    /* Frosted Glass Modal Overlay for Flashcard Carousel */
+    #view-carousel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 17, 21, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1002;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    #view-carousel.active {
+      display: flex;
+    }
+
+    .carousel-container {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      animation: carouselPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes carouselPopIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
     .carousel-top-bar { display: flex; justify-content: space-between; align-items: center; }
-    .carousel-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; min-height: 320px; }
+    .carousel-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      min-height: 320px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    }
     .carousel-card-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); }
     .carousel-card-body { flex: 1; padding: 2rem 1.5rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 1.25rem; }
     .carousel-formula { font-size: 1.35rem; padding: 0.75rem 1.25rem; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; width: 100%; overflow-x: auto; }
