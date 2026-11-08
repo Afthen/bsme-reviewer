@@ -3,17 +3,9 @@
  * ============================================================================
  * ARCHITECTURAL PILLAR I: The AST-First Math Compiler
  * ============================================================================
- * PHILOSOPHY:
- * Mathematical formulas are structured Abstract Syntax Trees (ASTs), NOT strings.
- * Using regex to check variable presence, transform formulas, or extract tokens
- * is strictly forbidden because regular expressions cannot handle operator
- * precedence, nested groupings, or mathematical scopes.
- *
- * RESPONSIBILITIES:
- * - Deterministic Tokenization (Lexer)
- * - Recursive-Descent Parsing (Parser)
- * - Pure AST Traversal & Search (Zero Regex)
- * - Numerical Evaluation with Physical Unit Hooks (Angle Degree/Radian Scaling)
+ * Mathematical formulas are structured Abstract Syntax Trees (ASTs).
+ * Enforces strict operator precedence during string serialization so
+ * denominators (A / (B * C)) preserve their grouping under left-associative math.
  * ============================================================================
  */
 
@@ -21,10 +13,6 @@
 // 1. LEXICAL ANALYZER (SCANNER)
 // ========================================================
 
-/**
- * Scans a mathematical expression string into formal language tokens.
- * Character-class checks are restricted strictly to tokenizer predicates.
- */
 export function tokenizeExpr(str) {
   const tokens = [];
   let i = 0;
@@ -60,10 +48,6 @@ export function tokenizeExpr(str) {
 // 2. RECURSIVE DESCENT PARSER (GRAMMAR ENFORCEMENT)
 // ========================================================
 
-/**
- * Builds an AST enforcing mathematical order of operations:
- * Primary (Parens, Calls, Leaves) -> Exponentiation (^) -> Multiplicative (*, /) -> Additive (+, -)
- */
 export function parseMathAST(exprStr) {
   if (!exprStr) return null;
   const tokens = tokenizeExpr(exprStr);
@@ -141,7 +125,8 @@ export function parseMathAST(exprStr) {
 }
 
 /**
- * Re-serializes an AST back into a clean mathematical string.
+ * Re-serializes an AST back into an infix string, enforcing strict
+ * mathematical operator precedence and grouping parentheses.
  */
 export function astToExprStr(node) {
   if (!node) return "";
@@ -149,19 +134,50 @@ export function astToExprStr(node) {
   if (node.type === "id") return node.name;
   if (node.type === "group") return `(${astToExprStr(node.expr)})`;
   if (node.type === "call") return `${node.fn}(${astToExprStr(node.arg)})`;
+
   if (node.type === "binary") {
-    return `${astToExprStr(node.left)} ${node.op} ${astToExprStr(node.right)}`;
+    let leftStr = astToExprStr(node.left);
+    let rightStr = astToExprStr(node.right);
+
+    // 1. Division: Denominator with ANY binary operation MUST be parenthesized: A / (B * C)
+    if (node.op === "/" && node.right.type === "binary") {
+      rightStr = `(${rightStr})`;
+    }
+    if (node.op === "/" && node.left.type === "binary" && (node.left.op === "+" || node.left.op === "-")) {
+      leftStr = `(${leftStr})`;
+    }
+
+    // 2. Multiplication: Additive terms must be parenthesized: (A + B) * C
+    if (node.op === "*") {
+      if (node.left.type === "binary" && (node.left.op === "+" || node.left.op === "-")) {
+        leftStr = `(${leftStr})`;
+      }
+      if (node.right.type === "binary" && (node.right.op === "+" || node.right.op === "-")) {
+        rightStr = `(${rightStr})`;
+      }
+    }
+
+    // 3. Subtraction: Right-hand additive terms must be parenthesized: A - (B + C)
+    if (node.op === "-" && node.right.type === "binary" && (node.right.op === "+" || node.right.op === "-")) {
+      rightStr = `(${rightStr})`;
+    }
+
+    // 4. Power: Complex base or exponent must be parenthesized: (A / B) ^ (1 / 2)
+    if (node.op === "^") {
+      if (node.left.type === "binary") leftStr = `(${leftStr})`;
+      if (node.right.type === "binary") rightStr = `(${rightStr})`;
+    }
+
+    return `${leftStr} ${node.op} ${rightStr}`;
   }
+
   return "";
 }
 
 // ========================================================
-// 3. TREE INSPECTION (REPLACES FINICKY REGEX)
+// 3. TREE INSPECTION
 // ========================================================
 
-/**
- * Collects all unique identifier tokens across the tree. Zero string regex matching.
- */
 export function getAstIdentifiers(node) {
   const ids = [];
   function walk(n) {
@@ -176,10 +192,6 @@ export function getAstIdentifiers(node) {
   return ids;
 }
 
-/**
- * Deterministically checks whether an AST contains targetVar.
- * Replaces broken regex word-boundary tests (\b) with exact node equality.
- */
 export function astHasVariable(node, targetVar) {
   if (!node) return false;
   function walk(n) {
@@ -193,9 +205,6 @@ export function astHasVariable(node, targetVar) {
   return walk(node);
 }
 
-/**
- * Counts occurrences of a variable in an expression tree to verify invertibility.
- */
 export function countVariableOccurrences(node, targetVar) {
   if (!node) return 0;
   let count = 0;
@@ -213,9 +222,6 @@ export function countVariableOccurrences(node, targetVar) {
   return count;
 }
 
-/**
- * Unwraps redundant groupings e.g. (((A))) -> A.
- */
 export function unwrapGroup(node) {
   let n = node;
   while (n && n.type === "group") {
@@ -225,14 +231,9 @@ export function unwrapGroup(node) {
 }
 
 // ========================================================
-// 4. NUMERICAL AST EVALUATOR WITH PHYSICAL ANGLE CONVERSION
+// 4. NUMERICAL AST EVALUATOR
 // ========================================================
 
-/**
- * Evaluates an AST numerically given a dictionary of values S.
- * Accepts an optional unitResolver hook to convert degree angles into radians
- * for trigonometric functions, respecting physical dimensional contracts.
- */
 export function evalAST(node, S = {}, unitResolver = null) {
   if (!node) return NaN;
 
@@ -255,8 +256,6 @@ export function evalAST(node, S = {}, unitResolver = null) {
     let a = evalAST(node.arg, S, unitResolver);
     if (isNaN(a)) return NaN;
 
-    // Physical Contract: sin/cos/tan require radians. If the argument's physical
-    // unit is degrees, scale to radians dynamically without hardcoding variable names.
     if (["sin", "cos", "tan"].includes(node.fn)) {
       if (unitResolver && unitResolver(node.arg)) {
         a = (a * Math.PI) / 180;
