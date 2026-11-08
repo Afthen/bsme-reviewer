@@ -1,3 +1,8 @@
+/**
+ * test/run_tests.js
+ * Automated Node.js test harness for GitHub Actions CI.
+ */
+
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { ALL_TOPICS } from "../src/topics/registry.js";
