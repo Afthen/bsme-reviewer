@@ -192,6 +192,9 @@ describe("Derivation Fidelity & Factor-Label Typesetting", () => {
 
         assert.ok(derivLatex.includes("\\boxed{"), "Derivation step missing boxed answer");
         assert.ok(derivLatex.includes("="), "Derivation step missing equality");
+        assert.ok(!/\\text{[^}]*_/.test(derivLatex), `Unescaped underscore inside \\text{} in step: ${derivLatex}`);
+        assert.ok(!/\\cdot\^/.test(derivLatex), `\\cdot cannot take a direct superscript in step: ${derivLatex}`);
+        assert.ok(!/\\cancel{\s*}/.test(derivLatex), `Empty cancel bracket in step: ${derivLatex}`);
         assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), "Derivation produced illegal nested fraction tower");
       }
     });
