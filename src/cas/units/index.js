@@ -1,8 +1,8 @@
 /**
- * src/cas/units.js
- * Single-Entry Facade re-exporting all submodules for complete backwards-compatibility.
+ * src/cas/units/index.js
+ * Single-Entry Facade re-exporting sibling modules for the units subpackage.
  */
 
-export * from "./units/definitions.js";
-export * from "./units/analysis.js";
-export * from "./units/evaluator.js";
+export * from "./definitions.js";
+export * from "./analysis.js";
+export * from "./evaluator.js";
