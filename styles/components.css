@@ -140,14 +140,6 @@
   padding: 0.38rem 0.85rem 0.38rem 2.3rem;
 }
 .topic-item:hover { background: var(--card); color: #fff; }
-.topic-item.selected {
-  background: rgba(147, 197, 253, 0.12);
-  color: var(--accent-math);
-  font-weight: 600;
-  border-left: 2px solid var(--accent-math);
-}
-.topic-item.level-2.selected { padding-left: calc(1.4rem - 2px); }
-.topic-item.level-3.selected { padding-left: calc(2.3rem - 2px); }
 
 /* Sidebar Drawer */
 aside {
@@ -192,6 +184,7 @@ aside.open { transform: translateX(0); }
 
 /* ================================================================== *
  *  Checklist topic dropdown (multi-topic review set)                 *
+ *  (.selected rules removed: the checklist uses .checked exclusively)*
  * ================================================================== */
 
 #topic-dropdown-menu .topic-item.topic-leaf {
@@ -260,7 +253,7 @@ aside.open { transform: translateX(0); }
 /* Deny flash: attempted to empty the review set */
 @keyframes denyFlash {
   0%, 100% { box-shadow: none; }
-  50%      { box-shadow: 0 0 0 2px rgba(255, 99, 99, 0.55); }
+  50%      { box-shadow: 0 0 0 2px var(--danger, rgba(255, 99, 99, 0.55)); }
 }
 .deny-flash {
   animation: denyFlash 0.35s ease 2;
@@ -297,3 +290,21 @@ aside.open { transform: translateX(0); }
   line-height: 1.5;
 }
 .selection-prompt .btn { margin-top: 0.25rem; }
+
+/* ================================================================== *
+ *  Topic badge: which subject the current problem came from         *
+ * ================================================================== */
+
+#view-problem .topic-badge {
+  display: inline-block;
+  margin: 0.5rem 0 0;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--accent-math);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
