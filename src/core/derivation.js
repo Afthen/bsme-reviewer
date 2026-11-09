@@ -10,6 +10,8 @@ import { resolveCanonicalKey } from "../cas/algebra.js";
 import { casToTex, astToLatex } from "../cas/latex.js";
 import { solveUnitAlgebra } from "../cas/units/index.js";
 import { fmtSigFig } from "./dimensions.js";
+import { formatGivenValue } from "./dimensions.js";
+import { unitToTex } from "../cas/units/definitions.js";
 
 export function buildAlignedDerivation(
   step,
@@ -112,3 +114,64 @@ export function buildAlignedDerivation(
 }
 
 export const buildDerivationStep = buildAlignedDerivation;
+
+// 1. Build Localized Substitution Mapping (constants keep full precision)
+const subsMap = {};
+for (const [k, v] of Object.entries(evalState)) {
+  if (typeof v === "number") {
+    const formattedNum = formatGivenValue(k, v, varsDb);
+    const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
+    const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
+
+    if (unitMarkup !== "" || inlineConv !== "") {
+      subsMap[k] = `${formattedNum},${unitMarkup}${inlineConv}`;
+    } else {
+      subsMap[k] = formattedNum;
+    }
+  }
+}
+
+// 2. GENERAL additive unit-group factoring: (a ± b ± …) shares ONE unit,
+//    printed outside the parenthesis, at any depth/position.
+const unitOfKey = k => S._u?.[k] || varsDb[k]?.unit || "";
+(function factorAdditiveGroups(node) {
+  if (!node) return;
+  if (node.type === "group") { factorAdditiveGroups(node.expr); return; }
+  if (node.type === "call") { factorAdditiveGroups(node.arg); return; }
+  if (node.type !== "binary") return;
+
+  if (node.op === "+" || node.op === "-") {
+    const leaves = [];
+    (function walk(n, sign) {
+      const u = n && n.type === "group" ? n.expr : n;
+      if (u && u.type === "binary" && (u.op === "+" || u.op === "-")) {
+        walk(u.left, sign);
+        walk(u.right, u.op === "+" ? sign : -sign);
+        return;
+      }
+      if (u && u.type === "id" && typeof evalState[u.name] === "number") {
+        leaves.push({ key: u.name, sign });
+      }
+    })(node, 1);
+
+    const units = leaves.map(l => unitOfKey(l.key));
+    if (leaves.length > 1 && units.every(u => u && u === units[0])) {
+      const uTex = unitAnalysis.tokenMarkup?.[leaves[0].key] || unitToTex(units[0]);
+      const inner = leaves
+        .map((l, i) => `${i === 0 ? (l.sign < 0 ? "-" : "") : (l.sign < 0 ? " - " : " + ")}${formatGivenValue(l.key, evalState[l.key], varsDb)}`)
+        .join("");
+      subsMap[leaves[0].key] = `(${inner}),${uTex}`;
+      leaves.slice(1).forEach(l => { subsMap[l.key] = "0"; });
+      return;                                   // maximal group: do not descend
+    }
+  }
+
+  factorAdditiveGroups(node.left);
+  factorAdditiveGroups(node.right);
+})(rhsAst);
+
+// 3. numTex: widen the zero-leaf strip to BOTH signs (groups consume leaves),
+//    and append the single global scale bracket when one exists:
+const numTex = astToLatex(rhsAst, subsMap, varsDb)
+  .replace(/[+\-]\s*0(?!\d)/g, "")
+  + (unitAnalysis.globalConversionTex || "");
