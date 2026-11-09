@@ -81,7 +81,8 @@ export function createGroundTruthHelicalSystem({ sys = null } = {}) {
       m: "mm", m_n: "mm", V_m: "m/s", P: "kW", M_t: "N-m", W_t: "N", W_r: "N", F_a: "N", W: "N",
       s: "MPa", F_s: "N", F_D: "N", C_d: "N", F_w: "N", K_w: "MPa",
       phi: "°", phi_n: "°", psi: "°", n_1: "rpm", n_2: "rpm", P_d: "teeth/in", P_dn: "teeth/in",
-      T_1: "teeth", T_2: "teeth", T: "teeth", T_v: "teeth"
+      T_1: "teeth", T_2: "teeth", T: "teeth", T_v: "teeth",
+      VR: "dimless", Y: "dimless", m_F: "dimless", k_f: "dimless", Q: "dimless"
     };
 
     S = {
@@ -131,7 +132,8 @@ export function createGroundTruthHelicalSystem({ sys = null } = {}) {
       m: "mm", m_n: "mm", P_d: "teeth/in", P_dn: "teeth/in", V_m: "ft/min", P: "hp", M_t: "lb-in",
       W_t: "lb", W_r: "lb", F_a: "lb", W: "lb", s: "psi", F_s: "lb", F_D: "lb", C_d: "lb", F_w: "lb", K_w: "psi",
       phi: "°", phi_n: "°", psi: "°", n_1: "rpm", n_2: "rpm",
-      T_1: "teeth", T_2: "teeth", T: "teeth", T_v: "teeth"
+      T_1: "teeth", T_2: "teeth", T: "teeth", T_v: "teeth",
+      VR: "dimless", Y: "dimless", m_F: "dimless", k_f: "dimless", Q: "dimless"
     };
 
     S = {
