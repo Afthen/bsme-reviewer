@@ -261,6 +261,7 @@ Not registered at the time of writing (add before use): `mm^2 cm^2 ft^2 cm^3 in^
 - **Fading:** non-goal steps whose equation mastery is at least `FADING_THRESHOLD` are pre-answered so effort goes into synthesis.
 - **Recall mode:** `isConstant` givens are omitted from the statement once their mastery reaches the threshold.
 - **Statement:** "A {noun} operates with the following specifications: ... Determine: ..." with polymorphic names and symbols; every non-faded step is listed as a goal.
+- **Multi-topic pool targeting (`src/core/topic_mix.js`):** the checklist dropdown persists selected topic ids in `localStorage` (`bsme.selectedTopicIds`); first run is empty and prompts. Each draw buys one ticket per topic, `key = topicScore × (phi(-1) + phi(-2)·rand())`, where `topicScore` is the share-weighted **mean** of `relationWeaknessWeight(mastery)` over the topic's relations (share = 1 unique, `phi(-1)` for `eq_base_*` — the same discount idiom as `calculateTopicLambda`). Mean ⇒ size-neutral, no order-statistics leak, and breadth of weakness earns airtime. A 1-topic pool has one ticket, so mechanics reduce verbatim to the legacy single-topic path. `relationWeaknessWeight` lives only in `problem_gen.js`; `isCommonEq` only in `mastery/engine.js`.
 
 ### 7.2 Derivations (`src/core/derivation.js`)
 - Line 1 is `canonicalTex`; then the isolated form (when the formula is not already solved for the target); then the numeric substitution.
