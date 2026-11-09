@@ -1,9 +1,14 @@
+/**
+ * src/topics/powerplant_design/diesel_heat_balance/system.js
+ * Ground truth generator for diesel engine thermal balance distribution.
+ */
+
 import { DIESEL_HEAT_BALANCE_VARS_DB } from "./schema.js";
 
-export function createDieselHeatBalanceSystem() {
+export function createDieselHeatBalanceSystem({ sys = "SI" } = {}) {
   const Q_f = [4000, 5000, 6000, 7000][Math.floor(Math.random() * 4)];
   
-  // Typical heat balance percentages for a diesel engine (as whole numbers, e.g., 35 for 35%)
+  // Typical heat balance percentages for a diesel engine
   const pct_ip = [35, 36, 38, 40][Math.floor(Math.random() * 4)];
   const pct_cw = [25, 26, 28, 30][Math.floor(Math.random() * 4)];
   const pct_exh = [20, 22, 24, 26][Math.floor(Math.random() * 4)];
@@ -30,5 +35,5 @@ export function createDieselHeatBalanceSystem() {
     pct_cw: "dimless", pct_exh: "dimless", pct_rad: "dimless"
   };
 
-  return { Q_f, Q_ip, Q_cw, Q_exh, Q_rad, m_cw, dT_cw, cp_w, pct_cw, pct_exh, pct_rad, _names, _u };
+  return { sys: "SI", Q_f, Q_ip, Q_cw, Q_exh, Q_rad, m_cw, dT_cw, cp_w, pct_cw, pct_exh, pct_rad, _names, _u };
 }

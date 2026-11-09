@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Graph-based engineering problem generator and mastery reviewer",
   "scripts": {
-    "test": "node --test test/run_test.js test/hygiene_test.js",
+    "test": "node --test test/run_test.js test/run_hygiene_test.js",
     "audit:duplicates": "npx jscpd src/ styles/",
     "audit:dead-code": "npx knip",
     "audit": "npm test && npm run audit:duplicates && npm run audit:dead-code"

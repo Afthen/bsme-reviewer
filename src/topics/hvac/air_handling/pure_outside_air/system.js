@@ -1,6 +1,11 @@
+/**
+ * src/topics/hvac/air_handling/pure_outside_air/system.js
+ * Ground truth generator for 100% Outside Air cooling coil systems.
+ */
+
 import { PURE_AIR_VARS_DB } from "./schema.js";
 
-export function createPureAirSystem() {
+export function createPureAirSystem({ sys = "SI" } = {}) {
   const m_o = [2.5, 3.0, 4.0, 5.0, 6.0][Math.floor(Math.random() * 5)];
   const h_o = 85.0;
   const h_s = 40.0;
@@ -12,5 +17,5 @@ export function createPureAirSystem() {
   }
   const _u = { m_o: "kg/s", h_o: "kJ/kg", h_s: "kJ/kg", q_c: "kW" };
 
-  return { m_o, h_o, h_s, q_c, _names, _u };
+  return { sys: "SI", m_o, h_o, h_s, q_c, _names, _u };
 }

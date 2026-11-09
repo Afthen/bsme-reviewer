@@ -57,9 +57,9 @@ export const HVAC_BASE_VARS = Object.freeze({
   "t_db": {
     name: "Dry-Bulb Temperature",
     symbol: "t_{db}",
-    nameAliases: ["Dry-Bulb Temperature", "Dry Bulb Temp", "Ambient Air Temp"],
+    nameAliases: ["Dry-Bulb Temperature", "Dry Bulb Temp"],
     symbolAliases: ["t_{db}", "\\text{DBT}", "T_{db}"],
-    aliases: ["Dry-Bulb Temperature", "Dry Bulb Temp", "Ambient Air Temp", "t_db", "DBT"],
+    aliases: ["Dry-Bulb Temperature", "Dry Bulb Temp", "t_db", "DBT"],
     dimension: DIMENSIONS.TEMPERATURE,
     unit: "°C"
   },

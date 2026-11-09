@@ -24,7 +24,7 @@ export const GEAR_VARS_DB = Object.freeze({
   "W": { name: "Normal Contact Force", symbol: "F_n", dimension: DIMENSIONS.FORCE, baseVar: "W", aliases: ["Normal Contact Force", "Total Tooth Load", "F_n"] },
   "phi": { name: "Pressure Angle", symbol: "\\phi", dimension: DIMENSIONS.ANGLE, unit: "deg", baseVar: "phi", aliases: ["Pressure Angle", "Angle of Obliquity"] },
   "S_n": { name: "Endurance Strength", symbol: "S_n", dimension: DIMENSIONS.STRESS, baseVar: "S_n", aliases: ["Endurance Strength", "Fatigue Limit"] },
-  "y_form": { name: "Lewis Form Factor", symbol: "y", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "y_form", aliases: ["Lewis Form Factor", "y"] },
+  "y_form": { name: "Lewis Form Factor (Circular)", symbol: "y", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "y_form", aliases: ["Circular Form Factor", "Lewis Form Factor (Circular Pitch)", "y"] },
   "k_f": { name: "Stress Reduction Factor", symbol: "k_f", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "k_f", aliases: ["Stress Reduction Factor", "k_f"] },
   "F_s": { name: "Beam Fatigue Strength", symbol: "F_s", dimension: DIMENSIONS.FORCE, baseVar: "F_s", aliases: ["Beam Fatigue Strength", "Lewis Safe Load", "F_s"] },
   "F_w": { name: "Wear Load", symbol: "F_w", dimension: DIMENSIONS.FORCE, baseVar: "F_w", aliases: ["Wear Load", "Buckingham Wear Load", "F_w"] },

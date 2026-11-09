@@ -57,6 +57,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
           stepIdx,
           type: "single",
           targetVar,
+          id: eq.id,
           eqId: eq.id,
           eqName: eq.name,
           baseFormula,
@@ -93,6 +94,7 @@ export function canSolveTarget(givensArray, targetVar, relations = [], S = {}) {
 
 /**
  * Prunes solution steps to the goal and activates Golden Ratio cognitive fading.
+ * Respects the R17 contract: passes an object with id and baseFormula to getMastery.
  */
 export function pruneSolutionPath(steps = [], goalVar, getMastery = () => 0) {
   const goalIdx = steps.findIndex(s => s.targetVar === goalVar);
@@ -104,11 +106,12 @@ export function pruneSolutionPath(steps = [], goalVar, getMastery = () => 0) {
   const fadedAncestorEqIds = [];
   solution.forEach(step => {
     const isGoal = step.targetVar === goalVar;
-    const mastery = getMastery(step);
+    const eqObj = { id: step.eqId || step.id, baseFormula: step.baseFormula };
+    const mastery = getMastery(eqObj);
 
     if (!isGoal && mastery >= FADING_THRESHOLD) {
       step.isFaded = true;
-      fadedAncestorEqIds.push(step.eqId);
+      fadedAncestorEqIds.push(step.eqId || step.id);
     } else {
       step.isFaded = false;
     }

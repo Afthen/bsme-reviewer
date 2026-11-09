@@ -11,7 +11,7 @@ import {
   exportMasteryJSON, importMasteryJSON
 } from "./src/mastery/index.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
-import { initSidebarView, renderSidebar } from "./src/ui/sidebar_view.js";
+import { initSidebarView, renderSidebar, MASTERY_CHANGED_EVENT } from "./src/ui/sidebar_view.js";
 
 /* ------------------------------------------------------------------ *
  *  Multi-topic review set (checklist dropdown)                       *
@@ -129,6 +129,12 @@ document.addEventListener("DOMContentLoaded", () => {
     currentTopic ? masteryFor(currentTopic) : () => 0
   );
   setupHeaderActions();
+
+  document.addEventListener(MASTERY_CHANGED_EVENT, () => {
+    if (currentTopic) {
+      renderSidebar(currentTopic.relations, masteryFor(currentTopic));
+    }
+  });
 
   const btnBack = document.getElementById("btn-back-to-problem");
   if (btnBack) {
@@ -337,8 +343,6 @@ function setupTopicSelector() {
       catChevron.className = "category-chevron";
       catChevron.textContent = "▶";
 
-      // NOTE: must NOT shadow the loop variable `catName` (previous bug
-      // rendered "[object HTMLSpanElement]" as the category label).
       const catNameSpan = document.createElement("span");
       catNameSpan.textContent = catName;
 
@@ -377,111 +381,3 @@ function setupTopicSelector() {
   selectAllBtn.className = "menu-mini-btn";
   selectAllBtn.textContent = "Select all";
   selectAllBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const wasEmpty = selectedTopicIds.length === 0;
-    leafBoxes.forEach(b => {
-      b.checked = true;
-      b.closest(".topic-leaf")?.classList.add("checked");
-      setTopicSelected(b.dataset.topicId, true);
-    });
-    commitSelection(wasEmpty);
-  });
-
-  footer.append(footerCount, selectAllBtn);
-  menu.appendChild(footer);
-
-  syncGroupBoxes();
-  updateDropdownLabel();
-
-  // Toggle dropdown
-  toggleBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = menu.classList.toggle("active");
-    toggleBtn.classList.toggle("active", isOpen);
-  });
-
-  // Click outside to dismiss (menu stays open while ticking boxes)
-  document.addEventListener("click", (e) => {
-    if (!container.contains(e.target)) {
-      menu.classList.remove("active");
-      toggleBtn.classList.remove("active");
-    }
-  });
-}
-
-function setupHeaderActions() {
-  const exportBtn = document.getElementById("btn-export");
-  if (exportBtn) {
-    exportBtn.addEventListener("click", () => {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(exportMasteryJSON());
-      const dl = document.createElement("a");
-      dl.setAttribute("href", dataStr);
-      dl.setAttribute("download", `mastery_global.json`);
-      dl.click();
-    });
-  }
-
-  const importBtn = document.getElementById("btn-import");
-  const fileInput = document.getElementById("mastery-file-input");
-
-  if (importBtn && fileInput) {
-    importBtn.addEventListener("click", () => fileInput.click());
-
-    fileInput.addEventListener("change", e => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        const res = importMasteryJSON(ev.target.result);
-        if (res.success) {
-          alert("Global Mastery profile imported successfully!");
-          if (currentTopic) {
-            renderSidebar(currentTopic.relations, masteryFor(currentTopic));
-          }
-        } else {
-          alert(`Import failed: ${res.reason}`);
-        }
-      };
-      reader.readAsText(file);
-    });
-  }
-
-  const nextBtn = document.getElementById("btn-generate-next");
-  if (nextBtn) {
-    nextBtn.addEventListener("click", () => generateNewProblem());
-  }
-}
-
-/* ------------------------------------------------------------------ *
- *  Generation: draw from the whole checked pool.                     *
- *  pickWeakestTopic runs the D′ tournament over the set;             *
- *  generateProblem then executes its untouched per-relation mastery  *
- *  pipeline (hops, fading, recall, distractors) inside that topic.   *
- *  Mastery bookkeeping stays scoped per topic via problem.topicId.   *
- *  Empty pool -> show the selection prompt and open the checklist.   *
- * ------------------------------------------------------------------ */
-function generateNewProblem() {
-  const pool = getSelectedTopics();
-
-  if (pool.length === 0) {
-    currentTopic = null;
-    currentProblem = null;
-    renderSelectionPrompt();
-    openDropdown();
-    return;
-  }
-
-  clearSelectionPrompt();
-
-  const topic = pickWeakestTopic(pool, masteryFor) || pool[0];
-  currentTopic = topic;
-
-  incrementTopicTick(topic.id);
-  incrementTopicTick("common");
-
-  currentProblem = generateProblem(topic, masteryFor(topic));
-
-  renderProblemView(currentProblem, topic.relations, topic.id);
-  renderTopicBadge(topic);
-  renderSidebar(topic.relations, masteryFor(topic));
-}

@@ -1,6 +1,11 @@
+/**
+ * src/topics/powerplant_design/diesel_cycle/system.js
+ * Ground truth generator for ideal air-standard Diesel cycle.
+ */
+
 import { DIESEL_CYCLE_VARS_DB } from "./schema.js";
 
-export function createDieselCycleSystem() {
+export function createDieselCycleSystem({ sys = "SI" } = {}) {
   const r_k = [14.0, 16.0, 18.0, 20.0, 22.0][Math.floor(Math.random() * 5)];
   const r_c = [1.5, 2.0, 2.5, 3.0][Math.floor(Math.random() * 4)];
   const r_e = r_k / r_c;
@@ -26,5 +31,5 @@ export function createDieselCycleSystem() {
     c_p: "kJ/kg-K", c_v: "kJ/kg-K",
     Q_A: "kJ/kg", Q_R: "kJ/kg", W_net: "kJ/kg", e_th: "dimless"
   };
-  return { r_k, r_c, r_e, k, T_1, T_2, T_3, T_4, c_p, c_v, Q_A, Q_R, W_net, e_th, _names, _u };
+  return { sys: "SI", r_k, r_c, r_e, k, T_1, T_2, T_3, T_4, c_p, c_v, Q_A, Q_R, W_net, e_th, _names, _u };
 }

@@ -5,7 +5,7 @@
 
 import { AIR_PROPERTIES_VARS_DB } from "./schema.js";
 
-export function createAirPropertiesSystem() {
+export function createAirPropertiesSystem({ sys = "SI" } = {}) {
   const t_db = [30.0, 32.0, 35.0, 38.0][Math.floor(Math.random() * 4)];
   const t_wb = [22.0, 24.0, 25.0, 27.0][Math.floor(Math.random() * 4)];
   const P_t = 101.325; // kPa standard atmospheric
@@ -44,6 +44,7 @@ export function createAirPropertiesSystem() {
   };
 
   return {
+    sys: "SI",
     P_v, P_sat, P_wb, P_t, P_a, t_db, t_wb, t_dp, W, RH, h, v,
     SHR, Q_s, Q_l, Q_t, _names, _u
   };

@@ -1,6 +1,11 @@
+/**
+ * src/topics/hvac/air_handling/outside_air_with_return/system.js
+ * Ground truth generator for mixed air handling systems.
+ */
+
 import { MIXED_AIR_VARS_DB } from "./schema.js";
 
-export function createMixedAirSystem() {
+export function createMixedAirSystem({ sys = "SI" } = {}) {
   const m_o = [1.5, 2.0, 2.5][Math.floor(Math.random() * 3)];
   const m_r = [6.0, 7.5, 8.0][Math.floor(Math.random() * 3)];
   const m_m = m_o + m_r;
@@ -29,5 +34,5 @@ export function createMixedAirSystem() {
     y: "dimless", V_o: "m^3/s", v_o: "m^3/kg", V_m: "m^3/s", v_m: "m^3/kg"
   };
 
-  return { m_o, m_r, m_m, y, t_o, t_r, t_m, h_o, h_r, h_m, h_s, q_c, V_o, v_o, V_m, v_m, _names, _u };
+  return { sys: "SI", m_o, m_r, m_m, y, t_o, t_r, t_m, h_o, h_r, h_m, h_s, q_c, V_o, v_o, V_m, v_m, _names, _u };
 }

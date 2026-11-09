@@ -1,6 +1,11 @@
+/**
+ * src/topics/powerplant_design/diesel_engine/system.js
+ * Ground truth generator for stationary diesel powerplant machinery.
+ */
+
 import { DIESEL_ENGINE_VARS_DB } from "./schema.js";
 
-export function createDieselEngineSystem() {
+export function createDieselEngineSystem({ sys = "SI" } = {}) {
   const BP = [1000, 1500, 2000, 2500, 3000][Math.floor(Math.random() * 5)];
   const eta_m = [0.82, 0.85, 0.88, 0.90][Math.floor(Math.random() * 4)];
   const IP = BP / eta_m;
@@ -25,5 +30,5 @@ export function createDieselEngineSystem() {
     eta_m: "dimless", eta_th: "dimless", eta_ith: "dimless", eta_g: "dimless",
     bsfc: "kg/kWh", isfc: "kg/kWh"
   };
-  return { BP, IP, FP, EP, Q_f, m_f, HV, eta_m, eta_th, eta_ith, eta_g, bsfc, isfc, _names, _u };
+  return { sys: "SI", BP, IP, FP, EP, Q_f, m_f, HV, eta_m, eta_th, eta_ith, eta_g, bsfc, isfc, _names, _u };
 }

@@ -7,6 +7,7 @@
 
 import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
+import { CONSTANTS_DB } from "../core/constants_registry.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
   incrementTopicTick, phi
@@ -15,7 +16,7 @@ import { attachTooltips } from "./carousel_view.js";
 import { MASTERY_CHANGED_EVENT } from "./sidebar_view.js";
 
 function resolveMeta(varKey, varsDb = {}) {
-  return varsDb[varKey] || { name: varKey, symbol: varKey, unit: "" };
+  return varsDb[varKey] || CONSTANTS_DB[varKey] || { name: varKey, symbol: varKey, unit: "" };
 }
 
 export function renderProblemView(activeProblem, relations = [], topicId = "spur_gears") {
@@ -195,6 +196,13 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
       recordAttempt(step.eqId, true, topicScope);
     }
 
+    (step.nodes || []).forEach(nodeKey => {
+      const vMeta = activeProblem.varsDb[nodeKey] || CONSTANTS_DB[nodeKey];
+      if (vMeta?.isConstant) {
+        recordAttempt(`const_${nodeKey}`, true, topicScope);
+      }
+    });
+
     reinforceAncestors(step.fadedAncestorEqIds || [], topicScope);
     document.getElementById(`step-item-${idx}`).classList.add("open");
   } else {
@@ -204,6 +212,14 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
     } else {
       recordAttempt(step.eqId, false, topicScope);
     }
+
+    (step.nodes || []).forEach(nodeKey => {
+      const vMeta = activeProblem.varsDb[nodeKey] || CONSTANTS_DB[nodeKey];
+      if (vMeta?.isConstant) {
+        recordAttempt(`const_${nodeKey}`, false, topicScope);
+      }
+    });
+
     penalizeAncestors(step.fadedAncestorEqIds || [], topicScope);
     setTimeout(() => inputEl.classList.remove("shake-trigger"), 400);
   }
@@ -229,6 +245,14 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   } else {
     recordAttempt(step.eqId, false, topicScope);
   }
+
+  (step.nodes || []).forEach(nodeKey => {
+    const vMeta = activeProblem.varsDb[nodeKey] || CONSTANTS_DB[nodeKey];
+    if (vMeta?.isConstant) {
+      recordAttempt(`const_${nodeKey}`, false, topicScope);
+    }
+  });
+
   penalizeAncestors(step.fadedAncestorEqIds || [], topicScope);
 
   document.getElementById(`step-item-${idx}`).classList.add("open");

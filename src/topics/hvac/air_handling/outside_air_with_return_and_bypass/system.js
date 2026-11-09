@@ -1,6 +1,11 @@
+/**
+ * src/topics/hvac/air_handling/outside_air_with_return_and_bypass/system.js
+ * Ground truth generator for cooling coil with bypass factor and reheat.
+ */
+
 import { BYPASS_AIR_VARS_DB } from "./schema.js";
 
-export function createBypassAirSystem() {
+export function createBypassAirSystem({ sys = "SI" } = {}) {
   const m_o = 2.0; const m_r = 8.0; const m_m = m_o + m_r;
   const y = m_o / m_m;
 
@@ -38,6 +43,7 @@ export function createBypassAirSystem() {
   };
 
   return { 
+    sys: "SI",
     m_o, m_r, m_m, y, t_o, t_r, t_m, t_s, t_adp, t_rh, 
     h_o, h_r, h_m, h_s, h_adp, h_rh, BF, CF, q_c, q_rh, 
     V_o, v_o, V_m, v_m, V_s, v_s, c_pa, _names, _u 
