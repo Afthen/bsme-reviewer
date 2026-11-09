@@ -1,10 +1,10 @@
 /**
  * src/ui/problem_view.js
  * Interactive problem presenter with adaptive relative error checks.
- * Mastery sidebar refresh is delegated: views dispatch MASTERY_CHANGED_EVENT
- * and app.js re-renders per the active sidebar mode.
+ * Seamless cognitive fading presentation:
+ * - Faded steps are collapsed and badged as Mastered (Faded)
+ * - Active un-faded steps remain open for input
  */
-
 import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import { CONSTANTS_DB } from "../core/constants_registry.js";
@@ -38,26 +38,27 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
 
     const labelWrap = document.createElement("div");
     labelWrap.className = "step-label-wrap";
-
     const chevron = document.createElement("span");
     chevron.className = "chevron";
     chevron.textContent = "▶";
 
     const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
     const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
-
-    const symSpan = `<span class="interactive-var" data-var="${step.targetVar}">$${meta.symbol || step.targetVar}$</span>`;
-    const labelText = targetLabel(meta.name, symSpan, unit);
+    const symSpan = `<span class="interactive-var" data-var="${step.targetVar}">$${activeProblem.system._displaySymbols?.[step.targetVar] || meta.symbol || step.targetVar}$</span>`;
+    const labelText = targetLabel(activeProblem.system._displayNames?.[step.targetVar] || meta.name, symSpan, unit);
 
     const targetSpan = document.createElement("span");
-    targetSpan.innerHTML = `Step ${idx + 1}: ${labelText}`;
+    if (step.isFaded) {
+      targetSpan.innerHTML = `Step ${idx + 1}: ${labelText} <span style="font-size: 0.72rem; color: var(--success); font-weight: 600; margin-left: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">✓ Mastered (Faded)</span>`;
+    } else {
+      targetSpan.innerHTML = `Step ${idx + 1}: ${labelText}`;
+    }
 
     labelWrap.appendChild(chevron);
     labelWrap.appendChild(targetSpan);
 
     const inputWrap = document.createElement("div");
     inputWrap.className = "step-input-wrap";
-
     const input = document.createElement("input");
     input.type = "number";
     input.inputMode = "decimal";
@@ -68,7 +69,9 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
       input.value = step.userVal !== undefined ? step.userVal : fmtSigFig(step.expectedVal, 6);
       input.classList.add(step.isRevealed ? "state-revealed" : "state-correct");
       input.disabled = true;
-      item.classList.add("open");
+      if (!step.isFaded) {
+        item.classList.add("open");
+      }
     }
 
     input.addEventListener("keydown", e => {
@@ -92,12 +95,11 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
 
     const body = document.createElement("div");
     body.className = "solution-body";
-
     const mathDiv = document.createElement("div");
     mathDiv.className = "solution-math-display";
     mathDiv.id = `math-display-${idx}`;
-
     body.appendChild(mathDiv);
+
     item.appendChild(summary);
     item.appendChild(body);
     flowEl.appendChild(item);
@@ -171,8 +173,8 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
 
   const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
   const expected = step.expectedVal;
-
   let tol;
+
   if (meta.isInteger) {
     tol = 0.5;
   } else if (typeof meta.tolerance === "number") {
@@ -207,6 +209,7 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
     document.getElementById(`step-item-${idx}`).classList.add("open");
   } else {
     inputEl.classList.add("state-wrong", "shake-trigger");
+
     if (step.systemEqIds) {
       step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
     } else {
@@ -240,6 +243,7 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   inputEl.disabled = true;
 
   const topicScope = activeProblem.topicId || "common";
+
   if (step.systemEqIds) {
     step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
   } else {
@@ -254,8 +258,8 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   });
 
   penalizeAncestors(step.fadedAncestorEqIds || [], topicScope);
-
   document.getElementById(`step-item-${idx}`).classList.add("open");
+
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
   document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
@@ -267,12 +271,12 @@ function renderDistractorBanner(activeProblem) {
   if (!banner) return;
 
   const allCompleted = activeProblem.solution.every(s => s.isAnswered);
-
   if (allCompleted && activeProblem.distractors && activeProblem.distractors.length > 0) {
     const list = activeProblem.distractors.map(v => {
       const meta = resolveMeta(v, activeProblem.varsDb);
       return `<strong>${meta.name} ($${meta.symbol}$)</strong>`;
     }).join(", ");
+
     banner.style.display = "block";
     banner.innerHTML = `<strong>Exam Tip (Distractor Variable Detected):</strong> Notice that ${list} was given in the specifications but was not needed in the solution path. Board exams often supply extra parameters to test whether you choose the correct relations.`;
 
