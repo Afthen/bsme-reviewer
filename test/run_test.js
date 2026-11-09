@@ -271,9 +271,9 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
 });
 
 // ============================================================================
-// 4. PHYSICAL COHERENT EVALUATION IN MIXED UNITS
+// 4. PHYSICAL COHERENT EVALUATION & REQUIREDUNITS TARGET SCALING
 // ============================================================================
-describe("Physical Coherent Base Evaluation (Mixed Unit Consistency)", () => {
+describe("Physical Coherent Base Evaluation & Empirical Target Unit Scaling", () => {
   test("Multi-unit addition IP = BP (hp) + FP (W) evaluates with physical accuracy without raw number concatenation", () => {
     const node = parseMathAST("BP + FP");
     const S = {
@@ -288,9 +288,81 @@ describe("Physical Coherent Base Evaluation (Mixed Unit Consistency)", () => {
     };
 
     const { value } = evaluatePhysicalAST(node, S, "IP", varsDb);
-    // 3,000,000 W + 409,091 W = 3,409,091 W / 1.355818 = ~2,514,416 ft-lb/s
     assert.ok(value > 2.4e6 && value < 2.6e6, `Expected ~2.51e6 ft-lb/s, got: ${value}`);
     assert.ok(value < 1e8, `Value should not blow up to 227 million, got: ${value}`);
+  });
+
+  test("Buckingham dynamic load with requiredUnits { F_D: 'lb' } converts to requested target 'kip' (3.796 kip, not 3795.9)", () => {
+    const rel = TOPICS.helical_gears.relations.find(r => r.id === "eq_helical_buckingham");
+    assert.ok(rel, "Helical buckingham relation must exist");
+
+    const variant = rel.variants.US;
+    const node = parseMathAST(variant.baseFormula.split("=")[1].trim());
+
+    const S = {
+      W_t: 2.74752,
+      V_m: 600.295,
+      b: 0.167,
+      C_d: 400,
+      psi: 25,
+      F_D: 3.7959,
+      _u: { W_t: "kip", V_m: "ft/min", b: "ft", C_d: "lb", psi: "°", F_D: "kip" }
+    };
+
+    const { value, unitAnalysis } = evaluatePhysicalAST(node, S, "F_D", TOPICS.helical_gears.varsDb, variant.requiredUnits);
+
+    assert.ok(value > 3.7 && value < 3.9, `Expected ~3.796 kip, got: ${value}`);
+    assert.equal(unitAnalysis.numericConversionFactor, 0.001);
+
+    const deriv = buildAlignedDerivation(
+      { targetVar: "F_D", baseFormula: variant.baseFormula, canonicalTex: variant.canonicalTex, requiredUnits: variant.requiredUnits, expectedVal: value },
+      S, [], TOPICS.helical_gears.varsDb, TOPICS.helical_gears.relations
+    );
+
+    assert.ok(deriv.includes("3.796") || deriv.includes("3.7959"), `Derivation must box the value in kips, got: ${deriv}`);
+    assert.ok(!deriv.includes("3795.9\\,\\text{kip}"));
+  });
+
+  test("Carrier vapor pressure equation with requiredUnits { P_v: 'kPa' } converts to target 'psi'", () => {
+    const rel = TOPICS.hvac_air_properties.relations.find(r => r.id === "eq_carrier_pv");
+    assert.ok(rel, "Carrier relation must exist");
+
+    const node = parseMathAST(rel.baseFormula.split("=")[1].trim());
+    const S = {
+      P_wb: 3.169, // kPa
+      P_t: 101.325, // kPa
+      t_db: 30.0, // °C
+      t_wb: 25.0, // °C
+      P_v: 0.41,
+      _u: { P_wb: "kPa", P_t: "kPa", t_db: "°C", t_wb: "°C", P_v: "psi" }
+    };
+
+    const { value, unitAnalysis } = evaluatePhysicalAST(node, S, "P_v", TOPICS.hvac_air_properties.varsDb, rel.requiredUnits);
+
+    // In kPa: 3.169 - 101.325 * 5 / 1500 = 2.831 kPa.
+    // In psi: 2.831 kPa * 0.145038 psi/kPa = ~0.4106 psi.
+    assert.ok(value > 0.40 && value < 0.42, `Expected ~0.4106 psi, got: ${value}`);
+    assert.ok(Math.abs(unitAnalysis.numericConversionFactor - 0.145038) < 0.001);
+  });
+
+  test("Brake Specific Fuel Consumption with requiredUnits { bsfc: 'kg/kWh' } converts to target 'lb/hp-hr'", () => {
+    const rel = TOPICS.powerplant_design_diesel_engine.relations.find(r => r.id === "eq_de_bsfc");
+    assert.ok(rel, "BSFC relation must exist");
+
+    const node = parseMathAST(rel.baseFormula.split("=")[1].trim());
+    const S = {
+      m_f: 0.15, // kg/s
+      BP: 3000,  // kW
+      bsfc: 0.18,
+      _u: { m_f: "kg/s", BP: "kW", bsfc: "lb/hp-hr" }
+    };
+
+    const { value, unitAnalysis } = evaluatePhysicalAST(node, S, "bsfc", TOPICS.powerplant_design_diesel_engine.varsDb, rel.requiredUnits);
+
+    // In kg/kWh: (0.15 * 3600) / 3000 = 0.18 kg/kWh.
+    // 1 kg/kWh = 1.64399 lb/hp-hr => 0.18 * 1.64399 = ~0.2959 lb/hp-hr.
+    assert.ok(value > 0.28 && value < 0.31, `Expected ~0.296 lb/hp-hr, got: ${value}`);
+    assert.ok(Math.abs(unitAnalysis.numericConversionFactor - 1.644) < 0.01);
   });
 });
 
