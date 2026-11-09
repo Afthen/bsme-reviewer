@@ -3,7 +3,6 @@
  * Formulas-as-Nodes / Variables-as-Edges Solver Engine.
  * Dynamically resolves SI/US variants and requiredUnits contracts.
  */
-
 import { isolateVariable } from "../cas/algebra.js";
 import { FADING_THRESHOLD } from "../mastery/index.js";
 
@@ -12,23 +11,21 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
   const steps = [];
   const usedEquations = new Set();
   const producedBy = {};
-  let keepPropagating = true;
 
+  let keepPropagating = true;
   const sortedRelations = [...relations].sort((a, b) => getMastery(a) - getMastery(b));
 
   while (keepPropagating) {
     keepPropagating = false;
-
     for (const eq of sortedRelations) {
       if (usedEquations.has(eq.id)) continue;
 
       const activeVariant = (eq.variants && S && S.sys && eq.variants[S.sys]) ? eq.variants[S.sys] : null;
       const eqNodes = activeVariant?.nodes || eq.nodes;
-
       const unknowns = eqNodes.filter(n => !known.has(n));
+
       if (unknowns.length === 1) {
         const targetVar = unknowns[0];
-
         if (eq.solvable && !eq.solvable.includes(targetVar)) {
           continue;
         }
@@ -43,6 +40,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
 
         const parentIndices = inputVars.map(v => producedBy[v]).filter(idx => idx !== undefined);
         const ancestorSet = new Set();
+
         function traceAncestors(pIdx) {
           ancestorSet.add(pIdx);
           const pStep = steps[pIdx];
@@ -80,7 +78,6 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
       }
     }
   }
-
   return steps;
 }
 
@@ -93,23 +90,52 @@ export function canSolveTarget(givensArray, targetVar, relations = [], S = {}) {
 }
 
 /**
- * Prunes solution steps to the goal and activates Golden Ratio cognitive fading.
- * Respects the R17 contract: passes an object with id and baseFormula to getMastery.
+ * Prunes solution steps to the goal(s) and activates Golden Ratio cognitive fading.
+ * Supports a single goalVar, an array of goals, or topic terminalGoals.
+ * Intermediate cycle state points fade when equation mastery >= FADING_THRESHOLD.
  */
-export function pruneSolutionPath(steps = [], goalVar, getMastery = () => 0) {
-  const goalIdx = steps.findIndex(s => s.targetVar === goalVar);
-  if (goalIdx < 0) return [];
+export function pruneSolutionPath(steps = [], goalVar = null, getMastery = () => 0, terminalGoals = []) {
+  let goalList = [];
+  if (Array.isArray(goalVar)) {
+    goalList = goalVar.filter(Boolean);
+  } else if (typeof goalVar === "string" && goalVar) {
+    goalList = [goalVar];
+  }
 
-  const requiredIndices = new Set([goalIdx, ...(steps[goalIdx].ancestorIndices || [])]);
+  let requiredIndices;
+  if (goalList.length === 0) {
+    requiredIndices = new Set(steps.map(s => s.stepIdx));
+  } else {
+    requiredIndices = new Set();
+    goalList.forEach(g => {
+      const idx = steps.findIndex(s => s.targetVar === g);
+      if (idx >= 0) {
+        requiredIndices.add(idx);
+        (steps[idx].ancestorIndices || []).forEach(aIdx => requiredIndices.add(aIdx));
+      }
+    });
+    if (requiredIndices.size === 0) {
+      requiredIndices = new Set(steps.map(s => s.stepIdx));
+    }
+  }
+
   const solution = steps.filter(s => requiredIndices.has(s.stepIdx));
+
+  // Terminal goals: never faded. If terminalGoals is provided, use it;
+  // otherwise, the final step in the solution represents the terminal goal.
+  const terminalSet = new Set(
+    Array.isArray(terminalGoals) && terminalGoals.length > 0
+      ? terminalGoals
+      : (solution.length > 0 ? [solution[solution.length - 1].targetVar] : [])
+  );
 
   const fadedAncestorEqIds = [];
   solution.forEach(step => {
-    const isGoal = step.targetVar === goalVar;
+    const isTerminal = terminalSet.has(step.targetVar);
     const eqObj = { id: step.eqId || step.id, baseFormula: step.baseFormula };
     const mastery = getMastery(eqObj);
 
-    if (!isGoal && mastery >= FADING_THRESHOLD) {
+    if (!isTerminal && mastery >= FADING_THRESHOLD) {
       step.isFaded = true;
       fadedAncestorEqIds.push(step.eqId || step.id);
     } else {
