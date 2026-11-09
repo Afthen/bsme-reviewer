@@ -1,12 +1,9 @@
 /**
  * src/core/problem_gen.js
- * ============================================================================
- * ARCHITECTURAL PILLAR: Formula-as-Node Graph Problem Generator
- * - Whole-cycle problem synthesis for thermodynamic & air handling topics
- * - Natural cognitive fading: beginners calculate points 1 2 3 4 5...;
- *   as equation mastery increases, intermediate points fade naturally
- * - Seamless integration with 40-40-20 unit distribution sampler
- * ============================================================================
+ * Problem Generator with:
+ * - Whole-cycle problem synthesis
+ * - Natural cognitive fading (faded steps hidden from solution steps)
+ * - Coherent unit sampling respecting thermodynamic cycle state point coupling
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
@@ -211,7 +208,6 @@ export function generateProblem(topic, getMastery = () => 0) {
 
   let path;
   if (topic.cycleGivens && topic.cycleGivens.length > 0) {
-    // Whole-cycle problem synthesis: provide boundary specifications and solve the complete cycle
     const candidateDistractors = Object.keys(S_raw).filter(k =>
       !k.startsWith("_") &&
       !topic.cycleGivens.includes(k) &&
@@ -230,7 +226,6 @@ export function generateProblem(topic, getMastery = () => 0) {
       hopDistance: relations.length
     };
   } else {
-    // Autonomous graph path expansion for non-cycle topics
     path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
   }
 
