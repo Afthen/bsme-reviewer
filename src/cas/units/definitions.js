@@ -104,7 +104,9 @@ export const COMPOUND_UNITS = Object.freeze({
   "kJ/(kg*K)":{ factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
   "kJ/kg-K":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
   "Btu/(lb*F)":{ atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot°\\text{F}}" },
-  "Btu/lb-F":   { atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot°\\text{F}}" }
+  "Btu/lb-F":   { atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot°\\text{F}}" },
+
+  "%":        { factor: 0.01, displayTex: "\\%"}
 });
 
 export function getUnitAtomBag(uName) {
@@ -140,4 +142,32 @@ export function isDimEqual(aMap, bMap) {
   const all = new Set([...Object.keys(aMap || {}), ...Object.keys(bMap || {})]);
   for (const d of all) if ((aMap?.[d] || 0) !== (bMap?.[d] || 0)) return false;
   return true;
+}
+
+const UNIT_TEX_ALIASES = Object.freeze({ "%": "\\%", "°": "^{\\circ}" });
+
+export function unitToTex(unitName = "") {
+  const cleaned = String(unitName || "").trim();
+  if (!cleaned || cleaned === "dimless" || cleaned === "ratio") return "";
+  if (UNIT_TEX_ALIASES[cleaned]) return UNIT_TEX_ALIASES[cleaned];
+
+  const [numPart = "", denPart = ""] = cleaned.split("/");
+  const parse = part => part.split(/[·* ]+/).filter(Boolean).map(tok => {
+    const m = tok.match(/^([A-Za-z°%]+)(?:\^(-?\d+))?$/);
+    if (!m) return `\\text{${tok}}`;
+    const base = UNIT_TEX_ALIASES[m[1]] || `\\text{${m[1]}}`;
+    return m[2] ? `${base}^{${m[2]}}` : base;
+  });
+
+  const num = parse(numPart);
+  const den = parse(denPart);
+  if (!den.length) return num.join("\\,");
+  if (!num.length) return `\\cfrac{1}{${den.join("\\cdot ")}}`;
+  return `\\cfrac{${num.join("\\cdot ")}}{${den.join("\\cdot ")}}`;
+}
+
+export function formatValueInUnit(value, unitName = "") {
+  const bag = getUnitAtomBag(unitName);
+  const scale = bag?.factor || 1;
+  return scale ? value / scale : value;
 }
