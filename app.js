@@ -18,29 +18,24 @@ import { initSidebarView, renderSidebar } from "./src/ui/sidebar_view.js";
  *  Persisted in localStorage; leaves of the Subject -> Category ->   *
  *  Topic tree are checkboxes. Problems are drawn from the selected   *
  *  pool, weakest-mastery topic first (see src/core/topic_mix.js).    *
+ *  First run: nothing selected — the student is prompted to pick.    *
  * ------------------------------------------------------------------ */
 const SELECTED_TOPICS_KEY = "bsme.selectedTopicIds";
-
-function defaultTopic() {
-  return TOPICS.spur_gears || ALL_TOPICS[0];
-}
 
 function loadSelectedTopicIds() {
   try {
     const raw = localStorage.getItem(SELECTED_TOPICS_KEY);
-    if (raw) {
-      const ids = JSON.parse(raw);
-      if (Array.isArray(ids)) {
-        const valid = ids.filter(id => ALL_TOPICS.some(t => t.id === id));
-        if (valid.length > 0) return valid;
-      }
+    if (raw === null) return [];              // first visit: prompt to pick
+    const ids = JSON.parse(raw);
+    if (Array.isArray(ids)) {
+      return ids.filter(id => ALL_TOPICS.some(t => t.id === id));
     }
-  } catch (_) { /* corrupted state -> fall through to default */ }
-  return [defaultTopic().id];
+  } catch (_) { /* corrupted state -> start empty and prompt */ }
+  return [];
 }
 
 let selectedTopicIds = loadSelectedTopicIds();
-let currentTopic = topicById(selectedTopicIds[0]) || defaultTopic();
+let currentTopic = topicById(selectedTopicIds[0]) || null;
 let currentProblem = null;
 
 export { TOPICS };
@@ -68,10 +63,52 @@ function setTopicSelected(id, on) {
   } catch (_) { /* private mode: session-only selection */ }
 }
 
+function openDropdown() {
+  document.getElementById("topic-dropdown-menu")?.classList.add("active");
+  document.getElementById("topic-dropdown-toggle")?.classList.add("active");
+}
+
+function clearSelectionPrompt() {
+  document.getElementById("selection-prompt")?.remove();
+  document.getElementById("view-problem")?.classList.remove("is-empty");
+}
+
+function renderSelectionPrompt() {
+  const view = document.getElementById("view-problem");
+  if (!view) return;
+  document.getElementById("selection-prompt")?.remove();
+
+  const wrap = document.createElement("div");
+  wrap.id = "selection-prompt";
+  wrap.className = "selection-prompt";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "No topics in review set";
+
+  const body = document.createElement("p");
+  body.textContent =
+    "Open the checklist and tick every topic you want to review. Problems are " +
+    "drawn from the whole set and target your weakest equations first — " +
+    "ideal for midterm prep. Your selection is remembered between sessions.";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn";
+  btn.textContent = "Choose topics";
+  btn.addEventListener("click", openDropdown);
+
+  wrap.append(heading, body, btn);
+  view.classList.add("is-empty");
+  view.prepend(wrap);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadMastery();
   setupTopicSelector();
-  initSidebarView(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
+  initSidebarView(
+    currentTopic ? currentTopic.relations : [],
+    eq => (currentTopic ? getDecayedMastery(eq, currentTopic) : 0)
+  );
   setupHeaderActions();
 
   const btnBack = document.getElementById("btn-back-to-problem");
@@ -89,8 +126,8 @@ document.addEventListener("DOMContentLoaded", () => {
  *  Checklist dropdown: Subject -> Category (optional) -> [x] Topic   *
  *  Collapsible groups kept; leaves are checkboxes; menu stays open   *
  *  while ticking. Group checkboxes bulk-toggle their subtree and     *
- *  show indeterminate for partial selections. The review set can     *
- *  never become empty (last tick is denied with a flash).            *
+ *  show indeterminate for partial selections. Once at least one      *
+ *  topic is ticked the set can never become empty (deny flash).      *
  * ------------------------------------------------------------------ */
 function setupTopicSelector() {
   const container = document.getElementById("topic-dropdown-container");
@@ -120,6 +157,7 @@ function setupTopicSelector() {
 
   const leafBoxes = [];                       // every leaf checkbox, in build order
   const groupBoxes = [];                      // { box, collectLeaves } for sync
+  let footerCount = null;                     // live "N of M" readout in menu footer
 
   function flashDeny(el) {
     el.classList.remove("deny-flash");
@@ -146,7 +184,11 @@ function setupTopicSelector() {
   function syncGroupBoxes() {
     groupBoxes.forEach(({ box, collectLeaves }) => {
       const leaves = collectLeaves();
-      if (leaves.length === 0) { box.checked = false; box.indeterminate = false; return; }
+      if (leaves.length === 0) {
+        box.checked = false;
+        box.indeterminate = false;
+        return;
+      }
       const on = leaves.filter(b => b.checked).length;
       box.checked = on === leaves.length;
       box.indeterminate = on > 0 && on < leaves.length;
@@ -173,17 +215,23 @@ function setupTopicSelector() {
     leafBoxes.push(box);
 
     box.addEventListener("change", () => {
+      const wasEmpty = selectedTopicIds.length === 0;
+
       // Never allow an empty review set: deny un-ticking the last topic.
       if (!box.checked && selectedTopicIds.length === 1 && selectedTopicIds[0] === t.id) {
         box.checked = true;
         flashDeny(leaf);
         return;
       }
+
       setTopicSelected(t.id, box.checked);
       leaf.classList.toggle("checked", box.checked);
       syncGroupBoxes();
       updateDropdownLabel();
-      // NOTE: no auto-regenerate here — the student keeps the current
+
+      // First tick of a session: no problem in progress, start right away.
+      if (wasEmpty) generateNewProblem();
+      // NOTE: otherwise no auto-regenerate — the student keeps the current
       // problem; the new pool applies from the next "Next problem" click.
     });
 
@@ -198,6 +246,7 @@ function setupTopicSelector() {
 
     box.addEventListener("click", e => e.stopPropagation());   // don't collapse
     box.addEventListener("change", () => {
+      const wasEmpty = selectedTopicIds.length === 0;
       const leaves = collectLeaves();
       const ids = leaves.map(b => b.dataset.topicId);
 
@@ -217,13 +266,12 @@ function setupTopicSelector() {
       });
       syncGroupBoxes();
       updateDropdownLabel();
+      if (wasEmpty) generateNewProblem();
     });
 
     groupBoxes.push({ box, collectLeaves });
     return box;
   }
-
-  let footerCount = null;
 
   for (const [subjName, { categories, standalone }] of Object.entries(subjects)) {
     const subjectGroup = document.createElement("div");
@@ -266,10 +314,12 @@ function setupTopicSelector() {
       catChevron.className = "category-chevron";
       catChevron.textContent = "▶";
 
-      const catName = document.createElement("span");
-      catName.textContent = catName;
+      // NOTE: must NOT shadow the loop variable `catName` (previous bug
+      // rendered "[object HTMLSpanElement]" as the category label).
+      const catNameSpan = document.createElement("span");
+      catNameSpan.textContent = catName;
 
-      catHeader.append(catBox, catChevron, catName);
+      catHeader.append(catBox, catChevron, catNameSpan);
       catHeader.addEventListener("click", (e) => {
         e.stopPropagation();
         catGroup.classList.toggle("open");
@@ -309,6 +359,7 @@ function setupTopicSelector() {
   selectAllBtn.textContent = "Select all";
   selectAllBtn.addEventListener("click", (e) => {
     e.stopPropagation();
+    const wasEmpty = selectedTopicIds.length === 0;
     leafBoxes.forEach(b => {
       b.checked = true;
       b.closest(".topic-leaf")?.classList.add("checked");
@@ -316,6 +367,7 @@ function setupTopicSelector() {
     });
     syncGroupBoxes();
     updateDropdownLabel();
+    if (wasEmpty) generateNewProblem();
   });
 
   footer.append(footerCount, selectAllBtn);
@@ -366,7 +418,9 @@ function setupHeaderActions() {
         const res = importMasteryJSON(ev.target.result);
         if (res.success) {
           alert("Global Mastery profile imported successfully!");
-          renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
+          if (currentTopic) {
+            renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
+          }
         } else {
           alert(`Import failed: ${res.reason}`);
         }
@@ -387,10 +441,20 @@ function setupHeaderActions() {
  *  generateProblem then runs its untouched per-relation mastery      *
  *  pipeline (hops, fading, recall, distractors) inside that topic.   *
  *  Mastery bookkeeping stays scoped per topic via problem.topicId.   *
+ *  Empty pool -> show the selection prompt and open the checklist.   *
  * ------------------------------------------------------------------ */
 function generateNewProblem() {
   const pool = getSelectedTopics();
-  if (pool.length === 0) return;              // guarded: UI denies empty set
+
+  if (pool.length === 0) {
+    currentTopic = null;
+    currentProblem = null;
+    renderSelectionPrompt();
+    openDropdown();
+    return;
+  }
+
+  clearSelectionPrompt();
 
   const topic = pickWeakestTopic(pool, t => eq => getDecayedMastery(eq, t)) || pool[0];
   currentTopic = topic;
