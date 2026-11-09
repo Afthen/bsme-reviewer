@@ -3,7 +3,9 @@
  * ============================================================================
  * ARCHITECTURAL PILLARS:
  * - PILLAR I: The "Onion Peeler" + Linear Rational Factoring + Fraction Flattener
+ * - PILLAR II: N-ary additive isolation (source-order term movement)
  * - PILLAR III: Case-Sensitive Physical Nomenclature
+ * All outputs pass through simplifyAST (src/cas/simplify.js).
  * ============================================================================
  */
 
@@ -11,6 +13,7 @@ import {
   parseMathAST, astToExprStr, astHasVariable,
   countVariableOccurrences, unwrapGroup
 } from "./ast.js";
+import { simplifyAST, collectAddTerms, emitAddChain } from "./simplify.js";
 
 export const RESERVED_MATH_TOKENS = Object.freeze(new Set([
   "pi", "e", "sin", "cos", "tan", "asin", "acos", "atan", "sqrt", "exp", "ln", "log", "abs"
@@ -37,11 +40,6 @@ export function resolveCanonicalKey(token, varsDb = {}) {
 // 1. AST FRACTION FLATTENER (KILLS NESTED FRACTION TOWERS)
 // ========================================================
 
-/**
- * Recursively simplifies compound division ASTs:
- *   (A / B) / C  ===>  A / (B * C)
- *   A / (B / C)  ===>  (A * C) / B
- */
 export function flattenFractions(node) {
   if (!node) return null;
   if (node.type === "group") {
@@ -107,18 +105,65 @@ export function flattenFractions(node) {
 }
 
 // ========================================================
-// 2. RECURSIVE ONION PEELER (SINGLE-OCCURRENCE INVERSION)
+// 2. N-ARY ADDITIVE ISOLATION (SOURCE-ORDER TERM MOVEMENT)
+//    Qf = Qip + Qcw + Qexh + Qrad  ->  Qexh = Qf - Qip - Qcw - Qrad
 // ========================================================
 
-export function invertEquationAST(lhsNode, rhsNode, targetVar) {
+function isBareTargetTerm(node, targetVar, varsDb = {}) {
+  const u = unwrapGroup(node);
+  return u.type === "id" && resolveCanonicalKey(u.name, varsDb) === targetVar;
+}
+
+function tryAdditiveIsolation(lhsNode, rhsNode, targetVar, varsDb = {}) {
+  const orientations = [
+    [lhsNode, rhsNode],
+    [rhsNode, lhsNode]
+  ];
+
+  for (const [sumSide, otherSide] of orientations) {
+    const flat = unwrapGroup(sumSide);
+    if (!flat || flat.type !== "binary" || (flat.op !== "+" && flat.op !== "-")) continue;
+
+    const terms = collectAddTerms(flat);
+    if (terms.length < 2) continue;
+
+    const idx = terms.findIndex(t => isBareTargetTerm(t.node, targetVar, varsDb));
+    if (idx === -1) continue;
+    // the target must occur exactly once in the whole equation here
+    if (countVariableOccurrences(sumSide, targetVar) !== 1) continue;
+
+    const sign = terms[idx].sign;
+    const rhsTerms = [
+      // other-side terms first, in source order
+      ...collectAddTerms(otherSide).map(t => ({ sign: t.sign * sign, node: t.node })),
+      // then same-side terms in source order, skipping the target, flipped
+      ...terms.filter((_, i) => i !== idx).map(t => ({ sign: -t.sign * sign, node: t.node }))
+    ];
+
+    return { success: true, isolatedAST: emitAddChain(rhsTerms, null) };
+  }
+  return null;
+}
+
+// ========================================================
+// 3. RECURSIVE ONION PEELER (SINGLE-OCCURRENCE INVERSION)
+// ========================================================
+
+export function invertEquationAST(lhsNode, rhsNode, targetVar, varsDb = {}) {
   const leftCount = countVariableOccurrences(lhsNode, targetVar);
   const rightCount = countVariableOccurrences(rhsNode, targetVar);
   const totalCount = leftCount + rightCount;
 
   if (totalCount === 0) return { success: false, reason: "Target not found" };
 
+  // PILLAR II: pure additive budgets move terms in source order, no peeling
+  if (totalCount === 1) {
+    const additive = tryAdditiveIsolation(lhsNode, rhsNode, targetVar, varsDb);
+    if (additive) return additive;
+  }
+
   if (totalCount > 1) {
-    return solveLinearRationalAST(lhsNode, rhsNode, targetVar);
+    return solveLinearRationalAST(lhsNode, rhsNode, targetVar, varsDb);
   }
 
   let E = leftCount === 1 ? lhsNode : rhsNode;
@@ -190,7 +235,7 @@ export function invertEquationAST(lhsNode, rhsNode, targetVar) {
 }
 
 // ========================================================
-// 3. LINEAR RATIONAL POLYNOMIAL FACTORING
+// 4. LINEAR RATIONAL POLYNOMIAL FACTORING
 // ========================================================
 
 function extractLinearCoeffs(node, targetVar) {
@@ -292,12 +337,14 @@ export function solveLinearRationalAST(lhsNode, rhsNode, targetVar) {
     denominator = negateNode(denominator);
   }
 
-  const isolatedAST = flattenFractions({
+  // PILLAR I output now passes through the canonical simplifier:
+  // folds (0-1), kills 1*x, flattens chains, canonicalises leading signs.
+  const isolatedAST = simplifyAST(flattenFractions({
     type: "binary",
     op: "/",
     left: { type: "group", expr: numerator },
     right: { type: "group", expr: denominator }
-  });
+  }));
 
   return { success: true, isolatedAST };
 }
@@ -310,9 +357,9 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
 
   if (!lhsAst || !rhsAst) return { targetVar, isolatedRhs: rawRhs, isolatedAST: rhsAst, success: false };
 
-  const res = invertEquationAST(lhsAst, rhsAst, targetVar);
+  const res = invertEquationAST(lhsAst, rhsAst, canonicalTarget, varsDb);
   if (res.success) {
-    const flattened = flattenFractions(res.isolatedAST);
+    const flattened = simplifyAST(flattenFractions(res.isolatedAST));
     return {
       targetVar,
       isolatedRhs: astToExprStr(flattened),
@@ -322,7 +369,7 @@ export function isolateVariable(eqStr, targetVar, varsDb = {}) {
   }
 
   if (resolveCanonicalKey(rawLhs, varsDb) === canonicalTarget) {
-    const flattened = flattenFractions(rhsAst);
+    const flattened = simplifyAST(flattenFractions(rhsAst));
     return { targetVar, isolatedRhs: astToExprStr(flattened), isolatedAST: flattened, success: true };
   }
 
@@ -355,4 +402,7 @@ export function substituteExpression(exprStr, subsObj = {}, varsDb = {}) {
   return ast ? astToExprStr(astSubstitute(ast, subsObj, varsDb)) : exprStr;
 }
 
-export function simplifyExpression(exprStr) { return exprStr || ""; }
+export function simplifyExpression(exprStr) {
+  const ast = parseMathAST(exprStr);
+  return ast ? astToExprStr(simplifyAST(ast)) : (exprStr || "");
+}
