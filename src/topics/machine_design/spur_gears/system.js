@@ -79,7 +79,8 @@ export function createGroundTruthSystem({ sys = null } = {}) {
       S_space: "mm", V_m: "m/s", P: "kW", M_t: "N-m", W_t: "N", W_r: "N", W: "N", s: "MPa",
       F_D: "N", C_d: "N", F_s: "N", S_n: "MPa", F_w: "N", K_w: "MPa",
       phi: "deg", n_1: "rpm", n_2: "rpm", P_d: "teeth/in",
-      T_1: "teeth", T_2: "teeth", T: "teeth"
+      T_1: "teeth", T_2: "teeth", T: "teeth",
+      VR: "dimless", Y: "dimless", y_form: "dimless", k_f: "dimless", Q: "dimless", N_sf: "dimless"
     };
 
     S = {
@@ -135,7 +136,8 @@ export function createGroundTruthSystem({ sys = null } = {}) {
       S_space: "in", V_m: "ft/min", P: "hp", M_t: "lb-in", W_t: "lb", W_r: "lb", W: "lb", s: "psi",
       F_D: "lb", C_d: "lb", F_s: "lb", S_n: "psi", F_w: "lb", K_w: "psi",
       phi: "deg", n_1: "rpm", n_2: "rpm", P_d: "teeth/in",
-      T_1: "teeth", T_2: "teeth", T: "teeth"
+      T_1: "teeth", T_2: "teeth", T: "teeth",
+      VR: "dimless", Y: "dimless", y_form: "dimless", k_f: "dimless", Q: "dimless", N_sf: "dimless"
     };
 
     S = {
