@@ -8,7 +8,7 @@ A graph-based problem generator and spaced-repetition reviewer for Mechanical En
 
 ---
 
-## 2. Hard rules (non-negotiable)
+## 1. Hard rules (non-negotiable)
 
 ### Math and formulas
 - **R1. Formulas are nodes.** Add an equation by adding a relation. Never write a bespoke "solve for X" function, a hard-coded solution order, or a per-topic solver. Variables are edges; `solveDAG` finds the path.
@@ -45,7 +45,27 @@ A graph-based problem generator and spaced-repetition reviewer for Mechanical En
 
 ---
 
-## 12. Known gaps and traps
+## 2. Units and Multi-System Sampling
+
+### 6.1 Distribution Model
+Problem generation draws unit systems using a 40% SI / 40% US / 20% MIXED distribution:
+- **Pure SI / Pure US:** All variables operate within the coherent system palette.
+- **MIXED Mode:** Dimensional variables are split 50-50 between SI and US units.
+- **Significant Figure Retention:** Conversions into alternative intra-system units must retain $\ge 3$ significant figures under the repository's 3-decimal-place rule ($|v| \ge 0.100$). Conversions that round to $0.099$ or below (such as kilometers for gear pitch diameter) are rejected.
+- **Compound Decomposition:** Decomposed unit representations (e.g. $\text{W} \to \text{J/s} \to \text{N}\cdot\text{m/s} \to \text{kg}\cdot\text{m}^2/\text{s}^3$) are sampled with probability inversely proportional to their token count ($w_i = 1/t_i$).
+- **Constants:** Physical constants sample exclusively from standard textbook representations per unit system ($c_{pa} = 1.0062\,\text{kJ/kg}\cdot\text{K}$ or $0.24\,\text{Btu/lb}\cdot^\circ\text{F}$).
+
+---
+
+## 3. Derivation & Typesetting Standards
+- **Zero-Comma Unit Spacing:** No commas precede units in any derivation line (`100\,\text{kN}`, $\boxed{50\,\text{mm}}$).
+- **Additive Unit Grouping:** Like-unit sums and differences are combined into factored parenthesis expressions: $(a \pm b)\,\text{unit}$.
+- **Specific Energy Convention:** Specific energy and specific work per unit mass strictly use lowercase notation ($q_A$, $q_R$, $w_{net}$ in $\text{kJ/kg}$), reserving uppercase notation for total energy or power ($Q$, $W$).
+- **Perceptual Mastery Gradient:** Formula mastery bars interpolate continuously in Oklab color space from danger red (`oklab(0.63 0.22 0.12)`) through warm amber (`oklab(0.75 0.06 0.16)`) to emerald green (`oklab(0.72 -0.17 0.14)`), sorted ascending (weakest equations on top).
+
+---
+
+## 4. Known gaps and traps
 
 1. **[RESOLVED] `package.json` test script:** Pointed to `test/run_hygiene_test.js`.
 2. **[RESOLVED] Hygiene suite:** Disambiguated `Y` vs `y_form`, resolved `t_db` vs `t_o` alias collision, and eliminated orphan variables across all topics (`hvac_bypass_air` and `diesel_heat_balance`).
