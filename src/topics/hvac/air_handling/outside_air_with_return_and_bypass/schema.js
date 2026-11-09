@@ -84,8 +84,8 @@ export const BYPASS_AIR_VARS_DB = Object.freeze({
     nameAliases: ["Reheated Air Enthalpy", "Point 6 Enthalpy", "State 6 Enthalpy"],
     symbolAliases: ["h_{rh}", "h_6"]
   },
-  "BF":    { name: "Bypass Factor", symbol: "BF", dimension: DIMENSIONS.DIMENSIONLESS, aliases: ["Bypass Factor", "Coil Bypass Factor", "Bypass Fraction", "Uncontacted Fraction"], symbolAliases: ["BF", "\\text{BF}"] },
-  "CF":    { name: "Contact Factor", symbol: "CF", dimension: DIMENSIONS.DIMENSIONLESS, aliases: ["Contact Factor", "Coil Efficiency", "Contact Efficiency", "1 - BF"], symbolAliases: ["CF", "\\text{CF}"] },
+  "BF":    { name: "Bypass Factor", symbol: "BF", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", aliases: ["Bypass Factor", "Coil Bypass Factor", "Bypass Fraction", "Uncontacted Fraction"], symbolAliases: ["BF", "\\text{BF}"] },
+  "CF":    { name: "Contact Factor", symbol: "CF", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", aliases: ["Contact Factor", "Coil Efficiency", "Contact Efficiency", "1 - BF"], symbolAliases: ["CF", "\\text{CF}"] },
   "q_c":   HVAC_BASE_VARS.q_c,
   "q_rh":  HVAC_BASE_VARS.q_rh,
   "V_o":   HVAC_BASE_VARS.V_o,
