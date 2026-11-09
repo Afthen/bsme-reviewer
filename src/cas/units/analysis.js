@@ -1,13 +1,11 @@
 /**
  * src/cas/units/analysis.js
- * Dimensional analysis with CANCEL-FIRST compound handling:
- * - Atomic cancellation runs over every token bag
- * - Tokens render only their cancelled/surviving atoms
- * - Scale bridges collapse into at most one global conversion bracket
- * - Relations with requiredUnits convert input tokens via preConversions AND
- *   convert the evaluated result to the targetUnit across all empirical relations
+ * Universal dimensional analysis:
+ * - Cancel-first atomic cancellation across expression token bags
+ * - Single global scale bracket collapse
+ * - Universal projection for empirical relations: converts formula output unit into targetUnit
  * - Scaled dimensionless units (%, silentScale) fold into the numeric factor
- * - All TeX goes through unitToTex / atomic tex
+ * - All TeX output passes through unitToTex
  */
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
@@ -142,7 +140,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         }
       }
     } else if (!reqTargetU && targetUnit) {
-      // Fallback for relations that declare input requiredUnits but omit target variable
       const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
       const targetBag = getUnitAtomBag(targetUnit);
       let exprScale = exprAnalysis.factor;
