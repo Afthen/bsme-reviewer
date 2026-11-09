@@ -9,6 +9,9 @@ import { ALL_TOPICS, TOPICS } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
 import { generateProblem } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
+import { runTopicMixTests } from "./topic_mix_test.js";
+import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
+import { pruneSolutionPath, solveDAG } from "../src/core/graph_solver.js";
 
 // Enhanced Headless Browser Mock with Tree & Event Tracking
 if (typeof globalThis.window === "undefined") {
@@ -108,7 +111,6 @@ describe("Topic Registry & Architecture Contract Suite", () => {
       assert.ok(!seenIds.has(topic.id), `Duplicate topic ID detected: '${topic.id}'`);
       seenIds.add(topic.id);
 
-      // Enforces the contract: Key in TOPICS object MUST equal topic.id
       assert.equal(
         TOPICS[topic.id],
         topic,
@@ -164,7 +166,6 @@ describe("Topic Switching & Autonomous Problem Generation Lifecycle", () => {
       assert.ok(Array.isArray(problem.solution) && problem.solution.length > 0, `Solution steps empty for ${topic.id}`);
       assert.ok(Array.isArray(problem.givens) && problem.givens.length > 0, `Givens array empty for ${topic.id}`);
 
-      // Verify each generated step has a valid expected value
       problem.solution.forEach((step, i) => {
         assert.ok(!isNaN(step.expectedVal), `Step ${i + 1} (${step.targetVar}) calculated NaN in topic ${topic.id}`);
       });
@@ -202,7 +203,82 @@ describe("Derivation Fidelity & Factor-Label Typesetting", () => {
 });
 
 // ============================================================================
-// 5. FRONTEND UI MODULE INTEGRITY SMOKE TESTS
+// 5. TOPIC MIX TOURNAMENT INVARIANT SUITE
+// ============================================================================
+describe("Topic Mix Tournament Suite", () => {
+  test("D' pool tournament invariants and weakness weighting", () => {
+    assert.ok(runTopicMixTests());
+  });
+});
+
+// ============================================================================
+// 6. REGRESSION: REAL MASTERY FADING & RECALL MODE CONTRACTS
+// ============================================================================
+describe("Regression: Cognitive Fading & Recall Mode Real Mastery Contract", () => {
+  test("pruneSolutionPath activates isFaded when intermediate relation mastery >= FADING_THRESHOLD", () => {
+    const topic = TOPICS.spur_gears;
+    const S = topic.createSystem({ sys: "SI" });
+
+    const intermediateEqId = "eq_addendum";
+    for (let i = 0; i < 15; i++) {
+      recordAttempt(intermediateEqId, true, topic.id);
+    }
+
+    const mastery = getDecayedMastery({ id: intermediateEqId, baseFormula: "a = 1 / P_d" }, topic);
+    assert.ok(
+      mastery >= FADING_THRESHOLD,
+      `Mastery for ${intermediateEqId} should reach FADING_THRESHOLD (${mastery} < ${FADING_THRESHOLD})`
+    );
+
+    const givens = ["D_P1", "P_d"];
+    const allSteps = solveDAG(givens, S, topic.relations, topic.varsDb, () => 0);
+    const getMastery = eq => getDecayedMastery(eq, topic);
+
+    const solution = pruneSolutionPath(allSteps, "D_o", getMastery);
+    assert.ok(solution.length >= 2, "Expected at least 2 steps in solution path");
+
+    const intermediateStep = solution.find(s => s.targetVar === "a");
+    assert.ok(intermediateStep, "Step solving for 'a' must be in solution path");
+    assert.equal(
+      intermediateStep.isFaded,
+      true,
+      "Intermediate step solving 'a' must be faded when its equation is mastered"
+    );
+    assert.ok(
+      intermediateStep.fadedAncestorEqIds.includes(intermediateEqId),
+      "fadedAncestorEqIds must record the faded equation id"
+    );
+
+    const goalStep = solution.find(s => s.targetVar === "D_o");
+    assert.ok(goalStep, "Goal step must be present");
+    assert.equal(goalStep.isFaded, false, "Goal step must NEVER be faded");
+  });
+
+  test("Recall mode: isConstant givens are recorded and omitted from statement at high mastery", () => {
+    const topic = TOPICS.hvac_bypass_air;
+    for (let i = 0; i < 10; i++) {
+      recordAttempt("const_c_pa", true, topic.id);
+    }
+    const constMastery = getDecayedMastery({ id: "const_c_pa" }, topic);
+    assert.ok(
+      constMastery >= FADING_THRESHOLD,
+      `const_c_pa mastery should reach FADING_THRESHOLD (${constMastery} < ${FADING_THRESHOLD})`
+    );
+
+    const getMastery = eq => getDecayedMastery(eq, topic);
+    const problem = generateProblem(topic, getMastery);
+    assert.ok(problem, "generateProblem should return problem");
+    if (problem.givens.includes("c_pa")) {
+      assert.ok(
+        !problem.statement.includes("Specific Heat of Air") && !problem.statement.includes("c_{pa}"),
+        "Mastered constant c_pa should be omitted from the problem statement in recall mode"
+      );
+    }
+  });
+});
+
+// ============================================================================
+// 7. FRONTEND UI MODULE INTEGRITY SMOKE TESTS
 // ============================================================================
 describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
   test("Verify src/ui/sidebar_view.js integrity and exports", async () => {
@@ -227,7 +303,6 @@ describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
     const mod = await import("../app.js");
     assert.ok(mod.TOPICS);
 
-    // Verify all registered topics are accessible through the app export
     for (const topic of ALL_TOPICS) {
       assert.ok(mod.TOPICS[topic.id], `app.js TOPICS export is missing topic '${topic.id}'`);
     }

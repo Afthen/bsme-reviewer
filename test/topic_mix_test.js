@@ -1,9 +1,6 @@
 /**
  * test/topic_mix_test.js
  * Unit cases for the D′ pool tournament.
- * Wire into test/index.html (browser runner) or run_test.js:
- *   import { runTopicMixTests } from "./topic_mix_test.js";
- *   runTopicMixTests();
  */
 import { phi } from "../src/mastery/index.js";
 import { relationWeaknessWeight } from "../src/core/problem_gen.js";
@@ -43,8 +40,8 @@ export function runTopicMixTests() {
     "topicScore independent of equation count");
 
   // 3. Common discount: eq_base_* material carries share phi(-1).
-  const mixedRels = [rel("u1", 0), rel("eq_base_c", 0.4)];
-  const mixedGet = getterFor({ u1: 0, eq_base_c: 0.4 });
+  const mixedRels = [rel("u1", 0), rel("eq_base_c", 0.5)];
+  const mixedGet = getterFor({ u1: 0, eq_base_c: 0.5 });
   const expected = (1 * w0 + phi(-1) * w5) / (1 + phi(-1));
   assert(
     approx(topicScore(mixedRels, mixedGet), expected),

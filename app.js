@@ -29,7 +29,7 @@ const masteryFor = topic => eq => getDecayedMastery(eq, topic);
 function loadSelectedTopicIds() {
   try {
     const raw = localStorage.getItem(SELECTED_TOPICS_KEY);
-    if (raw === null) return [];              // first visit: prompt to pick
+    if (raw === null) return [];
     const ids = JSON.parse(raw);
     if (Array.isArray(ids)) {
       return ids.filter(id => TOPIC_BY_ID.has(id));
@@ -147,14 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
   generateNewProblem();
 });
 
-/* ------------------------------------------------------------------ *
- *  Checklist dropdown: Subject -> Category (optional) -> [x] Topic   *
- *  Collapsible groups kept; leaves are checkboxes; menu stays open   *
- *  while ticking. Group checkboxes bulk-toggle their subtree and     *
- *  show indeterminate for partial selections. Once at least one      *
- *  topic is ticked the set can never become empty (deny flash).      *
- *  All mutation sites funnel through commitSelection().              *
- * ------------------------------------------------------------------ */
 function setupTopicSelector() {
   const container = document.getElementById("topic-dropdown-container");
   if (!container) return;
@@ -163,7 +155,6 @@ function setupTopicSelector() {
   const label = document.getElementById("topic-dropdown-label");
   const menu = document.getElementById("topic-dropdown-menu");
 
-  // Multi-tier hierarchy: Subject -> Category (optional subfolder) -> Topic
   const subjects = {};
   ALL_TOPICS.forEach(topic => {
     const subj = topic.subject || "General Engineering";
@@ -181,9 +172,9 @@ function setupTopicSelector() {
 
   menu.innerHTML = "";
 
-  const leafBoxes = [];                       // every leaf checkbox, in build order
-  const groupBoxes = [];                      // { box, collectLeaves } for sync
-  let footerCount = null;                     // live "N of M" readout in menu footer
+  const leafBoxes = [];
+  const groupBoxes = [];
+  let footerCount = null;
 
   const hasChecked = root => root.querySelector(".topic-checkbox:checked") !== null;
 
@@ -192,7 +183,7 @@ function setupTopicSelector() {
 
   function flashDeny(el) {
     el.classList.remove("deny-flash");
-    void el.offsetWidth;                      // restart animation
+    void el.offsetWidth;
     el.classList.add("deny-flash");
   }
 
@@ -226,14 +217,10 @@ function setupTopicSelector() {
     });
   }
 
-  // Single commit path for every mutation site (leaf / group / select-all).
   function commitSelection(wasEmpty) {
     syncGroupBoxes();
     updateDropdownLabel();
-    // First tick of a session: no problem in progress, start right away.
     if (wasEmpty) generateNewProblem();
-    // NOTE: otherwise no auto-regenerate — the student keeps the current
-    // problem; the new pool applies from the next "Next problem" click.
   }
 
   function createTopicLeaf(t, levelClass) {
@@ -258,7 +245,6 @@ function setupTopicSelector() {
     box.addEventListener("change", () => {
       const wasEmpty = selectedTopicIds.length === 0;
 
-      // Never allow an empty review set: deny un-ticking the last topic.
       if (!box.checked && wouldEmptyAfterRemoving([t.id])) {
         box.checked = true;
         flashDeny(leaf);
@@ -278,7 +264,7 @@ function setupTopicSelector() {
     box.type = "checkbox";
     box.className = "group-checkbox";
 
-    box.addEventListener("click", e => e.stopPropagation());   // don't collapse
+    box.addEventListener("click", e => e.stopPropagation());
     box.addEventListener("change", () => {
       const wasEmpty = selectedTopicIds.length === 0;
       const leaves = collectLeaves();
@@ -328,7 +314,6 @@ function setupTopicSelector() {
     const subjectList = document.createElement("div");
     subjectList.className = "topic-list";
 
-    // 1. Sub-categories (e.g. Air Handling collapsible folder)
     for (const [catName, catTopics] of Object.entries(categories)) {
       const catGroup = document.createElement("div");
       catGroup.className = "category-group";
@@ -361,7 +346,6 @@ function setupTopicSelector() {
       subjectList.appendChild(catGroup);
     }
 
-    // 2. Standalone topics under subject (e.g. Cooling Towers, Spur Gears)
     standalone.forEach(t => subjectList.appendChild(createTopicLeaf(t, "level-2")));
 
     subjectGroup.append(subjectHeader, subjectList);
@@ -369,7 +353,6 @@ function setupTopicSelector() {
     menu.appendChild(subjectGroup);
   }
 
-  // Footer: live count + quick "Select all" (midterm prep)
   const footer = document.createElement("div");
   footer.className = "topic-menu-footer";
 
@@ -381,3 +364,101 @@ function setupTopicSelector() {
   selectAllBtn.className = "menu-mini-btn";
   selectAllBtn.textContent = "Select all";
   selectAllBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const wasEmpty = selectedTopicIds.length === 0;
+    leafBoxes.forEach(b => {
+      b.checked = true;
+      b.closest(".topic-leaf")?.classList.add("checked");
+      setTopicSelected(b.dataset.topicId, true);
+    });
+    commitSelection(wasEmpty);
+  });
+
+  footer.append(footerCount, selectAllBtn);
+  menu.appendChild(footer);
+
+  syncGroupBoxes();
+  updateDropdownLabel();
+
+  toggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = menu.classList.toggle("active");
+    toggleBtn.classList.toggle("active", isOpen);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!container.contains(e.target)) {
+      menu.classList.remove("active");
+      toggleBtn.classList.remove("active");
+    }
+  });
+}
+
+function setupHeaderActions() {
+  const exportBtn = document.getElementById("btn-export");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(exportMasteryJSON());
+      const dl = document.createElement("a");
+      dl.setAttribute("href", dataStr);
+      dl.setAttribute("download", `mastery_global.json`);
+      dl.click();
+    });
+  }
+
+  const importBtn = document.getElementById("btn-import");
+  const fileInput = document.getElementById("mastery-file-input");
+
+  if (importBtn && fileInput) {
+    importBtn.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const res = importMasteryJSON(ev.target.result);
+        if (res.success) {
+          alert("Global Mastery profile imported successfully!");
+          if (currentTopic) {
+            renderSidebar(currentTopic.relations, masteryFor(currentTopic));
+          }
+        } else {
+          alert(`Import failed: ${res.reason}`);
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  const nextBtn = document.getElementById("btn-generate-next");
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => generateNewProblem());
+  }
+}
+
+function generateNewProblem() {
+  const pool = getSelectedTopics();
+
+  if (pool.length === 0) {
+    currentTopic = null;
+    currentProblem = null;
+    renderSelectionPrompt();
+    openDropdown();
+    return;
+  }
+
+  clearSelectionPrompt();
+
+  const topic = pickWeakestTopic(pool, masteryFor) || pool[0];
+  currentTopic = topic;
+
+  incrementTopicTick(topic.id);
+  incrementTopicTick("common");
+
+  currentProblem = generateProblem(topic, masteryFor(topic));
+
+  renderProblemView(currentProblem, topic.relations, topic.id);
+  renderTopicBadge(topic);
+  renderSidebar(topic.relations, masteryFor(topic));
+}

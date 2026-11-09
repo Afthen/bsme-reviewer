@@ -12,7 +12,7 @@ import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 import { parseMathAST } from "../cas/ast.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
-import { CONSTANTS_DB, getConstantValue, getConstantUnit } from "./constants_registry.js";
+import { CONSTANTS_DB } from "./constants_registry.js";
 import { fmtSigFig, formatGivenValue } from "./dimensions.js";
 
 /**
@@ -220,7 +220,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     if (typeof val !== "number") return;
 
     const meta = varsDb[g] || CONSTANTS_DB[g] || {};
-    if (meta.isConstant) return;              // constants keep tabulated precision
+    if (meta.isConstant) return;
 
     if (meta.isInteger) {
       S_neat[g] = Math.round(val);
