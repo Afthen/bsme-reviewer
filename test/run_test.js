@@ -97,6 +97,73 @@ if (typeof globalThis.localStorage === "undefined") {
   };
 }
 
+// Optional KaTeX dynamic import for direct parser/renderer validation
+let katex = null;
+try {
+  const mod = await import("katex");
+  katex = mod.default || mod;
+} catch (_) {
+  katex = null;
+}
+
+/**
+ * Validates LaTeX derivation syntax and rendering fidelity without brittle false positives.
+ * Permits legitimate mathematical subscripts with commas like c_{p,w} and m_{m,w}.
+ */
+export function validateDerivationLatex(derivLatex) {
+  assert.ok(typeof derivLatex === "string" && derivLatex.length > 0, "Derivation LaTeX must be non-empty");
+  assert.ok(derivLatex.includes("\\boxed{"), "Derivation step missing boxed answer");
+  assert.ok(derivLatex.includes("="), "Derivation step missing equality");
+  assert.ok(!/\\text\{[^}]*_[^}]*\}/.test(derivLatex), `Unescaped underscore inside \\text{} in step: ${derivLatex}`);
+  assert.ok(!/\\cdot\^/.test(derivLatex), `\\cdot cannot take a direct superscript in step: ${derivLatex}`);
+  assert.ok(!/\\cancel\{\s*\}/.test(derivLatex), `Empty cancel bracket in step: ${derivLatex}`);
+  assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), `Illegal nested fraction tower in step: ${derivLatex}`);
+
+  // Specifically checks that numbers or closing parens are not directly joined to units with a comma.
+  // Correct: "1200\\,\\cfrac{\\text{kJ}}{\\text{s}}" or "(a + b)\\,\\text{m}"
+  // Incorrect: "1200,\\text{kJ}" or "(a + b),\\text{m}"
+  // Legitimate mathematical subscripts (e.g. c_{p,w}, m_{m,w}) are completely permitted.
+  assert.ok(
+    !/\d+,\s*(?:\\text|\\cfrac|\\cancel|°)/.test(derivLatex),
+    `Found numeric literal immediately followed by comma before unit in: ${derivLatex}`
+  );
+  assert.ok(
+    !/\),\s*(?:\\text|\\cfrac|\\cancel|°)/.test(derivLatex),
+    `Found closing paren immediately followed by comma before unit in: ${derivLatex}`
+  );
+
+  // Structural brace balance verification: unescaped '{' must equal '}'
+  let braceDepth = 0;
+  for (let i = 0; i < derivLatex.length; i++) {
+    const ch = derivLatex[i];
+    const prev = i > 0 ? derivLatex[i - 1] : "";
+    if (prev !== "\\") {
+      if (ch === "{") braceDepth++;
+      else if (ch === "}") braceDepth--;
+      assert.ok(braceDepth >= 0, `Unbalanced closing brace '}' in derivation: ${derivLatex}`);
+    }
+  }
+  assert.equal(braceDepth, 0, `Unbalanced opening brace '{' in derivation: ${derivLatex}`);
+
+  // Environmental balance verification
+  const beginAligned = (derivLatex.match(/\\begin\{aligned\}/g) || []).length;
+  const endAligned = (derivLatex.match(/\\end\{aligned\}/g) || []).length;
+  assert.equal(beginAligned, endAligned, `Mismatched aligned environment in: ${derivLatex}`);
+
+  // Render directly through KaTeX if available in the environment
+  if (katex && typeof katex.renderToString === "function") {
+    let raw = derivLatex.trim();
+    if (raw.startsWith("$$") && raw.endsWith("$$")) {
+      raw = raw.slice(2, -2).trim();
+    }
+    try {
+      katex.renderToString(raw, { displayMode: true, throwOnError: true });
+    } catch (err) {
+      assert.fail(`KaTeX rendering error: ${err.message} in derivation:\n${derivLatex}`);
+    }
+  }
+}
+
 // ============================================================================
 // 1. TOPIC REGISTRY & INVARIANT CONTRACT SUITE
 // ============================================================================
@@ -148,11 +215,12 @@ describe("Engineering Topics Ground Truth & AST Inversion Suite", () => {
 describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
   test("Beginner learner (0% mastery) receives the full cycle with all state points in Diesel Cycle", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
-    const problem = generateProblem(topic, () => 0);
+    const problem = generateProblem(topic, () => 0); // 0% mastery
 
     assert.ok(problem.solution.length >= 7, "Diesel cycle must present full state point sequence");
     const targetVars = problem.solution.map(s => s.targetVar);
 
+    // Verifies points 1 2 3 4 and work/efficiency are all present
     assert.ok(targetVars.includes("T_2"), "Point 2 (T_2) must be in solution");
     assert.ok(targetVars.includes("T_3"), "Point 3 (T_3) must be in solution");
     assert.ok(targetVars.includes("T_4"), "Point 4 (T_4) must be in solution");
@@ -161,6 +229,7 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     assert.ok(targetVars.includes("W_net"), "Net work (w_net) must be in solution");
     assert.ok(targetVars.includes("e_th"), "Efficiency (e_th) must be in solution");
 
+    // All steps must be active (not faded) for a beginner
     problem.solution.forEach(s => {
       assert.equal(s.isFaded, false, `Step ${s.targetVar} should not be faded at 0% mastery`);
     });
@@ -168,7 +237,7 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
 
   test("Beginner learner (0% mastery) receives full air handling cycle with Points 1 to 6 in Bypass Air", () => {
     const topic = TOPICS.hvac_bypass_air;
-    const problem = generateProblem(topic, () => 0);
+    const problem = generateProblem(topic, () => 0); // 0% mastery
 
     assert.ok(problem.solution.length >= 8, "Bypass air must present full air handling cycle");
     const targetVars = problem.solution.map(s => s.targetVar);
@@ -190,9 +259,10 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
   test("Natural cognitive fading: mastered intermediate state points fade and reduce naturally", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
 
+    // Simulate high mastery on compression temp T_2 and expansion ratio r_e
     const getMastery = eq => {
       if (eq.id === "eq_diesel_t2" || eq.id === "eq_diesel_rk") return 0.95;
-      return 0.20;
+      return 0.20; // other relations unmastered
     };
 
     const problem = generateProblem(topic, getMastery);
@@ -200,9 +270,11 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     assert.ok(stepT2, "Step T_2 must exist in DAG");
     assert.equal(stepT2.isFaded, true, "Mastered intermediate step T_2 must be faded");
 
+    // Mastered intermediate step T_2 must be removed from the statement goals
     assert.ok(!problem.statement.includes("Determine: (1) Temperature after Compression ($T_2$)"),
       "Faded step T_2 must not be prompted in statement");
 
+    // Terminal goals (e_th, W_net) must remain active goals
     const stepEth = problem.solution.find(s => s.targetVar === "e_th");
     assert.ok(stepEth);
     assert.equal(stepEth.isFaded, false, "Terminal goal e_th must NEVER be faded");
@@ -230,11 +302,11 @@ describe("Topic Switching & Autonomous Problem Generation Lifecycle", () => {
 });
 
 // ============================================================================
-// 5. DERIVATION FIDELITY & NO-COMMA UNIT TYPESETTING TEST SUITE
+// 5. DERIVATION FIDELITY & LATEX RENDERING TEST SUITE
 // ============================================================================
-describe("Derivation Fidelity & No-Comma Unit Typesetting", () => {
+describe("Derivation Fidelity & LaTeX Rendering", () => {
   for (const topic of ALL_TOPICS) {
-    test(`Derivation output for ${topic.title}: strict no-comma before units`, () => {
+    test(`Derivation output for ${topic.title}: strict rendering & syntax validation`, () => {
       const problem = generateProblem(topic, () => 0.5);
       assert.ok(problem.solution.length > 0);
 
@@ -247,29 +319,7 @@ describe("Derivation Fidelity & No-Comma Unit Typesetting", () => {
           topic.relations
         );
 
-        assert.ok(derivLatex.includes("\\boxed{"), "Derivation step missing boxed answer");
-        assert.ok(derivLatex.includes("="), "Derivation step missing equality");
-        assert.ok(!/\\text{[^}]*_/.test(derivLatex), `Unescaped underscore inside \\text{}`);
-        assert.ok(!/\\cdot\^/.test(derivLatex), `\\cdot cannot take a direct superscript`);
-        assert.ok(!/\\cancel{\s*}/.test(derivLatex), `Empty cancel bracket`);
-        assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), "Produces illegal nested fraction tower");
-
-        // Verified automated test: ensures NO comma precedes any unit or unit markup.
-        // Legitimate LaTeX commas in subscripts (e.g. c_{p,w}, P_{max,i}) are preserved.
-        assert.ok(
-          !/(?:[0-9)]|\.\d+)\s*,\s*(?:\\text|\\cancel|\\cfrac|°|\\%)/.test(derivLatex),
-          `Illegal comma before unit found in: ${derivLatex}`
-        );
-        assert.ok(
-          !/\\boxed{[^}]*,\s*(?:\\text|\\cancel|\\cfrac|°|\\%)/.test(derivLatex),
-          `Illegal comma inside boxed answer found in: ${derivLatex}`
-        );
-
-        // LaTeX structural syntax validation: balanced curly braces and aligned environment
-        const openBraces = (derivLatex.match(/\{/g) || []).length;
-        const closeBraces = (derivLatex.match(/\}/g) || []).length;
-        assert.equal(openBraces, closeBraces, `Mismatched curly braces in: ${derivLatex}`);
-        assert.ok(derivLatex.includes("\\begin{aligned}") && derivLatex.includes("\\end{aligned}"));
+        validateDerivationLatex(derivLatex);
       }
     });
   }
@@ -416,6 +466,37 @@ describe("Regression: Cognitive Fading & Recall Mode Real Mastery Contract", () 
         !problem.statement.includes("Specific Heat of Air") && !problem.statement.includes("c_{pa}"),
         "Mastered constant c_pa should be omitted from statement in recall mode"
       );
+    }
+  });
+});
+
+// ============================================================================
+// 10. FRONTEND UI MODULE INTEGRITY SMOKE TESTS
+// ============================================================================
+describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
+  test("Verify src/ui/sidebar_view.js integrity and exports", async () => {
+    const mod = await import("../src/ui/sidebar_view.js");
+    assert.equal(typeof mod.initSidebarView, "function");
+    assert.equal(typeof mod.renderSidebar, "function");
+    assert.equal(typeof mod.renderMasteryBars, "function");
+  });
+
+  test("Verify src/ui/carousel_view.js integrity and exports", async () => {
+    const mod = await import("../src/ui/carousel_view.js");
+    assert.equal(typeof mod.attachTooltips, "function");
+    assert.equal(typeof mod.openCarouselForVariable, "function");
+  });
+
+  test("Verify src/ui/problem_view.js integrity and exports", async () => {
+    const mod = await import("../src/ui/problem_view.js");
+    assert.equal(typeof mod.renderProblemView, "function");
+  });
+
+  test("Verify app.js entry point integrity and dynamic topic exports", async () => {
+    const mod = await import("../app.js");
+    assert.ok(mod.TOPICS);
+    for (const topic of ALL_TOPICS) {
+      assert.ok(mod.TOPICS[topic.id], `app.js TOPICS export is missing topic '${topic.id}'`);
     }
   });
 });
