@@ -2,7 +2,8 @@
  * src/cas/units/definitions.js
  * Comprehensive engineering unit registry with:
  * - Exact affine temperature offset transformations for °C and °F
- * - Decomposed compound unit formulations
+ * - Support for vector temperature differences (bypassing affine origin offsets)
+ * - Scaled percentage dimension (1% = 0.01)
  * - Single source for unit TeX (unitToTex) and value formatting
  */
 
@@ -192,14 +193,18 @@ export function unitToTex(unitName = "") {
   return `\\cfrac{${num.join("\\cdot ")}}{${den.join("\\cdot ")}}`;
 }
 
-/** Converts numeric value from internal coherent base to target unit with exact affine temperature offsets. */
-export function formatValueInUnit(value, unitName = "") {
+/**
+ * Converts numeric value from internal coherent base to target unit.
+ * If isDifference is true (for temperature intervals/differences), affine origin
+ * offsets are bypassed and only the linear scale factor is applied.
+ */
+export function formatValueInUnit(value, unitName = "", isDifference = false) {
   const bag = getUnitAtomBag(unitName);
   const scale = bag?.scale || 1.0;
   if (!scale) return value;
 
   // Temperature affine conversions from coherent Kelvin base
-  if (bag.atoms && Object.keys(bag.atoms).length === 1 && bag.dimMap?.Th === 1) {
+  if (!isDifference && bag.atoms && Object.keys(bag.atoms).length === 1 && bag.dimMap?.Th === 1) {
     const atomName = Object.keys(bag.atoms)[0];
     const b = ATOMIC_BASE_UNITS[atomName];
     if (b && b.offset) {
@@ -212,13 +217,17 @@ export function formatValueInUnit(value, unitName = "") {
   return value / scale;
 }
 
-/** Converts numeric value in given unit back to internal coherent base with exact affine temperature offsets. */
-export function valueToCoherentBase(value, unitName = "") {
+/**
+ * Converts numeric value in given unit back to internal coherent base.
+ * If isDifference is true (for temperature intervals/differences), affine origin
+ * offsets are bypassed and only the linear scale factor is applied.
+ */
+export function valueToCoherentBase(value, unitName = "", isDifference = false) {
   const bag = getUnitAtomBag(unitName);
   const scale = bag?.scale || 1.0;
 
   // Temperature affine conversions to coherent Kelvin base
-  if (bag.atoms && Object.keys(bag.atoms).length === 1 && bag.dimMap?.Th === 1) {
+  if (!isDifference && bag.atoms && Object.keys(bag.atoms).length === 1 && bag.dimMap?.Th === 1) {
     const atomName = Object.keys(bag.atoms)[0];
     const b = ATOMIC_BASE_UNITS[atomName];
     if (b && b.offset) {
