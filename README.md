@@ -76,3 +76,10 @@ Problem generation draws unit systems using a 40% SI / 40% US / 20% MIXED distri
 7. **Unit gaps** listed in 6.4.
 8. **[RESOLVED] Dead imports and incomplete files:** Cleared unused imports from `problem_gen.js` and ensured full closure of `app.js`.
 9. **Trig arguments** other than a bare angle variable give wrong numbers without an error.
+
+---
+
+## 5. Whole-Cycle Problem Generation & Natural Cognitive Fading
+- **Full State Point Sequences:** Cycle topics (Diesel Cycle, Air Handling with Bypass, Outside Air with Return, Pure Air, Cooling Towers, Diesel Machinery, Diesel Heat Balance) synthesize the entire sequence of thermodynamic points (Point 1, Point 2, Point 3, Point 4, Point 5...) from boundary specifications.
+- **Natural Step Reduction:** Beginners with low formula mastery receive every state point as an explicit question in the statement and an active input step in the solution flow. As equation mastery crosses the cognitive fading threshold (`FADING_THRESHOLD` $\approx 76.4\%$), intermediate points fade automatically: they are omitted from the statement prompts and pre-calculated in the solution flow, naturally reducing the problem until only the terminal engineering outputs remain.
+- **Terminal Goals:** Primary equipment capacities and overall efficiencies (e.g. $e_{th}, w_{net}$ in Diesel Cycle; $q_c, q_{rh}, V_s$ in Air Handling with Bypass) are protected as terminal goals and never faded.
