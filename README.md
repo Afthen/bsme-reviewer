@@ -84,3 +84,14 @@ Problem generation draws unit systems using a 40% SI / 40% US / 20% MIXED distri
 - **Natural Step Reduction:** Beginners with low formula mastery receive every state point as an explicit question in the statement and an active input step in the solution flow. As equation mastery crosses the cognitive fading threshold (`FADING_THRESHOLD` $\approx 76.4\%$), intermediate points fade automatically: they are omitted from the statement prompts and literally hidden from the interactive solution flow.
 - **Synthesis Requirement:** Faded steps are not shown as pre-answered prompts. The learner calculates intermediate points independently to arrive at the active goals. Ancestor equations are reinforced when active steps succeed and penalized if they fail.
 - **Physical Base Evaluation:** Pure-physics expressions evaluate using coherent SI base units before converting to the requested target unit, ensuring that multi-unit additions ($BP\text{ in hp} + P_f\text{ in W}$) remain mathematically and dimensionally exact.
+
+---
+
+## 6. Physical Base Invariant & Dimensional Analysis
+
+### 6.1 The Single-Invariant Unit Model
+Rather than testing individual unit pairings ad hoc, the CAS unit engine enforces a universal dimensional invariant:
+- **Coherent Physical State:** Every physical quantity $Q$ possesses an invariant scalar magnitude in coherent SI base units ($\text{m}, \text{s}, \text{kg}, \text{N}, \text{K}$).
+- **Projections via `formatValueInUnit` & `valueToCoherentBase`:** Any unit $u$ (linear or affine) maps directly to and from this coherent base with exact affine offsets ($T_K = (T_{^\circ\text{F}} + 459.67) \cdot 5/9 = T_{^\circ\text{C}} + 273.15 = T_{\text{R}} \cdot 5/9$).
+- **Coherent AST Evaluation:** Pure physics expressions convert all inputs into coherent base units before evaluation, eliminating raw number concatenation (e.g. adding $\text{hp} + \text{W}$ as raw numbers). The coherent result projects into `targetUnit`.
+- **Universal Invariant Testing:** Verified via randomized property testing over 100 autonomous problems across all topics and modes (SI, US, MIXED), asserting round-trip physical conservation ($< 0.05\%$) and KaTeX derivation syntax fidelity.
