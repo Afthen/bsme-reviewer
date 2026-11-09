@@ -31,6 +31,17 @@ export const DIMENSIONS = Object.freeze({
  * Enforces up to 6 significant figures, with a strict maximum of 3 decimal places.
  * Trims trailing zeroes to the right of the decimal.
  */
+
+export function formatGivenValue(key, value, varsDb = {}) {
+  const meta = varsDb[key] || {};
+  if (meta.isConstant) {
+    if (typeof meta.display === "number") return String(meta.display);
+    if (typeof meta.display === "string") return meta.display;
+    return String(value);                       // full precision fallback
+  }
+  return fmtSigFig(value, 6);
+}
+
 export function fmtSigFig(n, sigFigs = 6) {
   if (n === undefined || n === null) return "";
   const num = typeof n === "number" ? n : Number(n);
