@@ -10,5 +10,8 @@ export const pureOutsideAirTopic = Object.freeze({
   noun: "100% outside air conditioning system",
   varsDb: PURE_AIR_VARS_DB,
   relations: PURE_AIR_RELATIONS,
-  createSystem: createPureAirSystem
+  createSystem: createPureAirSystem,
+  cycleGivens: ["m_o", "h_o", "h_s"],
+  primaryGoals: ["q_c"],
+  terminalGoals: ["q_c"]
 });
