@@ -1,20 +1,17 @@
 /**
  * src/core/unit_sampler.js
  * 40% SI / 40% US / 20% MIXED Unit Sampler with:
- * - 50-50 variable split in MIXED mode
+ * - Coupled State Variable Coherence (cycle temperatures and stream enthalpies
+ *   belong to uniform, physically consistent unit systems)
+ * - Exact affine temperature transformation (300 K = 26.85 °C = 80.33 °F = 540 °R)
  * - Inverse-token compound decomposition probability ($w_i = 1/t_i$)
- * - Significant figure preservation criterion under 3 decimal places ($|v| >= 0.100$)
- * - Canonical textbook constant representations
+ * - 3-significant-figure retention validation ($|v| >= 0.100$)
  */
 
 import { getUnitAtomBag, isDimEqual, valueToCoherentBase, formatValueInUnit } from "../cas/units/definitions.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
 import { DIMENSIONS } from "./dimensions.js";
 
-/**
- * Palette of physical candidate units per dimension and system, tagged with token counts.
- * Compound decompositions (e.g. W -> J/s -> N-m/s -> kg*m^2/s^3) are arranged hierarchically.
- */
 export const DIMENSION_TOKEN_PALETTES = Object.freeze({
   SI: {
     [DIMENSIONS.LENGTH]: [
@@ -83,6 +80,7 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "L/h", tokens: 2 }
     ],
     [DIMENSIONS.TEMPERATURE]: [
+      { unit: "K", tokens: 1 },
       { unit: "°C", tokens: 1 }
     ]
   },
@@ -141,14 +139,12 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "cfm", tokens: 1 }
     ],
     [DIMENSIONS.TEMPERATURE]: [
-      { unit: "°F", tokens: 1 }
+      { unit: "°F", tokens: 1 },
+      { unit: "°R", tokens: 1 }
     ]
   }
 });
 
-/**
- * 40% SI / 40% US / 20% MIXED Problem Sampler
- */
 export function sampleSystemMode(requestedSys = null) {
   if (requestedSys === "SI" || requestedSys === "US" || requestedSys === "MIXED") {
     return requestedSys;
@@ -159,10 +155,6 @@ export function sampleSystemMode(requestedSys = null) {
   return "MIXED";
 }
 
-/**
- * Selects an item from a list with probability inversely proportional to token count:
- *   w_i = 1 / t_i,  P_i = w_i / \sum w_j
- */
 export function sampleByInverseTokens(candidateList = []) {
   if (!candidateList || candidateList.length === 0) return null;
   if (candidateList.length === 1) return candidateList[0].unit;
@@ -178,21 +170,13 @@ export function sampleByInverseTokens(candidateList = []) {
   return candidateList[candidateList.length - 1].unit;
 }
 
-/**
- * Verifies that a converted value retains at least 3 significant figures
- * under the repository formatting standard (maximum 3 decimal places):
- * Values below 0.0995 round to <= 0.099 (at most 2 sig figs in 3 decimals) and are denied.
- */
 export function retainsSufficientSigFigs(convertedValue) {
   if (typeof convertedValue !== "number" || isNaN(convertedValue)) return false;
   const abs = Math.abs(convertedValue);
-  if (abs === 0) return true; // zero-value states preserve identity
+  if (abs === 0) return true;
   return abs >= 0.0995 && abs <= 9.99e6;
 }
 
-/**
- * Samples recognizable academic constant representations per unit system.
- */
 export function sampleConstantUnit(varKey, sys = "SI") {
   const meta = CONSTANTS_DB[varKey];
   if (!meta) return null;
@@ -218,9 +202,28 @@ export function sampleConstantUnit(varKey, sys = "SI") {
 }
 
 /**
+ * Recognizes coupled state variables that must share the same physical unit in any problem:
+ * - Cycle state temperatures (e.g. T_1, T_2, T_3, T_4 in Diesel cycle or t_o, t_r, t_m, t_s in Air handling)
+ * - Stream specific energies / enthalpies (e.g. h_o, h_r, h_m, h_s or q_A, q_R, w_net)
+ */
+const COUPLED_VARIABLE_GROUPS = Object.freeze([
+  new Set(["T_1", "T_2", "T_3", "T_4"]),
+  new Set(["t_o", "t_r", "t_m", "t_s", "t_adp", "t_rh"]),
+  new Set(["h_o", "h_r", "h_m", "h_s", "h_adp", "h_rh"]),
+  new Set(["Q_A", "Q_R", "W_net"]),
+  new Set(["Q_ip", "Q_cw", "Q_exh", "Q_rad"])
+]);
+
+function findCoupledGroup(varKey) {
+  for (const grp of COUPLED_VARIABLE_GROUPS) {
+    if (grp.has(varKey)) return grp;
+  }
+  return null;
+}
+
+/**
  * Master Problem Unit System & Intra-System Variational Sampler.
- * Applies the 40-40-20 distribution, 50-50 MIXED partitioning, inverse-token selection,
- * and 3-sig-fig retention validation to system ground truth S.
+ * Guarantees state point coherence, exact affine offsets, and 3-sig-fig retention.
  */
 export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
   if (!S || !S._u) return S;
@@ -243,17 +246,38 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
     const half = Math.floor(shuffled.length / 2);
     siKeys = new Set(shuffled.slice(0, half));
     usKeys = new Set(shuffled.slice(half));
+
+    // Preserve coupled state variable integrity: all members of a coupled group
+    // must land in the same system (SI or US)
+    COUPLED_VARIABLE_GROUPS.forEach(grp => {
+      const activeMembers = Array.from(grp).filter(k => dimensionalKeys.includes(k));
+      if (activeMembers.length > 1) {
+        const primarySys = usKeys.has(activeMembers[0]) ? "US" : "SI";
+        activeMembers.forEach(k => {
+          if (primarySys === "US") {
+            usKeys.add(k);
+            siKeys.delete(k);
+          } else {
+            siKeys.add(k);
+            usKeys.delete(k);
+          }
+        });
+      }
+    });
   } else if (mode === "US") {
     usKeys = new Set(dimensionalKeys);
   } else {
     siKeys = new Set(dimensionalKeys);
   }
 
+  // Track unit assigned to coupled groups so all group members share the identical unit
+  const groupUnitMap = new Map();
+
   dimensionalKeys.forEach(k => {
     const meta = varsDb[k] || {};
     const targetSys = usKeys.has(k) ? "US" : "SI";
 
-    // 1. Academic Constants: roll between recognizable textbook figures
+    // 1. Physical Constants: roll between recognizable textbook figures
     if (meta.isConstant || CONSTANTS_DB[k]) {
       const cRes = sampleConstantUnit(k, targetSys);
       if (cRes) {
@@ -268,11 +292,30 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
       return;
     }
 
+    // 2. Check if this variable belongs to an already-sampled coupled state group
+    const grp = findCoupledGroup(k);
+    if (grp && groupUnitMap.has(grp)) {
+      const coupledUnit = groupUnitMap.get(grp);
+      const coherentVal = valueToCoherentBase(S[k], canonUnit);
+      const convertedVal = formatValueInUnit(coherentVal, coupledUnit);
+      S[k] = convertedVal;
+      S._u[k] = coupledUnit;
+      return;
+    }
+
     const canonBag = getUnitAtomBag(canonUnit);
     const canonVal = S[k];
     const coherentVal = valueToCoherentBase(canonVal, canonUnit);
 
-    const palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
+    let palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
+
+    // Special thermodynamic constraint: ideal gas cycles (with K base) require absolute temperature (K or °R)
+    if (canonUnit === "K" && meta.dimension === DIMENSIONS.TEMPERATURE) {
+      palette = targetSys === "US"
+        ? [{ unit: "°R", tokens: 1 }]
+        : [{ unit: "K", tokens: 1 }];
+    }
+
     const validCandidates = palette.filter(p => {
       const b = getUnitAtomBag(p.unit);
       return isDimEqual(canonBag.dimMap, b.dimMap);
@@ -280,7 +323,6 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
 
     if (validCandidates.length === 0) return;
 
-    // 2. Select unit using inverse-token probability and validate sig-fig retention
     const shuffledCandidates = [...validCandidates].sort(() => Math.random() - 0.5);
     let chosenUnit = null;
 
@@ -294,8 +336,9 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
       }
     }
 
-    if (!chosenUnit) {
-      // Retain canonical unit if conversions would destroy significant figure resolution
+    if (chosenUnit) {
+      if (grp) groupUnitMap.set(grp, chosenUnit);
+    } else {
       S._u[k] = canonUnit;
     }
   });
