@@ -10,5 +10,8 @@ export const dieselHeatBalanceTopic = Object.freeze({
   noun: "Diesel engine heat balance and thermal distribution",
   varsDb: DIESEL_HEAT_BALANCE_VARS_DB,
   relations: DIESEL_HEAT_BALANCE_RELATIONS,
-  createSystem: createDieselHeatBalanceSystem
+  createSystem: createDieselHeatBalanceSystem,
+  cycleGivens: ["Q_f", "pct_ip", "pct_cw", "pct_exh", "dT_cw", "cp_w"],
+  primaryGoals: ["m_cw", "pct_rad", "Q_rad", "Q_exh", "Q_cw", "Q_ip"],
+  terminalGoals: ["m_cw", "Q_rad"]
 });
