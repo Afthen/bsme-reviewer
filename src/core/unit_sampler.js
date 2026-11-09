@@ -1,9 +1,7 @@
 /**
  * src/core/unit_sampler.js
  * 40% SI / 40% US / 20% MIXED Unit Sampler with:
- * - Coupled State Variable Coherence (cycle temperatures and stream enthalpies
- *   belong to uniform, physically consistent unit systems)
- * - Exact affine temperature transformation (300 K = 26.85 °C = 80.33 °F = 540 °R)
+ * - Uncoupled Givens (any given variable can freely roll valid units)
  * - Inverse-token compound decomposition probability ($w_i = 1/t_i$)
  * - 3-significant-figure retention validation ($|v| >= 0.100$)
  */
@@ -216,11 +214,8 @@ export function sampleConstantUnit(varKey, sys = "SI") {
 }
 
 /**
- * Recognizes coupled state variables that must share the same physical unit in any problem:
- * - Cycle state temperatures (e.g. T_1, T_2, T_3, T_4 in Diesel cycle or t_o, t_r, t_m, t_s in Air handling)
- * - Stream specific energies / enthalpies (e.g. h_o, h_r, h_m, h_s or q_A, q_R, w_net)
- * - Cooling tower temperatures and range/approach differences
- * - Heat balance percentage shares
+ * Recognizes coupled state variables that must share the same physical unit in any problem
+ * IF they end up as required deliverables. Givens are completely uncoupled and free to roll.
  */
 const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["T_1", "T_2", "T_3", "T_4"]),
@@ -232,7 +227,7 @@ const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["pct_ip", "pct_cw", "pct_exh", "pct_rad"])
 ]);
 
-function findCoupledGroup(varKey) {
+export function findCoupledGroup(varKey) {
   for (const grp of COUPLED_VARIABLE_GROUPS) {
     if (grp.has(varKey)) return grp;
   }
@@ -241,7 +236,8 @@ function findCoupledGroup(varKey) {
 
 /**
  * Master Problem Unit System & Intra-System Variational Sampler.
- * Guarantees state point coherence, exact affine offsets, and 3-sig-fig retention.
+ * Guarantees exact affine offsets and 3-sig-fig retention.
+ * Deliberately removes constraints to allow "givens" to roll any valid physical unit.
  */
 export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
   if (!S || !S._u) return S;
@@ -264,32 +260,11 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
     const half = Math.floor(shuffled.length / 2);
     siKeys = new Set(shuffled.slice(0, half));
     usKeys = new Set(shuffled.slice(half));
-
-    // Preserve coupled state variable integrity: all members of a coupled group
-    // must land in the same system (SI or US)
-    COUPLED_VARIABLE_GROUPS.forEach(grp => {
-      const activeMembers = Array.from(grp).filter(k => dimensionalKeys.includes(k));
-      if (activeMembers.length > 1) {
-        const primarySys = usKeys.has(activeMembers[0]) ? "US" : "SI";
-        activeMembers.forEach(k => {
-          if (primarySys === "US") {
-            usKeys.add(k);
-            siKeys.delete(k);
-          } else {
-            siKeys.add(k);
-            usKeys.delete(k);
-          }
-        });
-      }
-    });
   } else if (mode === "US") {
     usKeys = new Set(dimensionalKeys);
   } else {
     siKeys = new Set(dimensionalKeys);
   }
-
-  // Track unit assigned to coupled groups so all group members share the identical unit
-  const groupUnitMap = new Map();
 
   dimensionalKeys.forEach(k => {
     const meta = varsDb[k] || {};
@@ -311,30 +286,11 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
     }
 
     const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-
-    // 2. Check if this variable belongs to an already-sampled coupled state group
-    const grp = findCoupledGroup(k);
-    if (grp && groupUnitMap.has(grp)) {
-      const coupledUnit = groupUnitMap.get(grp);
-      const coherentVal = valueToCoherentBase(S[k], canonUnit, isDiff);
-      const convertedVal = formatValueInUnit(coherentVal, coupledUnit, isDiff);
-      S[k] = convertedVal;
-      S._u[k] = coupledUnit;
-      return;
-    }
-
     const canonBag = getUnitAtomBag(canonUnit);
     const canonVal = S[k];
     const coherentVal = valueToCoherentBase(canonVal, canonUnit, isDiff);
 
-    let palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
-
-    // Special thermodynamic constraint: ideal gas cycles (with K base) require absolute temperature (K or °R)
-    if (canonUnit === "K" && meta.dimension === DIMENSIONS.TEMPERATURE) {
-      palette = targetSys === "US"
-        ? [{ unit: "°R", tokens: 1 }]
-        : [{ unit: "K", tokens: 1 }];
-    }
+    const palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
 
     const validCandidates = palette.filter(p => {
       const b = getUnitAtomBag(p.unit);
@@ -356,9 +312,7 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
       }
     }
 
-    if (chosenUnit) {
-      if (grp) groupUnitMap.set(grp, chosenUnit);
-    } else {
+    if (!chosenUnit) {
       S._u[k] = canonUnit;
     }
   });
