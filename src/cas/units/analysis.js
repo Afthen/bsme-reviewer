@@ -1,12 +1,20 @@
 /**
  * src/cas/units/analysis.js
- * Dimensional analysis, 1:1 drop-in unit substitutions, and localized factor-label placement.
+ * Dimensional analysis with CANCEL-FIRST compound handling:
+ *   - atomic cancellation runs over every token bag;
+ *   - tokens render only their cancelled/surviving atoms (expand only what survives);
+ *   - scale bridges collapse into AT MOST ONE global conversion bracket
+ *     (globalConversionTex); per-token scale brackets no longer exist;
+ *   - scaled dimensionless units (%, silentScale) fold into the numeric factor
+ *     with NO printed bracket: "6\,\% \cdot 7000\,\text{kW}" reads as-is;
+ *   - all TeX goes through unitToTex / atomic tex — raw unit strings never
+ *     enter \text{}.
  */
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { fmtSigFig } from "../../core/dimensions.js";
-import { ATOMIC_BASE_UNITS, getUnitAtomBag, isDimEqual } from "./definitions.js";
+import { ATOMIC_BASE_UNITS, getUnitAtomBag, isDimEqual, unitToTex } from "./definitions.js";
 
 export function evalExprUnitAST(node, S, varsDb) {
   if (!node) return { factor: 1.0, atoms: [] };
@@ -51,6 +59,30 @@ export function evalExprUnitAST(node, S, varsDb) {
   return { factor: 1.0, atoms: [] };
 }
 
+// Multiplicative exponent of every identifier token (silent-scale accounting)
+function collectTokenExponents(node, sign = 1, acc = {}) {
+  if (!node) return acc;
+  if (node.type === "group") return collectTokenExponents(node.expr, sign, acc);
+  if (node.type === "id") {
+    acc[node.name] = (acc[node.name] || 0) + sign;
+    return acc;
+  }
+  if (node.type === "binary") {
+    if (node.op === "*") {
+      collectTokenExponents(node.left, sign, acc);
+      collectTokenExponents(node.right, sign, acc);
+    } else if (node.op === "/") {
+      collectTokenExponents(node.left, sign, acc);
+      collectTokenExponents(node.right, -sign, acc);
+    } else if (node.op === "^") {
+      const p = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
+      collectTokenExponents(node.left, sign * p, acc);
+    }
+    // additive subtrees are opaque here (group factoring is derivation's job)
+  }
+  return acc;
+}
+
 export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const ast = (typeof exprOrAST === "string") ? parseMathAST(exprOrAST) : exprOrAST;
   const tokenConversions = {};
@@ -67,7 +99,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
       if (currU === "°C" && (reqU === "K" || reqU === "degK")) {
         const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-        preConversions.push({ token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU, conv: { factor: 1.0, latex: `(${rawVal} + 273.15)\\text{ K}` }, rawVal, convertedVal: rawVal + 273.15 });
+        preConversions.push({ token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU, conv: { factor: 1.0, latex: `(${rawVal} + 273.15)\\,\\text{K}` }, rawVal, convertedVal: rawVal + 273.15 });
         return;
       }
       if (currU && reqU && currU !== reqU && currU !== "deg" && reqU !== "°") {
@@ -75,11 +107,11 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         if (isDimEqual(currBag.dimMap, reqBag.dimMap)) {
           const ratio = currBag.scale / reqBag.scale;
           const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-          preConversions.push({ token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU, conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\text{ ${reqU}}}{\\cancel{\\text{${currU}}}}` }, rawVal, convertedVal: rawVal * ratio });
+          preConversions.push({ token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU, conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}` }, rawVal, convertedVal: rawVal * ratio });
         }
       }
     });
-    return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor: 1.0, preConversions, tokenConversions };
+    return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor: 1.0, globalConversionTex: "", preConversions, tokenConversions };
   }
 
   const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
@@ -91,8 +123,25 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const targetScale = targetBag.scale || 1.0;
   const numericConversionFactor = targetScale > 0 ? (exprScale / targetScale) : 1.0;
 
-  const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false, preserved: false }));
+  // Silent scaled-dimensionless units (%, permille, ...) fold into the numeric
+  // factor WITHOUT a printed bracket, on both expression and target sides.
+  let silentExpr = 1.0;
+  const exps = collectTokenExponents(ast);
+  for (const [tok, exp] of Object.entries(exps)) {
+    const cKey = resolveCanonicalKey(tok, varsDb);
+    const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+    const bag = getUnitAtomBag(uName);
+    if (bag.scaledDimensionless) silentExpr *= Math.pow(bag.scale || 1, exp);
+  }
+  const silentTarget = targetBag.scaledDimensionless ? (targetBag.scale || 1) : 1;
+  const silentPart = silentExpr / silentTarget;
+  const bracketFactor = silentPart !== 0 ? numericConversionFactor / silentPart : numericConversionFactor;
+  const globalConversionTex = (Math.abs(bracketFactor - 1) > 1e-12)
+    ? `\\cdot\\left[${fmtSigFig(bracketFactor, 6)}\\right]`
+    : "";
 
+  // CANCEL-FIRST: pairwise atomic cancellation over the whole expression
+  const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false }));
   for (let i = 0; i < atomList.length; i++) {
     for (let j = i + 1; j < atomList.length; j++) {
       const a1 = atomList[i], a2 = atomList[j];
@@ -114,20 +163,16 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       continue;
     }
 
-    if (uName === targetUnit) {
-      const bag = getUnitAtomBag(uName);
-      tokenMarkup[tok] = bag.displayTex || `\\text{${uName}}`;
+    const bag = getUnitAtomBag(uName);
+
+    // Scaled dimensionless: print the value's own symbol (%, no expansion)
+    if (bag.scaledDimensionless) {
+      tokenMarkup[tok] = bag.displayTex || unitToTex(uName);
       continue;
     }
 
-    const bag = getUnitAtomBag(uName);
-    const hasMultiplier = bag.factor && bag.factor !== 1;
-
-    if (hasMultiplier) {
-      tokenMarkup[tok] = `\\cancel{\\text{${uName}}}`;
-      const convBracket = `\\cdot \\left[\\cfrac{${fmtSigFig(bag.factor)}\\,${bag.displayTex || "\\text{base}"}}{\\cancel{\\text{${uName}}}}\\right]`;
-      if (!tokenConversions[tok]) tokenConversions[tok] = [];
-      tokenConversions[tok].push(convBracket);
+    if (uName === targetUnit) {
+      tokenMarkup[tok] = bag.displayTex || unitToTex(uName);
       continue;
     }
 
@@ -136,10 +181,10 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       continue;
     }
 
+    // Expand ONLY the atoms that survive cancellation; cancelled atoms strike.
     const formatAtom = (atomName, p) => {
       const isCanceled = atomList.some(a => a.token === tok && a.atom === atomName && a.canceled);
       const expStr = Math.abs(p) > 1 ? `^{${Math.abs(p)}}` : "";
-      
       const atomTex = ATOMIC_BASE_UNITS[atomName]?.tex || `\\text{${atomName}}`;
       return isCanceled ? `\\cancel{${atomTex}}${expStr}` : `${atomTex}${expStr}`;
     };
@@ -156,5 +201,13 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     tokenMarkup[tok] = denStr ? `\\cfrac{${numStr || "1"}}{${denStr}}` : numStr;
   }
 
-  return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, preConversions, tokenConversions };
+  return {
+    tokenMarkup,
+    conversionFactors: [],
+    conversionFactorTex: "",
+    numericConversionFactor,
+    globalConversionTex,
+    preConversions,
+    tokenConversions
+  };
 }

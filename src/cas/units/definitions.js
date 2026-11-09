@@ -1,6 +1,7 @@
 /**
  * src/cas/units/definitions.js
  * Comprehensive engineering unit registry with affine offsets and compound scale definitions.
+ * Also the single source for unit TeX (unitToTex) and unit-aware value formatting.
  */
 
 export const BASE_DIMENSIONS = Object.freeze({
@@ -34,8 +35,7 @@ export const ATOMIC_BASE_UNITS = Object.freeze({
   rad:   { dim: "C", scale: 1.0, tex: "\\text{rad}" },
   rev:   { dim: "C", scale: 1.0, tex: "\\text{rev}" },
   "°":   { dim: "C", scale: Math.PI / 180, tex: "°" },
-  deg:   { dim: "C", scale: Math.PI / 180, tex: "°" },
-  "%":   { dim: "C", scale: 0.01, tex: "\\%" }
+  deg:   { dim: "C", scale: Math.PI / 180, tex: "°" }
 });
 
 export const COMPOUND_UNITS = Object.freeze({
@@ -111,8 +111,13 @@ export function getUnitAtomBag(uName) {
   if (!uName || uName === "dimless" || uName === "ratio") {
     return { factor: 1.0, atoms: {}, dimMap: {}, scale: 1.0, isDimensionless: true };
   }
+  // Percent: scaled dimensionless unit. factor/scale 0.01 fold into numeric
+  // conversion silently (no printed bracket); values print as "6\,\%".
   if (uName === "%") {
-    return { factor: 1.0, atoms: { "%": 1 }, dimMap: { C: 1 }, scale: 0.01, isDimensionless: false, displayTex: "\\%" };
+    return {
+      factor: 0.01, atoms: {}, dimMap: {}, scale: 0.01,
+      isDimensionless: true, scaledDimensionless: true, displayTex: "\\%"
+    };
   }
   if (COMPOUND_UNITS[uName]) {
     const c = COMPOUND_UNITS[uName];
@@ -140,4 +145,37 @@ export function isDimEqual(aMap, bMap) {
   const all = new Set([...Object.keys(aMap || {}), ...Object.keys(bMap || {})]);
   for (const d of all) if ((aMap?.[d] || 0) !== (bMap?.[d] || 0)) return false;
   return true;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Single source for unit TeX. Never interpolate raw unit strings    *
+ *  into \text{} — powers and slashes inside \text{} are KaTeX errors.*
+ * ------------------------------------------------------------------ */
+const UNIT_TEX_ALIASES = Object.freeze({ "%": "\\%", "°": "^{\\circ}" });
+
+export function unitToTex(unitName = "") {
+  const cleaned = String(unitName || "").trim();
+  if (!cleaned || cleaned === "dimless" || cleaned === "ratio") return "";
+  if (UNIT_TEX_ALIASES[cleaned]) return UNIT_TEX_ALIASES[cleaned];
+
+  const [numPart = "", denPart = ""] = cleaned.split("/");
+  const parse = part => part.split(/[·* ]+/).filter(Boolean).map(tok => {
+    const m = tok.match(/^([A-Za-z°%_]+)(?:\^(-?\d+))?$/);
+    if (!m) return `\\text{${tok}}`;
+    const base = UNIT_TEX_ALIASES[m[1]] || `\\text{${m[1]}}`;
+    return m[2] ? `${base}^{${m[2]}}` : base;
+  });
+
+  const num = parse(numPart);
+  const den = parse(denPart);
+  if (!den.length) return num.join("\\,");
+  if (!num.length) return `\\cfrac{1}{${den.join("\\cdot ")}}`;
+  return `\\cfrac{${num.join("\\cdot ")}}{${den.join("\\cdot ")}}`;
+}
+
+/** Value in internal SI -> value in the token's declared unit. */
+export function formatValueInUnit(value, unitName = "") {
+  const bag = getUnitAtomBag(unitName);
+  const scale = bag?.scale || 1;
+  return scale ? value / scale : value;
 }

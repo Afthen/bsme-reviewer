@@ -1,6 +1,7 @@
 /**
  * src/mastery/engine.js
  * Mastery Engine: Decay curves, attempt history, and graph ancestry propagation.
+ * isCommonEq is the single source of the eq_base_* prefix convention.
  */
 
 import { tokenizeExpr } from "../cas/ast.js";
@@ -15,6 +16,7 @@ import {
 
 let masteryState = {};
 
+/** Single source of the shared-material prefix convention. */
 export function isCommonEq(eq) {
   return !!eq && typeof eq.id === "string" && eq.id.startsWith("eq_base_");
 }
@@ -61,13 +63,13 @@ export function calculateTopicLambda(topic) {
 
 export function getDecayedMastery(eq, topic = null) {
   if (!eq || !eq.id) return 0;
-  
+
   const h = masteryState[eq.id];
   const history = h && Array.isArray(h.attempts) ? h.attempts : [];
-  
+
   const tokens = tokenizeExpr(eq.baseFormula || "").length;
   const windowSize = snapToFibonacci(tokens / Math.E);
-  
+
   const recent = history.slice(-windowSize);
   const padded = [...Array(Math.max(0, windowSize - recent.length)).fill(false), ...recent];
 
@@ -93,7 +95,7 @@ export function getDecayedMastery(eq, topic = null) {
 }
 
 export function recordAttempt(eqId, success, topicId = null) {
-  const isCommon = eqId.startsWith("eq_base_");
+  const isCommon = isCommonEq({ id: eqId });
   const scopeKey = isCommon ? "common" : (topicId || "common");
   const currentTick = getTopicTick(scopeKey);
 
@@ -110,7 +112,7 @@ export function recordAttempt(eqId, success, topicId = null) {
 
 export function penalizeAncestors(ancestorEqIds = [], topicId = null) {
   ancestorEqIds.forEach(eqId => {
-    const isCommon = eqId.startsWith("eq_base_");
+    const isCommon = isCommonEq({ id: eqId });
     const scopeKey = isCommon ? "common" : (topicId || "common");
     const currentTick = getTopicTick(scopeKey);
 
@@ -128,7 +130,7 @@ export function penalizeAncestors(ancestorEqIds = [], topicId = null) {
 
 export function reinforceAncestors(ancestorEqIds = [], topicId = null) {
   ancestorEqIds.forEach(eqId => {
-    const isCommon = eqId.startsWith("eq_base_");
+    const isCommon = isCommonEq({ id: eqId });
     const scopeKey = isCommon ? "common" : (topicId || "common");
     const currentTick = getTopicTick(scopeKey);
 

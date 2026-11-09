@@ -1,16 +1,18 @@
 /**
  * src/ui/problem_view.js
  * Interactive problem presenter with adaptive relative error checks.
+ * Mastery sidebar refresh is delegated: views dispatch MASTERY_CHANGED_EVENT
+ * and app.js re-renders per the active sidebar mode.
  */
 
 import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
-  incrementTopicTick, phi, getDecayedMastery
+  incrementTopicTick, phi
 } from "../mastery/index.js";
 import { attachTooltips } from "./carousel_view.js";
-import { renderMasteryBars } from "./sidebar_view.js";
+import { MASTERY_CHANGED_EVENT } from "./sidebar_view.js";
 
 function resolveMeta(varKey, varsDb = {}) {
   return varsDb[varKey] || { name: varKey, symbol: varKey, unit: "" };
@@ -42,7 +44,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
 
     const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
     const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
-    
+
     const symSpan = `<span class="interactive-var" data-var="${step.targetVar}">$${meta.symbol || step.targetVar}$</span>`;
     const labelText = targetLabel(meta.name, symSpan, unit);
 
@@ -108,7 +110,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     window.renderMathInElement(document.getElementById("view-problem"), {
       delimiters: [
         { left: "$$", right: "$$", display: true },
-        { left: "\\[", right: "\\]", display: true },
+        { left: "[", right: "]", display: true },
         { left: "$", right: "$", display: false }
       ],
       output: "html",
@@ -144,7 +146,7 @@ function refreshStepDerivations(activeProblem, relations) {
     window.renderMathInElement(document.getElementById("p-solution-flow"), {
       delimiters: [
         { left: "$$", right: "$$", display: true },
-        { left: "\\[", right: "\\]", display: true },
+        { left: "[", right: "]", display: true },
         { left: "$", right: "$", display: false }
       ],
       output: "html",
@@ -186,13 +188,13 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
     inputEl.disabled = true;
     step.isAnswered = true;
     step.userVal = val;
-    
+
     if (step.systemEqIds) {
       step.systemEqIds.forEach(id => recordAttempt(id, true, topicScope));
     } else {
       recordAttempt(step.eqId, true, topicScope);
     }
-    
+
     reinforceAncestors(step.fadedAncestorEqIds || [], topicScope);
     document.getElementById(`step-item-${idx}`).classList.add("open");
   } else {
@@ -206,11 +208,9 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
     setTimeout(() => inputEl.classList.remove("shake-trigger"), 400);
   }
 
-  const activeTopic = { id: activeProblem.topicId, relations };
-
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
-  renderMasteryBars(relations, eq => getDecayedMastery(eq, activeTopic));
+  document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
   updateToggleAllButton(activeProblem);
 }
 
@@ -231,12 +231,10 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   }
   penalizeAncestors(step.fadedAncestorEqIds || [], topicScope);
 
-  const activeTopic = { id: activeProblem.topicId, relations };
-
   document.getElementById(`step-item-${idx}`).classList.add("open");
   refreshStepDerivations(activeProblem, relations);
   renderDistractorBanner(activeProblem);
-  renderMasteryBars(relations, eq => getDecayedMastery(eq, activeTopic));
+  document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
   updateToggleAllButton(activeProblem);
 }
 

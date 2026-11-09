@@ -3,9 +3,13 @@
  * Sidebar drawer controller with single-listener initialization guard.
  * Supports flexible signature: renderMasteryBars(relations, getMastery) or
  * renderMasteryBars(container, relations, getMastery).
+ * initSidebarView is the ONLY setter of the drawer's active source.
  */
 
 import { FADING_THRESHOLD, phi } from "../mastery/index.js";
+
+/** Views dispatch this after mastery mutations; app.js re-renders per mode. */
+export const MASTERY_CHANGED_EVENT = "bsme:mastery-changed";
 
 let activeRelations = [];
 let activeGetMastery = () => 0;

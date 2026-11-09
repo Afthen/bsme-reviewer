@@ -2,6 +2,9 @@
  * src/core/problem_gen.js
  * ============================================================================
  * ARCHITECTURAL PILLAR: Formula-as-Node Graph Problem Generator
+ * - relationWeaknessWeight: single source of the mastery weakness curve
+ *   (imported by src/core/topic_mix.js for pool targeting)
+ * - neatness pass skips isConstant givens (tabulated precision preserved)
  * ============================================================================
  */
 
@@ -10,17 +13,23 @@ import { parseMathAST } from "../cas/ast.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { CONSTANTS_DB, getConstantValue, getConstantUnit } from "./constants_registry.js";
-import { fmtSigFig } from "./dimensions.js";
+import { fmtSigFig, formatGivenValue } from "./dimensions.js";
+
+/**
+ * Weakness weight of one relation at a given mastery — the repo's single
+ * source of truth for "low mastery priority" (used here per relation and by
+ * topic_mix.js per topic).
+ *   weight = max(phi(-7), ((1 + phi(-6)) - mastery) ^ fib(4))
+ */
+export function relationWeaknessWeight(mastery = 0) {
+  return Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
+}
 
 function determineGraphDistance(mastery) {
   if (mastery < phi(-2)) return 0;           // < 38.2%
-  if (mastery < phi(-1)) return 1;            // < 61.8%
-  if (mastery < FADING_THRESHOLD) return 2;   // < 76.4%
-  return fib(4);                              // >= 76.4% (3 hops)
-}
-
-export function relationWeaknessWeight(mastery = 0) {
-  return Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
+  if (mastery < phi(-1)) return 1;           // < 61.8%
+  if (mastery < FADING_THRESHOLD) return 2;  // < 76.4%
+  return fib(4);                             // >= 76.4% (3 hops)
 }
 
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
@@ -59,13 +68,13 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
 
   for (let h = 0; h < desiredHops; h++) {
     let expansions = [];
-    
+
     for (const g of currentGivens) {
       const neighborRels = relations.filter(r => r.id !== targetNode.id && r.nodes.includes(g));
-      
+
       for (const nRel of neighborRels) {
         const newInputs = nRel.nodes.filter(n => n !== g);
-        
+
         if (!newInputs.includes(goalVar)) {
           const candidateSet = Array.from(new Set([
             ...currentGivens.filter(x => x !== g),
@@ -143,12 +152,12 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
   function getPolymorphicMeta(v) {
     const meta = varsDb[v] || CONSTANTS_DB[v] || {};
-    
+
     if (!S._displayNames[v]) {
       const names = meta.nameAliases && meta.nameAliases.length > 0 ? meta.nameAliases : [meta.name || v];
       S._displayNames[v] = names[Math.floor(Math.random() * names.length)];
     }
-    
+
     if (!S._displaySymbols[v]) {
       const symbols = meta.symbolAliases && meta.symbolAliases.length > 0 ? meta.symbolAliases : [meta.symbol || v];
       S._displaySymbols[v] = symbols[Math.floor(Math.random() * symbols.length)];
@@ -162,10 +171,11 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
   const parts = givens.map(v => {
     const val = S[v];
-    const u = S._u?.[v] || varsDb[v]?.unit || CONSTANTS_DB[v]?.unit || "";
+    const meta = varsDb[v] || CONSTANTS_DB[v] || {};
+    const u = S._u?.[v] || meta.unit || "";
     const poly = getPolymorphicMeta(v);
 
-    const formattedVal = fmtSigFig(val, 6);
+    const formattedVal = formatGivenValue(val, meta);
     let valWithUnit = `$${formattedVal}$`;
     if (u && u !== "dimless" && u !== "ratio") {
       valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}°$` : `$${formattedVal}\\text{ ${u}}$`;
@@ -188,7 +198,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   });
 
   const systemNoun = topicConfig.noun || `${topicConfig.title || "Mechanical"} system`;
-  const goalsFormatted = goalStrings.length > 2 
+  const goalsFormatted = goalStrings.length > 2
     ? goalStrings.slice(0, -1).join(", ") + ", and " + goalStrings[goalStrings.length - 1]
     : goalStrings.join(" and ");
 
@@ -208,8 +218,10 @@ export function generateProblem(topic, getMastery = () => 0) {
   path.givens.forEach(g => {
     const val = S_raw[g];
     if (typeof val !== "number") return;
-    
+
     const meta = varsDb[g] || CONSTANTS_DB[g] || {};
+    if (meta.isConstant) return;              // constants keep tabulated precision
+
     if (meta.isInteger) {
       S_neat[g] = Math.round(val);
     } else {
@@ -219,7 +231,7 @@ export function generateProblem(topic, getMastery = () => 0) {
   });
 
   const allSteps = solveDAG(path.givens, S_neat, relations, varsDb, () => 0);
-  
+
   allSteps.forEach(step => {
     const ast = parseMathAST(step.rhsExpr);
     const { value } = evaluatePhysicalAST(ast, S_neat, step.targetVar, varsDb, step.requiredUnits);

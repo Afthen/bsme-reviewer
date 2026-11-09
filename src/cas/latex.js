@@ -40,26 +40,26 @@ export function stripOuterParens(texStr) {
 
 export function astToLatex(node, substituteMap = null, varsDb = {}) {
   if (!node) return "";
-  
+
   if (node.type === "num") return node.val;
-  
+
   if (node.type === "id") {
-    return (substituteMap && substituteMap[node.name] !== undefined) 
-      ? substituteMap[node.name] 
+    return (substituteMap && substituteMap[node.name] !== undefined)
+      ? substituteMap[node.name]
       : toLatexSymbol(node.name, varsDb);
   }
-  
+
   if (node.type === "group") {
     let innerNode = node.expr;
     while (innerNode && innerNode.type === "group") innerNode = innerNode.expr;
-    
+
     // Smart Parens: numbers, variables, and function calls do not need outer parens
     if (innerNode.type === "num" || innerNode.type === "id" || innerNode.type === "call") {
       return astToLatex(innerNode, substituteMap, varsDb);
     }
     return `(${stripOuterParens(astToLatex(innerNode, substituteMap, varsDb))})`;
   }
-  
+
   if (node.type === "call") {
     const argInner = unwrapGroup(node.arg);
     const isSubstitutedNum = substituteMap && (
@@ -86,7 +86,7 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
       default:     return `\\text{${node.fn}}\\left(${innerTex}\\right)`;
     }
   }
-  
+
   if (node.type === "binary") {
     if (node.op === "/") {
       return `\\cfrac{${stripOuterParens(astToLatex(node.left, substituteMap, varsDb))}}{${stripOuterParens(astToLatex(node.right, substituteMap, varsDb))}}`;
@@ -94,15 +94,18 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
     if (node.op === "*") {
       const L = astToLatex(node.left, substituteMap, varsDb);
       const R = astToLatex(node.right, substituteMap, varsDb);
-      
+
       const leftIsSimpleNum = /^[+-]?[\d.]+$/.test(L.trim());
       const rightIsSimpleNum = /^[+-]?[\d.]+$/.test(R.trim());
-      
-      // Use clean \, thin spacing between factors
+      // Unit-carrying substituted tokens (incl. unitToTex \cfrac compounds)
+      // are numeric factors: they multiply explicitly, never juxtaposed.
+      const leftHasUnit = L.includes("\\text{");
+      const rightHasUnit = R.includes("\\text{");
+
       let sep = " \\, ";
-      if (leftIsSimpleNum && rightIsSimpleNum) sep = " \\cdot ";
+      if ((leftIsSimpleNum || leftHasUnit) && (rightIsSimpleNum || rightHasUnit)) sep = " \\cdot ";
       else if (R.startsWith("(") || R.startsWith("\\cos") || R.startsWith("\\sin") || R.startsWith("\\tan")) sep = " \\, ";
-      
+
       return `${L}${sep}${R}`.trim();
     }
     if (node.op === "+") {
@@ -123,7 +126,7 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
         );
         const innerTex = stripOuterParens(astToLatex(argInner, substituteMap, varsDb));
         const wrappedArg = (isSubstitutedNum || argInner.type === "binary") ? `(${innerTex})` : ` ${innerTex}`;
-        return `\\${uL.fn}^{${expTex}}${wrappedArg}`;
+        return `${uL.fn === "cos" ? "\\cos" : uL.fn === "sin" ? "\\sin" : "\\tan"}^{${expTex}}${wrappedArg}`;
       }
 
       const leftTex = astToLatex(node.left, substituteMap, varsDb);
