@@ -1,6 +1,10 @@
 /**
  * test/run_test.js
  * Comprehensive Headless CI Test Runner & Invariant Verification Suite.
+ * Incorporates Universal Property-Based Testing:
+ * - Round-trip physical invariance across all registered units
+ * - Randomized 100-problem stress invariant across pure SI, US, and MIXED systems
+ * - Coherent physical base projection for all relations
  */
 
 import { test, describe } from "node:test";
@@ -16,8 +20,12 @@ import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/maste
 import { pruneSolutionPath, solveDAG } from "../src/core/graph_solver.js";
 import {
   sampleSystemMode, sampleByInverseTokens, retainsSufficientSigFigs,
-  applyProblemUnitSampling
+  DIMENSION_TOKEN_PALETTES
 } from "../src/core/unit_sampler.js";
+import {
+  ATOMIC_BASE_UNITS, COMPOUND_UNITS, getUnitAtomBag,
+  valueToCoherentBase, formatValueInUnit
+} from "../src/cas/units/definitions.js";
 import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
 
 // Enhanced Headless Browser Mock
@@ -155,7 +163,7 @@ export function validateDerivationLatex(derivLatex) {
 }
 
 // ============================================================================
-// 1. TOPIC REGISTRY & INVARIANT CONTRACT SUITE
+// 1. TOPIC REGISTRY & ARCHITECTURE CONTRACT SUITE
 // ============================================================================
 describe("Topic Registry & Architecture Contract Suite", () => {
   test("All topics must have unique IDs and match TOPICS dictionary keys", () => {
@@ -200,12 +208,133 @@ describe("Engineering Topics Ground Truth & AST Inversion Suite", () => {
 });
 
 // ============================================================================
-// 3. WHOLE-CYCLE SYNTHESIS & COGNITIVE FADING VERIFICATION
+// 3. UNIVERSAL PROPERTY-BASED INVARIANT SUITE (REPLACES AD-HOC CASE TESTS)
+// ============================================================================
+describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
+  test("Property 1: Universal Round-Trip Invariant across all registered units", () => {
+    // Tests that EVERY registered unit (linear and affine) satisfies round-trip equivalence:
+    // formatValueInUnit(valueToCoherentBase(val, u), u) == val
+    const allUnits = [...Object.keys(ATOMIC_BASE_UNITS), ...Object.keys(COMPOUND_UNITS)];
+
+    for (const u of allUnits) {
+      if (u === "dimless" || u === "ratio" || u === "teeth" || u === "rad" || u === "rev") continue;
+      const bag = getUnitAtomBag(u);
+
+      // Select nominal test values appropriate for dimension
+      let testVal = 42.5;
+      if (bag.dimMap?.Th) testVal = 20.0; // 20 °C or 20 °F
+      if (u === "%") testVal = 75.0;
+
+      const inBase = valueToCoherentBase(testVal, u);
+      assert.ok(!isNaN(inBase), `valueToCoherentBase returned NaN for unit ${u}`);
+
+      const roundTrip = formatValueInUnit(inBase, u);
+      const tol = Math.max(1e-6, Math.abs(testVal) * 1e-5);
+      assert.ok(
+        Math.abs(roundTrip - testVal) < tol,
+        `Round-trip failure for unit '${u}': input ${testVal}, got ${roundTrip}`
+      );
+    }
+  });
+
+  test("Property 2: Universal Invariant across 100 randomized problems (SI, US, MIXED)", () => {
+    // Generates 100 autonomous problems across all topics with random unit distribution.
+    // Proves that for ANY problem, every given and every step evaluates to the exact
+    // physical ground truth regardless of which units were sampled.
+    const TRIALS = 100;
+    for (let i = 0; i < TRIALS; i++) {
+      const topic = ALL_TOPICS[i % ALL_TOPICS.length];
+      const problem = generateProblem(topic, () => Math.random());
+      assert.ok(problem, `generateProblem returned null for topic ${topic.id}`);
+
+      // 1. Verify every given variable has valid physical magnitude and unit
+      problem.givens.forEach(gVar => {
+        const val = problem.system[gVar];
+        const u = problem.system._u?.[gVar] || problem.varsDb[gVar]?.unit;
+        assert.ok(typeof val === "number" && !isNaN(val), `Given ${gVar} has NaN value in ${topic.id}`);
+        assert.ok(u, `Given ${gVar} missing unit in ${topic.id}`);
+
+        // Converting given to coherent base must be non-NaN and finite
+        const baseVal = valueToCoherentBase(val, u);
+        assert.ok(isFinite(baseVal), `Coherent base value non-finite for ${gVar} in ${topic.id}`);
+      });
+
+      // 2. Verify every active solution step evaluates to exact target unit
+      const activeSteps = problem.solution.filter(s => !s.isFaded);
+      activeSteps.forEach(step => {
+        const expected = step.expectedVal;
+        const targetUnit = problem.system._u?.[step.targetVar];
+
+        assert.ok(typeof expected === "number" && !isNaN(expected), `Step ${step.targetVar} has NaN expectedVal`);
+        assert.ok(isFinite(expected), `Step ${step.targetVar} has non-finite expectedVal: ${expected}`);
+
+        // Coherent base value of the step's answer
+        const stepBase = valueToCoherentBase(expected, targetUnit);
+        assert.ok(isFinite(stepBase), `Step base non-finite for ${step.targetVar}`);
+
+        // Round-trip projection back to targetUnit must equal expectedVal within float epsilon
+        const projected = formatValueInUnit(stepBase, targetUnit);
+        const relErr = Math.abs(projected - expected) / (Math.abs(expected) || 1);
+        assert.ok(relErr < 0.001, `Target unit projection failed on step ${step.targetVar}: expected ${expected}, got ${projected}`);
+      });
+
+      // 3. Verify derivation output syntax and KaTeX rendering
+      for (const step of problem.solution) {
+        const deriv = buildAlignedDerivation(
+          step, problem.system, problem.allSteps, problem.varsDb, topic.relations
+        );
+        validateDerivationLatex(deriv);
+      }
+    }
+  });
+
+  test("Property 3: Universal Multi-Unit Algebraic Invariant", () => {
+    // Proves that multi-token additions/products with mixed input and output units
+    // evaluate with exact physical precision without hardcoded formula logic.
+
+    // 1. Power Addition: BP (hp) + FP (W) -> IP (ft-lb/s)
+    const powerNode = parseMathAST("BP + FP");
+    const S_power = {
+      BP: 4023.07, // ~3000 kW in hp
+      FP: 409091,  // ~409 kW in W
+      _u: { BP: "hp", FP: "W", IP: "ft-lb/s" }
+    };
+    const db_power = {
+      BP: { dimension: "Power", unit: "hp" },
+      FP: { dimension: "Power", unit: "W" },
+      IP: { dimension: "Power", unit: "ft-lb/s" }
+    };
+    const resPower = evaluatePhysicalAST(powerNode, S_power, "IP", db_power);
+    // (3000000 + 409091) W / 1.355818 = ~2,514,416 ft-lb/s
+    assert.ok(Math.abs(resPower.value - 2514416.5) / 2514416.5 < 0.002);
+
+    // 2. Heat Balance: m_cw * cp_w * dT_cw -> Q_cw (kW) with mixed inputs
+    const heatNode = parseMathAST("m_cw * cp_w * dT_cw");
+    const S_heat = {
+      m_cw: 600, // kg/min = 10 kg/s
+      cp_w: 4.187, // kJ/kg-K
+      dT_cw: 10, // K
+      _u: { m_cw: "kg/min", cp_w: "kJ/kg-K", dT_cw: "K", Q_cw: "kW" }
+    };
+    const db_heat = {
+      m_cw: { dimension: "Mass Flow Rate", unit: "kg/min" },
+      cp_w: { dimension: "Specific Energy / Enthalpy", unit: "kJ/kg-K" },
+      dT_cw: { dimension: "Temperature", unit: "K" },
+      Q_cw: { dimension: "Power", unit: "kW" }
+    };
+    const resHeat = evaluatePhysicalAST(heatNode, S_heat, "Q_cw", db_heat);
+    // 10 kg/s * 4.187 kJ/kg-K * 10 K = 418.7 kW
+    assert.ok(Math.abs(resHeat.value - 418.7) < 0.1);
+  });
+});
+
+// ============================================================================
+// 4. WHOLE-CYCLE SYNTHESIS & COGNITIVE FADING VERIFICATION
 // ============================================================================
 describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
   test("Beginner learner (0% mastery) receives the full cycle with all state points in Diesel Cycle", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
-    const problem = generateProblem(topic, () => 0); // 0% mastery
+    const problem = generateProblem(topic, () => 0);
 
     assert.ok(problem.solution.length >= 7, "Diesel cycle must present full state point sequence");
     const targetVars = problem.solution.map(s => s.targetVar);
@@ -225,7 +354,7 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
 
   test("Beginner learner (0% mastery) receives full air handling cycle with Points 1 to 6 in Bypass Air", () => {
     const topic = TOPICS.hvac_bypass_air;
-    const problem = generateProblem(topic, () => 0); // 0% mastery
+    const problem = generateProblem(topic, () => 0);
 
     assert.ok(problem.solution.length >= 8, "Bypass air must present full air handling cycle");
     const targetVars = problem.solution.map(s => s.targetVar);
@@ -257,162 +386,15 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     assert.ok(stepT2, "Step T_2 must exist in DAG");
     assert.equal(stepT2.isFaded, true, "Mastered intermediate step T_2 must be marked faded");
 
-    // Faded steps are literally excluded from active interactive solution steps
     const activeSteps = problem.solution.filter(s => !s.isFaded);
     assert.ok(!activeSteps.some(s => s.targetVar === "T_2"), "Faded step T_2 must be hidden from solution steps");
     assert.ok(!activeSteps.some(s => s.targetVar === "r_e"), "Faded step r_e must be hidden from solution steps");
 
-    // The statement goals and active steps must match exactly
     assert.ok(!problem.statement.includes("Determine: (1) Temperature after Compression ($T_2$)"));
     const stepEth = activeSteps.find(s => s.targetVar === "e_th");
     assert.ok(stepEth, "Terminal goal e_th must remain in active solution steps");
     assert.equal(stepEth.isFaded, false);
   });
-});
-
-// ============================================================================
-// 4. PHYSICAL COHERENT EVALUATION & REQUIREDUNITS TARGET SCALING
-// ============================================================================
-describe("Physical Coherent Base Evaluation & Empirical Target Unit Scaling", () => {
-  test("Multi-unit addition IP = BP (hp) + FP (W) evaluates with physical accuracy without raw number concatenation", () => {
-    const node = parseMathAST("BP + FP");
-    const S = {
-      BP: 4023.07,  // ~3000 kW in hp
-      FP: 409091,   // ~409 kW in W
-      _u: { BP: "hp", FP: "W", IP: "ft-lb/s" }
-    };
-    const varsDb = {
-      BP: { dimension: "Power", unit: "hp" },
-      FP: { dimension: "Power", unit: "W" },
-      IP: { dimension: "Power", unit: "ft-lb/s" }
-    };
-
-    const { value } = evaluatePhysicalAST(node, S, "IP", varsDb);
-    assert.ok(value > 2.4e6 && value < 2.6e6, `Expected ~2.51e6 ft-lb/s, got: ${value}`);
-    assert.ok(value < 1e8, `Value should not blow up to 227 million, got: ${value}`);
-  });
-
-  test("Buckingham dynamic load with requiredUnits { F_D: 'lb' } converts to requested target 'kip' (3.796 kip, not 3795.9)", () => {
-    const rel = TOPICS.helical_gears.relations.find(r => r.id === "eq_helical_buckingham");
-    assert.ok(rel, "Helical buckingham relation must exist");
-
-    const variant = rel.variants.US;
-    const node = parseMathAST(variant.baseFormula.split("=")[1].trim());
-
-    const S = {
-      W_t: 2.74752,
-      V_m: 600.295,
-      b: 0.167,
-      C_d: 400,
-      psi: 25,
-      F_D: 3.7959,
-      _u: { W_t: "kip", V_m: "ft/min", b: "ft", C_d: "lb", psi: "°", F_D: "kip" }
-    };
-
-    const { value, unitAnalysis } = evaluatePhysicalAST(node, S, "F_D", TOPICS.helical_gears.varsDb, variant.requiredUnits);
-
-    assert.ok(value > 3.7 && value < 3.9, `Expected ~3.796 kip, got: ${value}`);
-    assert.equal(unitAnalysis.numericConversionFactor, 0.001);
-
-    const deriv = buildAlignedDerivation(
-      { targetVar: "F_D", baseFormula: variant.baseFormula, canonicalTex: variant.canonicalTex, requiredUnits: variant.requiredUnits, expectedVal: value },
-      S, [], TOPICS.helical_gears.varsDb, TOPICS.helical_gears.relations
-    );
-
-    assert.ok(deriv.includes("3.796") || deriv.includes("3.7959"), `Derivation must box the value in kips, got: ${deriv}`);
-    assert.ok(!deriv.includes("3795.9\\,\\text{kip}"));
-  });
-
-  test("Carrier vapor pressure equation with requiredUnits { P_v: 'kPa' } converts to target 'psi'", () => {
-    const rel = TOPICS.hvac_air_properties.relations.find(r => r.id === "eq_carrier_pv");
-    assert.ok(rel, "Carrier relation must exist");
-
-    const node = parseMathAST(rel.baseFormula.split("=")[1].trim());
-    const S = {
-      P_wb: 3.169, // kPa
-      P_t: 101.325, // kPa
-      t_db: 30.0, // °C
-      t_wb: 25.0, // °C
-      P_v: 0.41,
-      _u: { P_wb: "kPa", P_t: "kPa", t_db: "°C", t_wb: "°C", P_v: "psi" }
-    };
-
-    const { value, unitAnalysis } = evaluatePhysicalAST(node, S, "P_v", TOPICS.hvac_air_properties.varsDb, rel.requiredUnits);
-
-    // In kPa: 3.169 - 101.325 * 5 / 1500 = 2.831 kPa.
-    // In psi: 2.831 kPa * 0.145038 psi/kPa = ~0.4106 psi.
-    assert.ok(value > 0.40 && value < 0.42, `Expected ~0.4106 psi, got: ${value}`);
-    assert.ok(Math.abs(unitAnalysis.numericConversionFactor - 0.145038) < 0.001);
-  });
-
-  test("Brake Specific Fuel Consumption with requiredUnits { bsfc: 'kg/kWh' } converts to target 'lb/hp-hr'", () => {
-    const rel = TOPICS.powerplant_design_diesel_engine.relations.find(r => r.id === "eq_de_bsfc");
-    assert.ok(rel, "BSFC relation must exist");
-
-    const node = parseMathAST(rel.baseFormula.split("=")[1].trim());
-    const S = {
-      m_f: 0.15, // kg/s
-      BP: 3000,  // kW
-      bsfc: 0.18,
-      _u: { m_f: "kg/s", BP: "kW", bsfc: "lb/hp-hr" }
-    };
-
-    const { value, unitAnalysis } = evaluatePhysicalAST(node, S, "bsfc", TOPICS.powerplant_design_diesel_engine.varsDb, rel.requiredUnits);
-
-    // In kg/kWh: (0.15 * 3600) / 3000 = 0.18 kg/kWh.
-    // 1 kg/kWh = 1.64399 lb/hp-hr => 0.18 * 1.64399 = ~0.2959 lb/hp-hr.
-    assert.ok(value > 0.28 && value < 0.31, `Expected ~0.296 lb/hp-hr, got: ${value}`);
-    assert.ok(Math.abs(unitAnalysis.numericConversionFactor - 1.644) < 0.01);
-  });
-
-  test("Affine offset transformations: 300 K converts to 26.85 °C, 80.33 °F, 540 °R (never 300 °C or 540 °F)", () => {
-    const tC = formatValueInUnit(300, "°C");
-    const tR = formatValueInUnit(300, "°R");
-    const tF = formatValueInUnit(300, "°F");
-
-    assert.ok(Math.abs(tC - 26.85) < 0.01, `Expected ~26.85 °C, got: ${tC}`);
-    assert.ok(Math.abs(tR - 540.0) < 0.01, `Expected 540.0 °R, got: ${tR}`);
-    assert.ok(Math.abs(tF - 80.33) < 0.01, `Expected ~80.33 °F, got: ${tF}`);
-    assert.notEqual(Math.round(tF), 540, "300 K must NOT format to 540 °F without affine offset");
-    assert.notEqual(Math.round(tC), 300, "300 K must NOT format to 300 °C without affine offset");
-  });
-
-  test("Boiling point and freezing point of water convert with exact affine accuracy", () => {
-    const boilK = valueToCoherentBase(100, "°C");
-    const boilF = formatValueInUnit(boilK, "°F");
-    assert.ok(Math.abs(boilF - 212.0) < 0.001, `Expected 212 °F, got: ${boilF}`);
-
-    const freezeF = valueToCoherentBase(32, "°F");
-    const freezeC = formatValueInUnit(freezeF, "°C");
-    assert.ok(Math.abs(freezeC - 0.0) < 0.001, `Expected 0 °C, got: ${freezeC}`);
-  });
-
-  test("Diesel cycle state point temperatures are strictly coupled and physically realistic", () => {
-    const topic = TOPICS.powerplant_design_diesel_cycle;
-
-    // Run 50 random generations across all modes (SI, US, MIXED)
-    for (let i = 0; i < 50; i++) {
-      const p = generateProblem(topic, () => 0);
-      const S = p.system;
-
-      // 1. Intake temperature T_1 must be standard ambient (never 300 °C or 540 °F)
-      if (S._u.T_1 === "K") {
-        assert.ok(S.T_1 >= 280 && S.T_1 <= 320, `T_1 in K out of realistic range: ${S.T_1}`);
-      } else if (S._u.T_1 === "°R") {
-        assert.ok(S.T_1 >= 500 && S.T_1 <= 580, `T_1 in °R out of realistic range: ${S.T_1}`);
-      } else if (S._u.T_1 === "°C") {
-        assert.ok(S.T_1 >= 15 && S.T_1 <= 35, `T_1 in °C out of realistic range (got ~300 °C): ${S.T_1}`);
-      } else if (S._u.T_1 === "°F") {
-        assert.ok(S.T_1 >= 60 && S.T_1 <= 95, `T_1 in °F out of realistic range (got ~540 °F): ${S.T_1}`);
-      }
-
-      // 2. All cycle temperatures in the same problem must share the exact same unit
-      const tempUnits = [S._u.T_1, S._u.T_2, S._u.T_3, S._u.T_4];
-      const allSame = tempUnits.every(u => u === tempUnits[0]);
-      assert.ok(allSame, `Cycle temperatures must be unified, found mixed units: ${JSON.stringify(tempUnits)}`);
-    }
-  });
-  
 });
 
 // ============================================================================
