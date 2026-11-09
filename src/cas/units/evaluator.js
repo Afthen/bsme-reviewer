@@ -1,9 +1,8 @@
 /**
  * src/cas/units/evaluator.js
  * Numerical evaluation of physical AST formulas with:
- * - Coherent SI base unit transformation for pure physics relations,
- *   guaranteeing consistent multi-unit additions/subtractions (e.g. hp + W)
- * - Explicit requiredUnits contract preservation for empirical formulations
+ * - Coherent SI base unit transformation for pure physics relations
+ * - Target unit conversion for empirical formulas with requiredUnits (e.g. Buckingham lb -> kip, Carrier kPa -> psi)
  * - Trigonometric unit resolution for bare angle tokens in degrees
  */
 
@@ -30,7 +29,8 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
 
   const unitAnalysis = solveUnitAlgebra(node, S, targetVar, targetUnit, varsDb, requiredUnits);
 
-  // 1. Empirical Formulas with requiredUnits: preserve dedicated factor-label conversions
+  // 1. Empirical formulas with requiredUnits (e.g. Buckingham, Carrier, Liley, BSFC):
+  //    Inputs convert into requiredUnits via preConversions; result converts into targetUnit
   if (requiredUnits && typeof requiredUnits === "object") {
     const evalState = { ...S };
     if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
@@ -48,7 +48,7 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     return { value: finalValue, unitAnalysis };
   }
 
-  // 2. Pure Physics Relations: transform all tokens into coherent SI base units
+  // 2. Pure physics relations: transform all input tokens into coherent SI base units
   //    before AST evaluation so operations like BP (hp) + FP (W) evaluate accurately
   const coherentState = { ...S };
   const varTokens = getAstIdentifiers(node).filter(t => !isReservedMathToken(t));
