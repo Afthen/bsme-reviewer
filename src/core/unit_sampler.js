@@ -82,6 +82,13 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
     [DIMENSIONS.TEMPERATURE]: [
       { unit: "K", tokens: 1 },
       { unit: "°C", tokens: 1 }
+    ],
+    [DIMENSIONS.TEMPERATURE_DIFF]: [
+      { unit: "°C", tokens: 1 },
+      { unit: "K", tokens: 1 }
+    ],
+    [DIMENSIONS.PERCENTAGE]: [
+      { unit: "%", tokens: 1 }
     ]
   },
   US: {
@@ -141,6 +148,13 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
     [DIMENSIONS.TEMPERATURE]: [
       { unit: "°F", tokens: 1 },
       { unit: "°R", tokens: 1 }
+    ],
+    [DIMENSIONS.TEMPERATURE_DIFF]: [
+      { unit: "°F", tokens: 1 },
+      { unit: "°R", tokens: 1 }
+    ],
+    [DIMENSIONS.PERCENTAGE]: [
+      { unit: "%", tokens: 1 }
     ]
   }
 });
@@ -205,13 +219,17 @@ export function sampleConstantUnit(varKey, sys = "SI") {
  * Recognizes coupled state variables that must share the same physical unit in any problem:
  * - Cycle state temperatures (e.g. T_1, T_2, T_3, T_4 in Diesel cycle or t_o, t_r, t_m, t_s in Air handling)
  * - Stream specific energies / enthalpies (e.g. h_o, h_r, h_m, h_s or q_A, q_R, w_net)
+ * - Cooling tower temperatures and range/approach differences
+ * - Heat balance percentage shares
  */
 const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["T_1", "T_2", "T_3", "T_4"]),
   new Set(["t_o", "t_r", "t_m", "t_s", "t_adp", "t_rh"]),
   new Set(["h_o", "h_r", "h_m", "h_s", "h_adp", "h_rh"]),
   new Set(["Q_A", "Q_R", "W_net"]),
-  new Set(["Q_ip", "Q_cw", "Q_exh", "Q_rad"])
+  new Set(["Q_ip", "Q_cw", "Q_exh", "Q_rad"]),
+  new Set(["t_w1", "t_w2", "t_wb1", "R_ct", "A_ct"]),
+  new Set(["pct_ip", "pct_cw", "pct_exh", "pct_rad"])
 ]);
 
 function findCoupledGroup(varKey) {
@@ -292,12 +310,14 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
       return;
     }
 
+    const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
+
     // 2. Check if this variable belongs to an already-sampled coupled state group
     const grp = findCoupledGroup(k);
     if (grp && groupUnitMap.has(grp)) {
       const coupledUnit = groupUnitMap.get(grp);
-      const coherentVal = valueToCoherentBase(S[k], canonUnit);
-      const convertedVal = formatValueInUnit(coherentVal, coupledUnit);
+      const coherentVal = valueToCoherentBase(S[k], canonUnit, isDiff);
+      const convertedVal = formatValueInUnit(coherentVal, coupledUnit, isDiff);
       S[k] = convertedVal;
       S._u[k] = coupledUnit;
       return;
@@ -305,7 +325,7 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
 
     const canonBag = getUnitAtomBag(canonUnit);
     const canonVal = S[k];
-    const coherentVal = valueToCoherentBase(canonVal, canonUnit);
+    const coherentVal = valueToCoherentBase(canonVal, canonUnit, isDiff);
 
     let palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
 
@@ -327,7 +347,7 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
     let chosenUnit = null;
 
     for (const cand of shuffledCandidates) {
-      const candVal = formatValueInUnit(coherentVal, cand.unit);
+      const candVal = formatValueInUnit(coherentVal, cand.unit, isDiff);
       if (retainsSufficientSigFigs(candVal)) {
         chosenUnit = cand.unit;
         S[k] = candVal;
