@@ -1,14 +1,13 @@
 /**
  * src/cas/units/analysis.js
  * Dimensional analysis with CANCEL-FIRST compound handling:
- *   - atomic cancellation runs over every token bag;
- *   - tokens render only their cancelled/surviving atoms (expand only what survives);
- *   - scale bridges collapse into AT MOST ONE global conversion bracket
- *     (globalConversionTex); per-token scale brackets no longer exist;
- *   - scaled dimensionless units (%, silentScale) fold into the numeric factor
- *     with NO printed bracket: "6\,\% \cdot 7000\,\text{kW}" reads as-is;
- *   - all TeX goes through unitToTex / atomic tex — raw unit strings never
- *     enter \text{}.
+ * - Atomic cancellation runs over every token bag
+ * - Tokens render only their cancelled/surviving atoms
+ * - Scale bridges collapse into at most one global conversion bracket
+ * - Relations with requiredUnits convert input tokens via preConversions AND
+ *   convert the evaluated result to the targetUnit across all empirical relations
+ * - Scaled dimensionless units (%, silentScale) fold into the numeric factor
+ * - All TeX goes through unitToTex / atomic tex
  */
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
@@ -37,7 +36,9 @@ export function evalExprUnitAST(node, S, varsDb) {
 
   if (node.type === "call") {
     if (["sin", "cos", "tan"].includes(node.fn)) return { factor: 1.0, atoms: [] };
-    if (["atan", "acos", "asin"].includes(node.fn)) return { factor: 1.0, atoms: [{ token: node.fn, canonicalKey: node.fn, unitName: "rad", atom: "rad", dim: "C", scale: 1.0, power: 1, tex: "\\text{rad}" }] };
+    if (["atan", "acos", "asin"].includes(node.fn)) {
+      return { factor: 1.0, atoms: [{ token: node.fn, canonicalKey: node.fn, unitName: "rad", atom: "rad", dim: "C", scale: 1.0, power: 1, tex: "\\text{rad}" }] };
+    }
     if (node.fn === "sqrt") {
       const inner = evalExprUnitAST(node.arg, S, varsDb);
       return { factor: Math.sqrt(inner.factor), atoms: inner.atoms.map(a => ({ ...a, power: a.power / 2 })) };
@@ -59,7 +60,6 @@ export function evalExprUnitAST(node, S, varsDb) {
   return { factor: 1.0, atoms: [] };
 }
 
-// Multiplicative exponent of every identifier token (silent-scale accounting)
 function collectTokenExponents(node, sign = 1, acc = {}) {
   if (!node) return acc;
   if (node.type === "group") return collectTokenExponents(node.expr, sign, acc);
@@ -78,7 +78,6 @@ function collectTokenExponents(node, sign = 1, acc = {}) {
       const p = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
       collectTokenExponents(node.left, sign * p, acc);
     }
-    // additive subtrees are opaque here (group factoring is derivation's job)
   }
   return acc;
 }
@@ -89,6 +88,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const preConversions = [];
   const tokenMarkup = {};
 
+  // 1. Handling relations with explicit requiredUnits contracts
   if (requiredUnits && typeof requiredUnits === "object") {
     const varTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
     varTokens.forEach(tok => {
@@ -99,7 +99,11 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
       if (currU === "°C" && (reqU === "K" || reqU === "degK")) {
         const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-        preConversions.push({ token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU, conv: { factor: 1.0, latex: `(${rawVal} + 273.15)\\,\\text{K}` }, rawVal, convertedVal: rawVal + 273.15 });
+        preConversions.push({
+          token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
+          conv: { factor: 1.0, latex: `(${rawVal} + 273.15)\\,\\text{K}` },
+          rawVal, convertedVal: rawVal + 273.15
+        });
         return;
       }
       if (currU && reqU && currU !== reqU && currU !== "deg" && reqU !== "°") {
@@ -107,13 +111,55 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         if (isDimEqual(currBag.dimMap, reqBag.dimMap)) {
           const ratio = currBag.scale / reqBag.scale;
           const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-          preConversions.push({ token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU, conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}` }, rawVal, convertedVal: rawVal * ratio });
+          preConversions.push({
+            token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
+            conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}` },
+            rawVal, convertedVal: rawVal * ratio
+          });
         }
       }
     });
-    return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor: 1.0, globalConversionTex: "", preConversions, tokenConversions };
+
+    // Universal target-side conversion for all empirical relations:
+    // Compares formula's output unit (reqTargetU) with requested unit (targetUnit)
+    const cTarget = resolveCanonicalKey(targetVar, varsDb);
+    const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
+    let numericConversionFactor = 1.0;
+    let globalConversionTex = "";
+
+    if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
+      const reqTargetBag = getUnitAtomBag(reqTargetU);
+      const targetBag = getUnitAtomBag(targetUnit);
+      if (isDimEqual(reqTargetBag.dimMap, targetBag.dimMap)) {
+        numericConversionFactor = reqTargetBag.scale / targetBag.scale;
+        if (Math.abs(numericConversionFactor - 1) > 1e-12) {
+          const ratio = numericConversionFactor;
+          if (ratio < 1) {
+            globalConversionTex = `\\cdot\\left[\\cfrac{1\\,${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)}\\,${unitToTex(reqTargetU)}}\\right]`;
+          } else {
+            globalConversionTex = `\\cdot\\left[\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(targetUnit)}}{1\\,${unitToTex(reqTargetU)}}\\right]`;
+          }
+        }
+      }
+    } else if (!reqTargetU && targetUnit) {
+      // Fallback for relations that declare input requiredUnits but omit target variable
+      const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
+      const targetBag = getUnitAtomBag(targetUnit);
+      let exprScale = exprAnalysis.factor;
+      exprAnalysis.atoms.forEach(a => { exprScale *= Math.pow(a.scale, a.power); });
+      const targetScale = targetBag.scale || 1.0;
+      if (targetScale > 0) {
+        numericConversionFactor = exprScale / targetScale;
+        if (Math.abs(numericConversionFactor - 1) > 1e-12) {
+          globalConversionTex = `\\cdot\\left[${fmtSigFig(numericConversionFactor, 6)}\\right]`;
+        }
+      }
+    }
+
+    return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions };
   }
 
+  // 2. Pure physics dimensional analysis
   const exprAnalysis = evalExprUnitAST(ast, S, varsDb);
   const targetBag = getUnitAtomBag(targetUnit);
 
@@ -123,8 +169,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const targetScale = targetBag.scale || 1.0;
   const numericConversionFactor = targetScale > 0 ? (exprScale / targetScale) : 1.0;
 
-  // Silent scaled-dimensionless units (%, permille, ...) fold into the numeric
-  // factor WITHOUT a printed bracket, on both expression and target sides.
   let silentExpr = 1.0;
   const exps = collectTokenExponents(ast);
   for (const [tok, exp] of Object.entries(exps)) {
@@ -140,7 +184,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     ? `\\cdot\\left[${fmtSigFig(bracketFactor, 6)}\\right]`
     : "";
 
-  // CANCEL-FIRST: pairwise atomic cancellation over the whole expression
   const atomList = exprAnalysis.atoms.map((a, idx) => ({ ...a, id: idx, canceled: false }));
   for (let i = 0; i < atomList.length; i++) {
     for (let j = i + 1; j < atomList.length; j++) {
@@ -152,7 +195,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   }
 
   const allExprTokens = Array.from(new Set(getAstIdentifiers(ast)));
-
   for (const tok of allExprTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
     const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
@@ -164,24 +206,19 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
 
     const bag = getUnitAtomBag(uName);
-
-    // Scaled dimensionless: print the value's own symbol (%, no expansion)
     if (bag.scaledDimensionless) {
       tokenMarkup[tok] = bag.displayTex || unitToTex(uName);
       continue;
     }
-
     if (uName === targetUnit) {
       tokenMarkup[tok] = bag.displayTex || unitToTex(uName);
       continue;
     }
-
     if (bag.substituteTex) {
       tokenMarkup[tok] = bag.substituteTex;
       continue;
     }
 
-    // Expand ONLY the atoms that survive cancellation; cancelled atoms strike.
     const formatAtom = (atomName, p) => {
       const isCanceled = atomList.some(a => a.token === tok && a.atom === atomName && a.canceled);
       const expStr = Math.abs(p) > 1 ? `^{${Math.abs(p)}}` : "";
