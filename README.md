@@ -47,7 +47,7 @@ A graph-based problem generator and spaced-repetition reviewer for Mechanical En
 
 ## 2. Units and Multi-System Sampling
 
-### 6.1 Distribution Model
+### 2.1 Distribution Model
 Problem generation draws unit systems using a 40% SI / 40% US / 20% MIXED distribution:
 - **Pure SI / Pure US:** All variables operate within the coherent system palette.
 - **MIXED Mode:** Dimensional variables are split 50-50 between SI and US units.
