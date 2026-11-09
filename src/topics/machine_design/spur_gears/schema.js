@@ -24,19 +24,20 @@ export const GEAR_VARS_DB = Object.freeze({
   "W": { name: "Normal Contact Force", symbol: "F_n", dimension: DIMENSIONS.FORCE, baseVar: "W", aliases: ["Normal Contact Force", "Total Tooth Load", "F_n"] },
   "phi": { name: "Pressure Angle", symbol: "\\phi", dimension: DIMENSIONS.ANGLE, unit: "deg", baseVar: "phi", aliases: ["Pressure Angle", "Angle of Obliquity"] },
   "S_n": { name: "Endurance Strength", symbol: "S_n", dimension: DIMENSIONS.STRESS, baseVar: "S_n", aliases: ["Endurance Strength", "Fatigue Limit"] },
-  "y_form": { name: "Lewis Form Factor (Circular)", symbol: "y", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "y_form", aliases: ["Circular Form Factor", "Lewis Form Factor (Circular Pitch)", "y"] },
-  "k_f": { name: "Stress Reduction Factor", symbol: "k_f", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "k_f", aliases: ["Stress Reduction Factor", "k_f"] },
+  "y_form": { name: "Lewis Form Factor (Circular)", symbol: "y", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "y_form", aliases: ["Circular Form Factor", "Lewis Form Factor (Circular Pitch)", "y"] },
+  "k_f": { name: "Stress Reduction Factor", symbol: "k_f", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "k_f", aliases: ["Stress Reduction Factor", "k_f"] },
   "F_s": { name: "Beam Fatigue Strength", symbol: "F_s", dimension: DIMENSIONS.FORCE, baseVar: "F_s", aliases: ["Beam Fatigue Strength", "Lewis Safe Load", "F_s"] },
   "F_w": { name: "Wear Load", symbol: "F_w", dimension: DIMENSIONS.FORCE, baseVar: "F_w", aliases: ["Wear Load", "Buckingham Wear Load", "F_w"] },
-  "Q": { name: "Ratio Factor for Gearing", symbol: "Q", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "Q", aliases: ["Ratio Factor for Gearing", "Q"] },
+  "Q": { name: "Ratio Factor for Gearing", symbol: "Q", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "Q", aliases: ["Ratio Factor for Gearing", "Q"] },
   "K_w": { name: "Load-Stress Factor", symbol: "K_w", dimension: DIMENSIONS.STRESS, baseVar: "K_w", aliases: ["Load-Stress Factor", "Wear Factor", "k_g", "K_w"] },
-  "N_sf": { name: "Service Factor for Fatigue", symbol: "N_{sf}", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "N_sf", aliases: ["Service Factor for Fatigue", "Fatigue Factor of Safety", "N_sf"] }
+  "N_sf": { name: "Service Factor for Fatigue", symbol: "N_{sf}", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "N_sf", aliases: ["Service Factor for Fatigue", "Fatigue Factor of Safety", "N_sf"] }
 });
 
 export function getVarMeta(varKey) {
   return GEAR_VARS_DB[varKey] || {
     name: varKey,
     symbol: varKey,
-    dimension: DIMENSIONS.DIMENSIONLESS
+    dimension: DIMENSIONS.DIMENSIONLESS,
+    unit: "dimless"
   };
 }
