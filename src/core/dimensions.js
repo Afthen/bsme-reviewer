@@ -23,6 +23,8 @@ export const DIMENSIONS = Object.freeze({
   VOLUME_FLOW: "Volume Flow Rate",
   SPECIFIC_CONSUMPTION: "Specific Fuel Consumption",
   TEMPERATURE: "Temperature",
+  TEMPERATURE_DIFF: "Temperature Difference",
+  PERCENTAGE: "Percentage",
   DIMENSIONLESS: "Dimensionless"
 });
 
@@ -90,6 +92,9 @@ export function targetLabel(name, token, unit) {
   }
   if (unit === "deg" || unit === "°") {
     return `${name} (${token}) in °`;
+  }
+  if (unit === "%") {
+    return `${name} (${token}) in %`;
   }
   return `${name} (${token}) in ${unit}`;
 }
