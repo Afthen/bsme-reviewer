@@ -19,10 +19,14 @@ function determineGraphDistance(mastery) {
   return fib(4);                              // >= 76.4% (3 hops)
 }
 
+export function relationWeaknessWeight(mastery = 0) {
+  return Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
+}
+
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
   const scoredNodes = relations.map(node => {
     const mastery = getMastery(node);
-    const weight = Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
+    const weight = relationWeaknessWeight(mastery);
     const key = weight * (phi(-1) + phi(-2) * Math.random());
     return { node, weight, key, mastery };
   });

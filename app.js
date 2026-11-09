@@ -17,10 +17,14 @@ import { initSidebarView, renderSidebar } from "./src/ui/sidebar_view.js";
  *  Multi-topic review set (checklist dropdown)                       *
  *  Persisted in localStorage; leaves of the Subject -> Category ->   *
  *  Topic tree are checkboxes. Problems are drawn from the selected   *
- *  pool, weakest-mastery topic first (see src/core/topic_mix.js).    *
+ *  pool, weakest-material topic first (see src/core/topic_mix.js).   *
  *  First run: nothing selected — the student is prompted to pick.    *
  * ------------------------------------------------------------------ */
 const SELECTED_TOPICS_KEY = "bsme.selectedTopicIds";
+
+const TOPIC_BY_ID = new Map(ALL_TOPICS.map(t => [t.id, t]));
+
+const masteryFor = topic => eq => getDecayedMastery(eq, topic);
 
 function loadSelectedTopicIds() {
   try {
@@ -28,7 +32,7 @@ function loadSelectedTopicIds() {
     if (raw === null) return [];              // first visit: prompt to pick
     const ids = JSON.parse(raw);
     if (Array.isArray(ids)) {
-      return ids.filter(id => ALL_TOPICS.some(t => t.id === id));
+      return ids.filter(id => TOPIC_BY_ID.has(id));
     }
   } catch (_) { /* corrupted state -> start empty and prompt */ }
   return [];
@@ -41,7 +45,7 @@ let currentProblem = null;
 export { TOPICS };
 
 function topicById(id) {
-  return ALL_TOPICS.find(t => t.id === id) || null;
+  return TOPIC_BY_ID.get(id) || null;
 }
 
 function getSelectedTopics() {
@@ -102,12 +106,27 @@ function renderSelectionPrompt() {
   view.prepend(wrap);
 }
 
+function renderTopicBadge(topic) {
+  const view = document.getElementById("view-problem");
+  if (!view) return;
+  let badge = document.getElementById("topic-badge");
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.id = "topic-badge";
+    badge.className = "topic-badge";
+    view.prepend(badge);
+  }
+  badge.textContent = topic.category
+    ? `${topic.subject} · ${topic.category}: ${topic.title}`
+    : `${topic.subject}: ${topic.title}`;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadMastery();
   setupTopicSelector();
   initSidebarView(
     currentTopic ? currentTopic.relations : [],
-    eq => (currentTopic ? getDecayedMastery(eq, currentTopic) : 0)
+    currentTopic ? masteryFor(currentTopic) : () => 0
   );
   setupHeaderActions();
 
@@ -128,6 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
  *  while ticking. Group checkboxes bulk-toggle their subtree and     *
  *  show indeterminate for partial selections. Once at least one      *
  *  topic is ticked the set can never become empty (deny flash).      *
+ *  All mutation sites funnel through commitSelection().              *
  * ------------------------------------------------------------------ */
 function setupTopicSelector() {
   const container = document.getElementById("topic-dropdown-container");
@@ -158,6 +178,11 @@ function setupTopicSelector() {
   const leafBoxes = [];                       // every leaf checkbox, in build order
   const groupBoxes = [];                      // { box, collectLeaves } for sync
   let footerCount = null;                     // live "N of M" readout in menu footer
+
+  const hasChecked = root => root.querySelector(".topic-checkbox:checked") !== null;
+
+  const wouldEmptyAfterRemoving = ids =>
+    selectedTopicIds.filter(id => !ids.includes(id)).length === 0;
 
   function flashDeny(el) {
     el.classList.remove("deny-flash");
@@ -195,6 +220,16 @@ function setupTopicSelector() {
     });
   }
 
+  // Single commit path for every mutation site (leaf / group / select-all).
+  function commitSelection(wasEmpty) {
+    syncGroupBoxes();
+    updateDropdownLabel();
+    // First tick of a session: no problem in progress, start right away.
+    if (wasEmpty) generateNewProblem();
+    // NOTE: otherwise no auto-regenerate — the student keeps the current
+    // problem; the new pool applies from the next "Next problem" click.
+  }
+
   function createTopicLeaf(t, levelClass) {
     const leaf = document.createElement("label");
     leaf.className = `topic-item topic-leaf ${levelClass}`;
@@ -218,7 +253,7 @@ function setupTopicSelector() {
       const wasEmpty = selectedTopicIds.length === 0;
 
       // Never allow an empty review set: deny un-ticking the last topic.
-      if (!box.checked && selectedTopicIds.length === 1 && selectedTopicIds[0] === t.id) {
+      if (!box.checked && wouldEmptyAfterRemoving([t.id])) {
         box.checked = true;
         flashDeny(leaf);
         return;
@@ -226,13 +261,7 @@ function setupTopicSelector() {
 
       setTopicSelected(t.id, box.checked);
       leaf.classList.toggle("checked", box.checked);
-      syncGroupBoxes();
-      updateDropdownLabel();
-
-      // First tick of a session: no problem in progress, start right away.
-      if (wasEmpty) generateNewProblem();
-      // NOTE: otherwise no auto-regenerate — the student keeps the current
-      // problem; the new pool applies from the next "Next problem" click.
+      commitSelection(wasEmpty);
     });
 
     return leaf;
@@ -242,7 +271,6 @@ function setupTopicSelector() {
     const box = document.createElement("input");
     box.type = "checkbox";
     box.className = "group-checkbox";
-    box.tabIndex = -1;                        // mouse-only bulk toggle
 
     box.addEventListener("click", e => e.stopPropagation());   // don't collapse
     box.addEventListener("change", () => {
@@ -250,13 +278,10 @@ function setupTopicSelector() {
       const leaves = collectLeaves();
       const ids = leaves.map(b => b.dataset.topicId);
 
-      if (!box.checked) {
-        const remaining = selectedTopicIds.filter(id => !ids.includes(id));
-        if (remaining.length === 0) {         // would empty the review set
-          flashDeny(box);
-          syncGroupBoxes();
-          return;
-        }
+      if (!box.checked && wouldEmptyAfterRemoving(ids)) {
+        flashDeny(box);
+        syncGroupBoxes();
+        return;
       }
 
       leaves.forEach(b => {
@@ -264,9 +289,7 @@ function setupTopicSelector() {
         b.closest(".topic-leaf")?.classList.toggle("checked", box.checked);
         setTopicSelected(b.dataset.topicId, box.checked);
       });
-      syncGroupBoxes();
-      updateDropdownLabel();
-      if (wasEmpty) generateNewProblem();
+      commitSelection(wasEmpty);
     });
 
     groupBoxes.push({ box, collectLeaves });
@@ -330,9 +353,7 @@ function setupTopicSelector() {
       catTopics.forEach(t => catList.appendChild(createTopicLeaf(t, "level-3")));
 
       catGroup.append(catHeader, catList);
-      if (Array.from(catGroup.querySelectorAll(".topic-checkbox")).some(b => b.checked)) {
-        catGroup.classList.add("open");
-      }
+      if (hasChecked(catGroup)) catGroup.classList.add("open");
       subjectList.appendChild(catGroup);
     }
 
@@ -340,9 +361,7 @@ function setupTopicSelector() {
     standalone.forEach(t => subjectList.appendChild(createTopicLeaf(t, "level-2")));
 
     subjectGroup.append(subjectHeader, subjectList);
-    if (Array.from(subjectGroup.querySelectorAll(".topic-checkbox")).some(b => b.checked)) {
-      subjectGroup.classList.add("open");
-    }
+    if (hasChecked(subjectGroup)) subjectGroup.classList.add("open");
     menu.appendChild(subjectGroup);
   }
 
@@ -365,9 +384,7 @@ function setupTopicSelector() {
       b.closest(".topic-leaf")?.classList.add("checked");
       setTopicSelected(b.dataset.topicId, true);
     });
-    syncGroupBoxes();
-    updateDropdownLabel();
-    if (wasEmpty) generateNewProblem();
+    commitSelection(wasEmpty);
   });
 
   footer.append(footerCount, selectAllBtn);
@@ -419,7 +436,7 @@ function setupHeaderActions() {
         if (res.success) {
           alert("Global Mastery profile imported successfully!");
           if (currentTopic) {
-            renderSidebar(currentTopic.relations, eq => getDecayedMastery(eq, currentTopic));
+            renderSidebar(currentTopic.relations, masteryFor(currentTopic));
           }
         } else {
           alert(`Import failed: ${res.reason}`);
@@ -437,8 +454,8 @@ function setupHeaderActions() {
 
 /* ------------------------------------------------------------------ *
  *  Generation: draw from the whole checked pool.                     *
- *  pickWeakestTopic targets the weakest-mastery topic in the set;    *
- *  generateProblem then runs its untouched per-relation mastery      *
+ *  pickWeakestTopic runs the D′ tournament over the set;             *
+ *  generateProblem then executes its untouched per-relation mastery  *
  *  pipeline (hops, fading, recall, distractors) inside that topic.   *
  *  Mastery bookkeeping stays scoped per topic via problem.topicId.   *
  *  Empty pool -> show the selection prompt and open the checklist.   *
@@ -456,14 +473,15 @@ function generateNewProblem() {
 
   clearSelectionPrompt();
 
-  const topic = pickWeakestTopic(pool, t => eq => getDecayedMastery(eq, t)) || pool[0];
+  const topic = pickWeakestTopic(pool, masteryFor) || pool[0];
   currentTopic = topic;
 
   incrementTopicTick(topic.id);
   incrementTopicTick("common");
 
-  currentProblem = generateProblem(topic, eq => getDecayedMastery(eq, topic));
+  currentProblem = generateProblem(topic, masteryFor(topic));
 
   renderProblemView(currentProblem, topic.relations, topic.id);
-  renderSidebar(topic.relations, eq => getDecayedMastery(eq, topic));
+  renderTopicBadge(topic);
+  renderSidebar(topic.relations, masteryFor(topic));
 }

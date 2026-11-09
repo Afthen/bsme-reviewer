@@ -15,6 +15,10 @@ import {
 
 let masteryState = {};
 
+export function isCommonEq(eq) {
+  return !!eq && typeof eq.id === "string" && eq.id.startsWith("eq_base_");
+}
+
 export function loadMastery() {
   masteryState = readMasteryStore();
   return masteryState;
@@ -43,8 +47,8 @@ export function calculateTopicLambda(topic) {
     return phi(-7);
   }
 
-  const commonRels = topic.relations.filter(r => r.id.startsWith("eq_base_"));
-  const uniqueRels = topic.relations.filter(r => !r.id.startsWith("eq_base_"));
+  const commonRels = topic.relations.filter(isCommonEq);
+  const uniqueRels = topic.relations.filter(r => !isCommonEq(r));
 
   const tokensCommon = commonRels.reduce((acc, r) => acc + tokenizeExpr(r.baseFormula || "").length, 0);
   const tokensUnique = uniqueRels.reduce((acc, r) => acc + tokenizeExpr(r.baseFormula || "").length, 0);
@@ -76,7 +80,7 @@ export function getDecayedMastery(eq, topic = null) {
   }
   const baseMastery = weightSum > 0 ? scoreSum / weightSum : 0;
 
-  const isCommon = eq.id.startsWith("eq_base_");
+  const isCommon = isCommonEq(eq);
   const scopeKey = isCommon ? "common" : (topic?.id || "common");
   const currentTick = getTopicTick(scopeKey);
   const lastTick = h && typeof h.lastTick === "number" ? h.lastTick : currentTick;
