@@ -11,19 +11,12 @@ import {
   exportMasteryJSON, importMasteryJSON
 } from "./src/mastery/index.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
-import { initSidebarView, renderSidebar, MASTERY_CHANGED_EVENT } from "./src/ui/sidebar_view.js";
+import {
+  initSidebarView, updateSidebarRelations, MASTERY_CHANGED_EVENT
+} from "./src/ui/sidebar_view.js";
 
-/* ------------------------------------------------------------------ *
- *  Multi-topic review set (checklist dropdown)                       *
- *  Persisted in localStorage; leaves of the Subject -> Category ->   *
- *  Topic tree are checkboxes. Problems are drawn from the selected   *
- *  pool, weakest-material topic first (see src/core/topic_mix.js).   *
- *  First run: nothing selected — the student is prompted to pick.    *
- * ------------------------------------------------------------------ */
 const SELECTED_TOPICS_KEY = "bsme.selectedTopicIds";
-
 const TOPIC_BY_ID = new Map(ALL_TOPICS.map(t => [t.id, t]));
-
 const masteryFor = topic => eq => getDecayedMastery(eq, topic);
 
 function loadSelectedTopicIds() {
@@ -34,7 +27,7 @@ function loadSelectedTopicIds() {
     if (Array.isArray(ids)) {
       return ids.filter(id => TOPIC_BY_ID.has(id));
     }
-  } catch (_) { /* corrupted state -> start empty and prompt */ }
+  } catch (_) { /* fallback to empty selection */ }
   return [];
 }
 
@@ -52,6 +45,12 @@ function getSelectedTopics() {
   return selectedTopicIds.map(topicById).filter(Boolean);
 }
 
+function getAllSelectedRelations() {
+  const rels = [];
+  getSelectedTopics().forEach(t => rels.push(...t.relations));
+  return rels;
+}
+
 function isTopicSelected(id) {
   return selectedTopicIds.includes(id);
 }
@@ -64,7 +63,7 @@ function setTopicSelected(id, on) {
   }
   try {
     localStorage.setItem(SELECTED_TOPICS_KEY, JSON.stringify(selectedTopicIds));
-  } catch (_) { /* private mode: session-only selection */ }
+  } catch (_) {}
 }
 
 function openDropdown() {
@@ -80,8 +79,8 @@ function clearSelectionPrompt() {
 function renderSelectionPrompt() {
   const view = document.getElementById("view-problem");
   if (!view) return;
-  document.getElementById("selection-prompt")?.remove();
 
+  document.getElementById("selection-prompt")?.remove();
   const wrap = document.createElement("div");
   wrap.id = "selection-prompt";
   wrap.className = "selection-prompt";
@@ -93,7 +92,7 @@ function renderSelectionPrompt() {
   body.textContent =
     "Open the checklist and tick every topic you want to review. Problems are " +
     "drawn from the whole set and target your weakest equations first — " +
-    "ideal for midterm prep. Your selection is remembered between sessions.";
+    "ideal for board exam prep. Your selection is remembered between sessions.";
 
   const btn = document.createElement("button");
   btn.type = "button";
@@ -109,6 +108,7 @@ function renderSelectionPrompt() {
 function renderTopicBadge(topic) {
   const view = document.getElementById("view-problem");
   if (!view) return;
+
   let badge = document.getElementById("topic-badge");
   if (!badge) {
     badge = document.createElement("div");
@@ -116,6 +116,7 @@ function renderTopicBadge(topic) {
     badge.className = "topic-badge";
     view.prepend(badge);
   }
+
   badge.textContent = topic.category
     ? `${topic.subject} · ${topic.category}: ${topic.title}`
     : `${topic.subject}: ${topic.title}`;
@@ -126,13 +127,18 @@ document.addEventListener("DOMContentLoaded", () => {
   setupTopicSelector();
   initSidebarView(
     currentTopic ? currentTopic.relations : [],
-    currentTopic ? masteryFor(currentTopic) : () => 0
+    currentTopic ? masteryFor(currentTopic) : () => 0,
+    getAllSelectedRelations()
   );
   setupHeaderActions();
 
   document.addEventListener(MASTERY_CHANGED_EVENT, () => {
     if (currentTopic) {
-      renderSidebar(currentTopic.relations, masteryFor(currentTopic));
+      updateSidebarRelations(
+        currentTopic.relations,
+        getAllSelectedRelations(),
+        masteryFor(currentTopic)
+      );
     }
   });
 
@@ -159,7 +165,6 @@ function setupTopicSelector() {
   ALL_TOPICS.forEach(topic => {
     const subj = topic.subject || "General Engineering";
     if (!subjects[subj]) subjects[subj] = { categories: {}, standalone: [] };
-
     if (topic.category) {
       if (!subjects[subj].categories[topic.category]) {
         subjects[subj].categories[topic.category] = [];
@@ -171,21 +176,11 @@ function setupTopicSelector() {
   });
 
   menu.innerHTML = "";
-
   const leafBoxes = [];
   const groupBoxes = [];
   let footerCount = null;
 
   const hasChecked = root => root.querySelector(".topic-checkbox:checked") !== null;
-
-  const wouldEmptyAfterRemoving = ids =>
-    selectedTopicIds.filter(id => !ids.includes(id)).length === 0;
-
-  function flashDeny(el) {
-    el.classList.remove("deny-flash");
-    void el.offsetWidth;
-    el.classList.add("deny-flash");
-  }
 
   function updateDropdownLabel() {
     const topics = getSelectedTopics();
@@ -217,10 +212,22 @@ function setupTopicSelector() {
     });
   }
 
-  function commitSelection(wasEmpty) {
+  function commitSelection() {
     syncGroupBoxes();
     updateDropdownLabel();
-    if (wasEmpty) generateNewProblem();
+    if (selectedTopicIds.length === 0) {
+      currentTopic = null;
+      currentProblem = null;
+      renderSelectionPrompt();
+    } else if (!currentTopic || !selectedTopicIds.includes(currentTopic.id)) {
+      generateNewProblem();
+    } else {
+      updateSidebarRelations(
+        currentTopic.relations,
+        getAllSelectedRelations(),
+        masteryFor(currentTopic)
+      );
+    }
   }
 
   function createTopicLeaf(t, levelClass) {
@@ -243,17 +250,9 @@ function setupTopicSelector() {
     leafBoxes.push(box);
 
     box.addEventListener("change", () => {
-      const wasEmpty = selectedTopicIds.length === 0;
-
-      if (!box.checked && wouldEmptyAfterRemoving([t.id])) {
-        box.checked = true;
-        flashDeny(leaf);
-        return;
-      }
-
       setTopicSelected(t.id, box.checked);
       leaf.classList.toggle("checked", box.checked);
-      commitSelection(wasEmpty);
+      commitSelection();
     });
 
     return leaf;
@@ -263,25 +262,15 @@ function setupTopicSelector() {
     const box = document.createElement("input");
     box.type = "checkbox";
     box.className = "group-checkbox";
-
     box.addEventListener("click", e => e.stopPropagation());
     box.addEventListener("change", () => {
-      const wasEmpty = selectedTopicIds.length === 0;
       const leaves = collectLeaves();
-      const ids = leaves.map(b => b.dataset.topicId);
-
-      if (!box.checked && wouldEmptyAfterRemoving(ids)) {
-        flashDeny(box);
-        syncGroupBoxes();
-        return;
-      }
-
       leaves.forEach(b => {
         b.checked = box.checked;
         b.closest(".topic-leaf")?.classList.toggle("checked", box.checked);
         setTopicSelected(b.dataset.topicId, box.checked);
       });
-      commitSelection(wasEmpty);
+      commitSelection();
     });
 
     groupBoxes.push({ box, collectLeaves });
@@ -294,14 +283,11 @@ function setupTopicSelector() {
 
     const subjectHeader = document.createElement("div");
     subjectHeader.className = "subject-header";
-
     const subjectBox = createGroupBox(() =>
       Array.from(subjectGroup.querySelectorAll(".topic-checkbox")));
-
     const subjectChevron = document.createElement("span");
     subjectChevron.className = "subject-chevron";
     subjectChevron.textContent = "▶";
-
     const subjectName = document.createElement("span");
     subjectName.textContent = subjName;
 
@@ -320,14 +306,11 @@ function setupTopicSelector() {
 
       const catHeader = document.createElement("div");
       catHeader.className = "category-header";
-
       const catBox = createGroupBox(() =>
         Array.from(catGroup.querySelectorAll(".topic-checkbox")));
-
       const catChevron = document.createElement("span");
       catChevron.className = "category-chevron";
       catChevron.textContent = "▶";
-
       const catNameSpan = document.createElement("span");
       catNameSpan.textContent = catName;
 
@@ -347,17 +330,20 @@ function setupTopicSelector() {
     }
 
     standalone.forEach(t => subjectList.appendChild(createTopicLeaf(t, "level-2")));
-
     subjectGroup.append(subjectHeader, subjectList);
     if (hasChecked(subjectGroup)) subjectGroup.classList.add("open");
     menu.appendChild(subjectGroup);
   }
 
+  // Footer: live count, Select all & Deselect all buttons
   const footer = document.createElement("div");
   footer.className = "topic-menu-footer";
-
   footerCount = document.createElement("span");
   footerCount.className = "topic-menu-count";
+
+  const btnWrap = document.createElement("div");
+  btnWrap.style.display = "flex";
+  btnWrap.style.gap = "0.35rem";
 
   const selectAllBtn = document.createElement("button");
   selectAllBtn.type = "button";
@@ -365,16 +351,30 @@ function setupTopicSelector() {
   selectAllBtn.textContent = "Select all";
   selectAllBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    const wasEmpty = selectedTopicIds.length === 0;
     leafBoxes.forEach(b => {
       b.checked = true;
       b.closest(".topic-leaf")?.classList.add("checked");
       setTopicSelected(b.dataset.topicId, true);
     });
-    commitSelection(wasEmpty);
+    commitSelection();
   });
 
-  footer.append(footerCount, selectAllBtn);
+  const deselectAllBtn = document.createElement("button");
+  deselectAllBtn.type = "button";
+  deselectAllBtn.className = "menu-mini-btn";
+  deselectAllBtn.textContent = "Deselect all";
+  deselectAllBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    leafBoxes.forEach(b => {
+      b.checked = false;
+      b.closest(".topic-leaf")?.classList.remove("checked");
+      setTopicSelected(b.dataset.topicId, false);
+    });
+    commitSelection();
+  });
+
+  btnWrap.append(selectAllBtn, deselectAllBtn);
+  footer.append(footerCount, btnWrap);
   menu.appendChild(footer);
 
   syncGroupBoxes();
@@ -408,10 +408,8 @@ function setupHeaderActions() {
 
   const importBtn = document.getElementById("btn-import");
   const fileInput = document.getElementById("mastery-file-input");
-
   if (importBtn && fileInput) {
     importBtn.addEventListener("click", () => fileInput.click());
-
     fileInput.addEventListener("change", e => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -421,7 +419,11 @@ function setupHeaderActions() {
         if (res.success) {
           alert("Global Mastery profile imported successfully!");
           if (currentTopic) {
-            renderSidebar(currentTopic.relations, masteryFor(currentTopic));
+            updateSidebarRelations(
+              currentTopic.relations,
+              getAllSelectedRelations(),
+              masteryFor(currentTopic)
+            );
           }
         } else {
           alert(`Import failed: ${res.reason}`);
@@ -439,7 +441,6 @@ function setupHeaderActions() {
 
 function generateNewProblem() {
   const pool = getSelectedTopics();
-
   if (pool.length === 0) {
     currentTopic = null;
     currentProblem = null;
@@ -449,7 +450,6 @@ function generateNewProblem() {
   }
 
   clearSelectionPrompt();
-
   const topic = pickWeakestTopic(pool, masteryFor) || pool[0];
   currentTopic = topic;
 
@@ -457,8 +457,11 @@ function generateNewProblem() {
   incrementTopicTick("common");
 
   currentProblem = generateProblem(topic, masteryFor(topic));
-
   renderProblemView(currentProblem, topic.relations, topic.id);
   renderTopicBadge(topic);
-  renderSidebar(topic.relations, masteryFor(topic));
+  updateSidebarRelations(
+    topic.relations,
+    getAllSelectedRelations(),
+    masteryFor(topic)
+  );
 }

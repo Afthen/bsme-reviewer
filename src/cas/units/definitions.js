@@ -1,7 +1,7 @@
 /**
  * src/cas/units/definitions.js
- * Comprehensive engineering unit registry with affine offsets and compound scale definitions.
- * Also the single source for unit TeX (unitToTex) and unit-aware value formatting.
+ * Comprehensive engineering unit registry with compound scale definitions.
+ * Single source for unit TeX (unitToTex) and unit-aware value formatting.
  */
 
 export const BASE_DIMENSIONS = Object.freeze({
@@ -47,6 +47,13 @@ export const COMPOUND_UNITS = Object.freeze({
   kPa:        { atoms: { kN: 1, m: -2 }, displayTex: "\\text{kPa}", substituteTex: "\\cfrac{\\text{kN}}{\\text{m}^2}" },
   bar:        { factor: 100000, atoms: { N: 1, m: -2 }, displayTex: "\\text{bar}" },
 
+  // Decomposed Pressure Formulations
+  "N/m^2":    { atoms: { N: 1, m: -2 }, displayTex: "\\cfrac{\\text{N}}{\\text{m}^2}" },
+  "kN/m^2":   { atoms: { kN: 1, m: -2 }, displayTex: "\\cfrac{\\text{kN}}{\\text{m}^2}" },
+  "N/mm^2":   { atoms: { N: 1, mm: -2 }, displayTex: "\\cfrac{\\text{N}}{\\text{mm}^2}" },
+  "lb/in^2":  { atoms: { lb: 1, in: -2 }, displayTex: "\\cfrac{\\text{lb}}{\\text{in}^2}" },
+  "lb/ft^2":  { atoms: { lb: 1, ft: -2 }, displayTex: "\\cfrac{\\text{lb}}{\\text{ft}^2}" },
+
   "N-m":      { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
   "N*m":      { atoms: { N: 1, m: 1 }, displayTex: "\\text{N}\\cdot\\text{m}" },
   "kN-m":     { atoms: { kN: 1, m: 1 }, displayTex: "\\text{kN}\\cdot\\text{m}" },
@@ -59,6 +66,21 @@ export const COMPOUND_UNITS = Object.freeze({
   kW:         { atoms: { kN: 1, m: 1, s: -1 }, displayTex: "\\text{kW}", substituteTex: "\\cfrac{\\text{kJ}}{\\text{s}}" },
   MW:         { factor: 1e6, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{MW}" },
   hp:         { factor: 33000, atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\text{hp}" },
+
+  // Decomposed Power Formulations
+  "J/s":          { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{J}}{\\text{s}}" },
+  "kJ/s":         { atoms: { kN: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{s}}" },
+  "N-m/s":        { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{N}\\cdot\\text{m}}{\\text{s}}" },
+  "N*m/s":        { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{N}\\cdot\\text{m}}{\\text{s}}" },
+  "kN-m/s":       { atoms: { kN: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{kN}\\cdot\\text{m}}{\\text{s}}" },
+  "kg*m^2/s^3":   { atoms: { kg: 1, m: 2, s: -3 }, displayTex: "\\cfrac{\\text{kg}\\cdot\\text{m}^2}{\\text{s}^3}" },
+  "kg-m^2/s^3":   { atoms: { kg: 1, m: 2, s: -3 }, displayTex: "\\cfrac{\\text{kg}\\cdot\\text{m}^2}{\\text{s}^3}" },
+  "ft-lb/s":      { atoms: { ft: 1, lb: 1, s: -1 }, displayTex: "\\cfrac{\\text{ft}\\cdot\\text{lb}}{\\text{s}}" },
+  "ft-lb/min":    { atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\cfrac{\\text{ft}\\cdot\\text{lb}}{\\text{min}}" },
+
+  // Decomposed Force Formulations
+  "kg*m/s^2":     { atoms: { kg: 1, m: 1, s: -2 }, displayTex: "\\cfrac{\\text{kg}\\cdot\\text{m}}{\\text{s}^2}" },
+  "kg-m/s^2":     { atoms: { kg: 1, m: 1, s: -2 }, displayTex: "\\cfrac{\\text{kg}\\cdot\\text{m}}{\\text{s}^2}" },
 
   "m^2":      { atoms: { m: 2 }, displayTex: "\\text{m}^2" },
   "in^2":     { atoms: { in: 2 }, displayTex: "\\text{in}^2" },
@@ -88,12 +110,16 @@ export const COMPOUND_UNITS = Object.freeze({
   "lb/hp-hr": { factor: 0.45359237 / (745.69987 * 3600), atoms: { kg: 1, N: -1, m: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{hp}\\cdot\\text{h}}" },
 
   "m/s":      { atoms: { m: 1, s: -1 }, displayTex: "\\cfrac{\\text{m}}{\\text{s}}" },
+  "m/min":    { factor: 1 / 60, atoms: { m: 1, s: -1 }, displayTex: "\\cfrac{\\text{m}}{\\text{min}}" },
   "ft/min":   { atoms: { ft: 1, min: -1 }, displayTex: "\\cfrac{\\text{ft}}{\\text{min}}" },
+  "ft/s":     { atoms: { ft: 1, s: -1 }, displayTex: "\\cfrac{\\text{ft}}{\\text{s}}" },
   "kg/s":     { atoms: { kg: 1, s: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{s}}" },
   "g/s":      { atoms: { g: 1, s: -1 }, displayTex: "\\cfrac{\\text{g}}{\\text{s}}" },
   "kg/min":   { atoms: { kg: 1, min: -1 }, displayTex: "\\cfrac{\\text{kg}}{\\text{min}}" },
   "lb/min":   { atoms: { lb_m: 1, min: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{min}}" },
   "lb/s":     { atoms: { lb_m: 1, s: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{s}}" },
+  "lb/h":     { factor: 1 / 3600, atoms: { lb_m: 1, s: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{h}}" },
+  "lb/hr":    { factor: 1 / 3600, atoms: { lb_m: 1, s: -1 }, displayTex: "\\cfrac{\\text{lb}}{\\text{h}}" },
 
   "teeth/in": { atoms: { teeth: 1, in: -1 }, displayTex: "\\cfrac{\\text{teeth}}{\\text{in}}" },
   rpm:        { atoms: { min: -1 }, displayTex: "\\text{rpm}" },
@@ -104,15 +130,13 @@ export const COMPOUND_UNITS = Object.freeze({
   "kJ/(kg*K)":{ factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
   "kJ/kg-K":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
   "Btu/(lb*F)":{ atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot°\\text{F}}" },
-  "Btu/lb-F":   { atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot°\\text{F}}" }
+  "Btu/lb-F":  { atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot°\\text{F}}" }
 });
 
 export function getUnitAtomBag(uName) {
   if (!uName || uName === "dimless" || uName === "ratio") {
     return { factor: 1.0, atoms: {}, dimMap: {}, scale: 1.0, isDimensionless: true };
   }
-  // Percent: scaled dimensionless unit. factor/scale 0.01 fold into numeric
-  // conversion silently (no printed bracket); values print as "6\,\%".
   if (uName === "%") {
     return {
       factor: 0.01, atoms: {}, dimMap: {}, scale: 0.01,
@@ -147,10 +171,6 @@ export function isDimEqual(aMap, bMap) {
   return true;
 }
 
-/* ------------------------------------------------------------------ *
- *  Single source for unit TeX. Never interpolate raw unit strings    *
- *  into \text{} — powers and slashes inside \text{} are KaTeX errors.*
- * ------------------------------------------------------------------ */
 const UNIT_TEX_ALIASES = Object.freeze({ "%": "\\%", "°": "^{\\circ}" });
 
 export function unitToTex(unitName = "") {
@@ -173,9 +193,16 @@ export function unitToTex(unitName = "") {
   return `\\cfrac{${num.join("\\cdot ")}}{${den.join("\\cdot ")}}`;
 }
 
-/** Value in internal SI -> value in the token's declared unit. */
+/** Converts numeric value from internal coherent base to target unit. */
 export function formatValueInUnit(value, unitName = "") {
   const bag = getUnitAtomBag(unitName);
-  const scale = bag?.scale || 1;
+  const scale = bag?.scale || 1.0;
   return scale ? value / scale : value;
+}
+
+/** Converts numeric value in given unit back to internal coherent base. */
+export function valueToCoherentBase(value, unitName = "") {
+  const bag = getUnitAtomBag(unitName);
+  const scale = bag?.scale || 1.0;
+  return value * scale;
 }
