@@ -1,9 +1,11 @@
 /**
  * src/core/problem_gen.js
- * Problem Generator with:
- * - Whole-cycle problem synthesis
- * - Natural cognitive fading (faded steps hidden from solution steps)
- * - Coherent unit sampling respecting thermodynamic cycle state point coupling
+ * ============================================================================
+ * ARCHITECTURAL PILLAR: Formula-as-Node Graph Problem Generator
+ * - Seamless integration with 40-40-20 unit distribution sampler
+ * - Persistent polymorphic names & symbols across statement and solution steps
+ * - Neatness pass rounding without disturbing tabulated constants
+ * ============================================================================
  */
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
@@ -11,8 +13,9 @@ import { parseMathAST } from "../cas/ast.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
-import { applyProblemUnitSampling, sampleSystemMode } from "./unit_sampler.js";
-import { fmtSigFig, formatGivenValue } from "./dimensions.js";
+import { applyProblemUnitSampling, sampleSystemMode, findCoupledGroup } from "./unit_sampler.js";
+import { fmtSigFig, formatGivenValue, DIMENSIONS } from "./dimensions.js";
+import { valueToCoherentBase, formatValueInUnit } from "../cas/units/definitions.js";
 
 export function relationWeaknessWeight(mastery = 0) {
   return Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
@@ -191,11 +194,14 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   });
 
   const systemNoun = topicConfig.noun || `${topicConfig.title || "Mechanical"} system`;
+  const startsWithVowel = /^[aeiou]/i.test(systemNoun);
+  const article = startsWithVowel ? "An" : "A";
+
   const goalsFormatted = goalStrings.length > 2
     ? goalStrings.slice(0, -1).join(", ") + ", and " + goalStrings[goalStrings.length - 1]
     : goalStrings.join(" and ");
 
-  return `A ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalsFormatted}.`;
+  return `${article} ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalsFormatted}.`;
 }
 
 export function generateProblem(topic, getMastery = () => 0) {
@@ -258,6 +264,31 @@ export function generateProblem(topic, getMastery = () => 0) {
   });
 
   const solution = pruneSolutionPath(allSteps, path.goalVar, getMastery, topic.terminalGoals || []);
+
+  // Unify units for deliverables in coupled groups
+  const unifiedUnits = new Map();
+  solution.forEach(step => {
+    if (!step.isFaded) {
+      const grp = findCoupledGroup(step.targetVar);
+      if (grp) {
+        const currentUnit = S_neat._u[step.targetVar];
+        if (!unifiedUnits.has(grp)) {
+          unifiedUnits.set(grp, currentUnit);
+        } else {
+          const targetUnit = unifiedUnits.get(grp);
+          if (currentUnit !== targetUnit) {
+            const meta = varsDb[step.targetVar] || {};
+            const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
+            const coherentVal = valueToCoherentBase(step.expectedVal, currentUnit, isDiff);
+            const newVal = formatValueInUnit(coherentVal, targetUnit, isDiff);
+            S_neat[step.targetVar] = newVal;
+            S_neat._u[step.targetVar] = targetUnit;
+            step.expectedVal = newVal;
+          }
+        }
+      }
+    }
+  });
 
   solution.forEach(step => {
     if (step.isFaded) {
