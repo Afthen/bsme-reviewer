@@ -2,9 +2,10 @@
  * src/core/problem_gen.js
  * ============================================================================
  * ARCHITECTURAL PILLAR: Formula-as-Node Graph Problem Generator
- * - relationWeaknessWeight: single source of the mastery weakness curve
- *   (imported by src/core/topic_mix.js for pool targeting)
- * - neatness pass skips isConstant givens (tabulated precision preserved)
+ * - Whole-cycle problem synthesis for thermodynamic & air handling topics
+ * - Natural cognitive fading: beginners calculate points 1 2 3 4 5...;
+ *   as equation mastery increases, intermediate points fade naturally
+ * - Seamless integration with 40-40-20 unit distribution sampler
  * ============================================================================
  */
 
@@ -13,14 +14,9 @@ import { parseMathAST } from "../cas/ast.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
+import { applyProblemUnitSampling, sampleSystemMode } from "./unit_sampler.js";
 import { fmtSigFig, formatGivenValue } from "./dimensions.js";
 
-/**
- * Weakness weight of one relation at a given mastery — the repo's single
- * source of truth for "low mastery priority" (used here per relation and by
- * topic_mix.js per topic).
- *   weight = max(phi(-7), ((1 + phi(-6)) - mastery) ^ fib(4))
- */
 export function relationWeaknessWeight(mastery = 0) {
   return Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
 }
@@ -207,12 +203,39 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
 export function generateProblem(topic, getMastery = () => 0) {
   const { title, varsDb, relations, createSystem } = topic;
-  const S_raw = createSystem();
 
-  const path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
+  // 1. Establish ground truth system with 40-40-20 unit distribution
+  const targetMode = sampleSystemMode();
+  let S_raw = createSystem({ sys: targetMode === "MIXED" ? "SI" : targetMode });
+  S_raw = applyProblemUnitSampling(S_raw, varsDb, targetMode);
 
-  const targetRel = relations.find(r => r.id === path.targetEqId);
-  const problemTitle = targetRel ? targetRel.name : `${title} Design Problem`;
+  let path;
+  if (topic.cycleGivens && topic.cycleGivens.length > 0) {
+    // Whole-cycle problem synthesis: provide boundary specifications and solve the complete cycle
+    const candidateDistractors = Object.keys(S_raw).filter(k =>
+      !k.startsWith("_") &&
+      !topic.cycleGivens.includes(k) &&
+      !relations.some(r => r.nodes?.includes(k)) &&
+      typeof S_raw[k] === "number" && !isNaN(S_raw[k])
+    );
+    const distractors = candidateDistractors.length > 0 && Math.random() < phi(-4)
+      ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
+      : [];
+
+    path = {
+      goalVar: topic.primaryGoals || null,
+      givens: Array.from(new Set([...topic.cycleGivens, ...distractors])).sort(),
+      distractors,
+      targetEqId: relations[relations.length - 1]?.id,
+      hopDistance: relations.length
+    };
+  } else {
+    // Autonomous graph path expansion for non-cycle topics
+    path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
+  }
+
+  const targetRel = relations.find(r => r.id === path.targetEqId) || relations[relations.length - 1];
+  const problemTitle = targetRel ? targetRel.name : `${title} Problem`;
 
   const S_neat = { ...S_raw };
   path.givens.forEach(g => {
@@ -239,7 +262,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     step.expectedVal = value;
   });
 
-  const solution = pruneSolutionPath(allSteps, path.goalVar, getMastery);
+  const solution = pruneSolutionPath(allSteps, path.goalVar, getMastery, topic.terminalGoals || []);
 
   solution.forEach(step => {
     if (step.isFaded) {
