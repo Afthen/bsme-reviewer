@@ -18,7 +18,7 @@ import {
 } from "../src/core/unit_sampler.js";
 import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
 
-// Headless Browser Mock
+// Enhanced Headless Browser Mock
 if (typeof globalThis.window === "undefined") globalThis.window = globalThis;
 if (typeof globalThis.document === "undefined") {
   const createMockElement = (id = "", tag = "div") => {
@@ -187,22 +187,26 @@ describe("Derivation Fidelity & No-Comma Unit Typesetting", () => {
         assert.ok(!/\\cancel{\s*}/.test(derivLatex), `Empty cancel bracket`);
         assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), "Produces illegal nested fraction tower");
 
-        // Request 3: Verified automated test - zero commas before units
+        // Verified automated test: ensures NO unescaped literal comma (?<!\\), precedes units
         assert.ok(
-          !/,\s*\\text{/.test(derivLatex),
-          `Illegal comma before \\text{unit} found in: ${derivLatex}`
+          !/(?<!\\),\s*\\text{/.test(derivLatex),
+          `Illegal literal comma before \\text{unit} found in: ${derivLatex}`
         );
         assert.ok(
-          !/,\s*\\cancel{/.test(derivLatex),
-          `Illegal comma before \\cancel{unit} found in: ${derivLatex}`
+          !/(?<!\\),\s*\\cancel{/.test(derivLatex),
+          `Illegal literal comma before \\cancel{unit} found in: ${derivLatex}`
         );
         assert.ok(
-          !/,\s*°/.test(derivLatex),
-          `Illegal comma before degree symbol found in: ${derivLatex}`
+          !/(?<!\\),\s*°/.test(derivLatex),
+          `Illegal literal comma before degree symbol found in: ${derivLatex}`
         );
         assert.ok(
-          !/,\s*\\cfrac{/.test(derivLatex),
-          `Illegal comma before \\cfrac unit compound found in: ${derivLatex}`
+          !/(?<!\\),\s*\\cfrac{/.test(derivLatex),
+          `Illegal literal comma before \\cfrac unit compound found in: ${derivLatex}`
+        );
+        assert.ok(
+          !/(?<!\\),/.test(derivLatex),
+          `Illegal unescaped literal comma found anywhere in derivation: ${derivLatex}`
         );
       }
     });
@@ -256,7 +260,6 @@ describe("Unit Sampler: 40-40-20, Inverse-Token Compound Weights & Sig-Fig Reten
   });
 
   test("sampleByInverseTokens matches w_i = 1/t_i relative probability math", () => {
-    // W (1 token) is twice as likely as J/s (2 tokens), thrice as likely as N-m/s (3 tokens), sixce as kg*m^2/s^3 (6 tokens)
     const candidates = [
       { unit: "W", tokens: 1 },
       { unit: "J/s", tokens: 2 },
@@ -270,7 +273,6 @@ describe("Unit Sampler: 40-40-20, Inverse-Token Compound Weights & Sig-Fig Reten
       counts[sampleByInverseTokens(candidates)]++;
     }
 
-    // Expected shares: 50% W (6/12), 25% J/s (3/12), 16.67% N-m/s (2/12), 8.33% kg*m^2/s^3 (1/12)
     const ratioW_to_Js = counts["W"] / counts["J/s"];
     const ratioW_to_Nms = counts["W"] / counts["N-m/s"];
     const ratioW_to_Base = counts["W"] / counts["kg*m^2/s^3"];
@@ -281,13 +283,9 @@ describe("Unit Sampler: 40-40-20, Inverse-Token Compound Weights & Sig-Fig Reten
   });
 
   test("Significant figure filter prevents wildly inappropriate units (km for pitch diameter)", () => {
-    // 60 mm converted to km = 0.00006 km -> rounds to 0.000 (0 sig figs) -> fails
     assert.equal(retainsSufficientSigFigs(0.00006), false);
-    // 60 mm converted to m = 0.06 m -> rounds to 0.060 (at most 2 sig figs) -> fails
     assert.equal(retainsSufficientSigFigs(0.06), false);
-    // 60 mm converted to cm = 6.0 cm -> retains sufficient resolution -> passes
     assert.equal(retainsSufficientSigFigs(6.0), true);
-    // 60 mm converted to in = 2.362 in -> passes
     assert.equal(retainsSufficientSigFigs(2.362), true);
   });
 
@@ -335,7 +333,6 @@ describe("Oklab Continuous Mastery Color Gradient", () => {
     assert.ok(c5.startsWith("oklab("));
     assert.ok(c10.startsWith("oklab("));
 
-    // Low mastery should have positive a (red hue), high mastery negative a (green hue)
     const extractA = str => parseFloat(str.replace("oklab(", "").split(" ")[1]);
     assert.ok(extractA(c0) > 0.15, "0% mastery must be in red hue (positive a)");
     assert.ok(extractA(c10) < -0.10, "100% mastery must be in green hue (negative a)");
