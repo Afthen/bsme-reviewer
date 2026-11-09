@@ -1,11 +1,16 @@
 /**
  * src/cas/units/evaluator.js
- * Numerical evaluation of physical AST formulas with trigonometric unit resolution.
+ * Numerical evaluation of physical AST formulas with:
+ * - Coherent SI base unit transformation for pure physics relations,
+ *   guaranteeing consistent multi-unit additions/subtractions (e.g. hp + W)
+ * - Explicit requiredUnits contract preservation for empirical formulations
+ * - Trigonometric unit resolution for bare angle tokens in degrees
  */
 
-import { evalAST } from "../ast.js";
-import { resolveCanonicalKey } from "../algebra.js";
+import { evalAST, getAstIdentifiers } from "../ast.js";
+import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { solveUnitAlgebra } from "./analysis.js";
+import { getUnitAtomBag } from "./definitions.js";
 
 export function isExpressionInDegrees(node, S, varsDb) {
   if (!node) return false;
@@ -25,18 +30,51 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
 
   const unitAnalysis = solveUnitAlgebra(node, S, targetVar, targetUnit, varsDb, requiredUnits);
 
-  const evalState = { ...S };
-  if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
-    unitAnalysis.preConversions.forEach(pc => {
-      evalState[pc.token] = pc.convertedVal;
-      evalState[pc.canonicalKey] = pc.convertedVal;
-    });
+  // 1. Empirical Formulas with requiredUnits: preserve dedicated factor-label conversions
+  if (requiredUnits && typeof requiredUnits === "object") {
+    const evalState = { ...S };
+    if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
+      unitAnalysis.preConversions.forEach(pc => {
+        evalState[pc.token] = pc.convertedVal;
+        evalState[pc.canonicalKey] = pc.convertedVal;
+      });
+    }
+
+    const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
+    const rawNum = evalAST(node, evalState, unitResolver);
+    if (isNaN(rawNum)) return { value: NaN, unitAnalysis };
+
+    const finalValue = rawNum * (unitAnalysis.numericConversionFactor || 1.0);
+    return { value: finalValue, unitAnalysis };
   }
 
-  const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
-  const rawNum = evalAST(node, evalState, unitResolver);
-  if (isNaN(rawNum)) return { value: NaN, unitAnalysis };
+  // 2. Pure Physics Relations: transform all tokens into coherent SI base units
+  //    before AST evaluation so operations like BP (hp) + FP (W) evaluate accurately
+  const coherentState = { ...S };
+  const varTokens = getAstIdentifiers(node).filter(t => !isReservedMathToken(t));
 
-  const finalValue = rawNum * (unitAnalysis.numericConversionFactor || 1.0);
+  varTokens.forEach(tok => {
+    const cKey = resolveCanonicalKey(tok, varsDb);
+    const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+
+    if (uName && uName !== "dimless" && uName !== "ratio" && uName !== "deg" && uName !== "°") {
+      const bag = getUnitAtomBag(uName);
+      const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
+      if (typeof rawVal === "number" && !isNaN(rawVal)) {
+        const valInBase = rawVal * (bag.scale || 1.0);
+        coherentState[tok] = valInBase;
+        coherentState[cKey] = valInBase;
+      }
+    }
+  });
+
+  const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
+  const coherentNum = evalAST(node, coherentState, unitResolver);
+  if (isNaN(coherentNum)) return { value: NaN, unitAnalysis };
+
+  const targetBag = getUnitAtomBag(targetUnit);
+  const targetScale = targetBag.scale || 1.0;
+  const finalValue = targetScale > 0 ? (coherentNum / targetScale) : coherentNum;
+
   return { value: finalValue, unitAnalysis };
 }
