@@ -1,6 +1,6 @@
 # BSME Reviewer
 
-A graph-based problem generator and spaced-repetition reviewer for Mechanical Engineering board-exam subjects (Machine Design, Air Conditioning, with Powerplant Design planned). Every equation is a node in a graph. The engine chains equations into multi-step problems, checks answers, renders textbook-style derivations, and tracks mastery per equation with golden-ratio / Fibonacci memory curves.
+A graph-based problem generator and spaced-repetition reviewer for Mechanical Engineering board-exam subjects. Every equation is a node in a graph. The engine chains equations into multi-step problems, checks answers, renders textbook-style derivations, and tracks mastery per equation with golden-ratio / Fibonacci memory curves.
 
 - **Stack:** vanilla ES modules, no bundler, no runtime dependencies except KaTeX (CDN). State lives in `localStorage`.
 - **Run:** serve the folder statically (`python3 -m http.server`) and open `index.html`. ES modules do not load from `file://`.
