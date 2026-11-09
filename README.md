@@ -312,4 +312,3 @@ node --test test/run_test.js test/run_hygiene_test.js
 - [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
 - [ ] No tests were renamed, skipped, loosened, or deleted.
 - [ ] LF line endings, header comment on every new file, no dead code, and no new duplication.
-```
