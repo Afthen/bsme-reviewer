@@ -189,3 +189,96 @@ aside.open { transform: translateX(0); }
 @media (max-width: 768px) {
   .dropdown-toggle { min-width: 100%; }
 }
+
+/* ================================================================== *
+ *  Checklist topic dropdown (multi-topic review set)                 *
+ * ================================================================== */
+
+#topic-dropdown-menu .topic-item.topic-leaf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .12s ease, color .12s ease;
+}
+
+#topic-dropdown-menu .topic-leaf:hover {
+  background: rgba(88, 166, 255, .08);
+}
+
+#topic-dropdown-menu .topic-leaf.checked {
+  background: rgba(88, 166, 255, .14);
+  color: #58a6ff;
+  font-weight: 600;
+}
+
+#topic-dropdown-menu input[type="checkbox"].topic-checkbox,
+#topic-dropdown-menu input[type="checkbox"].group-checkbox {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin: 0;
+  accent-color: #58a6ff;
+  cursor: pointer;
+}
+
+#topic-dropdown-menu .group-checkbox {
+  cursor: pointer;
+  opacity: .9;
+}
+
+#topic-dropdown-menu .subject-header,
+#topic-dropdown-menu .category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#topic-dropdown-menu .topic-leaf-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sticky footer: live count + Select all */
+#topic-dropdown-menu .topic-menu-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, .08);
+  background: inherit;
+  font-size: 11px;
+  color: #9da4ab;
+}
+
+#topic-dropdown-menu .menu-mini-btn {
+  background: transparent;
+  border: 1px solid rgba(88, 166, 255, .4);
+  color: #58a6ff;
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+
+#topic-dropdown-menu .menu-mini-btn:hover {
+  background: rgba(88, 166, 255, .12);
+}
+
+/* Deny flash: attempted to empty the review set */
+@keyframes denyFlash {
+  0%, 100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 0 2px rgba(255, 99, 99, .55); }
+}
+
+.deny-flash {
+  animation: denyFlash .35s ease 2;
+  border-radius: 4px;
+}
