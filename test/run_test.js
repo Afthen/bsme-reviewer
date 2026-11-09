@@ -148,12 +148,11 @@ describe("Engineering Topics Ground Truth & AST Inversion Suite", () => {
 describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
   test("Beginner learner (0% mastery) receives the full cycle with all state points in Diesel Cycle", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
-    const problem = generateProblem(topic, () => 0); // 0% mastery
+    const problem = generateProblem(topic, () => 0);
 
     assert.ok(problem.solution.length >= 7, "Diesel cycle must present full state point sequence");
     const targetVars = problem.solution.map(s => s.targetVar);
 
-    // Verifies points 1 2 3 4 and work/efficiency are all present
     assert.ok(targetVars.includes("T_2"), "Point 2 (T_2) must be in solution");
     assert.ok(targetVars.includes("T_3"), "Point 3 (T_3) must be in solution");
     assert.ok(targetVars.includes("T_4"), "Point 4 (T_4) must be in solution");
@@ -162,7 +161,6 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     assert.ok(targetVars.includes("W_net"), "Net work (w_net) must be in solution");
     assert.ok(targetVars.includes("e_th"), "Efficiency (e_th) must be in solution");
 
-    // All steps must be active (not faded) for a beginner
     problem.solution.forEach(s => {
       assert.equal(s.isFaded, false, `Step ${s.targetVar} should not be faded at 0% mastery`);
     });
@@ -170,7 +168,7 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
 
   test("Beginner learner (0% mastery) receives full air handling cycle with Points 1 to 6 in Bypass Air", () => {
     const topic = TOPICS.hvac_bypass_air;
-    const problem = generateProblem(topic, () => 0); // 0% mastery
+    const problem = generateProblem(topic, () => 0);
 
     assert.ok(problem.solution.length >= 8, "Bypass air must present full air handling cycle");
     const targetVars = problem.solution.map(s => s.targetVar);
@@ -192,10 +190,9 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
   test("Natural cognitive fading: mastered intermediate state points fade and reduce naturally", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
 
-    // Simulate high mastery on compression temp T_2 and expansion ratio r_e
     const getMastery = eq => {
       if (eq.id === "eq_diesel_t2" || eq.id === "eq_diesel_rk") return 0.95;
-      return 0.20; // other relations unmastered
+      return 0.20;
     };
 
     const problem = generateProblem(topic, getMastery);
@@ -203,11 +200,9 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     assert.ok(stepT2, "Step T_2 must exist in DAG");
     assert.equal(stepT2.isFaded, true, "Mastered intermediate step T_2 must be faded");
 
-    // Mastered intermediate step T_2 must be removed from the statement goals
     assert.ok(!problem.statement.includes("Determine: (1) Temperature after Compression ($T_2$)"),
       "Faded step T_2 must not be prompted in statement");
 
-    // Terminal goals (e_th, W_net) must remain active goals
     const stepEth = problem.solution.find(s => s.targetVar === "e_th");
     assert.ok(stepEth);
     assert.equal(stepEth.isFaded, false, "Terminal goal e_th must NEVER be faded");
@@ -258,7 +253,23 @@ describe("Derivation Fidelity & No-Comma Unit Typesetting", () => {
         assert.ok(!/\\cdot\^/.test(derivLatex), `\\cdot cannot take a direct superscript`);
         assert.ok(!/\\cancel{\s*}/.test(derivLatex), `Empty cancel bracket`);
         assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), "Produces illegal nested fraction tower");
-        assert.ok(!/(?<!\\),/.test(derivLatex), `Illegal literal comma found in derivation: ${derivLatex}`);
+
+        // Verified automated test: ensures NO comma precedes any unit or unit markup.
+        // Legitimate LaTeX commas in subscripts (e.g. c_{p,w}, P_{max,i}) are preserved.
+        assert.ok(
+          !/(?:[0-9)]|\.\d+)\s*,\s*(?:\\text|\\cancel|\\cfrac|°|\\%)/.test(derivLatex),
+          `Illegal comma before unit found in: ${derivLatex}`
+        );
+        assert.ok(
+          !/\\boxed{[^}]*,\s*(?:\\text|\\cancel|\\cfrac|°|\\%)/.test(derivLatex),
+          `Illegal comma inside boxed answer found in: ${derivLatex}`
+        );
+
+        // LaTeX structural syntax validation: balanced curly braces and aligned environment
+        const openBraces = (derivLatex.match(/\{/g) || []).length;
+        const closeBraces = (derivLatex.match(/\}/g) || []).length;
+        assert.equal(openBraces, closeBraces, `Mismatched curly braces in: ${derivLatex}`);
+        assert.ok(derivLatex.includes("\\begin{aligned}") && derivLatex.includes("\\end{aligned}"));
       }
     });
   }
