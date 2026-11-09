@@ -19,14 +19,14 @@ export const HELICAL_VARS_DB = Object.freeze({
   "m":     { name: "Transverse Module", symbol: "m", dimension: DIMENSIONS.LENGTH, unit: "mm", baseVar: "m", aliases: ["Transverse Module", "Module"] },
   "m_n":   { name: "Normal Module", symbol: "m_n", dimension: DIMENSIONS.LENGTH, unit: "mm", baseVar: "m_n", aliases: ["Normal Module", "Module in Normal Plane"] },
   "L_lead":{ name: "Tooth Lead", symbol: "L", dimension: DIMENSIONS.LENGTH, baseVar: "L_lead", aliases: ["Tooth Lead", "Helix Lead", "Lead", "L"] },
-  "m_F":   { name: "Face Contact Ratio", symbol: "m_F", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "m_F", aliases: ["Face Contact Ratio", "Helical Overlap Ratio", "Helical Contact Ratio", "m_F"] },
+  "m_F":   { name: "Face Contact Ratio", symbol: "m_F", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "m_F", aliases: ["Face Contact Ratio", "Helical Overlap Ratio", "Helical Contact Ratio", "m_F"] },
   "T_v":   { name: "Formative Number of Teeth", symbol: "T_v", dimension: DIMENSIONS.COUNT, isInteger: false, unit: "teeth", baseVar: "T_v", aliases: ["Formative Number of Teeth", "Virtual Teeth", "Virtual Number of Teeth", "Equivalent Number of Teeth", "Formative Teeth", "N_ev", "T_v"] },
   "F_a":   { name: "Axial Thrust Load", symbol: "F_a", dimension: DIMENSIONS.FORCE, baseVar: "F_a", aliases: ["Axial Thrust Load", "Axial Force", "Thrust Load", "End Thrust", "F_a"] },
   "W":     { name: "Resultant Normal Force", symbol: "F_n", dimension: DIMENSIONS.FORCE, baseVar: "W", aliases: ["Resultant Normal Force", "Total Contact Force", "Total Tooth Load", "Normal Tooth Force", "F_n", "W"] },
-  "k_f":   { name: "Stress Reduction Factor", symbol: "k_f", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "k_f", aliases: ["Stress Reduction Factor", "k_f"] },
+  "k_f":   { name: "Stress Reduction Factor", symbol: "k_f", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "k_f", aliases: ["Stress Reduction Factor", "k_f"] },
   "F_s":   { name: "Beam Fatigue Strength", symbol: "F_s", dimension: DIMENSIONS.FORCE, baseVar: "F_s", aliases: ["Beam Fatigue Strength", "Helical Beam Strength", "F_s"] },
   "F_w":   { name: "Limiting Wear Load", symbol: "F_w", dimension: DIMENSIONS.FORCE, baseVar: "F_w", aliases: ["Limiting Wear Load", "Wear Load", "Buckingham Wear Load", "F_w"] },
-  "Q":     { name: "Ratio Factor for Gearing", symbol: "Q", dimension: DIMENSIONS.DIMENSIONLESS, baseVar: "Q", aliases: ["Ratio Factor for Gearing", "Q"] },
+  "Q":     { name: "Ratio Factor for Gearing", symbol: "Q", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "Q", aliases: ["Ratio Factor for Gearing", "Q"] },
   "K_w":   { name: "Load-Stress Factor", symbol: "K_w", dimension: DIMENSIONS.STRESS, baseVar: "K_w", aliases: ["Load-Stress Factor", "Wear Factor", "k_g", "K_w"] }
 });
 
@@ -34,6 +34,7 @@ export function getVarMeta(varKey) {
   return HELICAL_VARS_DB[varKey] || {
     name: varKey,
     symbol: varKey,
-    dimension: DIMENSIONS.DIMENSIONLESS
+    dimension: DIMENSIONS.DIMENSIONLESS,
+    unit: "dimless"
   };
 }
