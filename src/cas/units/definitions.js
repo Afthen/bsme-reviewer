@@ -1,7 +1,9 @@
 /**
  * src/cas/units/definitions.js
- * Comprehensive engineering unit registry with compound scale definitions.
- * Single source for unit TeX (unitToTex) and unit-aware value formatting.
+ * Comprehensive engineering unit registry with:
+ * - Exact affine temperature offset transformations for °C and °F
+ * - Decomposed compound unit formulations
+ * - Single source for unit TeX (unitToTex) and value formatting
  */
 
 export const BASE_DIMENSIONS = Object.freeze({
@@ -47,7 +49,6 @@ export const COMPOUND_UNITS = Object.freeze({
   kPa:        { atoms: { kN: 1, m: -2 }, displayTex: "\\text{kPa}", substituteTex: "\\cfrac{\\text{kN}}{\\text{m}^2}" },
   bar:        { factor: 100000, atoms: { N: 1, m: -2 }, displayTex: "\\text{bar}" },
 
-  // Decomposed Pressure Formulations
   "N/m^2":    { atoms: { N: 1, m: -2 }, displayTex: "\\cfrac{\\text{N}}{\\text{m}^2}" },
   "kN/m^2":   { atoms: { kN: 1, m: -2 }, displayTex: "\\cfrac{\\text{kN}}{\\text{m}^2}" },
   "N/mm^2":   { atoms: { N: 1, mm: -2 }, displayTex: "\\cfrac{\\text{N}}{\\text{mm}^2}" },
@@ -67,7 +68,6 @@ export const COMPOUND_UNITS = Object.freeze({
   MW:         { factor: 1e6, atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\text{MW}" },
   hp:         { factor: 33000, atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\text{hp}" },
 
-  // Decomposed Power Formulations
   "J/s":          { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{J}}{\\text{s}}" },
   "kJ/s":         { atoms: { kN: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{s}}" },
   "N-m/s":        { atoms: { N: 1, m: 1, s: -1 }, displayTex: "\\cfrac{\\text{N}\\cdot\\text{m}}{\\text{s}}" },
@@ -78,7 +78,6 @@ export const COMPOUND_UNITS = Object.freeze({
   "ft-lb/s":      { atoms: { ft: 1, lb: 1, s: -1 }, displayTex: "\\cfrac{\\text{ft}\\cdot\\text{lb}}{\\text{s}}" },
   "ft-lb/min":    { atoms: { ft: 1, lb: 1, min: -1 }, displayTex: "\\cfrac{\\text{ft}\\cdot\\text{lb}}{\\text{min}}" },
 
-  // Decomposed Force Formulations
   "kg*m/s^2":     { atoms: { kg: 1, m: 1, s: -2 }, displayTex: "\\cfrac{\\text{kg}\\cdot\\text{m}}{\\text{s}^2}" },
   "kg-m/s^2":     { atoms: { kg: 1, m: 1, s: -2 }, displayTex: "\\cfrac{\\text{kg}\\cdot\\text{m}}{\\text{s}^2}" },
 
@@ -193,16 +192,41 @@ export function unitToTex(unitName = "") {
   return `\\cfrac{${num.join("\\cdot ")}}{${den.join("\\cdot ")}}`;
 }
 
-/** Converts numeric value from internal coherent base to target unit. */
+/** Converts numeric value from internal coherent base to target unit with exact affine temperature offsets. */
 export function formatValueInUnit(value, unitName = "") {
   const bag = getUnitAtomBag(unitName);
   const scale = bag?.scale || 1.0;
-  return scale ? value / scale : value;
+  if (!scale) return value;
+
+  // Temperature affine conversions from coherent Kelvin base
+  if (bag.atoms && Object.keys(bag.atoms).length === 1 && bag.dimMap?.Th === 1) {
+    const atomName = Object.keys(bag.atoms)[0];
+    const b = ATOMIC_BASE_UNITS[atomName];
+    if (b && b.offset) {
+      // For °C: T_C = T_K - 273.15
+      // For °F: T_F = (T_K / (5/9)) - 459.67
+      return (value / scale) - b.offset;
+    }
+  }
+
+  return value / scale;
 }
 
-/** Converts numeric value in given unit back to internal coherent base. */
+/** Converts numeric value in given unit back to internal coherent base with exact affine temperature offsets. */
 export function valueToCoherentBase(value, unitName = "") {
   const bag = getUnitAtomBag(unitName);
   const scale = bag?.scale || 1.0;
+
+  // Temperature affine conversions to coherent Kelvin base
+  if (bag.atoms && Object.keys(bag.atoms).length === 1 && bag.dimMap?.Th === 1) {
+    const atomName = Object.keys(bag.atoms)[0];
+    const b = ATOMIC_BASE_UNITS[atomName];
+    if (b && b.offset) {
+      // For °C: T_K = (T_C + 273.15) * 1.0
+      // For °F: T_K = (T_F + 459.67) * (5/9)
+      return (value + b.offset) * scale;
+    }
+  }
+
   return value * scale;
 }
