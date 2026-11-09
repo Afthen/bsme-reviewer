@@ -4,6 +4,8 @@
  * - Pure physics relations: transforms all input variables into coherent SI base units
  *   via valueToCoherentBase, evaluates AST in coherent base, and projects the result
  *   into targetUnit via formatValueInUnit (ensuring exact affine & scale conversions)
+ * - Identifies temperature difference variables (DIMENSIONS.TEMPERATURE_DIFF) to bypass
+ *   affine origin offsets during base conversion and projection
  * - Empirical relations with requiredUnits: converts inputs to requiredUnits via preConversions,
  *   evaluates AST in required units, and projects result into targetUnit via numericConversionFactor
  * - Resolves bare angle tokens in degrees for trigonometric functions
@@ -13,6 +15,7 @@ import { evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { solveUnitAlgebra } from "./analysis.js";
 import { valueToCoherentBase, formatValueInUnit } from "./definitions.js";
+import { DIMENSIONS } from "../../core/dimensions.js";
 
 export function isExpressionInDegrees(node, S, varsDb) {
   if (!node) return false;
@@ -23,6 +26,11 @@ export function isExpressionInDegrees(node, S, varsDb) {
   }
   if (node.type === "group") return isExpressionInDegrees(node.expr, S, varsDb);
   return false;
+}
+
+function isDifferenceVariable(key, varsDb) {
+  const meta = varsDb[key] || {};
+  return meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
 }
 
 export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUnits = null) {
@@ -63,7 +71,8 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     if (uName && uName !== "dimless" && uName !== "ratio" && uName !== "deg" && uName !== "°") {
       const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
       if (typeof rawVal === "number" && !isNaN(rawVal)) {
-        const valInBase = valueToCoherentBase(rawVal, uName);
+        const isDiff = isDifferenceVariable(cKey, varsDb) || isDifferenceVariable(tok, varsDb);
+        const valInBase = valueToCoherentBase(rawVal, uName, isDiff);
         coherentState[tok] = valInBase;
         coherentState[cKey] = valInBase;
       }
@@ -75,6 +84,7 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
   if (isNaN(coherentNum)) return { value: NaN, unitAnalysis };
 
   // Project coherent SI base result into requested targetUnit
-  const finalValue = formatValueInUnit(coherentNum, targetUnit);
+  const targetIsDiff = isDifferenceVariable(cTarget, varsDb) || isDifferenceVariable(targetVar, varsDb);
+  const finalValue = formatValueInUnit(coherentNum, targetUnit, targetIsDiff);
   return { value: finalValue, unitAnalysis };
 }
