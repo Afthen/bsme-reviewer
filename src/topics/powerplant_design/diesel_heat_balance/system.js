@@ -32,8 +32,8 @@ export function createDieselHeatBalanceSystem({ sys = "SI" } = {}) {
   const _u = {
     Q_f: "kW", Q_ip: "kW", Q_cw: "kW", Q_exh: "kW", Q_rad: "kW",
     m_cw: "kg/s", dT_cw: "K", cp_w: "kJ/kg-K",
-    pct_cw: "dimless", pct_exh: "dimless", pct_rad: "dimless"
+    pct_ip: "%", pct_cw: "%", pct_exh: "%", pct_rad: "%"
   };
 
-  return { sys: "SI", Q_f, Q_ip, Q_cw, Q_exh, Q_rad, m_cw, dT_cw, cp_w, pct_cw, pct_exh, pct_rad, _names, _u };
+  return { sys: "SI", Q_f, Q_ip, Q_cw, Q_exh, Q_rad, m_cw, dT_cw, cp_w, pct_ip, pct_cw, pct_exh, pct_rad, _names, _u };
 }
