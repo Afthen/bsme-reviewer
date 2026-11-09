@@ -9,6 +9,8 @@ import { ALL_TOPICS, TOPICS } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
 import { generateProblem } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
+import { evaluatePhysicalAST } from "../src/cas/units/index.js";
+import { parseMathAST } from "../src/cas/ast.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
 import { pruneSolutionPath, solveDAG } from "../src/core/graph_solver.js";
@@ -97,7 +99,6 @@ if (typeof globalThis.localStorage === "undefined") {
   };
 }
 
-// Optional KaTeX dynamic import for direct parser/renderer validation
 let katex = null;
 try {
   const mod = await import("katex");
@@ -106,10 +107,6 @@ try {
   katex = null;
 }
 
-/**
- * Validates LaTeX derivation syntax and rendering fidelity without brittle false positives.
- * Permits legitimate mathematical subscripts with commas like c_{p,w} and m_{m,w}.
- */
 export function validateDerivationLatex(derivLatex) {
   assert.ok(typeof derivLatex === "string" && derivLatex.length > 0, "Derivation LaTeX must be non-empty");
   assert.ok(derivLatex.includes("\\boxed{"), "Derivation step missing boxed answer");
@@ -119,10 +116,6 @@ export function validateDerivationLatex(derivLatex) {
   assert.ok(!/\\cancel\{\s*\}/.test(derivLatex), `Empty cancel bracket in step: ${derivLatex}`);
   assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), `Illegal nested fraction tower in step: ${derivLatex}`);
 
-  // Specifically checks that numbers or closing parens are not directly joined to units with a comma.
-  // Correct: "1200\\,\\cfrac{\\text{kJ}}{\\text{s}}" or "(a + b)\\,\\text{m}"
-  // Incorrect: "1200,\\text{kJ}" or "(a + b),\\text{m}"
-  // Legitimate mathematical subscripts (e.g. c_{p,w}, m_{m,w}) are completely permitted.
   assert.ok(
     !/\d+,\s*(?:\\text|\\cfrac|\\cancel|°)/.test(derivLatex),
     `Found numeric literal immediately followed by comma before unit in: ${derivLatex}`
@@ -132,7 +125,6 @@ export function validateDerivationLatex(derivLatex) {
     `Found closing paren immediately followed by comma before unit in: ${derivLatex}`
   );
 
-  // Structural brace balance verification: unescaped '{' must equal '}'
   let braceDepth = 0;
   for (let i = 0; i < derivLatex.length; i++) {
     const ch = derivLatex[i];
@@ -145,12 +137,10 @@ export function validateDerivationLatex(derivLatex) {
   }
   assert.equal(braceDepth, 0, `Unbalanced opening brace '{' in derivation: ${derivLatex}`);
 
-  // Environmental balance verification
   const beginAligned = (derivLatex.match(/\\begin\{aligned\}/g) || []).length;
   const endAligned = (derivLatex.match(/\\end\{aligned\}/g) || []).length;
   assert.equal(beginAligned, endAligned, `Mismatched aligned environment in: ${derivLatex}`);
 
-  // Render directly through KaTeX if available in the environment
   if (katex && typeof katex.renderToString === "function") {
     let raw = derivLatex.trim();
     if (raw.startsWith("$$") && raw.endsWith("$$")) {
@@ -220,7 +210,6 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     assert.ok(problem.solution.length >= 7, "Diesel cycle must present full state point sequence");
     const targetVars = problem.solution.map(s => s.targetVar);
 
-    // Verifies points 1 2 3 4 and work/efficiency are all present
     assert.ok(targetVars.includes("T_2"), "Point 2 (T_2) must be in solution");
     assert.ok(targetVars.includes("T_3"), "Point 3 (T_3) must be in solution");
     assert.ok(targetVars.includes("T_4"), "Point 4 (T_4) must be in solution");
@@ -229,7 +218,6 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     assert.ok(targetVars.includes("W_net"), "Net work (w_net) must be in solution");
     assert.ok(targetVars.includes("e_th"), "Efficiency (e_th) must be in solution");
 
-    // All steps must be active (not faded) for a beginner
     problem.solution.forEach(s => {
       assert.equal(s.isFaded, false, `Step ${s.targetVar} should not be faded at 0% mastery`);
     });
@@ -256,33 +244,58 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     });
   });
 
-  test("Natural cognitive fading: mastered intermediate state points fade and reduce naturally", () => {
+  test("Natural cognitive fading: mastered intermediate state points are literally hidden from solution steps", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
 
-    // Simulate high mastery on compression temp T_2 and expansion ratio r_e
     const getMastery = eq => {
       if (eq.id === "eq_diesel_t2" || eq.id === "eq_diesel_rk") return 0.95;
-      return 0.20; // other relations unmastered
+      return 0.20;
     };
 
     const problem = generateProblem(topic, getMastery);
     const stepT2 = problem.solution.find(s => s.targetVar === "T_2");
     assert.ok(stepT2, "Step T_2 must exist in DAG");
-    assert.equal(stepT2.isFaded, true, "Mastered intermediate step T_2 must be faded");
+    assert.equal(stepT2.isFaded, true, "Mastered intermediate step T_2 must be marked faded");
 
-    // Mastered intermediate step T_2 must be removed from the statement goals
-    assert.ok(!problem.statement.includes("Determine: (1) Temperature after Compression ($T_2$)"),
-      "Faded step T_2 must not be prompted in statement");
+    // Faded steps are literally excluded from active interactive solution steps
+    const activeSteps = problem.solution.filter(s => !s.isFaded);
+    assert.ok(!activeSteps.some(s => s.targetVar === "T_2"), "Faded step T_2 must be hidden from solution steps");
+    assert.ok(!activeSteps.some(s => s.targetVar === "r_e"), "Faded step r_e must be hidden from solution steps");
 
-    // Terminal goals (e_th, W_net) must remain active goals
-    const stepEth = problem.solution.find(s => s.targetVar === "e_th");
-    assert.ok(stepEth);
-    assert.equal(stepEth.isFaded, false, "Terminal goal e_th must NEVER be faded");
+    // The statement goals and active steps must match exactly
+    assert.ok(!problem.statement.includes("Determine: (1) Temperature after Compression ($T_2$)"));
+    const stepEth = activeSteps.find(s => s.targetVar === "e_th");
+    assert.ok(stepEth, "Terminal goal e_th must remain in active solution steps");
+    assert.equal(stepEth.isFaded, false);
   });
 });
 
 // ============================================================================
-// 4. LIFECYCLE & PROBLEM GENERATION SUITE
+// 4. PHYSICAL COHERENT EVALUATION IN MIXED UNITS
+// ============================================================================
+describe("Physical Coherent Base Evaluation (Mixed Unit Consistency)", () => {
+  test("Multi-unit addition IP = BP (hp) + FP (W) evaluates with physical accuracy without raw number concatenation", () => {
+    const node = parseMathAST("BP + FP");
+    const S = {
+      BP: 4023.07,  // ~3000 kW in hp
+      FP: 409091,   // ~409 kW in W
+      _u: { BP: "hp", FP: "W", IP: "ft-lb/s" }
+    };
+    const varsDb = {
+      BP: { dimension: "Power", unit: "hp" },
+      FP: { dimension: "Power", unit: "W" },
+      IP: { dimension: "Power", unit: "ft-lb/s" }
+    };
+
+    const { value } = evaluatePhysicalAST(node, S, "IP", varsDb);
+    // 3,000,000 W + 409,091 W = 3,409,091 W / 1.355818 = ~2,514,416 ft-lb/s
+    assert.ok(value > 2.4e6 && value < 2.6e6, `Expected ~2.51e6 ft-lb/s, got: ${value}`);
+    assert.ok(value < 1e8, `Value should not blow up to 227 million, got: ${value}`);
+  });
+});
+
+// ============================================================================
+// 5. LIFECYCLE & PROBLEM GENERATION SUITE
 // ============================================================================
 describe("Topic Switching & Autonomous Problem Generation Lifecycle", () => {
   for (const topic of ALL_TOPICS) {
@@ -302,7 +315,7 @@ describe("Topic Switching & Autonomous Problem Generation Lifecycle", () => {
 });
 
 // ============================================================================
-// 5. DERIVATION FIDELITY & LATEX RENDERING TEST SUITE
+// 6. DERIVATION FIDELITY & LATEX RENDERING TEST SUITE
 // ============================================================================
 describe("Derivation Fidelity & LaTeX Rendering", () => {
   for (const topic of ALL_TOPICS) {
@@ -352,7 +365,7 @@ describe("Derivation Fidelity & LaTeX Rendering", () => {
 });
 
 // ============================================================================
-// 6. UNIT SAMPLER: 40-40-20 & INVERSE TOKEN PROBABILITY SUITE
+// 7. UNIT SAMPLER: 40-40-20 & INVERSE TOKEN PROBABILITY SUITE
 // ============================================================================
 describe("Unit Sampler: 40-40-20, Inverse-Token Compound Weights & Sig-Fig Retention", () => {
   test("sampleSystemMode satisfies 40% SI / 40% US / 20% MIXED bounds over large sample", () => {
@@ -390,7 +403,7 @@ describe("Unit Sampler: 40-40-20, Inverse-Token Compound Weights & Sig-Fig Reten
 });
 
 // ============================================================================
-// 7. SPECIFIC ENERGY & OKLAB GRADIENT CONTRACTS
+// 8. SPECIFIC ENERGY & OKLAB GRADIENT CONTRACTS
 // ============================================================================
 describe("Thermodynamic Specific Energy & Oklab Gradient Contracts", () => {
   test("Specific Energy parameters in diesel cycle use lowercase notation (q_A, q_R, w_{net})", () => {
@@ -409,7 +422,7 @@ describe("Thermodynamic Specific Energy & Oklab Gradient Contracts", () => {
 });
 
 // ============================================================================
-// 8. TOPIC MIX TOURNAMENT INVARIANT SUITE
+// 9. TOPIC MIX TOURNAMENT INVARIANT SUITE
 // ============================================================================
 describe("Topic Mix Tournament Suite", () => {
   test("D' pool tournament invariants and weakness weighting", () => {
@@ -418,7 +431,7 @@ describe("Topic Mix Tournament Suite", () => {
 });
 
 // ============================================================================
-// 9. REGRESSION: REAL MASTERY FADING & RECALL MODE CONTRACTS
+// 10. REGRESSION: REAL MASTERY FADING & RECALL MODE CONTRACTS
 // ============================================================================
 describe("Regression: Cognitive Fading & Recall Mode Real Mastery Contract", () => {
   test("pruneSolutionPath activates isFaded when intermediate relation mastery >= FADING_THRESHOLD", () => {
@@ -471,7 +484,7 @@ describe("Regression: Cognitive Fading & Recall Mode Real Mastery Contract", () 
 });
 
 // ============================================================================
-// 10. FRONTEND UI MODULE INTEGRITY SMOKE TESTS
+// 11. FRONTEND UI MODULE INTEGRITY SMOKE TESTS
 // ============================================================================
 describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
   test("Verify src/ui/sidebar_view.js integrity and exports", async () => {
