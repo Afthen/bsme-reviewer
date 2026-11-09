@@ -1,15 +1,18 @@
 /**
  * src/cas/units/evaluator.js
- * Numerical evaluation of physical AST formulas with:
- * - Coherent SI base unit transformation for pure physics relations
- * - Target unit conversion for empirical formulas with requiredUnits (e.g. Buckingham lb -> kip, Carrier kPa -> psi)
- * - Trigonometric unit resolution for bare angle tokens in degrees
+ * Universal physical AST evaluator:
+ * - Pure physics relations: transforms all input variables into coherent SI base units
+ *   via valueToCoherentBase, evaluates AST in coherent base, and projects the result
+ *   into targetUnit via formatValueInUnit (ensuring exact affine & scale conversions)
+ * - Empirical relations with requiredUnits: converts inputs to requiredUnits via preConversions,
+ *   evaluates AST in required units, and projects result into targetUnit via numericConversionFactor
+ * - Resolves bare angle tokens in degrees for trigonometric functions
  */
 
 import { evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { solveUnitAlgebra } from "./analysis.js";
-import { getUnitAtomBag } from "./definitions.js";
+import { valueToCoherentBase, formatValueInUnit } from "./definitions.js";
 
 export function isExpressionInDegrees(node, S, varsDb) {
   if (!node) return false;
@@ -48,8 +51,8 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     return { value: finalValue, unitAnalysis };
   }
 
-  // 2. Pure physics relations: transform all input tokens into coherent SI base units
-  //    before AST evaluation so operations like BP (hp) + FP (W) evaluate accurately
+  // 2. Pure physics relations: transform all input variables into coherent SI base units
+  //    before AST evaluation so multi-unit expressions (e.g. hp + W) evaluate accurately
   const coherentState = { ...S };
   const varTokens = getAstIdentifiers(node).filter(t => !isReservedMathToken(t));
 
@@ -58,10 +61,9 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
 
     if (uName && uName !== "dimless" && uName !== "ratio" && uName !== "deg" && uName !== "°") {
-      const bag = getUnitAtomBag(uName);
       const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
       if (typeof rawVal === "number" && !isNaN(rawVal)) {
-        const valInBase = rawVal * (bag.scale || 1.0);
+        const valInBase = valueToCoherentBase(rawVal, uName);
         coherentState[tok] = valInBase;
         coherentState[cKey] = valInBase;
       }
@@ -72,9 +74,7 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
   const coherentNum = evalAST(node, coherentState, unitResolver);
   if (isNaN(coherentNum)) return { value: NaN, unitAnalysis };
 
-  const targetBag = getUnitAtomBag(targetUnit);
-  const targetScale = targetBag.scale || 1.0;
-  const finalValue = targetScale > 0 ? (coherentNum / targetScale) : coherentNum;
-
+  // Project coherent SI base result into requested targetUnit
+  const finalValue = formatValueInUnit(coherentNum, targetUnit);
   return { value: finalValue, unitAnalysis };
 }
