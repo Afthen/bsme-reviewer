@@ -364,6 +364,55 @@ describe("Physical Coherent Base Evaluation & Empirical Target Unit Scaling", ()
     assert.ok(value > 0.28 && value < 0.31, `Expected ~0.296 lb/hp-hr, got: ${value}`);
     assert.ok(Math.abs(unitAnalysis.numericConversionFactor - 1.644) < 0.01);
   });
+
+  test("Affine offset transformations: 300 K converts to 26.85 °C, 80.33 °F, 540 °R (never 300 °C or 540 °F)", () => {
+    const tC = formatValueInUnit(300, "°C");
+    const tR = formatValueInUnit(300, "°R");
+    const tF = formatValueInUnit(300, "°F");
+
+    assert.ok(Math.abs(tC - 26.85) < 0.01, `Expected ~26.85 °C, got: ${tC}`);
+    assert.ok(Math.abs(tR - 540.0) < 0.01, `Expected 540.0 °R, got: ${tR}`);
+    assert.ok(Math.abs(tF - 80.33) < 0.01, `Expected ~80.33 °F, got: ${tF}`);
+    assert.notEqual(Math.round(tF), 540, "300 K must NOT format to 540 °F without affine offset");
+    assert.notEqual(Math.round(tC), 300, "300 K must NOT format to 300 °C without affine offset");
+  });
+
+  test("Boiling point and freezing point of water convert with exact affine accuracy", () => {
+    const boilK = valueToCoherentBase(100, "°C");
+    const boilF = formatValueInUnit(boilK, "°F");
+    assert.ok(Math.abs(boilF - 212.0) < 0.001, `Expected 212 °F, got: ${boilF}`);
+
+    const freezeF = valueToCoherentBase(32, "°F");
+    const freezeC = formatValueInUnit(freezeF, "°C");
+    assert.ok(Math.abs(freezeC - 0.0) < 0.001, `Expected 0 °C, got: ${freezeC}`);
+  });
+
+  test("Diesel cycle state point temperatures are strictly coupled and physically realistic", () => {
+    const topic = TOPICS.powerplant_design_diesel_cycle;
+
+    // Run 50 random generations across all modes (SI, US, MIXED)
+    for (let i = 0; i < 50; i++) {
+      const p = generateProblem(topic, () => 0);
+      const S = p.system;
+
+      // 1. Intake temperature T_1 must be standard ambient (never 300 °C or 540 °F)
+      if (S._u.T_1 === "K") {
+        assert.ok(S.T_1 >= 280 && S.T_1 <= 320, `T_1 in K out of realistic range: ${S.T_1}`);
+      } else if (S._u.T_1 === "°R") {
+        assert.ok(S.T_1 >= 500 && S.T_1 <= 580, `T_1 in °R out of realistic range: ${S.T_1}`);
+      } else if (S._u.T_1 === "°C") {
+        assert.ok(S.T_1 >= 15 && S.T_1 <= 35, `T_1 in °C out of realistic range (got ~300 °C): ${S.T_1}`);
+      } else if (S._u.T_1 === "°F") {
+        assert.ok(S.T_1 >= 60 && S.T_1 <= 95, `T_1 in °F out of realistic range (got ~540 °F): ${S.T_1}`);
+      }
+
+      // 2. All cycle temperatures in the same problem must share the exact same unit
+      const tempUnits = [S._u.T_1, S._u.T_2, S._u.T_3, S._u.T_4];
+      const allSame = tempUnits.every(u => u === tempUnits[0]);
+      assert.ok(allSame, `Cycle temperatures must be unified, found mixed units: ${JSON.stringify(tempUnits)}`);
+    }
+  });
+  
 });
 
 // ============================================================================
