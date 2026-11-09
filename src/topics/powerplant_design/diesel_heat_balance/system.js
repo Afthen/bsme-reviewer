@@ -3,16 +3,17 @@ import { DIESEL_HEAT_BALANCE_VARS_DB } from "./schema.js";
 export function createDieselHeatBalanceSystem() {
   const Q_f = [4000, 5000, 6000, 7000][Math.floor(Math.random() * 4)];
   
-  // Typical heat balance percentages for a diesel engine
-  const pct_ip = [0.35, 0.36, 0.38, 0.40][Math.floor(Math.random() * 4)];
-  const pct_cw = [0.25, 0.26, 0.28, 0.30][Math.floor(Math.random() * 4)];
-  const pct_exh = [0.20, 0.22, 0.24, 0.26][Math.floor(Math.random() * 4)];
-  const pct_rad = 1.0 - (pct_ip + pct_cw + pct_exh);
+  // Typical heat balance percentages for a diesel engine (as whole numbers, e.g., 35 for 35%)
+  const pct_ip = [35, 36, 38, 40][Math.floor(Math.random() * 4)];
+  const pct_cw = [25, 26, 28, 30][Math.floor(Math.random() * 4)];
+  const pct_exh = [20, 22, 24, 26][Math.floor(Math.random() * 4)];
+  const pct_rad = 100 - (pct_ip + pct_cw + pct_exh);
 
-  const Q_ip = Q_f * pct_ip;
-  const Q_cw = Q_f * pct_cw;
-  const Q_exh = Q_f * pct_exh;
-  const Q_rad = Q_f * pct_rad;
+  // Convert percentages to fractions for heat calculations
+  const Q_ip = Q_f * (pct_ip / 100);
+  const Q_cw = Q_f * (pct_cw / 100);
+  const Q_exh = Q_f * (pct_exh / 100);
+  const Q_rad = Q_f * (pct_rad / 100);
 
   const cp_w = 4.187;
   const dT_cw = [5, 8, 10, 12][Math.floor(Math.random() * 4)]; 
