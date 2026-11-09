@@ -1,10 +1,13 @@
 /**
  * src/ui/problem_view.js
  * Interactive problem presenter with adaptive relative error checks.
- * Seamless cognitive fading presentation:
- * - Faded steps are collapsed and badged as Mastered (Faded)
- * - Active un-faded steps remain open for input
+ * Cognitive fading architecture:
+ * - Faded steps are literally hidden from solution steps.
+ * - Active steps strictly match the goals listed in "Determine: (1)... (N)".
+ * - Intermediate synthesis is required from the learner; ancestor equations
+ *   are reinforced upon correct submission and penalized upon failure.
  */
+
 import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
 import { CONSTANTS_DB } from "../core/constants_registry.js";
@@ -28,7 +31,11 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
   const flowEl = document.getElementById("p-solution-flow");
   flowEl.innerHTML = "";
 
-  activeProblem.solution.forEach((step, idx) => {
+  // The faded steps are literally hidden from solution steps.
+  // Only active (non-faded) steps are presented to the learner.
+  const activeSteps = activeProblem.solution.filter(s => !s.isFaded);
+
+  activeSteps.forEach((step, idx) => {
     const item = document.createElement("div");
     item.className = "solution-item";
     item.id = `step-item-${idx}`;
@@ -48,11 +55,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     const labelText = targetLabel(activeProblem.system._displayNames?.[step.targetVar] || meta.name, symSpan, unit);
 
     const targetSpan = document.createElement("span");
-    if (step.isFaded) {
-      targetSpan.innerHTML = `Step ${idx + 1}: ${labelText} <span style="font-size: 0.72rem; color: var(--success); font-weight: 600; margin-left: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">✓ Mastered (Faded)</span>`;
-    } else {
-      targetSpan.innerHTML = `Step ${idx + 1}: ${labelText}`;
-    }
+    targetSpan.innerHTML = `Step ${idx + 1}: ${labelText}`;
 
     labelWrap.appendChild(chevron);
     labelWrap.appendChild(targetSpan);
@@ -69,9 +72,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
       input.value = step.userVal !== undefined ? step.userVal : fmtSigFig(step.expectedVal, 6);
       input.classList.add(step.isRevealed ? "state-revealed" : "state-correct");
       input.disabled = true;
-      if (!step.isFaded) {
-        item.classList.add("open");
-      }
+      item.classList.add("open");
     }
 
     input.addEventListener("keydown", e => {
@@ -126,11 +127,12 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
 }
 
 function refreshStepDerivations(activeProblem, relations) {
+  const activeSteps = activeProblem.solution.filter(s => !s.isFaded);
   const answeredVars = new Set(
     activeProblem.solution.filter(s => s.isAnswered).map(s => s.targetVar)
   );
 
-  activeProblem.solution.forEach((step, idx) => {
+  activeSteps.forEach((step, idx) => {
     const mathDiv = document.getElementById(`math-display-${idx}`);
     if (mathDiv) {
       mathDiv.innerHTML = buildAlignedDerivation(
@@ -160,7 +162,10 @@ function refreshStepDerivations(activeProblem, relations) {
 }
 
 function checkStepAnswer(idx, inputEl, activeProblem, relations) {
-  const step = activeProblem.solution[idx];
+  const activeSteps = activeProblem.solution.filter(s => !s.isFaded);
+  const step = activeSteps[idx];
+  if (!step) return;
+
   const raw = inputEl.value.trim();
   if (raw === "") return revealStepAnswer(idx, inputEl, activeProblem, relations);
 
@@ -234,7 +239,10 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
 }
 
 function revealStepAnswer(idx, inputEl, activeProblem, relations) {
-  const step = activeProblem.solution[idx];
+  const activeSteps = activeProblem.solution.filter(s => !s.isFaded);
+  const step = activeSteps[idx];
+  if (!step) return;
+
   step.isAnswered = true;
   step.isRevealed = true;
   step.userVal = step.expectedVal;
@@ -270,7 +278,8 @@ function renderDistractorBanner(activeProblem) {
   const banner = document.getElementById("distractor-banner");
   if (!banner) return;
 
-  const allCompleted = activeProblem.solution.every(s => s.isAnswered);
+  const activeSteps = activeProblem.solution.filter(s => !s.isFaded);
+  const allCompleted = activeSteps.every(s => s.isAnswered);
   if (allCompleted && activeProblem.distractors && activeProblem.distractors.length > 0) {
     const list = activeProblem.distractors.map(v => {
       const meta = resolveMeta(v, activeProblem.varsDb);
@@ -301,7 +310,8 @@ function updateToggleAllButton(activeProblem) {
   const items = document.querySelectorAll(".solution-item");
   if (!btn || items.length === 0) return;
 
-  const allCompleted = activeProblem.solution.every(s => s.isAnswered);
+  const activeSteps = activeProblem.solution.filter(s => !s.isFaded);
+  const allCompleted = activeSteps.every(s => s.isAnswered);
   const openCount = Array.from(items).filter(it => it.classList.contains("open")).length;
 
   if (openCount === 0 && !allCompleted) {
