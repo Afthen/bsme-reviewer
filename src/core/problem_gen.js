@@ -171,10 +171,14 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const u = S._u?.[v] || meta.unit || "";
     const poly = getPolymorphicMeta(v);
 
-    const formattedVal = formatGivenValue(val, meta);
+    const formattedVal = formatGivenValue(val, meta, true); // true uses {,} in math mode
+    const { tex: uTex, isClinging } = formatInlineUnit(u);
+
     let valWithUnit = `$${formattedVal}$`;
-    if (u && u !== "dimless" && u !== "ratio") {
-      valWithUnit = (u === "deg" || u === "°") ? `$${formattedVal}°$` : `$${formattedVal}\\text{ ${u}}$`;
+    if (uTex) {
+      valWithUnit = isClinging
+        ? `$${formattedVal}${uTex}$`
+        : `$${formattedVal}\\ ${uTex}$`;
     }
 
     return `${poly.name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${poly.symbol}$</span> = ${valWithUnit})</span>`;
@@ -185,8 +189,9 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const u = S._u?.[gVar] || varsDb[gVar]?.unit || CONSTANTS_DB[gVar]?.unit || "";
 
     let uStr = "";
-    if (u && u !== "dimless" && u !== "ratio") {
-      uStr = (u === "deg" || u === "°") ? " in °" : ` in $\\text{${u}}$`;
+    const { tex: uTex } = formatInlineUnit(u);
+    if (uTex) {
+      uStr = ` in $${uTex}$`;
     }
 
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
