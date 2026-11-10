@@ -35,6 +35,13 @@ export function determineGraphDistance(mastery, maxDepth = Infinity) {
   return Math.min(fib(8), maxDepth);                             // >= 94.4%: maximum depth
 }
 
+function isRelSolvableFor(rel, varKey, varsDb = {}) {
+  if (rel.non_solvable && rel.non_solvable.includes(varKey)) return false;
+  if (rel.solvable && !rel.solvable.includes(varKey)) return false;
+  const bf = rel.baseFormula || (rel.canonical ? `${rel.canonical.lhs} = ${rel.canonical.rhs}` : "");
+  return isolateVariable(bf, varKey, varsDb).success;
+}
+
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0, terminalGoals = []) {
   const scoredNodes = relations.map(node => {
     const mastery = getMastery(node);
@@ -78,7 +85,6 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
       const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery, varsDb);
       if (problem) {
         if (!isHighMastery) {
-          // At low/intermediate mastery, immediately return the weakest targeted problem
           return problem;
         }
         bestCandidates.push(problem);
@@ -87,7 +93,6 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   }
 
   if (bestCandidates.length > 0) {
-    // When mastery approaches 100%, select the candidate that produces the longest chain
     bestCandidates.sort((a, b) => b.hopDistance - a.hopDistance);
     return bestCandidates[0];
   }
@@ -96,13 +101,6 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   const goalVar = fallback.solvable ? fallback.solvable[0] : fallback.nodes[0];
   const givens = fallback.nodes.filter(n => n !== goalVar);
   return { goalVar, givens, distractors: [], targetEqId: fallback.id, hopDistance: 0 };
-}
-
-function isRelSolvableFor(rel, varKey, varsDb = {}) {
-  if (rel.non_solvable && rel.non_solvable.includes(varKey)) return false;
-  if (rel.solvable && !rel.solvable.includes(varKey)) return false;
-  const bf = rel.baseFormula || (rel.canonical ? `${rel.canonical.lhs} = ${rel.canonical.rhs}` : "");
-  return isolateVariable(bf, varKey, varsDb).success;
 }
 
 function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, varsDb = {}) {
@@ -130,8 +128,6 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
         const rawNewInputs = nRel.nodes.filter(n => n !== g);
         if (rawNewInputs.includes(goalVar)) continue;
 
-        // If an input is already produced by intermediate steps in the DAG,
-        // it connects internally and must not be added to external givens
         const newInputs = rawNewInputs.filter(inp => !currentProduced.has(inp));
 
         const candidateSet = Array.from(new Set([
@@ -140,17 +136,17 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
         ]));
 
         if (candidateSet.length <= fib(8) && canSolveTarget(candidateSet, goalVar, relations, S)) {
-          const testSteps = solveDAG(candidateSet, S, relations, {}, () => 0);
+          const testSteps = solveDAG(candidateSet, S, relations, varsDb, () => 0);
           const testRequired = pruneSolutionPath(testSteps, goalVar);
 
-          // Direction-agnostic invariant: strictly extend the solution chain
           if (testRequired.length > currentRequired.length) {
             const isLHS = (nRel.baseFormula && nRel.baseFormula.split("=")[0].trim() === g) ? 1 : 0;
             expansions.push({
               candidateSet,
               required: testRequired,
               chainLen: testRequired.length,
-              isLHS
+              isLHS,
+              relId: nRel.id
             });
           }
         }
@@ -159,7 +155,6 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
 
     if (expansions.length === 0) break;
 
-    // Greedily pick the expansion that maximizes chain length, preferring primary LHS equations on ties
     expansions.sort((a, b) => (b.chainLen - a.chainLen) || (b.isLHS - a.isLHS) || (Math.random() - 0.5));
     const chosen = expansions[0];
     bestGivens = chosen.candidateSet;
@@ -167,7 +162,7 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
     if (chosen.relId) usedRelIds.add(chosen.relId);
   }
 
-  const steps = solveDAG(bestGivens, S, relations, {}, () => 0);
+  const steps = solveDAG(bestGivens, S, relations, varsDb, () => 0);
   const required = pruneSolutionPath(steps, goalVar);
 
   const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
@@ -184,9 +179,6 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
     });
   });
 
-  // Layer 1: Backward Greedy Givens Reduction heuristic (keeps statement lean)
-  // Sort candidate givens so producible intermediate variables are tested and pruned first,
-  // ensuring fundamental boundary specifications are retained as givens.
   const producibleVars = new Set(
     relations.flatMap(r => [r.baseFormula?.split("=")[0]?.trim(), ...(r.solvable || [])]).filter(Boolean)
   );
@@ -194,7 +186,7 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
   let minimalGivens = Array.from(essentialGivensSet).sort((a, b) => {
     const aProducible = producibleVars.has(a) ? 1 : 0;
     const bProducible = producibleVars.has(b) ? 1 : 0;
-    return bProducible - aProducible; // producible variables first!
+    return bProducible - aProducible;
   });
 
   for (let i = 0; i < minimalGivens.length; i++) {
@@ -203,7 +195,7 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
 
     if (canSolveTarget(reducedSet, goalVar, relations, S)) {
       minimalGivens = reducedSet;
-      i--; // adjust index after removal
+      i--;
     }
   }
 
@@ -231,13 +223,12 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
   };
 }
 
-function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
-  // At high mastery, run multiple search trials (fib(5) = 5) to guarantee the longest chain is discovered
+function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, varsDb = {}) {
   const TRIALS = targetMastery >= FADING_THRESHOLD ? fib(5) : 1;
   let bestOfAll = null;
 
   for (let t = 0; t < TRIALS; t++) {
-    const prob = buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery);
+    const prob = buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, varsDb);
     if (prob && (!bestOfAll || prob.hopDistance > bestOfAll.hopDistance)) {
       bestOfAll = prob;
     }
