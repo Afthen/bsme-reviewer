@@ -99,7 +99,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
         preConversions.push({
           token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-          conv: { factor: 1.0, latex: `(${rawVal} + 273.15)\\,\\text{K}` },
+          conv: { factor: 1.0, latex: `(${fmtSigFig(rawVal)} + 273.15)\\,\\text{K}` },
           rawVal, convertedVal: rawVal + 273.15
         });
         return;
