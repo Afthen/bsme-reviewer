@@ -33,18 +33,22 @@ export const DIMENSIONS = Object.freeze({
  * Enforces up to 6 significant figures, with a strict maximum of 3 decimal places.
  * Formats numbers with thousand separators. Trims trailing zeroes to the right of the decimal.
  */
-export function fmtSigFig(n, sigFigs = 6) {
+
+export function addSeparators(valStr, isLatex = false) {
+  if (valStr === undefined || valStr === null) return "";
+  const str = String(valStr);
+  const sep = isLatex ? "{,}" : ",";
+  const parts = str.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, sep);
+  return parts.join(".");
+}
+
+export function fmtSigFig(n, sigFigs = 6, isLatex = false) {
   if (n === undefined || n === null) return "";
   const num = typeof n === "number" ? n : Number(n);
   if (isNaN(num)) return "";
 
-  const addSeparators = (valStr) => {
-    const parts = valStr.split(".");
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    return parts.join(".");
-  };
-
-  if (Number.isInteger(num)) return addSeparators(num.toString());
+  if (Number.isInteger(num)) return addSeparators(num.toString(), isLatex);
 
   // 1. Apply significant figures precision first
   let formatted = parseFloat(num.toPrecision(sigFigs));
@@ -60,7 +64,7 @@ export function fmtSigFig(n, sigFigs = 6) {
     }
   }
 
-  return addSeparators(formatted.toString());
+  return addSeparators(formatted.toString(), isLatex);
 }
 
 export function fmt(n) {
@@ -74,13 +78,13 @@ export function fmt(n) {
  * @param {number} value
  * @param {object} meta varsDb / CONSTANTS_DB entry for the variable
  */
-export function formatGivenValue(value, meta = {}) {
+export function formatGivenValue(value, meta = {}, isLatex = true) {
   if (meta.isConstant) {
-    if (typeof meta.display === "number") return String(meta.display);
+    if (typeof meta.display === "number") return addSeparators(String(meta.display), isLatex);
     if (typeof meta.display === "string") return meta.display;
-    return String(value);
+    return addSeparators(String(value), isLatex);
   }
-  return fmtSigFig(value, 6);
+  return fmtSigFig(value, 6, isLatex);
 }
 
 export function cancelUnit(unitStr) {
