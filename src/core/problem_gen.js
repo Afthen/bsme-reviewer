@@ -51,11 +51,15 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   // When mastery is high across the topic, prioritize terminal goals to synthesize full-cycle chains
   if (isHighMastery && Array.isArray(terminalGoals) && terminalGoals.length > 0) {
     for (const tGoal of terminalGoals) {
-      const parentRels = relations.filter(r => (r.solvable || r.nodes).includes(tGoal));
+      const parentRels = relations.filter(r => isRelSolvableFor(r, tGoal, varsDb));
       for (const pRel of parentRels) {
-        const problem = buildGraphPath(pRel, tGoal, relations, S, meanMastery);
+        const problem = buildGraphPath(pRel, tGoal, relations, S, meanMastery, varsDb);
         if (problem) bestCandidates.push(problem);
       }
+    }
+    if (bestCandidates.length > 0) {
+      bestCandidates.sort((a, b) => b.hopDistance - a.hopDistance);
+      return bestCandidates[0];
     }
   }
 
@@ -67,10 +71,10 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
       const meta = varsDb[goalVar] || CONSTANTS_DB[goalVar] || {};
       if (meta.isConstant) continue;
 
-      if (targetNode.solvable && !targetNode.solvable.includes(goalVar)) {
+      if (!isRelSolvableFor(targetNode, goalVar, varsDb)) {
         continue;
       }
-      const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery);
+      const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery, varsDb);
       if (problem) {
         if (!isHighMastery) {
           // At low/intermediate mastery, immediately return the weakest targeted problem
@@ -203,7 +207,7 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
   }
 
   // Recalculate true solution path and hop distance on the reduced givens
-  const finalSteps = solveDAG(minimalGivens, S, relations, {}, () => 0);
+  const finalSteps = solveDAG(minimalGivens, S, relations, varsDb, () => 0);
   const finalRequired = pruneSolutionPath(finalSteps, goalVar);
 
   const finalUsedVars = new Set(finalRequired.flatMap(s => s.nodes || [s.targetVar]));
