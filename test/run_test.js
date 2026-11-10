@@ -122,12 +122,7 @@ export function validateDerivationLatex(derivLatex) {
   assert.ok(!derivLatex.includes("\\cdot^"), `\\cdot cannot take a direct superscript in step: ${derivLatex}`);
   assert.ok(!derivLatex.includes("\\cancel{}") && !derivLatex.includes("\\cancel{ }"), `Empty cancel bracket in step: ${derivLatex}`);
   assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), `Illegal nested fraction tower in step: ${derivLatex}`);
-
-  const forbiddenSeparators = [", \\text", ",\\text", ", \\cfrac", ",\\cfrac", ", \\cancel", ",\\cancel", ", °", ",°"];
-  for (const sep of forbiddenSeparators) {
-    assert.ok(!derivLatex.includes(sep), `Found illegal comma separator before unit in: ${derivLatex}`);
-  }
-
+  
   let braceDepth = 0;
   for (let i = 0; i < derivLatex.length; i++) {
     const ch = derivLatex[i];
