@@ -15,7 +15,7 @@ import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
 import { applyProblemUnitSampling, sampleSystemMode, findCoupledGroup } from "./unit_sampler.js";
 import { fmtSigFig, formatGivenValue, DIMENSIONS } from "./dimensions.js";
-import { valueToCoherentBase, formatValueInUnit } from "../cas/units/definitions.js";
+import { valueToCoherentBase, formatValueInUnit, unitToTex } from "../cas/units/definitions.js";
 
 export function relationWeaknessWeight(mastery = 0) {
   return Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
@@ -175,18 +175,13 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     let valWithUnit = `$${formattedVal}$`;
 
     if (u && u !== "dimless" && u !== "ratio") {
+      const uTex = unitToTex(u, true);
       if (u === "%") {
-        // Percentage: clinging, escaped \%, zero space
         valWithUnit = `$${formattedVal}\\%$`;
       } else if (u.startsWith("°")) {
-        // Degree units: clinging, literal degree symbol °, zero space, no circ
-        const rest = u.slice(1);
-        const degTex = rest ? `°\\text{${rest}}` : "°";
-        valWithUnit = `$${formattedVal}${degTex}$`;
+        valWithUnit = `$${formattedVal}${uTex}$`;
       } else {
-        // Standard units (kW, kJ/kg-K, hp, K): space before unit, escape % defensively
-        const safeU = u.replace(/%/g, "\\%");
-        valWithUnit = `$${formattedVal}\\text{ ${safeU}}$`;
+        valWithUnit = `$${formattedVal}\\,${uTex}$`;
       }
     }
 
@@ -199,15 +194,8 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
     let uStr = "";
     if (u && u !== "dimless" && u !== "ratio") {
-      if (u === "%") {
-        uStr = " in %";
-      } else if (u.startsWith("°")) {
-        const rest = u.slice(1);
-        uStr = rest ? ` in $°\\text{${rest}}$` : " in °";
-      } else {
-        const safeU = u.replace(/%/g, "\\%");
-        uStr = ` in $\\text{${safeU}}$`;
-      }
+      const uTex = unitToTex(u, true);
+      uStr = ` in $${uTex}$`;
     }
 
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
@@ -215,7 +203,8 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   });
 
   const systemNoun = topicConfig.noun || `${topicConfig.title || "Mechanical"} system`;
-  const startsWithVowel = /^[aeiou]/i.test(systemNoun);
+  const firstChar = (systemNoun[0] || "").toLowerCase();
+  const startsWithVowel = "aeiou".includes(firstChar);
   const article = startsWithVowel ? "An" : "A";
 
   const goalsFormatted = goalStrings.length > 2
