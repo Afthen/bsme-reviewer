@@ -171,14 +171,23 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const u = S._u?.[v] || meta.unit || "";
     const poly = getPolymorphicMeta(v);
 
-    const formattedVal = formatGivenValue(val, meta, true); // true uses {,} in math mode
-    const { tex: uTex, isClinging } = formatInlineUnit(u);
-
+    const formattedVal = formatGivenValue(val, meta);
     let valWithUnit = `$${formattedVal}$`;
-    if (uTex) {
-      valWithUnit = isClinging
-        ? `$${formattedVal}${uTex}$`
-        : `$${formattedVal}\\ ${uTex}$`;
+
+    if (u && u !== "dimless" && u !== "ratio") {
+      if (u === "%") {
+        // Percentage: clinging, escaped \%, zero space
+        valWithUnit = `$${formattedVal}\\%$`;
+      } else if (u.startsWith("°")) {
+        // Degree units: clinging, literal degree symbol °, zero space, no circ
+        const rest = u.slice(1);
+        const degTex = rest ? `°\\text{${rest}}` : "°";
+        valWithUnit = `$${formattedVal}${degTex}$`;
+      } else {
+        // Standard units (kW, kJ/kg-K, hp, K): space before unit, escape % defensively
+        const safeU = u.replace(/%/g, "\\%");
+        valWithUnit = `$${formattedVal}\\text{ ${safeU}}$`;
+      }
     }
 
     return `${poly.name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${poly.symbol}$</span> = ${valWithUnit})</span>`;
@@ -189,9 +198,16 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const u = S._u?.[gVar] || varsDb[gVar]?.unit || CONSTANTS_DB[gVar]?.unit || "";
 
     let uStr = "";
-    const { tex: uTex } = formatInlineUnit(u);
-    if (uTex) {
-      uStr = ` in $${uTex}$`;
+    if (u && u !== "dimless" && u !== "ratio") {
+      if (u === "%") {
+        uStr = " in %";
+      } else if (u.startsWith("°")) {
+        const rest = u.slice(1);
+        uStr = rest ? ` in $°\\text{${rest}}$` : " in °";
+      } else {
+        const safeU = u.replace(/%/g, "\\%");
+        uStr = ` in $\\text{${safeU}}$`;
+      }
     }
 
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
