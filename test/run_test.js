@@ -316,6 +316,57 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
     // 10 kg/s * 4.187 kJ/kg-K * 10 K = 418.7 kW
     assert.ok(Math.abs(resHeat.value - 418.7) < 0.1);
   });
+
+  test("Property 4: Universal KaTeX Syntax Invariant across all statements and derivations", () => {
+    // Proves that EVERY inline math token ($...$) and block ($$...$$) in problem statements
+    // and every derivation step renders cleanly via KaTeX with zero syntax errors.
+    const TRIALS = 100;
+    for (let i = 0; i < TRIALS; i++) {
+      const topic = ALL_TOPICS[i % ALL_TOPICS.length];
+      const problem = generateProblem(topic, () => Math.random());
+
+      // 1. Pure character scanner: extract and validate all math blocks from statement
+      const str = problem.statement;
+      let pos = 0;
+      while (pos < str.length) {
+        if (str.startsWith("$$", pos)) {
+          const end = str.indexOf("$$", pos + 2);
+          assert.ok(end !== -1, `Unclosed $$ in ${topic.id} statement: ${str}`);
+          const math = str.slice(pos + 2, end).trim();
+          if (katex) {
+            try {
+              katex.renderToString(math, { displayMode: true, throwOnError: true });
+            } catch (err) {
+              assert.fail(`KaTeX syntax error in $$ math block [${topic.id}]: ${err.message}\nLaTeX: ${math}`);
+            }
+          }
+          pos = end + 2;
+        } else if (str[pos] === "$") {
+          const end = str.indexOf("$", pos + 1);
+          assert.ok(end !== -1, `Unclosed $ in ${topic.id} statement: ${str}`);
+          const math = str.slice(pos + 1, end).trim();
+          if (katex) {
+            try {
+              katex.renderToString(math, { displayMode: false, throwOnError: true });
+            } catch (err) {
+              assert.fail(`KaTeX syntax error in inline $ block [${topic.id}]: ${err.message}\nLaTeX: ${math}`);
+            }
+          }
+          pos = end + 1;
+        } else {
+          pos++;
+        }
+      }
+
+      // 2. Validate all derivation steps for the problem
+      for (const step of problem.solution) {
+        const deriv = buildAlignedDerivation(
+          step, problem.system, problem.allSteps, problem.varsDb, topic.relations
+        );
+        validateDerivationLatex(deriv);
+      }
+    }
+  });
 });
 
 // ============================================================================
