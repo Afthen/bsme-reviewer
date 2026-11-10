@@ -1,6 +1,6 @@
 /**
  * test/topic_mix_test.js
- * Unit cases for the D′ pool tournament.
+ * Unit cases for unified weakness-proportional topic selection.
  */
 import { phi } from "../src/mastery/index.js";
 import { relationWeaknessWeight } from "../src/core/problem_gen.js";
@@ -47,18 +47,29 @@ export function runTopicMixTests() {
     approx(topicScore(mixedRels, mixedGet), expected),
     "common relations weighted phi(-1) in the mean");
 
-  // 4. Tournament contract: null on empty, exact on single, member always.
+  // 4. Selection contract: null on empty, exact on single, member always.
   assert(pickWeakestTopic([], () => () => 0) === null, "empty pool -> null");
   const small = { id: "small", relations: smallRels };
   const big = { id: "big", relations: bigRels };
   const mixed = { id: "mixed", relations: mixedRels };
   assert(pickWeakestTopic([small], () => uniform) === small,
     "single-topic pool reduces to that topic (legacy exactness)");
+
   const pool = [small, big, mixed];
   for (let i = 0; i < 50; i++) {
     const pick = pickWeakestTopic(pool, t => (t === mixed ? mixedGet : uniform));
     assert(pool.includes(pick), "pick is always a pool member");
   }
+
+  // 5. Weakness weighting: weakest topic (mixed) has highest probability, but no topic is starved
+  const picks = { small: 0, big: 0, mixed: 0 };
+  const draws = 2000;
+  for (let i = 0; i < draws; i++) {
+    const p = pickWeakestTopic(pool, t => (t === mixed ? mixedGet : uniform));
+    picks[p.id]++;
+  }
+  assert(picks.mixed > picks.small, "weakest topic (mixed) must have higher selection count than small");
+  assert(picks.small > 0 && picks.big > 0, "higher mastery topics must retain non-zero selection chance");
 
   return true;
 }
