@@ -192,7 +192,54 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
 
   const isCorrect = Math.abs(val - expected) <= tol;
   inputEl.classList.remove("state-correct", "state-wrong", "shake-trigger");
-  // ... rest of the function remains identical ...
+
+  if (isCorrect) {
+    inputEl.classList.add("state-correct");
+    inputEl.disabled = true;
+    step.isAnswered = true;
+    step.userVal = val;
+
+    if (step.systemEqIds) {
+      step.systemEqIds.forEach(id => recordAttempt(id, true, topicScope));
+    } else {
+      recordAttempt(step.eqId, true, topicScope);
+    }
+
+    (step.nodes || []).forEach(nodeKey => {
+      const vMeta = activeProblem.varsDb[nodeKey] || CONSTANTS_DB[nodeKey];
+      if (vMeta?.isConstant) {
+        recordAttempt(`const_${nodeKey}`, true, topicScope);
+      }
+    });
+
+    reinforceAncestors(step.fadedAncestorEqIds || [], topicScope);
+    document.getElementById(`step-item-${idx}`).classList.add("open");
+  } else {
+    inputEl.classList.add("state-wrong", "shake-trigger");
+
+    if (step.systemEqIds) {
+      step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
+    } else {
+      recordAttempt(step.eqId, false, topicScope);
+    }
+
+    (step.nodes || []).forEach(nodeKey => {
+      const vMeta = activeProblem.varsDb[nodeKey] || CONSTANTS_DB[nodeKey];
+      if (vMeta?.isConstant) {
+        recordAttempt(`const_${nodeKey}`, false, topicScope);
+      }
+    });
+
+    penalizeAncestors(step.fadedAncestorEqIds || [], topicScope);
+    setTimeout(() => inputEl.classList.remove("shake-trigger"), 400);
+  }
+
+  refreshStepDerivations(activeProblem, relations);
+  renderDistractorBanner(activeProblem);
+  document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
+  updateToggleAllButton(activeProblem);
+}
+
 function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   const activeSteps = activeProblem.solution.filter(s => !s.isFaded);
   const step = activeSteps[idx];
