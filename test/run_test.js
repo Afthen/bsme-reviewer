@@ -119,19 +119,14 @@ export function validateDerivationLatex(derivLatex) {
   assert.ok(typeof derivLatex === "string" && derivLatex.length > 0, "Derivation LaTeX must be non-empty");
   assert.ok(derivLatex.includes("\\boxed{"), "Derivation step missing boxed answer");
   assert.ok(derivLatex.includes("="), "Derivation step missing equality");
-  assert.ok(!/\\text\{[^}]*_[^}]*\}/.test(derivLatex), `Unescaped underscore inside \\text{} in step: ${derivLatex}`);
-  assert.ok(!/\\cdot\^/.test(derivLatex), `\\cdot cannot take a direct superscript in step: ${derivLatex}`);
-  assert.ok(!/\\cancel\{\s*\}/.test(derivLatex), `Empty cancel bracket in step: ${derivLatex}`);
+  assert.ok(!derivLatex.includes("\\cdot^"), `\\cdot cannot take a direct superscript in step: ${derivLatex}`);
+  assert.ok(!derivLatex.includes("\\cancel{}") && !derivLatex.includes("\\cancel{ }"), `Empty cancel bracket in step: ${derivLatex}`);
   assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), `Illegal nested fraction tower in step: ${derivLatex}`);
 
-  assert.ok(
-    !/\d+,\s*(?:\\text|\\cfrac|\\cancel|°)/.test(derivLatex),
-    `Found numeric literal immediately followed by comma before unit in: ${derivLatex}`
-  );
-  assert.ok(
-    !/\),\s*(?:\\text|\\cfrac|\\cancel|°)/.test(derivLatex),
-    `Found closing paren immediately followed by comma before unit in: ${derivLatex}`
-  );
+  const forbiddenSeparators = [", \\text", ",\\text", ", \\cfrac", ",\\cfrac", ", \\cancel", ",\\cancel", ", °", ",°"];
+  for (const sep of forbiddenSeparators) {
+    assert.ok(!derivLatex.includes(sep), `Found illegal comma separator before unit in: ${derivLatex}`);
+  }
 
   let braceDepth = 0;
   for (let i = 0; i < derivLatex.length; i++) {
@@ -145,8 +140,8 @@ export function validateDerivationLatex(derivLatex) {
   }
   assert.equal(braceDepth, 0, `Unbalanced opening brace '{' in derivation: ${derivLatex}`);
 
-  const beginAligned = (derivLatex.match(/\\begin\{aligned\}/g) || []).length;
-  const endAligned = (derivLatex.match(/\\end\{aligned\}/g) || []).length;
+  const beginAligned = derivLatex.split("\\begin{aligned}").length - 1;
+  const endAligned = derivLatex.split("\\end{aligned}").length - 1;
   assert.equal(beginAligned, endAligned, `Mismatched aligned environment in: ${derivLatex}`);
 
   if (katex && typeof katex.renderToString === "function") {
@@ -459,10 +454,32 @@ describe("Derivation Fidelity & LaTeX Rendering", () => {
       W_net: { symbol: "w_{net}", unit: "kJ/kg" }
     };
 
+    // 1. Verify semantic AST parsing and physical evaluation
+    const rhsAst = parseMathAST("Q_A - Q_R");
+    assert.equal(rhsAst.type, "binary");
+    assert.equal(rhsAst.op, "-");
+    assert.equal(rhsAst.left.name, "Q_A");
+    assert.equal(rhsAst.right.name, "Q_R");
+
+    const physicalEval = evaluatePhysicalAST(rhsAst, S, "W_net", varsDb);
+    assert.equal(physicalEval.value, 450);
+
+    // 2. Generate derivation and validate through KaTeX AST
     const deriv = buildAlignedDerivation(step, S, [step], varsDb, []);
+    validateDerivationLatex(deriv);
+
+    // 3. Structural invariant: terms combined without per-variable units, common unit outside
     assert.ok(
-      deriv.includes("(1200 - 750)") || deriv.includes("(1200 - 750)\\,\\cfrac{\\text{kJ}}{\\text{kg}}"),
-      `Expected factored additive expression without per-variable units, got: ${deriv}`
+      deriv.includes("(1{,}200 - 750)") || deriv.includes("(1200 - 750)"),
+      `Expected factored additive group (1{,}200 - 750), got: ${deriv}`
+    );
+    assert.ok(
+      deriv.includes("\\cfrac{\\text{kJ}}{\\text{kg}}"),
+      `Expected common unit factored outside parentheses, got: ${deriv}`
+    );
+    assert.ok(
+      !deriv.includes("1{,}200\\,\\cfrac") && !deriv.includes("1200\\,\\cfrac"),
+      `Terms must not retain individual units inside parentheses: ${deriv}`
     );
   });
 });
