@@ -26,9 +26,6 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
 
       if (unknowns.length === 1) {
         const targetVar = unknowns[0];
-        if (eq.non_solvable && eq.non_solvable.includes(targetVar)) {
-          continue;
-        }
 
         const inputVars = eqNodes.filter(n => n !== targetVar);
         const baseFormula = activeVariant?.baseFormula || eq.baseFormula || (eq.canonical ? `${eq.canonical.lhs} = ${eq.canonical.rhs}` : "");
@@ -37,7 +34,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
 
         const isolated = isolateVariable(baseFormula, targetVar, varsDb);
         if (!isolated.success) {
-          continue;
+          continue; // The AST naturally rejects non-invertible math
         }
         const expectedVal = S[targetVar];
 
