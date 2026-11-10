@@ -198,7 +198,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     if (!uName || uName === "dimless" || uName === "ratio") continue;
 
     if (uName === "deg" || uName === "°") {
-      tokenMarkup[tok] = "^{\\circ}";
+      tokenMarkup[tok] = "°";
       continue;
     }
 
