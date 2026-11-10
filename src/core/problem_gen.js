@@ -99,9 +99,10 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
 
   for (let h = 0; h < desiredHops; h++) {
     const expansions = [];
+    const currentProduced = new Set(currentRequired.map(s => s.targetVar));
 
     for (const g of bestGivens) {
-      // Direction-Agnostic: Find any relation containing g that can algebraically isolate g
+      // Find any relation containing g that can algebraically solve for g
       const neighborRels = relations.filter(r =>
         r.id !== targetNode.id &&
         r.nodes.includes(g) &&
@@ -109,8 +110,12 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
       );
 
       for (const nRel of neighborRels) {
-        const newInputs = nRel.nodes.filter(n => n !== g);
-        if (newInputs.includes(goalVar)) continue;
+        const rawNewInputs = nRel.nodes.filter(n => n !== g);
+        if (rawNewInputs.includes(goalVar)) continue;
+
+        // If an input is already produced by intermediate steps in the DAG,
+        // it connects internally and must not be added to external givens
+        const newInputs = rawNewInputs.filter(inp => !currentProduced.has(inp));
 
         const candidateSet = Array.from(new Set([
           ...bestGivens.filter(x => x !== g),
@@ -121,7 +126,7 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
           const testSteps = solveDAG(candidateSet, S, relations, {}, () => 0);
           const testRequired = pruneSolutionPath(testSteps, goalVar);
 
-          // The Chain-Extension Invariant: strictly extend the solution chain
+          // Strictly extend the solution chain
           if (testRequired.length > currentRequired.length) {
             expansions.push({
               candidateSet,
