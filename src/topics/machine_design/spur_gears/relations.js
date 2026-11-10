@@ -68,7 +68,6 @@ export const GEAR_RELATION_GRAPH = [
   { 
     id: "eq_spur_buckingham", 
     name: "Buckingham Dynamic Tooth Load", 
-    solvable: ["F_D"],
     nodes: ["F_D", "W_t", "V_m", "b", "C_d"],
     variants: {
       US: {
