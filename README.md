@@ -59,7 +59,6 @@ Software engineering in this repository is governed by physical and mathematical
 - **R6. Declare empirical exceptions.**
   - Empirical correlations valid only in specific units: declare `requiredUnits: { token: "unit", targetVar: "unit" }`.
   - Differing mathematical formulations between SI and US: declare `variants.SI` and `variants.US`.
-  - Non-invertible transcendental/exponential equations: declare `solvable: ["target"]`.
 - **R7. Register every unit.** Every unit string must exist in `src/cas/units/definitions.js`. Unknown units fail validation.
 - **R8. Thermodynamic Temperature Consistency.**
   - Ideal-gas and isentropic relations requiring absolute temperatures ($T_2 = T_1 r_k^{k-1}$) must evaluate in absolute scales ($\text{K}$ in SI, $\text{°R}$ in US).
@@ -176,7 +175,6 @@ Export the topic frozen: `export const myTopic = Object.freeze({...});`.
   canonicalTex: "T_2 = T_1 r_k^{k-1}",
   baseFormula: "T_2 = T_1 * (r_k^(k - 1))",
   nodes: ["T_2", "T_1", "r_k", "k"],
-  solvable: ["T_2", "T_1", "r_k"], // optional: variables that can be algebraically inverted
   requiredUnits: null              // or { tok: "unit", targetVar: "unit" } for empirical correlations
 }
 ```
