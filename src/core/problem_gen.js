@@ -64,6 +64,9 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
     const candidateGoals = [...targetNode.nodes].sort(() => Math.random() - 0.5);
 
     for (const goalVar of candidateGoals) {
+      const meta = varsDb[goalVar] || CONSTANTS_DB[goalVar] || {};
+      if (meta.isConstant) continue;
+
       if (targetNode.solvable && !targetNode.solvable.includes(goalVar)) {
         continue;
       }
@@ -190,11 +193,15 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery) 
     }
   }
 
-  const usedVars = new Set(required.flatMap(s => s.nodes || [s.targetVar]));
-  minimalGivens.forEach(g => usedVars.add(g));
+  // Recalculate true solution path and hop distance on the reduced givens
+  const finalSteps = solveDAG(minimalGivens, S, relations, {}, () => 0);
+  const finalRequired = pruneSolutionPath(finalSteps, goalVar);
+
+  const finalUsedVars = new Set(finalRequired.flatMap(s => s.nodes || [s.targetVar]));
+  minimalGivens.forEach(g => finalUsedVars.add(g));
 
   const candidateDistractors = Object.keys(S).filter(k =>
-    !k.startsWith("_") && !usedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
+    !k.startsWith("_") && !finalUsedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
   );
 
   const distractors = candidateDistractors.length > 0 && Math.random() < phi(-4)
@@ -206,7 +213,7 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery) 
     givens: Array.from(new Set([...minimalGivens, ...distractors])).sort(),
     distractors,
     targetEqId: targetNode.id,
-    hopDistance: required.length - 1
+    hopDistance: Math.max(0, finalRequired.length - 1)
   };
 }
 
