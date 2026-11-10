@@ -1,8 +1,8 @@
 /**
  * src/core/derivation.js
  * ============================================================================
- * ARCHITECTURAL PILLAR: Textbook-Grade Aligned Derivations
- * - Zero comma separators preceding physical units (uses \\, mathematical spacing)
+ * ARCHITECTURAL PILLAR: Pure AST-Driven Aligned Derivations
+ * - Zero regex; full AST-based subtree mutation and factoring
  * - Additive terms of identical units combined into (a ± b ± ...)\\,unit
  * - Variable symbols consistently drawn from S._displaySymbols
  * - At most one global scale bracket (unitAnalysis.globalConversionTex)
@@ -59,8 +59,9 @@ export function buildAlignedDerivation(
     }
   }
 
-  // 2. Additive Unit-Group Factoring: (a ± b ± …) sharing identical physical units
-  //    combines into (a ± b)\\,unit with the unit factored outside the parentheses.
+  // 2. Pure AST Additive Factoring:
+  //    Mutates the additive binary subtree directly into a single factored identifier node,
+  //    eliminating dummy leaf zeros and regex replacements.
   const rhsAst = parseMathAST(formulaRhs);
   const unitOfKey = k => S._u?.[k] || varsDb[k]?.unit || "";
 
@@ -103,9 +104,16 @@ export function buildAlignedDerivation(
           })
           .join("");
 
-        subsMap[leaves[0].key] = uTex ? `(${inner})\\,${uTex}` : `(${inner})`;
-        leaves.slice(1).forEach(l => { subsMap[l.key] = "0"; });
-        return; // maximal group factored cleanly
+        const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
+        subsMap[factoredId] = uTex ? `(${inner})\\,${uTex}` : `(${inner})`;
+
+        // Transform binary node in-place into an identifier AST node
+        node.type = "id";
+        node.name = factoredId;
+        delete node.op;
+        delete node.left;
+        delete node.right;
+        return; // maximal group factored cleanly in AST
       }
     }
 
@@ -113,19 +121,22 @@ export function buildAlignedDerivation(
     factorAdditiveGroups(node.right);
   })(rhsAst);
 
-  // 3. Implication Arrow Logic
+  // 3. Implication Arrow Logic via semantic LHS matching
   const symRhs = casToTex(formulaRhs, varsDb);
   const displayCanonical = canonicalTex || casToTex(baseFormula, varsDb);
 
-  let line1;
-  const norm = s => (s || "").replace(/left|right|\s/g, "");
-  const isAlreadyIsolated = norm(displayCanonical).startsWith(norm(targetSymbol) + "=");
+  const formulaLhs = baseFormula && baseFormula.includes("=")
+    ? baseFormula.split("=")[0].trim()
+    : "";
+  const isAlreadyIsolated = formulaLhs !== "" && (
+    formulaLhs === targetVar ||
+    resolveCanonicalKey(formulaLhs, varsDb) === canonicalTarget
+  );
 
-  // Strip zero-leaves of factored groups and append global conversion factor once
   const numTex = astToLatex(rhsAst, subsMap, varsDb)
-    .replace(/[+\-]\s*0(?!\d)/g, "")
     + (unitAnalysis.globalConversionTex || "");
 
+  let line1;
   if (isAlreadyIsolated || !baseFormula) {
     line1 = `${displayCanonical} &= ${numTex}`;
   } else {
