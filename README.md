@@ -42,7 +42,7 @@ Software engineering in this repository is governed by physical and mathematical
    - **No per-variable conversion logic:** All unit changes must route through the dimensional registry and coherent base projections.
    - **No regex-based syntax assertions on math strings:** Tests must validate structural ASTs, balance, and KaTeX rendering. Do not write catch-all regexes like `!/,/.test()` that falsely reject valid math subscripts like $c_{p,w}$ or $m_{m,w}$.
    - **No fragmentation of coupled state points:** Thermodynamic states of the same working fluid must never be split across incompatible units.
-   - **No bespoke solvers:** If an equation cannot be solved by `solveDAG` and `isolateVariable`, fix the algebraic graph or declare `solvable`, but never write a hardcoded solver.
+   - **No bespoke solvers:** If an equation cannot be solved by `solveDAG` and `isolateVariable`, fix the algebraic graph, but never write a hardcoded solver.
 
 ---
 
@@ -303,7 +303,7 @@ node --test test/run_test.js test/run_hygiene_test.js
 - [ ] I read Section 1 (Engineering Philosophy) and addressed the root cause rather than patching a symptom.
 - [ ] No Hard Rules in Section 2 are violated.
 - [ ] Any new unit is registered in `definitions.js` with consistent atomic base scales.
-- [ ] New formulas are pure physics; empirical exceptions declare `requiredUnits` and `solvable`.
+- [ ] New formulas are pure physics; empirical exceptions declare `requiredUnits`.
 - [ ] `system.js` is independent of the solver and honors `{ sys }`.
 - [ ] Cycle topics define `cycleGivens`, `primaryGoals`, and `terminalGoals`.
 - [ ] `node --test test/run_test.js test/run_hygiene_test.js` was run and passed with 0 failures.
