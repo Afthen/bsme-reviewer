@@ -26,7 +26,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
 
       if (unknowns.length === 1) {
         const targetVar = unknowns[0];
-        if (eq.solvable && !eq.solvable.includes(targetVar)) {
+        if (eq.non_solvable && eq.non_solvable.includes(targetVar)) {
           continue;
         }
 
@@ -36,6 +36,9 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
         const requiredUnits = activeVariant?.requiredUnits || eq.requiredUnits || null;
 
         const isolated = isolateVariable(baseFormula, targetVar, varsDb);
+        if (!isolated.success) {
+          continue;
+        }
         const expectedVal = S[targetVar];
 
         const parentIndices = inputVars.map(v => producedBy[v]).filter(idx => idx !== undefined);
