@@ -5,8 +5,8 @@
  * - Seamless integration with 40-40-20 unit distribution sampler
  * - Persistent polymorphic names & symbols across statement and solution steps
  * - Neatness pass rounding without disturbing tabulated constants
- * - Mastery-driven hop expansion: single-relation at 0% -> longest chain at 100%
- * - Minimal givens greedy pruning & constant recall-mode pruning preserved
+ * - Direction-Agnostic Chain-Extension Invariant for longest-chain synthesis
+ * - Backward greedy givens reduction & constant recall-mode pruning preserved
  * ============================================================================
  */
 
@@ -30,7 +30,7 @@ export function determineGraphDistance(mastery, maxDepth = Infinity) {
   if (mastery < 1 - phi(-4)) return Math.min(fib(4), maxDepth); // < 85.4%: 3 hops
   if (mastery < 1 - phi(-5)) return Math.min(fib(5), maxDepth); // < 91.0%: 5 hops
   if (mastery < 1 - phi(-6)) return Math.min(fib(6), maxDepth); // < 94.4%: 8 hops
-  return Math.min(fib(8), maxDepth);                             // >= 94.4% (approaching 100%): full graph diameter
+  return Math.min(fib(8), maxDepth);                             // >= 94.4%: maximum depth
 }
 
 export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0, terminalGoals = []) {
@@ -93,26 +93,41 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
   let currentGivens = targetNode.nodes.filter(n => n !== goalVar);
   const desiredHops = determineGraphDistance(targetMastery, relations.length);
 
-  let bestPath = { givens: currentGivens, hops: 0 };
-  let usedRelIds = new Set([targetNode.id]);
+  let bestGivens = currentGivens;
+  let currentSteps = solveDAG(currentGivens, S, relations, {}, () => 0);
+  let currentRequired = pruneSolutionPath(currentSteps, goalVar);
 
   for (let h = 0; h < desiredHops; h++) {
-    let expansions = [];
+    const expansions = [];
 
-    for (const g of currentGivens) {
-      const neighborRels = relations.filter(r => !usedRelIds.has(r.id) && r.nodes.includes(g));
+    for (const g of bestGivens) {
+      // Direction-Agnostic: Find any relation containing g that can algebraically isolate g
+      const neighborRels = relations.filter(r =>
+        r.id !== targetNode.id &&
+        r.nodes.includes(g) &&
+        (!r.solvable || r.solvable.includes(g))
+      );
 
       for (const nRel of neighborRels) {
         const newInputs = nRel.nodes.filter(n => n !== g);
+        if (newInputs.includes(goalVar)) continue;
 
-        if (!newInputs.includes(goalVar)) {
-          const candidateSet = Array.from(new Set([
-            ...currentGivens.filter(x => x !== g),
-            ...newInputs
-          ]));
+        const candidateSet = Array.from(new Set([
+          ...bestGivens.filter(x => x !== g),
+          ...newInputs
+        ]));
 
-          if (candidateSet.length <= fib(8) && canSolveTarget(candidateSet, goalVar, relations, S)) {
-            expansions.push({ candidateSet, relId: nRel.id });
+        if (candidateSet.length <= fib(8) && canSolveTarget(candidateSet, goalVar, relations, S)) {
+          const testSteps = solveDAG(candidateSet, S, relations, {}, () => 0);
+          const testRequired = pruneSolutionPath(testSteps, goalVar);
+
+          // The Chain-Extension Invariant: strictly extend the solution chain
+          if (testRequired.length > currentRequired.length) {
+            expansions.push({
+              candidateSet,
+              required: testRequired,
+              chainLen: testRequired.length
+            });
           }
         }
       }
@@ -120,13 +135,14 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
 
     if (expansions.length === 0) break;
 
-    const chosen = expansions[Math.floor(Math.random() * expansions.length)];
-    currentGivens = chosen.candidateSet;
-    usedRelIds.add(chosen.relId);
-    bestPath = { givens: currentGivens, hops: h + 1 };
+    // Greedily pick the expansion that maximizes the chain length
+    expansions.sort((a, b) => (b.chainLen - a.chainLen) || (Math.random() - 0.5));
+    const chosen = expansions[0];
+    bestGivens = chosen.candidateSet;
+    currentRequired = chosen.required;
   }
 
-  const steps = solveDAG(bestPath.givens, S, relations, {}, () => 0);
+  const steps = solveDAG(bestGivens, S, relations, {}, () => 0);
   const required = pruneSolutionPath(steps, goalVar);
 
   const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
@@ -346,7 +362,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     return true;
   });
 
-  // Layer 3: Cognitive fading step hiding (faded steps omitted from statement prompt)
+  // Layer 3: Cognitive fading step hiding
   const visibleGoals = solution.filter(s => !s.isFaded).map(s => s.targetVar);
   const statement = buildProblemStatement(statementGivens, visibleGoals, S_neat, varsDb, topic);
 
