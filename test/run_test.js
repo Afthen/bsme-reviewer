@@ -11,7 +11,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { ALL_TOPICS, TOPICS } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
-import { generateProblem } from "../src/core/problem_gen.js";
+import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
 import { evaluatePhysicalAST } from "../src/cas/units/index.js";
 import { parseMathAST } from "../src/cas/ast.js";
