@@ -31,13 +31,20 @@ export const DIMENSIONS = Object.freeze({
 /**
  * Universal Number Formatter:
  * Enforces up to 6 significant figures, with a strict maximum of 3 decimal places.
- * Trims trailing zeroes to the right of the decimal.
+ * Formats numbers with thousand separators. Trims trailing zeroes to the right of the decimal.
  */
 export function fmtSigFig(n, sigFigs = 6) {
   if (n === undefined || n === null) return "";
   const num = typeof n === "number" ? n : Number(n);
   if (isNaN(num)) return "";
-  if (Number.isInteger(num)) return num.toString();
+
+  const addSeparators = (valStr) => {
+    const parts = valStr.split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
+  };
+
+  if (Number.isInteger(num)) return addSeparators(num.toString());
 
   // 1. Apply significant figures precision first
   let formatted = parseFloat(num.toPrecision(sigFigs));
@@ -53,7 +60,7 @@ export function fmtSigFig(n, sigFigs = 6) {
     }
   }
 
-  return formatted.toString();
+  return addSeparators(formatted.toString());
 }
 
 export function fmt(n) {
@@ -78,11 +85,14 @@ export function formatGivenValue(value, meta = {}) {
 
 export function cancelUnit(unitStr) {
   if (!unitStr) return "";
+  if (unitStr === "%") return "\\cancel{\\%}";
   return `\\cancel{\\text{${unitStr}}}`;
 }
 
 export function textUnit(unitStr) {
   if (!unitStr) return "";
+  if (unitStr === "%") return "\\%";
+  if (unitStr.startsWith("°")) return unitStr;
   return `\\text{${unitStr}}`;
 }
 

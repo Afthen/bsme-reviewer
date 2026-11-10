@@ -30,15 +30,15 @@ export const ATOMIC_BASE_UNITS = Object.freeze({
   g:     { dim: "M", scale: 0.001, tex: "\\text{g}" },
   lb_m:  { dim: "M", scale: 0.45359237, tex: "\\text{lb}_m" },
   K:     { dim: "Th", scale: 1.0, tex: "\\text{K}" },
-  "°C":  { dim: "Th", scale: 1.0, offset: 273.15, tex: "°\\text{C}" },
-  "°F":  { dim: "Th", scale: 5 / 9, offset: 459.67, tex: "°\\text{F}" },
-  "°R":  { dim: "Th", scale: 5 / 9, tex: "°\\text{R}" },
+  "°C":  { dim: "Th", scale: 1.0, offset: 273.15, tex: "^{\\circ}\\text{C}" },
+  "°F":  { dim: "Th", scale: 5 / 9, offset: 459.67, tex: "^{\\circ}\\text{F}" },
+  "°R":  { dim: "Th", scale: 5 / 9, tex: "^{\\circ}\\text{R}" },
   Btu:   { dim: "E", scale: 1.0, tex: "\\text{Btu}" },
   teeth: { dim: "C", scale: 1.0, tex: "\\text{teeth}" },
   rad:   { dim: "C", scale: 1.0, tex: "\\text{rad}" },
   rev:   { dim: "C", scale: 1.0, tex: "\\text{rev}" },
-  "°":   { dim: "C", scale: Math.PI / 180, tex: "°" },
-  deg:   { dim: "C", scale: Math.PI / 180, tex: "°" }
+  "°":   { dim: "C", scale: Math.PI / 180, tex: "^{\\circ}" },
+  deg:   { dim: "C", scale: Math.PI / 180, tex: "^{\\circ}" }
 });
 
 export const COMPOUND_UNITS = Object.freeze({
@@ -129,8 +129,8 @@ export const COMPOUND_UNITS = Object.freeze({
 
   "kJ/(kg*K)":{ factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
   "kJ/kg-K":  { factor: 1000, atoms: { N: 1, m: 1, kg: -1, K: -1 }, displayTex: "\\cfrac{\\text{kJ}}{\\text{kg}\\cdot\\text{K}}" },
-  "Btu/(lb*F)":{ atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot°\\text{F}}" },
-  "Btu/lb-F":  { atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot°\\text{F}}" }
+  "Btu/(lb*F)":{ atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot^{\\circ}\\text{F}}" },
+  "Btu/lb-F":  { atoms: { Btu: 1, lb_m: -1, "°F": -1 }, substituteTex: "\\cfrac{\\text{Btu}}{\\text{lb}\\cdot^{\\circ}\\text{F}}" }
 });
 
 export function getUnitAtomBag(uName) {
@@ -171,7 +171,13 @@ export function isDimEqual(aMap, bMap) {
   return true;
 }
 
-const UNIT_TEX_ALIASES = Object.freeze({ "%": "\\%", "°": "^{\\circ}" });
+const UNIT_TEX_ALIASES = Object.freeze({
+  "%": "\\%",
+  "°": "^{\\circ}",
+  "°C": "^{\\circ}\\text{C}",
+  "°F": "^{\\circ}\\text{F}",
+  "°R": "^{\\circ}\\text{R}"
+});
 
 export function unitToTex(unitName = "") {
   const cleaned = String(unitName || "").trim();
@@ -181,8 +187,8 @@ export function unitToTex(unitName = "") {
   const [numPart = "", denPart = ""] = cleaned.split("/");
   const parse = part => part.split(/[·* ]+/).filter(Boolean).map(tok => {
     const m = tok.match(/^([A-Za-z°%_]+)(?:\^(-?\d+))?$/);
-    if (!m) return `\\text{${tok}}`;
-    const base = UNIT_TEX_ALIASES[m[1]] || `\\text{${m[1]}}`;
+    if (!m) return tok === "%" ? "\\%" : `\\text{${tok}}`;
+    const base = UNIT_TEX_ALIASES[m[1]] || (m[1] === "%" ? "\\%" : `\\text{${m[1]}}`);
     return m[2] ? `${base}^{${m[2]}}` : base;
   });
 
