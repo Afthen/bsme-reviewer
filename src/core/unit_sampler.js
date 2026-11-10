@@ -224,7 +224,10 @@ const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["Q_A", "Q_R", "W_net"]),
   new Set(["Q_ip", "Q_cw", "Q_exh", "Q_rad"]),
   new Set(["t_w1", "t_w2", "t_wb1", "R_ct", "A_ct"]),
-  new Set(["pct_ip", "pct_cw", "pct_exh", "pct_rad"])
+  new Set(["pct_ip", "pct_cw", "pct_exh", "pct_rad"]),
+  new Set(["phi_n", "phi_t", "psi"]),
+  new Set(["p_n", "p_t", "p_x"]),
+  new Set(["W_t", "F_a", "F_r", "F_N"])
 ]);
 
 export function findCoupledGroup(varKey) {
