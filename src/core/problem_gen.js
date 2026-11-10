@@ -168,14 +168,25 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery) 
   });
 
   // Layer 1: Backward Greedy Givens Reduction heuristic (keeps statement lean)
-  let minimalGivens = Array.from(essentialGivensSet);
+  // Sort candidate givens so producible intermediate variables are tested and pruned first,
+  // ensuring fundamental boundary specifications are retained as givens.
+  const producibleVars = new Set(
+    relations.flatMap(r => [r.baseFormula?.split("=")[0]?.trim(), ...(r.solvable || [])]).filter(Boolean)
+  );
 
-  for (let i = minimalGivens.length - 1; i >= 0; i--) {
+  let minimalGivens = Array.from(essentialGivensSet).sort((a, b) => {
+    const aProducible = producibleVars.has(a) ? 1 : 0;
+    const bProducible = producibleVars.has(b) ? 1 : 0;
+    return bProducible - aProducible; // producible variables first!
+  });
+
+  for (let i = 0; i < minimalGivens.length; i++) {
     const candidate = minimalGivens[i];
     const reducedSet = minimalGivens.filter(v => v !== candidate);
 
     if (canSolveTarget(reducedSet, goalVar, relations, S)) {
       minimalGivens = reducedSet;
+      i--; // adjust index after removal
     }
   }
 
