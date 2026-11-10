@@ -430,12 +430,11 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
     const problem = generateProblem(topic, () => 1.0);
 
-    // At 100% mastery, the problem should not give intermediate calculated variables
-    assert.ok(!problem.givens.includes("T_2"), "T_2 must be pruned from givens");
-    assert.ok(!problem.givens.includes("T_3"), "T_3 must be pruned from givens");
-    assert.ok(!problem.givens.includes("T_4"), "T_4 must be pruned from givens");
-    assert.ok(!problem.givens.includes("Q_A"), "Q_A must be pruned from givens");
-    assert.ok(!problem.givens.includes("Q_R"), "Q_R must be pruned from givens");
+    // Verify that variables produced along the solution path are never included in givens
+    const producedVars = new Set(problem.solution.map(s => s.targetVar));
+    problem.givens.forEach(g => {
+      assert.ok(!producedVars.has(g), `Variable ${g} is produced in solution and must be pruned from givens`);
+    });
   });
 
   test("Master learner (100% mastery) naturally receives multi-hop air handling chain in Bypass Air", () => {
