@@ -13,6 +13,7 @@
 
 import { solveDAG, canSolveTarget, pruneSolutionPath } from "./graph_solver.js";
 import { parseMathAST } from "../cas/ast.js";
+import { isolateVariable } from "../cas/algebra.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
