@@ -60,6 +60,7 @@ export const DIESEL_CYCLE_RELATIONS = Object.freeze([
     name: "Thermal Efficiency (Basic)",
     canonicalTex: "e_{th} = \\frac{w_{net}}{q_A}",
     baseFormula: "e_th = W_net / Q_A",
+    solvable: ["e_th"],
     nodes: ["e_th", "W_net", "Q_A"]
   },
   {
