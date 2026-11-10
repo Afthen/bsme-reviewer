@@ -179,28 +179,61 @@ const UNIT_TEX_ALIASES = Object.freeze({
   "°R": "°\\text{R}"
 });
 
-export function unitToTex(unitName = "") {
+export function unitToTex(unitName = "", inline = false) {
   const cleaned = String(unitName || "").trim();
   if (!cleaned || cleaned === "dimless" || cleaned === "ratio") return "";
-  if (UNIT_TEX_ALIASES && UNIT_TEX_ALIASES[cleaned]) return UNIT_TEX_ALIASES[cleaned];
+  if (typeof UNIT_TEX_ALIASES !== "undefined" && UNIT_TEX_ALIASES[cleaned]) {
+    return UNIT_TEX_ALIASES[cleaned];
+  }
 
-  // Literal symbols - never use \circ
+  // Literal units
   if (cleaned === "%") return "\\%";
   if (cleaned === "°") return "°";
   if (cleaned === "°C") return "°\\text{C}";
   if (cleaned === "°F") return "°\\text{F}";
   if (cleaned === "°R") return "°\\text{R}";
 
-  const [numPart = "", denPart = ""] = cleaned.split("/");
-  const parse = part => part.split(/[·* ]+/).filter(Boolean).map(tok => {
-    const m = tok.match(/^([A-Za-z°%_]+)(?:\^(-?\d+))?$/);
-    if (!m) return tok === "%" ? "\\%" : `\\text{${tok}}`;
-    const base = (UNIT_TEX_ALIASES && UNIT_TEX_ALIASES[m[1]]) || (m[1] === "%" ? "\\%" : (m[1] === "°" ? "°" : `\\text{${m[1]}}`));
-    return m[2] ? `${base}^{${m[2]}}` : base;
-  });
+  const slashIdx = cleaned.indexOf("/");
+  const numPart = slashIdx !== -1 ? cleaned.slice(0, slashIdx) : cleaned;
+  const denPart = slashIdx !== -1 ? cleaned.slice(slashIdx + 1) : "";
 
-  const num = parse(numPart);
-  const den = parse(denPart);
+  const parsePart = part => {
+    const rawTokens = [];
+    let cur = "";
+    for (let i = 0; i < part.length; i++) {
+      const ch = part[i];
+      if (ch === " " || ch === "*" || ch === "·" || ch === "(" || ch === ")") {
+        if (cur) { rawTokens.push(cur); cur = ""; }
+      } else {
+        cur += ch;
+      }
+    }
+    if (cur) rawTokens.push(cur);
+
+    return rawTokens.map(tok => {
+      if (tok === "%") return "\\%";
+      if (tok === "°") return "°";
+      const caretIdx = tok.indexOf("^");
+      if (caretIdx !== -1) {
+        const base = tok.slice(0, caretIdx);
+        const exp = tok.slice(caretIdx + 1);
+        const baseTex = (typeof UNIT_TEX_ALIASES !== "undefined" && UNIT_TEX_ALIASES[base]) || `\\text{${base}}`;
+        return `${baseTex}^{${exp}}`;
+      }
+      return (typeof UNIT_TEX_ALIASES !== "undefined" && UNIT_TEX_ALIASES[tok]) || `\\text{${tok}}`;
+    });
+  };
+
+  const num = parsePart(numPart);
+  const den = parsePart(denPart);
+
+  if (inline) {
+    if (!den.length) return num.join("\\,");
+    if (!num.length) return `1 / ${den.join("\\cdot ")}`;
+    const denStr = den.length > 1 ? `(${den.join("\\cdot ")})` : den[0];
+    return `${num.join("\\cdot ")}/${denStr}`;
+  }
+
   if (!den.length) return num.join("\\,");
   if (!num.length) return `\\cfrac{1}{${den.join("\\cdot ")}}`;
   return `\\cfrac{${num.join("\\cdot ")}}{${den.join("\\cdot ")}}`;
