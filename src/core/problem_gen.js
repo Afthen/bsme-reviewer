@@ -6,6 +6,7 @@
  * - Persistent polymorphic names & symbols across statement and solution steps
  * - Neatness pass rounding without disturbing tabulated constants
  * - Direction-Agnostic Chain-Extension Invariant for longest-chain synthesis
+ * - Multi-trial graph traversal at high mastery for global longest chain discovery
  * - Backward greedy givens reduction & constant recall-mode pruning preserved
  * ============================================================================
  */
@@ -89,7 +90,7 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   return { goalVar, givens, distractors: [], targetEqId: fallback.id, hopDistance: 0 };
 }
 
-function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
+function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery) {
   let currentGivens = targetNode.nodes.filter(n => n !== goalVar);
   const desiredHops = determineGraphDistance(targetMastery, relations.length);
 
@@ -126,12 +127,14 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
           const testSteps = solveDAG(candidateSet, S, relations, {}, () => 0);
           const testRequired = pruneSolutionPath(testSteps, goalVar);
 
-          // Strictly extend the solution chain
+          // Direction-agnostic invariant: strictly extend the solution chain
           if (testRequired.length > currentRequired.length) {
+            const isLHS = (nRel.baseFormula && nRel.baseFormula.split("=")[0].trim() === g) ? 1 : 0;
             expansions.push({
               candidateSet,
               required: testRequired,
-              chainLen: testRequired.length
+              chainLen: testRequired.length,
+              isLHS
             });
           }
         }
@@ -140,8 +143,8 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
 
     if (expansions.length === 0) break;
 
-    // Greedily pick the expansion that maximizes the chain length
-    expansions.sort((a, b) => (b.chainLen - a.chainLen) || (Math.random() - 0.5));
+    // Greedily pick the expansion that maximizes chain length, preferring primary LHS equations on ties
+    expansions.sort((a, b) => (b.chainLen - a.chainLen) || (b.isLHS - a.isLHS) || (Math.random() - 0.5));
     const chosen = expansions[0];
     bestGivens = chosen.candidateSet;
     currentRequired = chosen.required;
@@ -164,7 +167,7 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     });
   });
 
-  // Layer 1: Backward Greedy Givens Reduction heuristic
+  // Layer 1: Backward Greedy Givens Reduction heuristic (keeps statement lean)
   let minimalGivens = Array.from(essentialGivensSet);
 
   for (let i = minimalGivens.length - 1; i >= 0; i--) {
@@ -194,6 +197,20 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     targetEqId: targetNode.id,
     hopDistance: required.length - 1
   };
+}
+
+function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
+  // At high mastery, run multiple search trials (fib(5) = 5) to guarantee the longest chain is discovered
+  const TRIALS = targetMastery >= FADING_THRESHOLD ? fib(5) : 1;
+  let bestOfAll = null;
+
+  for (let t = 0; t < TRIALS; t++) {
+    const prob = buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery);
+    if (prob && (!bestOfAll || prob.hopDistance > bestOfAll.hopDistance)) {
+      bestOfAll = prob;
+    }
+  }
+  return bestOfAll;
 }
 
 export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicConfig = {}) {
