@@ -16,7 +16,5 @@ export const dieselCycleTopic = Object.freeze({
   varsDb: DIESEL_CYCLE_VARS_DB,
   relations: DIESEL_CYCLE_RELATIONS,
   createSystem: createDieselCycleSystem,
-  cycleGivens: ["T_1", "r_k", "r_c", "k", "c_p", "c_v"],
-  primaryGoals: ["e_th", "W_net", "Q_A", "Q_R", "T_4", "T_3", "T_2", "r_e"],
   terminalGoals: ["e_th", "W_net"]
 });
