@@ -64,7 +64,6 @@ export const HELICAL_RELATION_GRAPH = [
   { 
     id: "eq_helical_buckingham", 
     name: "Buckingham Dynamic Load (Helical)", 
-    solvable: ["F_D"],
     nodes: ["F_D", "W_t", "V_m", "psi", "b", "C_d"],
     variants: {
       US: {
