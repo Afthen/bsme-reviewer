@@ -182,13 +182,20 @@ const UNIT_TEX_ALIASES = Object.freeze({
 export function unitToTex(unitName = "") {
   const cleaned = String(unitName || "").trim();
   if (!cleaned || cleaned === "dimless" || cleaned === "ratio") return "";
-  if (UNIT_TEX_ALIASES[cleaned]) return UNIT_TEX_ALIASES[cleaned];
+  if (UNIT_TEX_ALIASES && UNIT_TEX_ALIASES[cleaned]) return UNIT_TEX_ALIASES[cleaned];
+
+  // Literal symbols - never use \circ
+  if (cleaned === "%") return "\\%";
+  if (cleaned === "°") return "°";
+  if (cleaned === "°C") return "°\\text{C}";
+  if (cleaned === "°F") return "°\\text{F}";
+  if (cleaned === "°R") return "°\\text{R}";
 
   const [numPart = "", denPart = ""] = cleaned.split("/");
   const parse = part => part.split(/[·* ]+/).filter(Boolean).map(tok => {
     const m = tok.match(/^([A-Za-z°%_]+)(?:\^(-?\d+))?$/);
     if (!m) return tok === "%" ? "\\%" : `\\text{${tok}}`;
-    const base = UNIT_TEX_ALIASES[m[1]] || (m[1] === "%" ? "\\%" : `\\text{${m[1]}}`);
+    const base = (UNIT_TEX_ALIASES && UNIT_TEX_ALIASES[m[1]]) || (m[1] === "%" ? "\\%" : (m[1] === "°" ? "°" : `\\text{${m[1]}}`));
     return m[2] ? `${base}^{${m[2]}}` : base;
   });
 
@@ -197,6 +204,30 @@ export function unitToTex(unitName = "") {
   if (!den.length) return num.join("\\,");
   if (!num.length) return `\\cfrac{1}{${den.join("\\cdot ")}}`;
   return `\\cfrac{${num.join("\\cdot ")}}{${den.join("\\cdot ")}}`;
+}
+
+/**
+ * Formats inline units for problem statements and text prompts.
+ * Uses the literal degree symbol '°'. Clinging units (% and °) attach directly with no space.
+ */
+export function formatInlineUnit(unit = "") {
+  const u = String(unit || "").trim();
+  if (!u || u === "dimless" || u === "ratio") return { tex: "", isClinging: false };
+
+  // Clinging units: % and literal degree units
+  if (u === "%") return { tex: "\\%", isClinging: true };
+  if (u === "°") return { tex: "°", isClinging: true };
+  if (u === "°C") return { tex: "°\\text{C}", isClinging: true };
+  if (u === "°F") return { tex: "°\\text{F}", isClinging: true };
+  if (u === "°R") return { tex: "°\\text{R}", isClinging: true };
+  if (u.startsWith("°")) {
+    const rest = u.slice(1);
+    return { tex: rest ? `°\\text{${rest}}` : "°", isClinging: true };
+  }
+
+  // Standard units (kW, kJ/kg-K, hp, kg/h, K) take standard spacing and escape %
+  const escaped = u.replace(/%/g, "\\%");
+  return { tex: `\\text{${escaped}}`, isClinging: false };
 }
 
 /**
