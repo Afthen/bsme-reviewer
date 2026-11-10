@@ -5,6 +5,9 @@
  * - Seamless integration with 40-40-20 unit distribution sampler
  * - Persistent polymorphic names & symbols across statement and solution steps
  * - Neatness pass rounding without disturbing tabulated constants
+ * - Direction-Agnostic Chain-Extension Invariant for longest-chain synthesis
+ * - Multi-trial graph traversal at high mastery for global longest chain discovery
+ * - Backward greedy givens reduction & constant recall-mode pruning preserved
  * ============================================================================
  */
 
@@ -21,14 +24,17 @@ export function relationWeaknessWeight(mastery = 0) {
   return Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
 }
 
-function determineGraphDistance(mastery) {
-  if (mastery < phi(-2)) return 0;           // < 38.2%
-  if (mastery < phi(-1)) return 1;           // < 61.8%
-  if (mastery < FADING_THRESHOLD) return 2;  // < 76.4%
-  return fib(4);                             // >= 76.4% (3 hops)
+export function determineGraphDistance(mastery, maxDepth = Infinity) {
+  if (mastery < phi(-2)) return 0;                               // < 38.2%: single relation (0 hops)
+  if (mastery < phi(-1)) return 1;                               // < 61.8%: 1 hop (2 equations)
+  if (mastery < FADING_THRESHOLD) return 2;                      // < 76.4%: 2 hops (3 equations)
+  if (mastery < 1 - phi(-4)) return Math.min(fib(4), maxDepth); // < 85.4%: 3 hops
+  if (mastery < 1 - phi(-5)) return Math.min(fib(5), maxDepth); // < 91.0%: 5 hops
+  if (mastery < 1 - phi(-6)) return Math.min(fib(6), maxDepth); // < 94.4%: 8 hops
+  return Math.min(fib(8), maxDepth);                             // >= 94.4%: maximum depth
 }
 
-export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
+export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0, terminalGoals = []) {
   const scoredNodes = relations.map(node => {
     const mastery = getMastery(node);
     const weight = relationWeaknessWeight(mastery);
@@ -38,6 +44,22 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
 
   scoredNodes.sort((a, b) => b.key - a.key);
 
+  const meanMastery = scoredNodes.reduce((sum, s) => sum + s.mastery, 0) / (scoredNodes.length || 1);
+  const isHighMastery = meanMastery >= FADING_THRESHOLD;
+  const bestCandidates = [];
+
+  // When mastery is high across the topic, prioritize terminal goals to synthesize full-cycle chains
+  if (isHighMastery && Array.isArray(terminalGoals) && terminalGoals.length > 0) {
+    for (const tGoal of terminalGoals) {
+      const parentRels = relations.filter(r => (r.solvable || r.nodes).includes(tGoal));
+      for (const pRel of parentRels) {
+        const problem = buildGraphPath(pRel, tGoal, relations, S, meanMastery);
+        if (problem) bestCandidates.push(problem);
+      }
+    }
+  }
+
+  // Iterate through weakness-sorted nodes
   for (const { node: targetNode, mastery } of scoredNodes) {
     const candidateGoals = [...targetNode.nodes].sort(() => Math.random() - 0.5);
 
@@ -46,8 +68,20 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
         continue;
       }
       const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery);
-      if (problem) return problem;
+      if (problem) {
+        if (!isHighMastery) {
+          // At low/intermediate mastery, immediately return the weakest targeted problem
+          return problem;
+        }
+        bestCandidates.push(problem);
+      }
     }
+  }
+
+  if (bestCandidates.length > 0) {
+    // When mastery approaches 100%, select the candidate that produces the longest chain
+    bestCandidates.sort((a, b) => b.hopDistance - a.hopDistance);
+    return bestCandidates[0];
   }
 
   const fallback = scoredNodes[0].node;
@@ -56,29 +90,52 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   return { goalVar, givens, distractors: [], targetEqId: fallback.id, hopDistance: 0 };
 }
 
-function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
+function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery) {
   let currentGivens = targetNode.nodes.filter(n => n !== goalVar);
-  const desiredHops = determineGraphDistance(targetMastery);
+  const desiredHops = determineGraphDistance(targetMastery, relations.length);
 
-  let bestPath = { givens: currentGivens, hops: 0 };
+  let bestGivens = currentGivens;
+  let currentSteps = solveDAG(currentGivens, S, relations, {}, () => 0);
+  let currentRequired = pruneSolutionPath(currentSteps, goalVar);
 
   for (let h = 0; h < desiredHops; h++) {
-    let expansions = [];
+    const expansions = [];
+    const currentProduced = new Set(currentRequired.map(s => s.targetVar));
 
-    for (const g of currentGivens) {
-      const neighborRels = relations.filter(r => r.id !== targetNode.id && r.nodes.includes(g));
+    for (const g of bestGivens) {
+      // Find any relation containing g that can algebraically solve for g
+      const neighborRels = relations.filter(r =>
+        r.id !== targetNode.id &&
+        r.nodes.includes(g) &&
+        (!r.solvable || r.solvable.includes(g))
+      );
 
       for (const nRel of neighborRels) {
-        const newInputs = nRel.nodes.filter(n => n !== g);
+        const rawNewInputs = nRel.nodes.filter(n => n !== g);
+        if (rawNewInputs.includes(goalVar)) continue;
 
-        if (!newInputs.includes(goalVar)) {
-          const candidateSet = Array.from(new Set([
-            ...currentGivens.filter(x => x !== g),
-            ...newInputs
-          ]));
+        // If an input is already produced by intermediate steps in the DAG,
+        // it connects internally and must not be added to external givens
+        const newInputs = rawNewInputs.filter(inp => !currentProduced.has(inp));
 
-          if (candidateSet.length <= fib(6) && canSolveTarget(candidateSet, goalVar, relations, S)) {
-            expansions.push(candidateSet);
+        const candidateSet = Array.from(new Set([
+          ...bestGivens.filter(x => x !== g),
+          ...newInputs
+        ]));
+
+        if (candidateSet.length <= fib(8) && canSolveTarget(candidateSet, goalVar, relations, S)) {
+          const testSteps = solveDAG(candidateSet, S, relations, {}, () => 0);
+          const testRequired = pruneSolutionPath(testSteps, goalVar);
+
+          // Direction-agnostic invariant: strictly extend the solution chain
+          if (testRequired.length > currentRequired.length) {
+            const isLHS = (nRel.baseFormula && nRel.baseFormula.split("=")[0].trim() === g) ? 1 : 0;
+            expansions.push({
+              candidateSet,
+              required: testRequired,
+              chainLen: testRequired.length,
+              isLHS
+            });
           }
         }
       }
@@ -86,11 +143,14 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
 
     if (expansions.length === 0) break;
 
-    currentGivens = expansions[Math.floor(Math.random() * expansions.length)];
-    bestPath = { givens: currentGivens, hops: h + 1 };
+    // Greedily pick the expansion that maximizes chain length, preferring primary LHS equations on ties
+    expansions.sort((a, b) => (b.chainLen - a.chainLen) || (b.isLHS - a.isLHS) || (Math.random() - 0.5));
+    const chosen = expansions[0];
+    bestGivens = chosen.candidateSet;
+    currentRequired = chosen.required;
   }
 
-  const steps = solveDAG(bestPath.givens, S, relations, {}, () => 0);
+  const steps = solveDAG(bestGivens, S, relations, {}, () => 0);
   const required = pruneSolutionPath(steps, goalVar);
 
   const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
@@ -107,14 +167,26 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     });
   });
 
-  let minimalGivens = Array.from(essentialGivensSet);
+  // Layer 1: Backward Greedy Givens Reduction heuristic (keeps statement lean)
+  // Sort candidate givens so producible intermediate variables are tested and pruned first,
+  // ensuring fundamental boundary specifications are retained as givens.
+  const producibleVars = new Set(
+    relations.flatMap(r => [r.baseFormula?.split("=")[0]?.trim(), ...(r.solvable || [])]).filter(Boolean)
+  );
 
-  for (let i = minimalGivens.length - 1; i >= 0; i--) {
+  let minimalGivens = Array.from(essentialGivensSet).sort((a, b) => {
+    const aProducible = producibleVars.has(a) ? 1 : 0;
+    const bProducible = producibleVars.has(b) ? 1 : 0;
+    return bProducible - aProducible; // producible variables first!
+  });
+
+  for (let i = 0; i < minimalGivens.length; i++) {
     const candidate = minimalGivens[i];
     const reducedSet = minimalGivens.filter(v => v !== candidate);
 
     if (canSolveTarget(reducedSet, goalVar, relations, S)) {
       minimalGivens = reducedSet;
+      i--; // adjust index after removal
     }
   }
 
@@ -134,8 +206,22 @@ function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
     givens: Array.from(new Set([...minimalGivens, ...distractors])).sort(),
     distractors,
     targetEqId: targetNode.id,
-    hopDistance: bestPath.hops
+    hopDistance: required.length - 1
   };
+}
+
+function buildGraphPath(targetNode, goalVar, relations, S, targetMastery) {
+  // At high mastery, run multiple search trials (fib(5) = 5) to guarantee the longest chain is discovered
+  const TRIALS = targetMastery >= FADING_THRESHOLD ? fib(5) : 1;
+  let bestOfAll = null;
+
+  for (let t = 0; t < TRIALS; t++) {
+    const prob = buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery);
+    if (prob && (!bestOfAll || prob.hopDistance > bestOfAll.hopDistance)) {
+      bestOfAll = prob;
+    }
+  }
+  return bestOfAll;
 }
 
 export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicConfig = {}) {
@@ -215,35 +301,15 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 }
 
 export function generateProblem(topic, getMastery = () => 0) {
-  const { title, varsDb, relations, createSystem } = topic;
+  const { title, varsDb, relations, createSystem, terminalGoals = [] } = topic;
 
   // 1. Establish ground truth system with 40-40-20 unit distribution
   const targetMode = sampleSystemMode();
   let S_raw = createSystem({ sys: targetMode === "MIXED" ? "SI" : targetMode });
   S_raw = applyProblemUnitSampling(S_raw, varsDb, targetMode);
 
-  let path;
-  if (topic.cycleGivens && topic.cycleGivens.length > 0) {
-    const candidateDistractors = Object.keys(S_raw).filter(k =>
-      !k.startsWith("_") &&
-      !topic.cycleGivens.includes(k) &&
-      !relations.some(r => r.nodes?.includes(k)) &&
-      typeof S_raw[k] === "number" && !isNaN(S_raw[k])
-    );
-    const distractors = candidateDistractors.length > 0 && Math.random() < phi(-4)
-      ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
-      : [];
-
-    path = {
-      goalVar: topic.primaryGoals || null,
-      givens: Array.from(new Set([...topic.cycleGivens, ...distractors])).sort(),
-      distractors,
-      targetEqId: relations[relations.length - 1]?.id,
-      hopDistance: relations.length
-    };
-  } else {
-    path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
-  }
+  // 2. Autonomous graph path unrolling
+  const path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery, terminalGoals);
 
   const targetRel = relations.find(r => r.id === path.targetEqId) || relations[relations.length - 1];
   const problemTitle = targetRel ? targetRel.name : `${title} Problem`;
@@ -273,7 +339,16 @@ export function generateProblem(topic, getMastery = () => 0) {
     step.expectedVal = value;
   });
 
-  const solution = pruneSolutionPath(allSteps, path.goalVar, getMastery, topic.terminalGoals || []);
+  // If at high mastery multiple terminal goals are solvable from the givens, bundle them
+  let targetGoals = path.goalVar;
+  if (Array.isArray(terminalGoals) && terminalGoals.length > 0) {
+    const reachableTerminals = terminalGoals.filter(tg => canSolveTarget(path.givens, tg, relations, S_neat));
+    if (reachableTerminals.length > 0 && (Array.isArray(path.goalVar) || reachableTerminals.includes(path.goalVar))) {
+      targetGoals = reachableTerminals;
+    }
+  }
+
+  const solution = pruneSolutionPath(allSteps, targetGoals, getMastery, terminalGoals);
 
   // Unify units for deliverables in coupled groups
   const unifiedUnits = new Map();
@@ -308,6 +383,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     }
   });
 
+  // Layer 2: Constant recall-mode pruning heuristic
   const statementGivens = path.givens.filter(g => {
     const meta = varsDb[g] || CONSTANTS_DB[g] || {};
     if (meta.isConstant) {
@@ -319,6 +395,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     return true;
   });
 
+  // Layer 3: Cognitive fading step hiding
   const visibleGoals = solution.filter(s => !s.isFaded).map(s => s.targetVar);
   const statement = buildProblemStatement(statementGivens, visibleGoals, S_neat, varsDb, topic);
 
