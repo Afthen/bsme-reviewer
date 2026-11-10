@@ -36,8 +36,6 @@ export function determineGraphDistance(mastery, maxDepth = Infinity) {
 }
 
 function isRelSolvableFor(rel, varKey, varsDb = {}) {
-  if (rel.non_solvable && rel.non_solvable.includes(varKey)) return false;
-  if (rel.solvable && !rel.solvable.includes(varKey)) return false;
   const bf = rel.baseFormula || (rel.canonical ? `${rel.canonical.lhs} = ${rel.canonical.rhs}` : "");
   return isolateVariable(bf, varKey, varsDb).success;
 }
@@ -180,7 +178,7 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
   });
 
   const producibleVars = new Set(
-    relations.flatMap(r => [r.baseFormula?.split("=")[0]?.trim(), ...(r.solvable || [])]).filter(Boolean)
+    relations.flatMap(r => r.nodes.filter(n => isRelSolvableFor(r, n, varsDb)))
   );
 
   let minimalGivens = Array.from(essentialGivensSet).sort((a, b) => {
