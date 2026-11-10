@@ -93,24 +93,32 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   return { goalVar, givens, distractors: [], targetEqId: fallback.id, hopDistance: 0 };
 }
 
-function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery) {
+function isRelSolvableFor(rel, varKey, varsDb = {}) {
+  if (rel.non_solvable && rel.non_solvable.includes(varKey)) return false;
+  if (rel.solvable && !rel.solvable.includes(varKey)) return false;
+  const bf = rel.baseFormula || (rel.canonical ? `${rel.canonical.lhs} = ${rel.canonical.rhs}` : "");
+  return isolateVariable(bf, varKey, varsDb).success;
+}
+
+function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, varsDb = {}) {
   let currentGivens = targetNode.nodes.filter(n => n !== goalVar);
   const desiredHops = determineGraphDistance(targetMastery, relations.length);
 
   let bestGivens = currentGivens;
-  let currentSteps = solveDAG(currentGivens, S, relations, {}, () => 0);
+  let currentSteps = solveDAG(currentGivens, S, relations, varsDb, () => 0);
   let currentRequired = pruneSolutionPath(currentSteps, goalVar);
+  const usedRelIds = new Set([targetNode.id]);
 
   for (let h = 0; h < desiredHops; h++) {
     const expansions = [];
     const currentProduced = new Set(currentRequired.map(s => s.targetVar));
 
     for (const g of bestGivens) {
-      // Find any relation containing g that can algebraically solve for g
+      // Find any unvisited relation containing g that can algebraically solve for g
       const neighborRels = relations.filter(r =>
-        r.id !== targetNode.id &&
+        !usedRelIds.has(r.id) &&
         r.nodes.includes(g) &&
-        (!r.solvable || r.solvable.includes(g))
+        isRelSolvableFor(r, g, varsDb)
       );
 
       for (const nRel of neighborRels) {
@@ -151,6 +159,7 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery) 
     const chosen = expansions[0];
     bestGivens = chosen.candidateSet;
     currentRequired = chosen.required;
+    if (chosen.relId) usedRelIds.add(chosen.relId);
   }
 
   const steps = solveDAG(bestGivens, S, relations, {}, () => 0);
