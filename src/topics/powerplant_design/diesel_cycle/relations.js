@@ -17,7 +17,6 @@ export const DIESEL_CYCLE_RELATIONS = Object.freeze([
     canonicalTex: "T_2 = T_1 r_k^{k-1}",
     baseFormula: "T_2 = T_1 * (r_k^(k - 1))",
     nodes: ["T_2", "T_1", "r_k", "k"],
-    solvable: ["T_2", "T_1", "r_k"]
   },
   {
     id: "eq_diesel_t3",
@@ -32,7 +31,6 @@ export const DIESEL_CYCLE_RELATIONS = Object.freeze([
     canonicalTex: "T_4 = \\frac{T_3}{r_e^{k-1}}",
     baseFormula: "T_4 = T_3 / (r_e^(k - 1))",
     nodes: ["T_4", "T_3", "r_e", "k"],
-    solvable: ["T_4", "T_3", "r_e"]
   },
   {
     id: "eq_diesel_qa",
@@ -60,7 +58,6 @@ export const DIESEL_CYCLE_RELATIONS = Object.freeze([
     name: "Thermal Efficiency (Basic)",
     canonicalTex: "e_{th} = \\frac{w_{net}}{q_A}",
     baseFormula: "e_th = W_net / Q_A",
-    solvable: ["e_th"],
     nodes: ["e_th", "W_net", "Q_A"]
   },
   {
@@ -68,7 +65,6 @@ export const DIESEL_CYCLE_RELATIONS = Object.freeze([
     name: "Thermal Efficiency (Air-Standard)",
     canonicalTex: "e_{th} = 1 - \\frac{1}{r_k^{k-1}} \\left[ \\frac{r_c^k - 1}{k(r_c - 1)} \\right]",
     baseFormula: "e_th = 1 - (1 / (r_k^(k - 1))) * ((r_c^k - 1) / (k * (r_c - 1)))",
-    solvable: ["e_th"],
     nodes: ["e_th", "r_k", "r_c", "k"]
   }
 ]);
