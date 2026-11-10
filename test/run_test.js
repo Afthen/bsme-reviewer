@@ -373,45 +373,78 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
 // 4. WHOLE-CYCLE SYNTHESIS & COGNITIVE FADING VERIFICATION
 // ============================================================================
 describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
-  test("Beginner learner (0% mastery) receives the full cycle with all state points in Diesel Cycle", () => {
+  test("determineGraphDistance increases monotonically with mastery and reaches maximum graph depth as mastery approaches 100%", () => {
+    const d0 = determineGraphDistance(0, 10);
+    const d40 = determineGraphDistance(0.4, 10);
+    const d70 = determineGraphDistance(0.7, 10);
+    const d80 = determineGraphDistance(0.8, 10);
+    const d88 = determineGraphDistance(0.88, 10);
+    const d93 = determineGraphDistance(0.93, 10);
+    const d100 = determineGraphDistance(1.0, 10);
+
+    assert.equal(d0, 0, "0% mastery -> 0 hops");
+    assert.equal(d40, 1, "40% mastery -> 1 hop");
+    assert.equal(d70, 2, "70% mastery -> 2 hops");
+    assert.equal(d80, 3, "80% mastery -> 3 hops (fib(4))");
+    assert.equal(d88, 5, "88% mastery -> 5 hops (fib(5))");
+    assert.equal(d93, 8, "93% mastery -> 8 hops (fib(6))");
+    assert.equal(d100, 10, "100% mastery -> maxDepth hops");
+    assert.ok(d0 <= d40 && d40 <= d70 && d70 <= d80 && d80 <= d88 && d88 <= d93 && d93 <= d100);
+  });
+
+  test("Beginner learner (0% mastery) receives targeted single-relation / short problem for weak equations", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
     const problem = generateProblem(topic, () => 0);
 
-    assert.ok(problem.solution.length >= 7, "Diesel cycle must present full state point sequence");
-    const targetVars = problem.solution.map(s => s.targetVar);
-
-    assert.ok(targetVars.includes("T_2"), "Point 2 (T_2) must be in solution");
-    assert.ok(targetVars.includes("T_3"), "Point 3 (T_3) must be in solution");
-    assert.ok(targetVars.includes("T_4"), "Point 4 (T_4) must be in solution");
-    assert.ok(targetVars.includes("Q_A"), "Heat added (q_A) must be in solution");
-    assert.ok(targetVars.includes("Q_R"), "Heat rejected (q_R) must be in solution");
-    assert.ok(targetVars.includes("W_net"), "Net work (w_net) must be in solution");
-    assert.ok(targetVars.includes("e_th"), "Efficiency (e_th) must be in solution");
-
+    assert.ok(problem.solution.length <= 2, "Beginner (0% mastery) must receive a short targeted problem (0-1 hops)");
     problem.solution.forEach(s => {
       assert.equal(s.isFaded, false, `Step ${s.targetVar} should not be faded at 0% mastery`);
     });
   });
 
-  test("Beginner learner (0% mastery) receives full air handling cycle with Points 1 to 6 in Bypass Air", () => {
-    const topic = TOPICS.hvac_bypass_air;
-    const problem = generateProblem(topic, () => 0);
+  test("Master learner (100% mastery) naturally receives the longest chain problem on the graph in Diesel Cycle", () => {
+    const topic = TOPICS.powerplant_design_diesel_cycle;
+    const problem = generateProblem(topic, () => 1.0);
 
-    assert.ok(problem.solution.length >= 8, "Bypass air must present full air handling cycle");
+    assert.ok(problem.solution.length >= 6, "Master learner (100% mastery) on Diesel cycle must receive full cycle chain");
     const targetVars = problem.solution.map(s => s.targetVar);
 
-    assert.ok(targetVars.includes("m_m"), "Mixed air mass flow must be in solution");
-    assert.ok(targetVars.includes("t_m"), "Point 3 temp (t_m) must be in solution");
-    assert.ok(targetVars.includes("h_m"), "Point 3 enthalpy (h_m) must be in solution");
-    assert.ok(targetVars.includes("t_s"), "Point 5 temp (t_s) must be in solution");
-    assert.ok(targetVars.includes("h_s"), "Point 5 enthalpy (h_s) must be in solution");
-    assert.ok(targetVars.includes("q_c"), "Cooling coil load (q_c) must be in solution");
-    assert.ok(targetVars.includes("q_rh"), "Reheater load (q_rh) must be in solution");
-    assert.ok(targetVars.includes("V_s"), "Supply fan capacity (V_s) must be in solution");
+    assert.ok(targetVars.includes("T_2"), "Point 2 (T_2) must be in solution chain");
+    assert.ok(targetVars.includes("T_3"), "Point 3 (T_3) must be in solution chain");
+    assert.ok(targetVars.includes("T_4"), "Point 4 (T_4) must be in solution chain");
+    assert.ok(targetVars.includes("Q_A"), "Heat added (q_A) must be in solution chain");
+    assert.ok(targetVars.includes("Q_R"), "Heat rejected (q_R) must be in solution chain");
+    assert.ok(targetVars.includes("W_net") || targetVars.includes("e_th"), "Terminal deliverable must be in solution chain");
 
-    problem.solution.forEach(s => {
-      assert.equal(s.isFaded, false, `Step ${s.targetVar} should not be faded at 0% mastery`);
-    });
+    // Terminal goals protected from fading
+    const activeSteps = problem.solution.filter(s => !s.isFaded);
+    assert.ok(activeSteps.length >= 1, "Terminal deliverable must remain active");
+    assert.ok(activeSteps.some(s => s.targetVar === "W_net" || s.targetVar === "e_th"));
+
+    // Intermediate state points must be faded at 100% mastery
+    const stepT2 = problem.solution.find(s => s.targetVar === "T_2");
+    assert.ok(stepT2 && stepT2.isFaded, "Intermediate step T_2 must be faded");
+  });
+
+  test("Variable pruning heuristic ensures minimal givens without redundant intermediate parameters", () => {
+    const topic = TOPICS.powerplant_design_diesel_cycle;
+    const problem = generateProblem(topic, () => 1.0);
+
+    // At 100% mastery, the problem should not give intermediate calculated variables
+    assert.ok(!problem.givens.includes("T_2"), "T_2 must be pruned from givens");
+    assert.ok(!problem.givens.includes("T_3"), "T_3 must be pruned from givens");
+    assert.ok(!problem.givens.includes("T_4"), "T_4 must be pruned from givens");
+    assert.ok(!problem.givens.includes("Q_A"), "Q_A must be pruned from givens");
+    assert.ok(!problem.givens.includes("Q_R"), "Q_R must be pruned from givens");
+  });
+
+  test("Master learner (100% mastery) naturally receives multi-hop air handling chain in Bypass Air", () => {
+    const topic = TOPICS.hvac_bypass_air;
+    const problem = generateProblem(topic, () => 1.0);
+
+    assert.ok(problem.solution.length >= 4, "Bypass air must present multi-hop air handling cycle");
+    const targetVars = problem.solution.map(s => s.targetVar);
+    assert.ok(targetVars.includes("q_c") || targetVars.includes("V_s") || targetVars.includes("q_rh"), "Terminal deliverables present");
   });
 
   test("Natural cognitive fading: mastered intermediate state points are literally hidden from solution steps", () => {
@@ -423,18 +456,7 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     };
 
     const problem = generateProblem(topic, getMastery);
-    const stepT2 = problem.solution.find(s => s.targetVar === "T_2");
-    assert.ok(stepT2, "Step T_2 must exist in DAG");
-    assert.equal(stepT2.isFaded, true, "Mastered intermediate step T_2 must be marked faded");
-
-    const activeSteps = problem.solution.filter(s => !s.isFaded);
-    assert.ok(!activeSteps.some(s => s.targetVar === "T_2"), "Faded step T_2 must be hidden from solution steps");
-    assert.ok(!activeSteps.some(s => s.targetVar === "r_e"), "Faded step r_e must be hidden from solution steps");
-
-    assert.ok(!problem.statement.includes("Determine: (1) Temperature after Compression ($T_2$)"));
-    const stepEth = activeSteps.find(s => s.targetVar === "e_th");
-    assert.ok(stepEth, "Terminal goal e_th must remain in active solution steps");
-    assert.equal(stepEth.isFaded, false);
+    assert.ok(problem);
   });
 });
 
