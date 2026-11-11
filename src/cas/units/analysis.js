@@ -10,7 +10,7 @@ import { parseUnitToSemanticAST, semanticASTToTex, SUBSTITUTION_GRAPH, BASE_UNIT
 
 function expandSemanticFactor(factor) {
   const sub = SUBSTITUTION_GRAPH[factor.base];
-  if (!sub) return [factor]; // Leaf node, cannot expand further
+  if (!sub) return [factor];
 
   const expanded = [];
   const sign = factor.power > 0 ? 1 : -1;
@@ -46,7 +46,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         });
         return;
       }
-      if (currU && reqU && currU !== reqU && currU !== "deg" && reqU !== "°") {
+      if (currU && reqU && currU !== reqU && currU !== "deg" && currU !== "°") {
         const currScale = getUnitAtomBag(currU).scale;
         const reqScale = getUnitAtomBag(reqU).scale;
         if (currScale && reqScale) {
@@ -80,6 +80,15 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
           }
         }
       }
+    } else if (!reqTargetU && targetUnit) {
+      const exprScale = evalExprSemanticScale(ast, S, varsDb);
+      const targetScale = getUnitAtomBag(targetUnit).scale || 1.0;
+      if (targetScale > 0) {
+        numericConversionFactor = exprScale / targetScale;
+        if (Math.abs(numericConversionFactor - 1) > 1e-12) {
+          globalConversionTex = `\\cdot\\left[${fmtSigFig(numericConversionFactor, 6)}\\right]`;
+        }
+      }
     }
 
     return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions: {} };
@@ -100,7 +109,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     });
   }
 
-  // 2. Pass 1: Exact Match Cancellation
+  // Pass 1: Exact Match Cancellation
   for (let i = 0; i < semanticFactors.length; i++) {
     for (let j = i + 1; j < semanticFactors.length; j++) {
       const f1 = semanticFactors[i];
@@ -113,7 +122,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
   }
 
-  // 3. Pass 2: Shallowest-Match Substitution Expansion for uncancelled factors
+  // Pass 2: Shallowest-Match Substitution Expansion for uncancelled factors
   let expandedList = [...semanticFactors];
   let madeProgress = true;
   let safety = 0;
@@ -123,11 +132,9 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     safety++;
 
     const uncancelled = expandedList.filter(f => !f.canceled);
-    // Try to expand the first un-cancelled compound factor
     const targetIdx = uncancelled.findIndex(f => SUBSTITUTION_GRAPH[f.base]);
     if (targetIdx !== -1) {
       const itemToExpand = uncancelled[targetIdx];
-      // Mark original as canceled/superseded
       itemToExpand.canceled = true;
 
       const subFactors = expandSemanticFactor(itemToExpand);
@@ -135,7 +142,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         expandedList.push({ tok: itemToExpand.tok, prefix: sf.prefix, base: sf.base, power: sf.power, canceled: false });
       });
 
-      // Re-run exact match cancellation on newly expanded list
       for (let i = 0; i < expandedList.length; i++) {
         for (let j = i + 1; j < expandedList.length; j++) {
           const f1 = expandedList[i];
@@ -150,7 +156,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
   }
 
-  // 4. Build Token Markup for display
+  // Build Token Markup for display
   const allTokens = Array.from(new Set(Object.keys(exps)));
   for (const tok of allTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
@@ -164,7 +170,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     if (!anyCanceled) {
       tokenMarkup[tok] = semanticASTToTex(originalFactors);
     } else {
-      // Render with strikethroughs on cancelled semantic factors
       const activeFactors = originalFactors.map(f => {
         const match = myExpanded.find(ef => ef.base === f.base && ef.prefix === f.prefix);
         const isCanceled = match ? match.canceled : false;
@@ -181,6 +186,29 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     numericConversionFactor: 1.0,
     globalConversionTex: ""
   };
+}
+
+function evalExprSemanticScale(node, S, varsDb) {
+  if (!node) return 1.0;
+  if (node.type === "num") return 1.0;
+  if (node.type === "id") {
+    const cKey = resolveCanonicalKey(node.name, varsDb);
+    const uName = S._u?.[cKey] || S._u?.[node.name] || varsDb[cKey]?.unit || varsDb[node.name]?.unit || "";
+    return getUnitAtomBag(uName).scale || 1.0;
+  }
+  if (node.type === "group") return evalExprSemanticScale(node.expr, S, varsDb);
+  if (node.type === "call") return evalExprSemanticScale(node.arg, S, varsDb);
+  if (node.type === "binary") {
+    const L = evalExprSemanticScale(node.left, S, varsDb);
+    const R = evalExprSemanticScale(node.right, S, varsDb);
+    if (node.op === "*") return L * R;
+    if (node.op === "/") return L / R;
+    if (node.op === "^") {
+      const p = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
+      return Math.pow(L, p);
+    }
+  }
+  return 1.0;
 }
 
 function semanticASTToTexWithCancellation(factors) {
