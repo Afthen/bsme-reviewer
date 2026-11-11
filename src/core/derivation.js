@@ -42,38 +42,21 @@ export function buildAlignedDerivation(
     });
   }
 
-  // 1. Build Localized Substitution Mapping with universal affine & factor-label conversions
+  // 1. Build Localized Substitution Mapping with in-situ factor-label and affine conversions
   const subsMap = {};
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
       const meta = varsDb[k] || {};
       const formattedNum = formatGivenValue(v, meta);
-      const givenUnit = S._u?.[k] || meta.unit || "";
+      const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
+      const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
 
-      // Universal Affine Temperature Conversion (using single source of truth in definitions.js)
-      const isTemp = meta.dimension === "Temperature" || givenUnit === "°C" || givenUnit === "°F" || givenUnit === "K" || givenUnit === "°R";
-      const isDiff = meta.dimension === "Temperature Difference" || !!meta.isDifference;
-
-      let affineTex = null;
-      if (isTemp && !isDiff) {
-        if (givenUnit === "°F" && (targetUnit === "°R" || targetUnit === "K" || S.sys === "US")) {
-          affineTex = `(${formattedNum} + 459.67)\\,^{\\circ}\\text{R}`;
-        } else if (givenUnit === "°C" && (targetUnit === "K" || targetUnit === "°R" || S.sys === "SI")) {
-          affineTex = `(${formattedNum} + 273.15)\\,\\text{K}`;
-        }
-      }
-
-      if (affineTex) {
-        subsMap[k] = affineTex;
+      if (inlineConv === "__AFFINE_CONVERTED__") {
+        subsMap[k] = unitMarkup;
+      } else if (unitMarkup !== "" || inlineConv !== "") {
+        subsMap[k] = `${formattedNum}${unitMarkup ? (unitMarkup.startsWith("\\cfrac") || unitMarkup.startsWith("\\cancel{\\cfrac") ? unitMarkup : `\\,${unitMarkup}`) : ""}${inlineConv}`;
       } else {
-        const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
-        const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
-
-        if (unitMarkup !== "" || inlineConv !== "") {
-          subsMap[k] = `${formattedNum}${unitMarkup ? (unitMarkup.startsWith("\\cfrac") || unitMarkup.startsWith("\\cancel{\\cfrac") ? unitMarkup : `\\,${unitMarkup}`) : ""}${inlineConv}`;
-        } else {
-          subsMap[k] = formattedNum;
-        }
+        subsMap[k] = formattedNum;
       }
     }
   }
