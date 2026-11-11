@@ -205,7 +205,7 @@ export function getSemanticScale(factors) {
 export function getUnitAtomBag(uName) {
   const ast = parseUnitToSemanticAST(uName);
   const scale = getSemanticScale(ast);
-  return { scale, isDimensionless: uName === "dimless" || uName === "ratio" };
+  return { scale, isDimensionless: !uName || uName === "dimless" || uName === "ratio" };
 }
 
 export function formatValueInUnit(value, unitName = "", isDifference = false) {
