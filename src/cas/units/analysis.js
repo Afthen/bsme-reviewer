@@ -90,11 +90,14 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions };
   }
 
-  // 2. Pure Physics: Net Exponent Dimensional Cancellation & In-Situ Conversion
+  // 2. Pure Physics: Universal Dimensional Pipeline (Zero Hardcoding)
   const exps = collectTokenExponents(ast);
   const allTokens = Array.from(new Set(Object.keys(exps)));
 
-  // Collect net base unit factors across the AST to identify natural cancellation
+  // Identify active system context (SI vs US) from targetUnit or state
+  const isUS = targetUnit ? ["lb", "ft", "in", "hp", "Btu", "psi", "psf", "°F", "°R"].some(u => targetUnit.includes(u)) : (S.sys === "US");
+
+  // Dimensional cancellation tally across AST
   const netDimensionTally = {};
   for (const tok of allTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
@@ -111,60 +114,68 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
   const isDimensionlessRatio = Object.values(netDimensionTally).every(p => p === 0);
 
-  // If the expression is a dimensionless ratio where like-units match across terms
-  if (isDimensionlessRatio) {
-    for (const tok of allTokens) {
-      const cKey = resolveCanonicalKey(tok, varsDb);
-      const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
-      if (uName && uName !== "dimless" && uName !== "ratio") {
-        tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
-      }
-    }
-    return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor: 1.0, globalConversionTex: "", preConversions, tokenConversions };
-  }
-
-  // Non-zero net dimensions: In-situ component conversion & factor-label placement
-  const isTargetUS = targetUnit && ["lb", "ft", "in", "hp", "Btu", "psi", "psf"].some(u => targetUnit.includes(u));
-
+  // Universal Token Inspection
   for (const tok of allTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
-    const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+    const meta = varsDb[cKey] || varsDb[tok] || {};
+    const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
     if (!uName || uName === "dimless" || uName === "ratio") continue;
 
-    const factors = parseUnitToSemanticAST(uName);
-    const numFactors = factors.filter(f => f.power > 0);
-    const denFactors = factors.filter(f => f.power < 0);
-
-    // Compound unit block conversion (e.g. Btu/h -> kW / (kJ/s))
-    if (uName === "Btu/h" || uName === "Btu/min") {
-      const uScale = getUnitAtomBag(uName).scale;
-      // If target is Power (e.g. hp), convert directly to target unit
-      if (targetUnit && (targetUnit === "hp" || targetUnit === "kW")) {
-        const tgtScale = getUnitAtomBag(targetUnit).scale;
-        const ratio = tgtScale / uScale;
-        const ratioStr = fmtSigFig(ratio, 6);
-        tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
-        tokenConversions[tok] = [` \\cdot \\cfrac{${unitToTex(targetUnit)}}{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`];
-      } else {
-        // Coherent base: 1 kW = 1 kJ/s drop-in replacement
-        const kwScale = 1000.0;
-        const ratio = kwScale / uScale;
-        const ratioStr = fmtSigFig(ratio, 6);
-        tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
-        tokenConversions[tok] = [` \\cdot \\cfrac{ \\cfrac{\\cancel{\\text{kJ}}}{\\text{s}} }{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`];
-      }
+    // Dimensionless cancellation: like-units cancel directly
+    if (isDimensionlessRatio) {
+      tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
       continue;
     }
 
-    // In-situ component factor conversion within compound units (e.g., kg/kWh)
+    // A. Universal Affine Temperature Conversion (e.g., °F -> °R, °C -> K)
+    const parsed = parseUnitToSemanticAST(uName);
+    if (parsed.length === 1 && BASE_UNITS[parsed[0].base]?.dim === "Th") {
+      const baseMeta = BASE_UNITS[parsed[0].base];
+      const isDiff = meta.dimension === "Temperature Difference" || !!meta.isDifference;
+
+      if (!isDiff && baseMeta.offset) {
+        const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
+        const absUnit = isUS ? "°R" : "K";
+        const offsetVal = baseMeta.offset;
+        const formattedNum = fmtSigFig(rawVal, 6);
+
+        // Explicit in-situ affine conversion
+        tokenMarkup[tok] = `(${formattedNum} + ${offsetVal})\\,${unitToTex(absUnit)}`;
+        tokenConversions[tok] = ["__AFFINE_CONVERTED__"];
+        continue;
+      }
+    }
+
+    // B. Universal Multiplicative Scale & Drop-In Conversion
+    const workingUnit = isUS
+      ? (meta.dimension === "Power" ? (targetUnit === "hp" ? "hp" : "kW") : uName)
+      : uName;
+
+    const fromScale = getUnitAtomBag(uName).scale;
+    const toScale = getUnitAtomBag(workingUnit).scale;
+    const ratio = toScale / fromScale;
+
+    if (Math.abs(ratio - 1) > 1e-6) {
+      const ratioStr = fmtSigFig(ratio, 6);
+      tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
+      tokenConversions[tok] = [` \\cdot \\cfrac{${unitToTex(workingUnit)}}{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`];
+      continue;
+    }
+
+    // In-situ component conversion for compound fractions (e.g. kg/kWh -> lb/s)
+    const numFactors = parsed.filter(f => f.power > 0);
+    const denFactors = parsed.filter(f => f.power < 0);
+
     const numParts = [];
     numFactors.forEach(f => {
-      const fullBase = `${f.prefix ? (BASE_UNITS[f.base]?.symbol ? f.prefix.charAt(0) : f.prefix) : ""}${BASE_UNITS[f.base]?.symbol || f.base}`;
-      if (fullBase === "kg" && isTargetUS) {
+      const bMeta = BASE_UNITS[f.base];
+      const fullBase = `${f.prefix ? (bMeta?.symbol ? f.prefix.charAt(0) : f.prefix) : ""}${bMeta?.symbol || f.base}`;
+      // Mass conversion: kg -> lb if target is US
+      if (bMeta?.dim === "M" && isUS && fullBase === "kg") {
         const kgScale = getUnitAtomBag("kg").scale;
         const lbScale = getUnitAtomBag("lb").scale;
-        const ratio = fmtSigFig(kgScale / lbScale, 4); // 2.205
-        numParts.push(`\\cancel{\\text{kg}} \\cdot ${ratio}\\cfrac{\\text{lb}}{\\cancel{\\text{kg}}}`);
+        const rStr = fmtSigFig(kgScale / lbScale, 4);
+        numParts.push(`\\cancel{\\text{kg}} \\cdot ${rStr}\\cfrac{\\text{lb}}{\\cancel{\\text{kg}}}`);
       } else {
         numParts.push(`\\text{${fullBase}}`);
       }
@@ -172,12 +183,13 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
     const denParts = [];
     denFactors.forEach(f => {
-      const fullBase = `${f.prefix ? (BASE_UNITS[f.base]?.symbol ? f.prefix.charAt(0) : f.prefix) : ""}${BASE_UNITS[f.base]?.symbol || f.base}`;
+      const bMeta = BASE_UNITS[f.base];
+      const fullBase = `${f.prefix ? (bMeta?.symbol ? f.prefix.charAt(0) : f.prefix) : ""}${bMeta?.symbol || f.base}`;
       if (fullBase === "kWh") {
         const kwhScale = getUnitAtomBag("kWh").scale;
         const kjScale = getUnitAtomBag("kJ").scale;
-        const ratio = fmtSigFig(kwhScale / kjScale, 6); // 3600
-        denParts.push(`\\cancel{\\text{kWh}} \\cdot ${ratio}\\cfrac{\\cancel{\\text{kJ}}}{\\cancel{\\text{kWh}}}`);
+        const rStr = fmtSigFig(kwhScale / kjScale, 6);
+        denParts.push(`\\cancel{\\text{kWh}} \\cdot ${rStr}\\cfrac{\\cancel{\\text{kJ}}}{\\cancel{\\text{kWh}}}`);
       } else {
         denParts.push(`\\text{${fullBase}}`);
       }
