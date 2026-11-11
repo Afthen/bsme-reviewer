@@ -7,8 +7,30 @@
  * - Coherent physical base projection for all relations
  */
 
-import { test, describe } from "node:test";
+import { test as nodeTest, describe as nodeDescribe } from "node:test";
 import assert from "node:assert/strict";
+
+let totalFailed = 0;
+
+export function describe(name, fn) {
+  fn();
+}
+
+export function test(name, fn) {
+  try {
+    const res = fn();
+    if (res instanceof Promise) {
+      res.catch(err => {
+        totalFailed++;
+        nodeTest(name, () => { throw err; });
+      });
+    }
+  } catch (err) {
+    totalFailed++;
+    nodeTest(name, () => { throw err; });
+  }
+}
+
 import { ALL_TOPICS, TOPICS } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
@@ -192,7 +214,7 @@ describe("Engineering Topics Ground Truth & AST Inversion Suite", () => {
       assert.equal(
         report.errors.length,
         0,
-        `${topic.title} has ${report.errors.length} validation errors (tested ${report.testedPairs} pairs).`
+        `${topic.title} has ${report.errors.length} validation errors (tested ${report.testedPairs} pairs):\n` + report.errors.slice(0, 5).join("\n")
       );
     });
   }
@@ -693,4 +715,8 @@ describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
       assert.ok(mod.TOPICS[topic.id], `app.js TOPICS export is missing topic '${topic.id}'`);
     }
   });
+});
+
+nodeTest("Test Suite Summary", () => {
+  assert.equal(totalFailed, 0, `${totalFailed} test(s) failed.`);
 });
