@@ -11,5 +11,4 @@ export const dieselEngineTopic = Object.freeze({
   varsDb: DIESEL_ENGINE_VARS_DB,
   relations: DIESEL_ENGINE_RELATIONS,
   createSystem: createDieselEngineSystem,
-  terminalGoals: ["bsfc", "EP", "eta_ith"]
 });

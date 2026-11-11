@@ -11,5 +11,4 @@ export const mixedAirTopic = Object.freeze({
   varsDb: MIXED_AIR_VARS_DB,
   relations: MIXED_AIR_RELATIONS,
   createSystem: createMixedAirSystem,
-  terminalGoals: ["q_c", "V_m"]
 });

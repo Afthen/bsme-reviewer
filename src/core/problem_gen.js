@@ -40,7 +40,7 @@ function isRelSolvableFor(rel, varKey, varsDb = {}) {
   return isolateVariable(bf, varKey, varsDb).success;
 }
 
-export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0, terminalGoals = []) {
+export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery = () => 0) {
   const scoredNodes = relations.map(node => {
     const mastery = getMastery(node);
     const weight = relationWeaknessWeight(mastery);
@@ -53,21 +53,6 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   const meanMastery = scoredNodes.reduce((sum, s) => sum + s.mastery, 0) / (scoredNodes.length || 1);
   const isHighMastery = meanMastery >= FADING_THRESHOLD;
   const bestCandidates = [];
-
-  // When mastery is high across the topic, prioritize terminal goals to synthesize full-cycle chains
-  if (isHighMastery && Array.isArray(terminalGoals) && terminalGoals.length > 0) {
-    for (const tGoal of terminalGoals) {
-      const parentRels = relations.filter(r => isRelSolvableFor(r, tGoal, varsDb));
-      for (const pRel of parentRels) {
-        const problem = buildGraphPath(pRel, tGoal, relations, S, meanMastery, varsDb);
-        if (problem) bestCandidates.push(problem);
-      }
-    }
-    if (bestCandidates.length > 0) {
-      bestCandidates.sort((a, b) => b.hopDistance - a.hopDistance);
-      return bestCandidates[0];
-    }
-  }
 
   // Iterate through weakness-sorted nodes
   for (const { node: targetNode, mastery } of scoredNodes) {
@@ -311,7 +296,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 }
 
 export function generateProblem(topic, getMastery = () => 0) {
-  const { title, varsDb, relations, createSystem, terminalGoals = [] } = topic;
+  const { title, varsDb, relations, createSystem } = topic;
 
   // 1. Establish ground truth system with 40-40-20 unit distribution
   const targetMode = sampleSystemMode();
@@ -319,7 +304,7 @@ export function generateProblem(topic, getMastery = () => 0) {
   S_raw = applyProblemUnitSampling(S_raw, varsDb, targetMode);
 
   // 2. Autonomous graph path unrolling
-  const path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery, terminalGoals);
+  const path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
 
   const targetRel = relations.find(r => r.id === path.targetEqId) || relations[relations.length - 1];
   const problemTitle = targetRel ? targetRel.name : `${title} Problem`;
@@ -349,16 +334,8 @@ export function generateProblem(topic, getMastery = () => 0) {
     step.expectedVal = value;
   });
 
-  // If at high mastery multiple terminal goals are solvable from the givens, bundle them
-  let targetGoals = path.goalVar;
-  if (Array.isArray(terminalGoals) && terminalGoals.length > 0) {
-    const reachableTerminals = terminalGoals.filter(tg => canSolveTarget(path.givens, tg, relations, S_neat));
-    if (reachableTerminals.length > 0 && (Array.isArray(path.goalVar) || reachableTerminals.includes(path.goalVar))) {
-      targetGoals = reachableTerminals;
-    }
-  }
-
-  const solution = pruneSolutionPath(allSteps, targetGoals, getMastery, terminalGoals);
+  const targetGoals = path.goalVar;
+  const solution = pruneSolutionPath(allSteps, targetGoals, getMastery);
 
   // Unify units for deliverables in coupled groups
   const unifiedUnits = new Map();

@@ -11,5 +11,4 @@ export const dieselHeatBalanceTopic = Object.freeze({
   varsDb: DIESEL_HEAT_BALANCE_VARS_DB,
   relations: DIESEL_HEAT_BALANCE_RELATIONS,
   createSystem: createDieselHeatBalanceSystem,
-  terminalGoals: ["m_cw", "Q_rad"]
 });
