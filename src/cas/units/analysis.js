@@ -37,7 +37,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   let globalConversionTex = "";
   let numericConversionFactor = 1.0;
 
-  // 1. Handling empirical relations with requiredUnits contracts
+  // 1. Empirical relations with requiredUnits contracts
   if (requiredUnits && typeof requiredUnits === "object") {
     const varTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
     varTokens.forEach(tok => {
@@ -90,8 +90,41 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions };
   }
 
-  // 2. Pure physics dimensional analysis & Factor-Label in-situ unit conversions
-  const allTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
+  // 2. Pure Physics: Net Exponent Dimensional Cancellation & In-Situ Conversion
+  const exps = collectTokenExponents(ast);
+  const allTokens = Array.from(new Set(Object.keys(exps)));
+
+  // Collect net base unit factors across the AST to identify natural cancellation
+  const netDimensionTally = {};
+  for (const tok of allTokens) {
+    const cKey = resolveCanonicalKey(tok, varsDb);
+    const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+    if (!uName || uName === "dimless" || uName === "ratio") continue;
+
+    const tokExp = exps[tok] || 1;
+    const factors = parseUnitToSemanticAST(uName);
+    factors.forEach(f => {
+      const dim = BASE_UNITS[f.base]?.dim || f.base;
+      netDimensionTally[dim] = (netDimensionTally[dim] || 0) + f.power * tokExp;
+    });
+  }
+
+  const isDimensionlessRatio = Object.values(netDimensionTally).every(p => p === 0);
+
+  // If the expression is a dimensionless ratio where like-units match across terms
+  if (isDimensionlessRatio) {
+    for (const tok of allTokens) {
+      const cKey = resolveCanonicalKey(tok, varsDb);
+      const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+      if (uName && uName !== "dimless" && uName !== "ratio") {
+        tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
+      }
+    }
+    return { tokenMarkup, conversionFactors: [], conversionFactorTex: "", numericConversionFactor: 1.0, globalConversionTex: "", preConversions, tokenConversions };
+  }
+
+  // Non-zero net dimensions: In-situ component conversion & factor-label placement
+  const isTargetUS = targetUnit && ["lb", "ft", "in", "hp", "Btu", "psi", "psf"].some(u => targetUnit.includes(u));
 
   for (const tok of allTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
@@ -102,33 +135,31 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const numFactors = factors.filter(f => f.power > 0);
     const denFactors = factors.filter(f => f.power < 0);
 
-    // Identify target unit system context
-    const isTargetUS = targetUnit && ["lb", "ft", "in", "hp", "Btu", "psi", "psf"].some(u => targetUnit.includes(u));
-
-    // A. Check for compound block conversion (e.g., Btu/h -> kW / (kJ/s))
+    // Compound unit block conversion (e.g. Btu/h -> kW / (kJ/s))
     if (uName === "Btu/h" || uName === "Btu/min") {
       const uScale = getUnitAtomBag(uName).scale;
-      const kwScale = 1000.0;
-      const ratio = kwScale / uScale; // 3412.14
-      const ratioStr = fmtSigFig(ratio, 6);
-
-      const fDepth = getFormulaFractionDepth(ast, tok) || 0;
-      // Fraction height check: block fraction is level 2; if fDepth > 0, height = 3 > 2 (illegal)
-      if (fDepth === 0) {
+      // If target is Power (e.g. hp), convert directly to target unit
+      if (targetUnit && (targetUnit === "hp" || targetUnit === "kW")) {
+        const tgtScale = getUnitAtomBag(targetUnit).scale;
+        const ratio = tgtScale / uScale;
+        const ratioStr = fmtSigFig(ratio, 6);
         tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
-        tokenConversions[tok] = [` \\cdot \\cfrac{\\cfrac{\\cancel{\\text{kJ}}}{\\text{s}}}{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`];
+        tokenConversions[tok] = [` \\cdot \\cfrac{${unitToTex(targetUnit)}}{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`];
       } else {
-        tokenMarkup[tok] = unitToTex(uName);
-        globalConversionTex += ` \\cdot \\cfrac{\\cfrac{\\cancel{\\text{kJ}}}{\\text{s}}}{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`;
+        // Coherent base: 1 kW = 1 kJ/s drop-in replacement
+        const kwScale = 1000.0;
+        const ratio = kwScale / uScale;
+        const ratioStr = fmtSigFig(ratio, 6);
+        tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
+        tokenConversions[tok] = [` \\cdot \\cfrac{ \\cfrac{\\cancel{\\text{kJ}}}{\\text{s}} }{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`];
       }
       continue;
     }
 
-    // B. In-situ conversion within numerator and denominator factors
+    // In-situ component factor conversion within compound units (e.g., kg/kWh)
     const numParts = [];
     numFactors.forEach(f => {
       const fullBase = `${f.prefix ? (BASE_UNITS[f.base]?.symbol ? f.prefix.charAt(0) : f.prefix) : ""}${BASE_UNITS[f.base]?.symbol || f.base}`;
-      // Mass conversion: kg -> lb if target is US
       if (fullBase === "kg" && isTargetUS) {
         const kgScale = getUnitAtomBag("kg").scale;
         const lbScale = getUnitAtomBag("lb").scale;
@@ -142,7 +173,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const denParts = [];
     denFactors.forEach(f => {
       const fullBase = `${f.prefix ? (BASE_UNITS[f.base]?.symbol ? f.prefix.charAt(0) : f.prefix) : ""}${BASE_UNITS[f.base]?.symbol || f.base}`;
-      // Energy conversion: kWh -> kJ
       if (fullBase === "kWh") {
         const kwhScale = getUnitAtomBag("kWh").scale;
         const kjScale = getUnitAtomBag("kJ").scale;
@@ -169,4 +199,26 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     preConversions,
     tokenConversions
   };
+}
+
+function collectTokenExponents(node, sign = 1, acc = {}) {
+  if (!node) return acc;
+  if (node.type === "group") return collectTokenExponents(node.expr, sign, acc);
+  if (node.type === "id") {
+    acc[node.name] = (acc[node.name] || 0) + sign;
+    return acc;
+  }
+  if (node.type === "binary") {
+    if (node.op === "*") {
+      collectTokenExponents(node.left, sign, acc);
+      collectTokenExponents(node.right, sign, acc);
+    } else if (node.op === "/") {
+      collectTokenExponents(node.left, sign, acc);
+      collectTokenExponents(node.right, -sign, acc);
+    } else if (node.op === "^") {
+      const p = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
+      collectTokenExponents(node.left, sign * p, acc);
+    }
+  }
+  return acc;
 }
