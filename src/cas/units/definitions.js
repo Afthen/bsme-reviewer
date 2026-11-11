@@ -23,15 +23,17 @@ export const PREFIXES = Object.freeze({
 });
 
 export const BASE_UNITS = Object.freeze({
-  "gram":     { dim: "M", baseScale: 0.001, symbol: "g" },
-  "meter":    { dim: "L", baseScale: 1.0, symbol: "m" },
-  "second":   { dim: "T", baseScale: 1.0, symbol: "s" },
-  "Newton":   { dim: "F", baseScale: 1.0, symbol: "N" },
-  "pound":    { dim: "F", baseScale: 4.4482216, symbol: "lb" },
-  "Kelvin":   { dim: "Th", baseScale: 1.0, symbol: "K" },
-  "Celsius":  { dim: "Th", baseScale: 1.0, offset: 273.15, symbol: "°C" },
-  "Fahrenheit":{ dim: "Th", baseScale: 5/9, offset: 459.67, symbol: "°F" },
-  "Rankine":  { dim: "Th", baseScale: 5/9, symbol: "°R" },
+  "gram":       { dim: "M", baseScale: 0.001, symbol: "g" },
+  "pound_mass": { dim: "M", baseScale: 0.45359237, symbol: "lb" },
+  "meter":      { dim: "L", baseScale: 1.0, symbol: "m" },
+  "second":     { dim: "T", baseScale: 1.0, symbol: "s" },
+  "Newton":     { dim: "F", baseScale: 1.0, symbol: "N" },
+  "pound":      { dim: "F", baseScale: 4.4482216, symbol: "lb" },
+  "percent":    { dim: "C", baseScale: 0.01, symbol: "%" },
+  "Kelvin":     { dim: "Th", baseScale: 1.0, symbol: "K" },
+  "Celsius":    { dim: "Th", baseScale: 1.0, offset: 273.15, symbol: "°C" },
+  "Fahrenheit": { dim: "Th", baseScale: 5/9, offset: 459.67, symbol: "°F" },
+  "Rankine":    { dim: "Th", baseScale: 5/9, symbol: "°R" },
   "Btu":      { dim: "E", baseScale: 1055.056, symbol: "Btu" },
   "Joule":    { dim: "E", baseScale: 1.0, symbol: "J" },
   "Watt":     { dim: "E", baseScale: 1.0, symbol: "W" },
@@ -65,6 +67,10 @@ export const SUBSTITUTION_GRAPH = Object.freeze({
 export function resolveUnitToken(tokenBody) {
   if (tokenBody === "%") return { prefix: null, base: "percent" };
   if (tokenBody === "°" || tokenBody === "deg") return { prefix: null, base: "deg" };
+  if (tokenBody === "F" || tokenBody === "°F") return { prefix: null, base: "Fahrenheit" };
+  if (tokenBody === "C" || tokenBody === "°C") return { prefix: null, base: "Celsius" };
+  if (tokenBody === "R" || tokenBody === "°R") return { prefix: null, base: "Rankine" };
+  if (tokenBody === "K") return { prefix: null, base: "Kelvin" };
 
   const aliasMap = {
     "kips": { prefix: "kilo", base: "pound" },
@@ -103,6 +109,11 @@ export function parseUnitToSemanticAST(uName) {
   if (uName === "ksi") return [{ prefix: "kilo", base: "pound", power: 1 }, { prefix: null, base: "inch", power: -2 }];
   if (uName === "rpm") return [{ prefix: null, base: "rev", power: 1 }, { prefix: null, base: "minute", power: -1 }];
   if (uName === "cfm") return [{ prefix: null, base: "foot", power: 3 }, { prefix: null, base: "minute", power: -1 }];
+  if (uName === "Btu/(lb*F)" || uName === "Btu/lb-F") return [{ prefix: null, base: "Btu", power: 1 }, { prefix: null, base: "pound_mass", power: -1 }, { prefix: null, base: "Fahrenheit", power: -1 }];
+  if (uName === "Btu/lb") return [{ prefix: null, base: "Btu", power: 1 }, { prefix: null, base: "pound_mass", power: -1 }];
+  if (uName === "lb/min") return [{ prefix: null, base: "pound_mass", power: 1 }, { prefix: null, base: "minute", power: -1 }];
+  if (uName === "lb/s") return [{ prefix: null, base: "pound_mass", power: 1 }, { prefix: null, base: "second", power: -1 }];
+  if (uName === "lb/h" || uName === "lb/hr") return [{ prefix: null, base: "pound_mass", power: 1 }, { prefix: null, base: "hour", power: -1 }];
 
   const ast = parseUnitAST(uName);
   return flattenUnitAST(ast);
