@@ -320,8 +320,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     if (meta.isInteger) {
       S_neat[g] = Math.round(val);
     } else {
-      const formattedStr = fmtSigFig(val, 6);
-      S_neat[g] = parseFloat(formattedStr);
+      S_neat[g] = parseFloat(val.toPrecision(6));
     }
   });
 
