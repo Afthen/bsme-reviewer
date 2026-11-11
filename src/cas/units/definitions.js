@@ -209,12 +209,21 @@ export function getUnitAtomBag(uName) {
 }
 
 export function formatValueInUnit(value, unitName = "", isDifference = false) {
+  if (!isDifference) {
+    if (unitName === "°C") return value - 273.15;
+    if (unitName === "°F") return (value * (9/5)) - 459.67;
+    if (unitName === "°R") return value * (9/5);
+  }
   const scale = getUnitAtomBag(unitName).scale;
-  if (!scale) return value;
-  return value / scale;
+  return scale > 0 ? value / scale : value;
 }
 
 export function valueToCoherentBase(value, unitName = "", isDifference = false) {
+  if (!isDifference) {
+    if (unitName === "°C") return value + 273.15;
+    if (unitName === "°F") return (value + 459.67) * (5/9);
+    if (unitName === "°R") return value * (5/9);
+  }
   const scale = getUnitAtomBag(unitName).scale;
   return value * scale;
 }
