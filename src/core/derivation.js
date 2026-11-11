@@ -5,7 +5,7 @@
  * - Zero regex; full AST-based subtree mutation and factoring
  * - Additive terms of identical units combined into (a ± b ± ...)\\,unit
  * - Variable symbols consistently drawn from S._displaySymbols
- * - At most one global scale bracket (unitAnalysis.globalConversionTex)
+ * - In-situ factor-label unit conversions with "omit 1" rule
  * ============================================================================
  */
 
@@ -42,7 +42,7 @@ export function buildAlignedDerivation(
     });
   }
 
-  // 1. Build Localized Substitution Mapping with thin LaTeX spacing (no commas)
+  // 1. Build Localized Substitution Mapping with in-situ factor-label conversions
   const subsMap = {};
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
@@ -52,7 +52,7 @@ export function buildAlignedDerivation(
       const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
 
       if (unitMarkup !== "" || inlineConv !== "") {
-        subsMap[k] = `${formattedNum}\\,${unitMarkup}${inlineConv}`;
+        subsMap[k] = `${formattedNum}${unitMarkup ? (unitMarkup.startsWith("\\cfrac") || unitMarkup.startsWith("\\cancel{\\cfrac") ? unitMarkup : `\\,${unitMarkup}`) : ""}${inlineConv}`;
       } else {
         subsMap[k] = formattedNum;
       }
@@ -60,8 +60,7 @@ export function buildAlignedDerivation(
   }
 
   // 2. Pure AST Additive Factoring:
-  //    Mutates the additive binary subtree directly into a single factored identifier node,
-  //    eliminating dummy leaf zeros and regex replacements.
+  //    Mutates the additive binary subtree directly into a single factored identifier node
   const rhsAst = parseMathAST(formulaRhs);
   const unitOfKey = k => S._u?.[k] || varsDb[k]?.unit || "";
 
@@ -107,13 +106,12 @@ export function buildAlignedDerivation(
         const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
         subsMap[factoredId] = uTex ? `(${inner})\\,${uTex}` : `(${inner})`;
 
-        // Transform binary node in-place into an identifier AST node
         node.type = "id";
         node.name = factoredId;
         delete node.op;
         delete node.left;
         delete node.right;
-        return; // maximal group factored cleanly in AST
+        return;
       }
     }
 
@@ -121,7 +119,7 @@ export function buildAlignedDerivation(
     factorAdditiveGroups(node.right);
   })(rhsAst);
 
-  // 3. Implication Arrow Logic via semantic LHS matching
+  // 3. Implication Arrow Logic
   const symRhs = casToTex(formulaRhs, varsDb);
   const displayCanonical = canonicalTex || casToTex(baseFormula, varsDb);
 
@@ -143,7 +141,7 @@ export function buildAlignedDerivation(
     line1 = `${displayCanonical} \\;\\Rightarrow\\; ${targetSymbol} &= ${symRhs} \\\\[6pt]\n  &= ${numTex}`;
   }
 
-  // 4. Final Boxed Answer with clean thin spacing (no comma before unit)
+  // 4. Final Boxed Answer with \tfrac for compact units
   const val = step.expectedVal !== undefined ? step.expectedVal : S[canonicalTarget];
   const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
 
@@ -152,7 +150,7 @@ export function buildAlignedDerivation(
     if (targetUnit === "deg" || targetUnit === "°") {
       unitTex = "°";
     } else {
-      unitTex = `\\,${unitToTex(targetUnit)}`;
+      unitTex = `\\,${unitToTex(targetUnit, true)}`;
     }
   }
 
