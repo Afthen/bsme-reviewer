@@ -11,5 +11,4 @@ export const bypassAirTopic = Object.freeze({
   varsDb: BYPASS_AIR_VARS_DB,
   relations: BYPASS_AIR_RELATIONS,
   createSystem: createBypassAirSystem,
-  terminalGoals: ["q_c", "q_rh", "V_s"]
 });
