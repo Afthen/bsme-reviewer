@@ -66,13 +66,14 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
 
   varTokens.forEach(tok => {
     const cKey = resolveCanonicalKey(tok, varsDb);
-    const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+    const meta = varsDb[cKey] || varsDb[tok] || {};
+    const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
 
     if (uName && uName !== "dimless" && uName !== "ratio" && uName !== "deg" && uName !== "°") {
       const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
       if (typeof rawVal === "number" && !isNaN(rawVal)) {
         const isDiff = isDifferenceVariable(cKey, varsDb) || isDifferenceVariable(tok, varsDb);
-        const valInBase = valueToCoherentBase(rawVal, uName, isDiff);
+        const valInBase = valueToCoherentBase(rawVal, uName, isDiff, meta.dimension);
         coherentState[tok] = valInBase;
         coherentState[cKey] = valInBase;
       }
@@ -83,8 +84,9 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
   const coherentNum = evalAST(node, coherentState, unitResolver);
   if (isNaN(coherentNum)) return { value: NaN, unitAnalysis };
 
-  // Project coherent SI base result into requested targetUnit
+  // Project coherent SI base result into requested targetUnit with target dimension awareness
+  const targetMeta = varsDb[cTarget] || varsDb[targetVar] || {};
   const targetIsDiff = isDifferenceVariable(cTarget, varsDb) || isDifferenceVariable(targetVar, varsDb);
-  const finalValue = formatValueInUnit(coherentNum, targetUnit, targetIsDiff);
+  const finalValue = formatValueInUnit(coherentNum, targetUnit, targetIsDiff, targetMeta.dimension);
   return { value: finalValue, unitAnalysis };
 }
