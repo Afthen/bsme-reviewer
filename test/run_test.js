@@ -144,7 +144,7 @@ export function validateDerivationLatex(derivLatex) {
   assert.ok(derivLatex.includes("="), "Derivation step missing equality");
   assert.ok(!derivLatex.includes("\\cdot^"), `\\cdot cannot take a direct superscript in step: ${derivLatex}`);
   assert.ok(!derivLatex.includes("\\cancel{}") && !derivLatex.includes("\\cancel{ }"), `Empty cancel bracket in step: ${derivLatex}`);
-  assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{"), `Illegal nested fraction tower in step: ${derivLatex}`);
+  assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{\\cfrac{"), `Illegal nested fraction tower (exceeds 2 levels) in step: ${derivLatex}`);
   
   let braceDepth = 0;
   for (let i = 0; i < derivLatex.length; i++) {
