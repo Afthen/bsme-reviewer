@@ -88,6 +88,7 @@ export function validateTopic(topic) {
       const activeVariant = (rel.variants && rel.variants[sys]) ? rel.variants[sys] : null;
       const baseFormula = activeVariant?.baseFormula || rel.baseFormula;
       const allowableTargets = activeVariant?.nodes || rel.nodes;
+      const requiredUnits = activeVariant?.requiredUnits || rel.requiredUnits || null;
 
       for (const targetVar of allowableTargets) {
         const isolated = isolateVariable(baseFormula, targetVar, varsDb);
