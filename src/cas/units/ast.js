@@ -51,7 +51,7 @@ export function parseUnitAST(exprStr, dimension = null) {
 
     if (tok.val === "(") {
       consume("(");
-      const node = parseExpr();
+      const node = parseDiv();
       consume(")");
       return { type: "group", expr: node };
     }
@@ -88,32 +88,36 @@ export function parseUnitAST(exprStr, dimension = null) {
     return left;
   }
 
-  function parseMulDiv() {
+  // Compound product: binds *, ·, -, and adjacent units tighter than solidus /
+  function parseProduct() {
     let left = parsePower();
-    while (peek() && (peek().val === "*" || peek().val === "/")) {
-      const op = consume().val;
+    while (
+      peek() &&
+      (peek().val === "*" || peek().val === "-" || (peek().type !== "op" && peek().val !== ")"))
+    ) {
+      if (peek().val === "*" || peek().val === "-") {
+        consume();
+      }
       const right = parsePower();
-      left = { type: "binary", op, left, right };
-    }
-    while (peek() && peek().type !== "op" && peek().val !== ")") {
-      const right = parsePower();
-      left = { type: "binary", op: "*", left, right };
+      if (right) {
+        left = { type: "binary", op: "*", left, right };
+      }
     }
     return left;
   }
 
-  function parseExpr() {
-    let left = parseMulDiv();
-    while (peek() && (peek().val === "*" || peek().val === "/" || peek().val === "-")) {
-      const op = consume().val;
-      const actualOp = op === "-" ? "*" : op;
-      const right = parseMulDiv();
-      left = { type: "binary", op: actualOp, left, right };
+  // Division solidus (/): everything following / in the product binds to the denominator
+  function parseDiv() {
+    let left = parseProduct();
+    while (peek() && peek().val === "/") {
+      consume("/");
+      const right = parseProduct();
+      left = { type: "binary", op: "/", left, right };
     }
     return left;
   }
 
-  return parseExpr();
+  return parseDiv();
 }
 
 export function flattenUnitAST(node, currentSign = 1) {
