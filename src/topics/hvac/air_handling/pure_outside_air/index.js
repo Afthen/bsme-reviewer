@@ -11,5 +11,4 @@ export const pureOutsideAirTopic = Object.freeze({
   varsDb: PURE_AIR_VARS_DB,
   relations: PURE_AIR_RELATIONS,
   createSystem: createPureAirSystem,
-  terminalGoals: ["q_c"]
 });
