@@ -1,34 +1,43 @@
 /**
  * src/cas/units/analysis.js
- * Shallowest-Match Unit Cancellation & AST Derivation Markup Engine.
+ * AST-Driven Unit Analysis, In-Situ Conversion, and Factor-Label Markup Engine.
  */
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { fmtSigFig } from "../../core/dimensions.js";
-import { parseUnitToSemanticAST, semanticASTToTex, SUBSTITUTION_GRAPH, BASE_UNITS, getUnitAtomBag, unitToTex } from "./definitions.js";
+import {
+  parseUnitToSemanticAST,
+  semanticASTToTex,
+  SUBSTITUTION_GRAPH,
+  BASE_UNITS,
+  getUnitAtomBag,
+  unitToTex
+} from "./definitions.js";
 
-function expandSemanticFactor(factor) {
-  const sub = SUBSTITUTION_GRAPH[factor.base];
-  if (!sub) return [factor];
-
-  const expanded = [];
-  const sign = factor.power > 0 ? 1 : -1;
-  const absP = Math.abs(factor.power);
-
-  for (let i = 0; i < absP; i++) {
-    sub.num.forEach(b => expanded.push({ prefix: factor.prefix, base: b, power: sign }));
-    sub.den.forEach(b => expanded.push({ prefix: factor.prefix, base: b, power: -sign }));
+function getFormulaFractionDepth(node, targetName, currentDepth = 0) {
+  if (!node) return null;
+  if (node.type === "id" && node.name === targetName) return currentDepth;
+  if (node.type === "group") return getFormulaFractionDepth(node.expr, targetName, currentDepth);
+  if (node.type === "call") return getFormulaFractionDepth(node.arg, targetName, currentDepth);
+  if (node.type === "binary") {
+    const nextDepth = currentDepth + (node.op === "/" ? 1 : 0);
+    const l = getFormulaFractionDepth(node.left, targetName, nextDepth);
+    if (l !== null) return l;
+    return getFormulaFractionDepth(node.right, targetName, nextDepth);
   }
-  return expanded;
+  return null;
 }
 
 export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
-  const ast = (typeof exprOrAST === "string") ? parseMathAST(exprOrAST) : exprOrAST;
+  const ast = typeof exprOrAST === "string" ? parseMathAST(exprOrAST) : exprOrAST;
   const tokenMarkup = {};
+  const tokenConversions = {};
   const preConversions = [];
+  let globalConversionTex = "";
+  let numericConversionFactor = 1.0;
 
-  // 1. Handling empirical relations with explicit requiredUnits contracts
+  // 1. Handling empirical relations with requiredUnits contracts
   if (requiredUnits && typeof requiredUnits === "object") {
     const varTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
     varTokens.forEach(tok => {
@@ -63,9 +72,6 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
     const cTarget = resolveCanonicalKey(targetVar, varsDb);
     const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
-    let numericConversionFactor = 1.0;
-    let globalConversionTex = "";
-
     if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
       const reqScale = getUnitAtomBag(reqTargetU).scale;
       const targetScale = getUnitAtomBag(targetUnit).scale;
@@ -74,108 +80,83 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         if (Math.abs(numericConversionFactor - 1) > 1e-12) {
           const ratio = numericConversionFactor;
           if (ratio < 1) {
-            globalConversionTex = `\\cdot\\left[\\cfrac{1\\,${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)}\\,${unitToTex(reqTargetU)}}\\right]`;
+            globalConversionTex = ` \\cdot \\left[\\cfrac{${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)}\\,${unitToTex(reqTargetU)}}\\right]`;
           } else {
-            globalConversionTex = `\\cdot\\left[\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(targetUnit)}}{1\\,${unitToTex(reqTargetU)}}\\right]`;
-          }
-        }
-      }
-    } else if (!reqTargetU && targetUnit) {
-      const exprScale = evalExprSemanticScale(ast, S, varsDb);
-      const targetScale = getUnitAtomBag(targetUnit).scale || 1.0;
-      if (targetScale > 0) {
-        numericConversionFactor = exprScale / targetScale;
-        if (Math.abs(numericConversionFactor - 1) > 1e-12) {
-          globalConversionTex = `\\cdot\\left[${fmtSigFig(numericConversionFactor, 6)}\\right]`;
-        }
-      }
-    }
-
-    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions: {} };
-  }
-
-  // 2. Pure physics dimensional analysis (Semantic AST & Shallowest Match)
-  const exps = collectTokenExponents(ast);
-  const semanticFactors = [];
-
-  for (const [tok, exp] of Object.entries(exps)) {
-    const cKey = resolveCanonicalKey(tok, varsDb);
-    const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
-    if (!uName || uName === "dimless" || uName === "ratio") continue;
-
-    const astFactors = parseUnitToSemanticAST(uName);
-    astFactors.forEach(f => {
-      semanticFactors.push({ tok, prefix: f.prefix, base: f.base, power: f.power * exp, canceled: false });
-    });
-  }
-
-  // Pass 1: Exact Match Cancellation
-  for (let i = 0; i < semanticFactors.length; i++) {
-    for (let j = i + 1; j < semanticFactors.length; j++) {
-      const f1 = semanticFactors[i];
-      const f2 = semanticFactors[j];
-      if (!f1.canceled && !f2.canceled && f1.base === f2.base && f1.prefix === f2.prefix && f1.power * f2.power < 0) {
-        f1.canceled = true;
-        f2.canceled = true;
-        break;
-      }
-    }
-  }
-
-  // Pass 2: Shallowest-Match Substitution Expansion for uncancelled factors
-  let expandedList = [...semanticFactors];
-  let madeProgress = true;
-  let safety = 0;
-
-  while (madeProgress && safety < 5) {
-    madeProgress = false;
-    safety++;
-
-    const uncancelled = expandedList.filter(f => !f.canceled);
-    const targetIdx = uncancelled.findIndex(f => SUBSTITUTION_GRAPH[f.base]);
-    if (targetIdx !== -1) {
-      const itemToExpand = uncancelled[targetIdx];
-      itemToExpand.canceled = true;
-
-      const subFactors = expandSemanticFactor(itemToExpand);
-      subFactors.forEach(sf => {
-        expandedList.push({ tok: itemToExpand.tok, prefix: sf.prefix, base: sf.base, power: sf.power, canceled: false });
-      });
-
-      for (let i = 0; i < expandedList.length; i++) {
-        for (let j = i + 1; j < expandedList.length; j++) {
-          const f1 = expandedList[i];
-          const f2 = expandedList[j];
-          if (!f1.canceled && !f2.canceled && f1.base === f2.base && f1.prefix === f2.prefix && f1.power * f2.power < 0) {
-            f1.canceled = true;
-            f2.canceled = true;
-            madeProgress = true;
+            globalConversionTex = ` \\cdot \\left[\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(targetUnit)}}{${unitToTex(reqTargetU)}}\\right]`;
           }
         }
       }
     }
+    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions };
   }
 
-  // Build Token Markup for display
-  const allTokens = Array.from(new Set(Object.keys(exps)));
+  // 2. Pure physics dimensional analysis & Factor-Label in-situ unit conversions
+  const allTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
+
   for (const tok of allTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
     const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
     if (!uName || uName === "dimless" || uName === "ratio") continue;
 
-    const originalFactors = parseUnitToSemanticAST(uName);
-    const myExpanded = expandedList.filter(f => f.tok === tok);
-    const anyCanceled = myExpanded.some(f => f.canceled);
+    const factors = parseUnitToSemanticAST(uName);
+    const numFactors = factors.filter(f => f.power > 0);
+    const denFactors = factors.filter(f => f.power < 0);
 
-    if (!anyCanceled) {
-      tokenMarkup[tok] = semanticASTToTex(originalFactors);
+    // Identify target unit system context
+    const isTargetUS = targetUnit && ["lb", "ft", "in", "hp", "Btu", "psi", "psf"].some(u => targetUnit.includes(u));
+
+    // A. Check for compound block conversion (e.g., Btu/h -> kW / (kJ/s))
+    if (uName === "Btu/h" || uName === "Btu/min") {
+      const uScale = getUnitAtomBag(uName).scale;
+      const kwScale = 1000.0;
+      const ratio = kwScale / uScale; // 3412.14
+      const ratioStr = fmtSigFig(ratio, 6);
+
+      const fDepth = getFormulaFractionDepth(ast, tok) || 0;
+      // Fraction height check: block fraction is level 2; if fDepth > 0, height = 3 > 2 (illegal)
+      if (fDepth === 0) {
+        tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
+        tokenConversions[tok] = [` \\cdot \\cfrac{\\cfrac{\\cancel{\\text{kJ}}}{\\text{s}}}{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`];
+      } else {
+        tokenMarkup[tok] = unitToTex(uName);
+        globalConversionTex += ` \\cdot \\cfrac{\\cfrac{\\cancel{\\text{kJ}}}{\\text{s}}}{${ratioStr}\\,\\cancel{${unitToTex(uName)}}}`;
+      }
+      continue;
+    }
+
+    // B. In-situ conversion within numerator and denominator factors
+    const numParts = [];
+    numFactors.forEach(f => {
+      const fullBase = `${f.prefix ? (BASE_UNITS[f.base]?.symbol ? f.prefix.charAt(0) : f.prefix) : ""}${BASE_UNITS[f.base]?.symbol || f.base}`;
+      // Mass conversion: kg -> lb if target is US
+      if (fullBase === "kg" && isTargetUS) {
+        const kgScale = getUnitAtomBag("kg").scale;
+        const lbScale = getUnitAtomBag("lb").scale;
+        const ratio = fmtSigFig(kgScale / lbScale, 4); // 2.205
+        numParts.push(`\\cancel{\\text{kg}} \\cdot ${ratio}\\cfrac{\\text{lb}}{\\cancel{\\text{kg}}}`);
+      } else {
+        numParts.push(`\\text{${fullBase}}`);
+      }
+    });
+
+    const denParts = [];
+    denFactors.forEach(f => {
+      const fullBase = `${f.prefix ? (BASE_UNITS[f.base]?.symbol ? f.prefix.charAt(0) : f.prefix) : ""}${BASE_UNITS[f.base]?.symbol || f.base}`;
+      // Energy conversion: kWh -> kJ
+      if (fullBase === "kWh") {
+        const kwhScale = getUnitAtomBag("kWh").scale;
+        const kjScale = getUnitAtomBag("kJ").scale;
+        const ratio = fmtSigFig(kwhScale / kjScale, 6); // 3600
+        denParts.push(`\\cancel{\\text{kWh}} \\cdot ${ratio}\\cfrac{\\cancel{\\text{kJ}}}{\\cancel{\\text{kWh}}}`);
+      } else {
+        denParts.push(`\\text{${fullBase}}`);
+      }
+    });
+
+    if (denParts.length > 0) {
+      tokenMarkup[tok] = `\\cfrac{${numParts.join("\\cdot ") || "1"}}{${denParts.join("\\cdot ")}}`;
     } else {
-      const activeFactors = originalFactors.map(f => {
-        const match = myExpanded.find(ef => ef.base === f.base && ef.prefix === f.prefix);
-        const isCanceled = match ? match.canceled : false;
-        return { ...f, canceled: isCanceled };
-      });
-      tokenMarkup[tok] = semanticASTToTexWithCancellation(activeFactors);
+      tokenMarkup[tok] = numParts.join("\\cdot ");
     }
   }
 
@@ -184,76 +165,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     conversionFactors: [],
     conversionFactorTex: "",
     numericConversionFactor: 1.0,
-    globalConversionTex: ""
+    globalConversionTex,
+    preConversions,
+    tokenConversions
   };
-}
-
-function evalExprSemanticScale(node, S, varsDb) {
-  if (!node) return 1.0;
-  if (node.type === "num") return 1.0;
-  if (node.type === "id") {
-    const cKey = resolveCanonicalKey(node.name, varsDb);
-    const uName = S._u?.[cKey] || S._u?.[node.name] || varsDb[cKey]?.unit || varsDb[node.name]?.unit || "";
-    return getUnitAtomBag(uName).scale || 1.0;
-  }
-  if (node.type === "group") return evalExprSemanticScale(node.expr, S, varsDb);
-  if (node.type === "call") return evalExprSemanticScale(node.arg, S, varsDb);
-  if (node.type === "binary") {
-    const L = evalExprSemanticScale(node.left, S, varsDb);
-    const R = evalExprSemanticScale(node.right, S, varsDb);
-    if (node.op === "*") return L * R;
-    if (node.op === "/") return L / R;
-    if (node.op === "^") {
-      const p = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
-      return Math.pow(L, p);
-    }
-  }
-  return 1.0;
-}
-
-function semanticASTToTexWithCancellation(factors) {
-  const prefixSymbols = { kilo: "k", milli: "m", centi: "c", mega: "M" };
-  const numStrs = [];
-  const denStrs = [];
-
-  factors.forEach(f => {
-    const bSym = BASE_UNITS[f.base]?.symbol || f.base;
-    const pSym = f.prefix ? prefixSymbols[f.prefix] || f.prefix : "";
-    const fullSym = `${pSym}${bSym}`;
-
-    const absP = Math.abs(f.power);
-    const expStr = absP > 1 ? `^{${absP}}` : "";
-    const symTex = `\\text{${fullSym}}${expStr}`;
-    const termTex = f.canceled ? `\\cancel{${symTex}}` : symTex;
-
-    if (f.power > 0) numStrs.push(termTex);
-    else if (f.power < 0) denStrs.push(termTex);
-  });
-
-  const nStr = numStrs.join("\\cdot ");
-  const dStr = denStrs.join("\\cdot ");
-  if (dStr) return `\\cfrac{${nStr || "1"}}{${dStr}}`;
-  return nStr;
-}
-
-function collectTokenExponents(node, sign = 1, acc = {}) {
-  if (!node) return acc;
-  if (node.type === "group") return collectTokenExponents(node.expr, sign, acc);
-  if (node.type === "id") {
-    acc[node.name] = (acc[node.name] || 0) + sign;
-    return acc;
-  }
-  if (node.type === "binary") {
-    if (node.op === "*") {
-      collectTokenExponents(node.left, sign, acc);
-      collectTokenExponents(node.right, sign, acc);
-    } else if (node.op === "/") {
-      collectTokenExponents(node.left, sign, acc);
-      collectTokenExponents(node.right, -sign, acc);
-    } else if (node.op === "^") {
-      const p = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
-      collectTokenExponents(node.left, sign * p, acc);
-    }
-  }
-  return acc;
 }
