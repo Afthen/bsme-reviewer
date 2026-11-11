@@ -15,6 +15,5 @@ export const dieselCycleTopic = Object.freeze({
   noun: "ideal air-standard Diesel cycle",
   varsDb: DIESEL_CYCLE_VARS_DB,
   relations: DIESEL_CYCLE_RELATIONS,
-  createSystem: createDieselCycleSystem,
-  terminalGoals: ["e_th", "W_net"]
+  createSystem: createDieselCycleSystem
 });
