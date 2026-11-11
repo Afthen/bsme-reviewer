@@ -26,12 +26,66 @@ function expandSemanticFactor(factor) {
 export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null) {
   const ast = (typeof exprOrAST === "string") ? parseMathAST(exprOrAST) : exprOrAST;
   const tokenMarkup = {};
+  const preConversions = [];
 
+  // 1. Handling empirical relations with explicit requiredUnits contracts
   if (requiredUnits && typeof requiredUnits === "object") {
-    return { tokenMarkup, preConversions: [], numericConversionFactor: 1.0, globalConversionTex: "" };
+    const varTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
+    varTokens.forEach(tok => {
+      const cKey = resolveCanonicalKey(tok, varsDb);
+      const reqU = requiredUnits[cKey] || requiredUnits[tok];
+      if (!reqU) return;
+      const currU = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+
+      if (currU === "°C" && (reqU === "K" || reqU === "degK")) {
+        const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
+        preConversions.push({
+          token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
+          conv: { factor: 1.0, latex: `(${fmtSigFig(rawVal)} + 273.15)\\,\\text{K}` },
+          rawVal, convertedVal: rawVal + 273.15
+        });
+        return;
+      }
+      if (currU && reqU && currU !== reqU && currU !== "deg" && reqU !== "°") {
+        const currScale = getUnitAtomBag(currU).scale;
+        const reqScale = getUnitAtomBag(reqU).scale;
+        if (currScale && reqScale) {
+          const ratio = currScale / reqScale;
+          const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
+          preConversions.push({
+            token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
+            conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}` },
+            rawVal, convertedVal: rawVal * ratio
+          });
+        }
+      }
+    });
+
+    const cTarget = resolveCanonicalKey(targetVar, varsDb);
+    const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
+    let numericConversionFactor = 1.0;
+    let globalConversionTex = "";
+
+    if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
+      const reqScale = getUnitAtomBag(reqTargetU).scale;
+      const targetScale = getUnitAtomBag(targetUnit).scale;
+      if (reqScale && targetScale) {
+        numericConversionFactor = reqScale / targetScale;
+        if (Math.abs(numericConversionFactor - 1) > 1e-12) {
+          const ratio = numericConversionFactor;
+          if (ratio < 1) {
+            globalConversionTex = `\\cdot\\left[\\cfrac{1\\,${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)}\\,${unitToTex(reqTargetU)}}^\\right]`;
+          } else {
+            globalConversionTex = `\\cdot\\left[\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(targetUnit)}}{1\\,${unitToTex(reqTargetU)}}\\right]`;
+          }
+        }
+      }
+    }
+
+    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions: {} };
   }
 
-  // 1. Collect semantic factors for each token in the expression
+  // 2. Pure physics dimensional analysis (Semantic AST & Shallowest Match)
   const exps = collectTokenExponents(ast);
   const semanticFactors = [];
 
