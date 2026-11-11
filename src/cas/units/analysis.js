@@ -6,7 +6,7 @@
 import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { fmtSigFig } from "../../core/dimensions.js";
-import { parseUnitToSemanticAST, semanticASTToTex, SUBSTITUTION_GRAPH, BASE_UNITS } from "./definitions.js";
+import { parseUnitToSemanticAST, semanticASTToTex, SUBSTITUTION_GRAPH, BASE_UNITS, getUnitAtomBag } from "./definitions.js";
 
 function expandSemanticFactor(factor) {
   const sub = SUBSTITUTION_GRAPH[factor.base];
@@ -74,7 +74,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         if (Math.abs(numericConversionFactor - 1) > 1e-12) {
           const ratio = numericConversionFactor;
           if (ratio < 1) {
-            globalConversionTex = `\\cdot\\left[\\cfrac{1\\,${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)}\\,${unitToTex(reqTargetU)}}^\\right]`;
+            globalConversionTex = `\\cdot\\left[\\cfrac{1\\,${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)}\\,${unitToTex(reqTargetU)}}\\right]`;
           } else {
             globalConversionTex = `\\cdot\\left[\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(targetUnit)}}{1\\,${unitToTex(reqTargetU)}}\\right]`;
           }
