@@ -97,8 +97,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   // Identify active system context (SI vs US) from targetUnit or state
   const isUS = targetUnit ? ["lb", "ft", "in", "hp", "Btu", "psi", "psf", "°F", "°R"].some(u => targetUnit.includes(u)) : (S.sys === "US");
 
-  // Dimensional cancellation tally across AST
-  const netDimensionTally = {};
+  // Dimensional tally across AST
+  const dimensionUnits = {};
   for (const tok of allTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
     const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
@@ -108,11 +108,10 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const factors = parseUnitToSemanticAST(uName);
     factors.forEach(f => {
       const dim = BASE_UNITS[f.base]?.dim || f.base;
-      netDimensionTally[dim] = (netDimensionTally[dim] || 0) + f.power * tokExp;
+      if (!dimensionUnits[dim]) dimensionUnits[dim] = [];
+      dimensionUnits[dim].push({ tok, uName, power: f.power * tokExp });
     });
   }
-
-  const isDimensionlessRatio = Object.values(netDimensionTally).every(p => p === 0);
 
   // Universal Token Inspection
   for (const tok of allTokens) {
@@ -121,9 +120,53 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
     if (!uName || uName === "dimless" || uName === "ratio") continue;
 
-    // Dimensionless cancellation: like-units cancel directly
-    if (isDimensionlessRatio) {
+    const fDepth = getFormulaFractionDepth(ast, tok) || 0;
+
+    // Check if another token shares this dimension with opposite exponent
+    const tokFactors = parseUnitToSemanticAST(uName);
+    let counterpart = null;
+    for (const f of tokFactors) {
+      const dim = BASE_UNITS[f.base]?.dim || f.base;
+      const list = dimensionUnits[dim] || [];
+      const match = list.find(entry => entry.tok !== tok && entry.power * (exps[tok] || 1) < 0);
+      if (match) {
+        counterpart = match;
+        break;
+      }
+    }
+
+    // A. Identical Units with opposite exponents: direct in-situ cancellation
+    if (counterpart && counterpart.uName === uName) {
       tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
+      continue;
+    }
+
+    // B. Mismatched Scales in Dimensionless Ratio (e.g., Btu/h vs Btu/min in Q_ip / Q_f)
+    if (counterpart && counterpart.uName !== uName) {
+      const scaleCurrent = getUnitAtomBag(uName).scale;
+      const scaleTarget = getUnitAtomBag(counterpart.uName).scale;
+      const scaleRatio = scaleCurrent / scaleTarget;
+
+      tokenMarkup[tok] = `\\cancel{${unitToTex(uName)}}`;
+
+      // Clamping rule: If inside a fraction (fDepth >= 1), placing conversion inside
+      // would create level 3 (illegal) -> place inline outside main fraction
+      if (fDepth >= 1) {
+        if (!globalConversionTex) {
+          if (scaleRatio > 1) {
+            globalConversionTex = ` \\cdot \\cfrac{${fmtSigFig(scaleRatio)}\\,\\cancel{\\text{min}}}{\\cancel{\\text{h}}}`;
+          } else {
+            globalConversionTex = ` \\cdot \\cfrac{\\cancel{\\text{h}}}{${fmtSigFig(1 / scaleRatio)}\\,\\cancel{\\text{min}}}`;
+          }
+        }
+      } else {
+        // At top level (fDepth == 0): sits beside the variable
+        if (scaleRatio > 1) {
+          tokenConversions[tok] = [` \\cdot \\cfrac{${fmtSigFig(scaleRatio)}\\,\\cancel{${unitToTex(counterpart.uName)}}}{\\cancel{${unitToTex(uName)}}}`];
+        } else {
+          tokenConversions[tok] = [` \\cdot \\cfrac{\\cancel{${unitToTex(counterpart.uName)}}}{${fmtSigFig(1 / scaleRatio)}\\,\\cancel{${unitToTex(uName)}}}`];
+        }
+      }
       continue;
     }
 
