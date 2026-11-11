@@ -1,7 +1,6 @@
 /**
  * src/cas/units/ast.js
  * Lexer and Recursive Descent Parser for Unit Expressions.
- * Parses unit strings into structured semantic AST trees.
  */
 
 import { resolveUnitToken } from "./definitions.js";
@@ -33,7 +32,7 @@ export function tokenizeUnitExpr(str) {
   return tokens;
 }
 
-export function parseUnitAST(exprStr) {
+export function parseUnitAST(exprStr, dimension = null) {
   if (!exprStr) return null;
   const tokens = tokenizeUnitExpr(exprStr);
   let pos = 0;
@@ -64,7 +63,7 @@ export function parseUnitAST(exprStr) {
 
     if (tok.type === "id" || tok.type === "op") {
       const val = consume().val;
-      const resolved = resolveUnitToken(val);
+      const resolved = resolveUnitToken(val, dimension);
       return {
         type: "unit",
         prefix: resolved.prefix,
@@ -117,9 +116,6 @@ export function parseUnitAST(exprStr) {
   return parseExpr();
 }
 
-/**
- * Flattens a Unit AST tree into a list of semantic factors: [{ prefix, base, power }]
- */
 export function flattenUnitAST(node, currentSign = 1) {
   if (!node) return [];
   if (node.type === "unit") {
