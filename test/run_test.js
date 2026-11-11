@@ -23,8 +23,9 @@ import {
   DIMENSION_TOKEN_PALETTES
 } from "../src/core/unit_sampler.js";
 import {
-  ATOMIC_BASE_UNITS, COMPOUND_UNITS, getUnitAtomBag,
-  valueToCoherentBase, formatValueInUnit
+  getUnitAtomBag,
+  valueToCoherentBase,
+  formatValueInUnit
 } from "../src/cas/units/definitions.js";
 import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
 
