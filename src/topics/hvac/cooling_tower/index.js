@@ -10,5 +10,4 @@ export const coolingTowerTopic = Object.freeze({
   varsDb: TOWER_VARS_DB,
   relations: COOLING_TOWER_RELATIONS,
   createSystem: createCoolingTowerSystem,
-  terminalGoals: ["m_mu", "Q_rej"]
 });
