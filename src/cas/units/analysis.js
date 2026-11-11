@@ -6,7 +6,7 @@
 import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { fmtSigFig } from "../../core/dimensions.js";
-import { parseUnitToSemanticAST, semanticASTToTex, SUBSTITUTION_GRAPH, BASE_UNITS, getUnitAtomBag } from "./definitions.js";
+import { parseUnitToSemanticAST, semanticASTToTex, SUBSTITUTION_GRAPH, BASE_UNITS, getUnitAtomBag, unitToTex } from "./definitions.js";
 
 function expandSemanticFactor(factor) {
   const sub = SUBSTITUTION_GRAPH[factor.base];
