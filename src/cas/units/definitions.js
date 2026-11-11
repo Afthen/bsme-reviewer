@@ -48,6 +48,7 @@ export const BASE_UNITS = Object.freeze({
   "foot":           { dim: "L", baseScale: 0.3048, symbol: "ft" },
   "yard":           { dim: "L", baseScale: 0.9144, symbol: "yd" },
   "horsepower":     { dim: "E", baseScale: 745.69987, symbol: "hp" },
+  "kWh":            { dim: "E", baseScale: 3600000.0, symbol: "kWh" },
   "litre":          { dim: "L", baseScale: 0.001, symbol: "L" },
   "rpm":            { dim: "T", baseScale: 1/60, symbol: "rpm" },
   "cfm":            { dim: "L", baseScale: 0.3048**3 / 60, symbol: "cfm" }
@@ -83,15 +84,20 @@ export function resolveUnitToken(tokenBody, dimension = null) {
 
   // Dimension-Aware Ambiguous "lb" Resolution
   if (tokenBody === "lb") {
-    if (dimension === DIMENSIONS.MASS || dimension === DIMENSIONS.MASS_FLOW || dimension === DIMENSIONS.SPECIFIC_ENERGY || dimension === DIMENSIONS.SPECIFIC_CONSUMPTION) {
+    if (
+      dimension === DIMENSIONS.MASS ||
+      dimension === DIMENSIONS.MASS_FLOW ||
+      dimension === DIMENSIONS.SPECIFIC_ENERGY ||
+      dimension === DIMENSIONS.SPECIFIC_CONSUMPTION
+    ) {
       return { prefix: null, base: "pound_mass" };
     }
     return { prefix: null, base: "pound_force" };
   }
 
   // Exact base match
-  const foundExact = Object.keys(BASE_UNITS).find(bKey =>
-    bKey === tokenBody || BASE_UNITS[bKey].symbol === tokenBody
+  const foundExact = Object.keys(BASE_UNITS).find(
+    bKey => bKey === tokenBody || BASE_UNITS[bKey].symbol === tokenBody
   );
   if (foundExact) {
     return { prefix: null, base: foundExact };
@@ -101,8 +107,8 @@ export function resolveUnitToken(tokenBody, dimension = null) {
   for (const [pCode, pMeta] of Object.entries(PREFIXES)) {
     if (tokenBody.startsWith(pCode) && tokenBody.length > pCode.length) {
       const possibleBase = tokenBody.slice(pCode.length);
-      const foundBase = Object.keys(BASE_UNITS).find(bKey => 
-        bKey === possibleBase || BASE_UNITS[bKey].symbol === possibleBase
+      const foundBase = Object.keys(BASE_UNITS).find(
+        bKey => bKey === possibleBase || BASE_UNITS[bKey].symbol === possibleBase
       );
       if (foundBase) {
         return { prefix: pMeta.name, base: foundBase };
@@ -120,17 +126,13 @@ export function parseUnitToSemanticAST(uName, dimension = null) {
   if (uName === "ksi") return [{ prefix: "kilo", base: "pound_force", power: 1 }, { prefix: null, base: "inch", power: -2 }];
   if (uName === "rpm") return [{ prefix: null, base: "rev", power: 1 }, { prefix: null, base: "minute", power: -1 }];
   if (uName === "cfm") return [{ prefix: null, base: "foot", power: 3 }, { prefix: null, base: "minute", power: -1 }];
-  if (uName === "Btu/(lb*F)" || uName === "Btu/lb-F") return [{ prefix: null, base: "Btu", power: 1 }, { prefix: null, base: "pound_mass", power: -1 }, { prefix: null, base: "Fahrenheit", power: -1 }];
-  if (uName === "Btu/lb") return [{ prefix: null, base: "Btu", power: 1 }, { prefix: null, base: "pound_mass", power: -1 }];
-  if (uName === "lb/min") return [{ prefix: null, base: "pound_mass", power: 1 }, { prefix: null, base: "minute", power: -1 }];
-  if (uName === "lb/s") return [{ prefix: null, base: "pound_mass", power: 1 }, { prefix: null, base: "second", power: -1 }];
-  if (uName === "lb/h" || uName === "lb/hr") return [{ prefix: null, base: "pound_mass", power: 1 }, { prefix: null, base: "hour", power: -1 }];
 
+  // Fully AST-driven unit parsing; zero hardcoded string checks
   const ast = parseUnitAST(uName, dimension);
   return flattenUnitAST(ast);
 }
 
-export function semanticASTToTex(factors) {
+export function semanticASTToTex(factors, inline = false) {
   if (!factors || factors.length === 0) return "";
   if (factors.length === 1 && factors[0].base === "percent" && factors[0].power === 1) return "\\%";
   if (factors.length === 1 && factors[0].base === "deg" && factors[0].power === 1) return "°";
@@ -144,7 +146,7 @@ export function semanticASTToTex(factors) {
     const bSym = bMeta?.symbol || f.base;
     const pSym = f.prefix ? prefixSymbols[f.prefix] || f.prefix : "";
     const fullSym = `${pSym}${bSym}`;
-    
+
     const absP = Math.abs(f.power);
     const expStr = absP > 1 ? `^{${absP}}` : "";
     const termTex = `\\text{${fullSym}}${expStr}`;
@@ -155,13 +157,16 @@ export function semanticASTToTex(factors) {
 
   const nStr = numStrs.join("\\cdot ");
   const dStr = denStrs.join("\\cdot ");
-  if (dStr) return `\\cfrac{${nStr || "1"}}{${dStr}}`;
+  if (dStr) {
+    const fracCmd = inline ? "\\tfrac" : "\\cfrac";
+    return `${fracCmd}{${nStr || "1"}}{${dStr}}`;
+  }
   return nStr;
 }
 
 export function unitToTex(unitName = "", inline = false, dimension = null) {
   const ast = parseUnitToSemanticAST(unitName, dimension);
-  return semanticASTToTex(ast);
+  return semanticASTToTex(ast, inline);
 }
 
 export function getSemanticScale(factors) {
