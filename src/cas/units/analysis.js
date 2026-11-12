@@ -12,7 +12,9 @@ import {
   SUBSTITUTION_GRAPH,
   BASE_UNITS,
   getUnitAtomBag,
-  unitToTex
+  unitToTex,
+  unitToCancelledTex,
+  getAbsoluteCompanionUnit
 } from "./definitions.js";
 
 function getFormulaFractionDepth(node, targetName, currentDepth = 0) {
