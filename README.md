@@ -194,3 +194,219 @@ node --test test/run_test.js test/run_hygiene_test.js
 - [ ] `node --test test/run_test.js test/run_hygiene_test.js` passes with 0 failures.
 - [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
 - [ ] LF line endings, no dead code, and no new duplication.
+
+---
+
+## 7. Authoring Guide & Blueprint for New Topics & Subjects
+
+Every topic in the repository follows a strict **4-File Domain Architecture** under `src/topics/<subject>/<topic_name>/`. New material must be mathematically closed, unit-coherent, and independently verifiable against textbook ground truth.
+
+```text
+src/topics/<subject>/<topic_name>/
+├── index.js       # Topic manifest, categorization, and engine wiring
+├── schema.js      # Scoped variable dictionary (dimensions, units, aliases)
+├── relations.js   # Invertible physics relations (nodes, baseFormula, canonicalTex)
+└── system.js      # Independent ground truth generator ({ sys } => SystemState)
+```
+
+---
+
+### 7.1 Topic Manifest Blueprint (`index.js`)
+
+```javascript
+/**
+ * src/topics/<subject>/<topic>/index.js
+ */
+import { MY_TOPIC_VARS_DB } from "./schema.js";
+import { MY_TOPIC_RELATIONS } from "./relations.js";
+import { createMyTopicSystem } from "./system.js";
+
+export const myTopic = Object.freeze({
+  id: "<subject>_<topic_name>",             // Globally unique key, matching TOPICS export
+  title: "Topic Display Title",             // Level 3 dropdown label
+  subject: "Subject Name",                  // Level 1 dropdown category (e.g. "Powerplant Design")
+  category: "Subcategory Name",             // Level 2 folder (or null if standalone under subject)
+  noun: "specific mechanical equipment",    // Reads: "A/An {noun} operates with the following..."
+  varsDb: MY_TOPIC_VARS_DB,
+  relations: MY_TOPIC_RELATIONS,
+  createSystem: createMyTopicSystem,
+
+  // Required only for multi-state thermodynamic cycles or complex fluid circuits:
+  cycleGivens: ["T_1", "r_k", "r_c"],      // Minimal boundary conditions
+  primaryGoals: ["T_2", "T_3", "T_4"],     // Full topological state progression
+  terminalGoals: ["e_th", "w_net"]         // Protected terminal deliverables (NEVER fade)
+});
+```
+
+---
+
+### 7.2 Variable Schema Blueprint (`schema.js`)
+
+Every variable represents a physical edge in the graph. Zero orphan variables and zero alias collisions are permitted.
+
+```javascript
+/**
+ * src/topics/<subject>/<topic>/schema.js
+ */
+import { DIMENSIONS } from "../../../core/dimensions.js";
+
+export const MY_TOPIC_VARS_DB = Object.freeze({
+  "P_out": {
+    name: "Output Power",
+    symbol: "P_{out}",
+    dimension: DIMENSIONS.POWER,
+    unit: "kW",                             // Registered unit from definitions.js
+    nameAliases: ["Output Power", "Delivered Brake Power", "Power Capacity"],
+    symbolAliases: ["P_{out}", "P_b", "\\text{BHP}"],
+    aliases: ["Output Power", "Delivered Brake Power", "Power Capacity", "P_out", "P_b"]
+  },
+  "N_teeth": {
+    name: "Tooth Count",
+    symbol: "T",
+    dimension: DIMENSIONS.COUNT,
+    unit: "teeth",
+    isInteger: true,                        // Enforces ±0.5 integer tolerance checks
+    aliases: ["Tooth Count", "Number of Teeth"]
+  },
+  "c_p": {
+    name: "Specific Heat",
+    symbol: "c_p",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    isConstant: true,                       // Tags physical constants for high-mastery recall mode
+    display: 1.0062,                        // Tabulated textbook academic display
+    aliases: ["Specific Heat at Constant Pressure", "c_p"]
+  }
+});
+```
+
+#### Schema Invariants:
+1. **Registered Units:** The `unit` string must exist in `src/cas/units/definitions.js`.
+2. **Native Degree:** Use native `°` in all symbols and units (`°C`, `°F`, `°R`, `°`). Never use `\circ`.
+3. **No Collision Rule:** No alias may be claimed by two different variables across the subject schema.
+4. **Specific Energy:** Always use lowercase symbols for specific energy ($q_A, q_R, w_{net}, h$). Reserve uppercase ($Q, W, P$) for total power/energy.
+
+---
+
+### 7.3 Relations Graph Blueprint (`relations.js`)
+
+Relations represent formula nodes. Pure physics only—zero unit conversion constants allowed.
+
+```javascript
+/**
+ * src/topics/<subject>/<topic>/relations.js
+ */
+export const MY_TOPIC_RELATIONS = Object.freeze([
+  // 1. Pure Physics Relation (Invertible across all variables)
+  {
+    id: "eq_<topic>_power_flow",
+    name: "Power from Mass Flow and Work",
+    canonicalTex: "P = \\dot{m} w_{net}",
+    baseFormula: "P = m_flow * w_net",      // Strict AST syntax: explicit '*', parenthesized exponents
+    nodes: ["P", "m_flow", "w_net"]
+  },
+
+  // 2. Dual-System Variant (When SI and US formulas differ mathematically)
+  {
+    id: "eq_<topic>_bending_stress",
+    name: "Tooth Bending Stress",
+    variants: {
+      SI: {
+        canonicalTex: "s = \\frac{F_t}{b m Y}",
+        baseFormula: "s = W_t / (b * m * Y)",
+        nodes: ["s", "W_t", "b", "m", "Y"]
+      },
+      US: {
+        canonicalTex: "s = \\frac{F_t P_d}{b Y}",
+        baseFormula: "s = (W_t * P_d) / (b * Y)",
+        nodes: ["s", "W_t", "P_d", "b", "Y"]
+      }
+    },
+    canonicalTex: "s = \\frac{F_t}{b m Y}",
+    baseFormula: "s = W_t / (b * m * Y)",
+    nodes: ["s", "W_t", "b", "m", "Y"]
+  },
+
+  // 3. Empirical Correlation (Strict unit locking)
+  {
+    id: "eq_<topic>_empirical_flow",
+    name: "Empirical Heat Loss Correlation",
+    canonicalTex: "q_{loss} = 0.05 v^{0.8} \\Delta T",
+    baseFormula: "q_loss = 0.05 * (v^0.8) * dT",
+    nodes: ["q_loss", "v", "dT"],
+    requiredUnits: { v: "m/s", dT: "K", q_loss: "kW" }
+  }
+]);
+```
+
+#### Relation Invariants:
+1. **Prefix Convention:** Common equations shared across multiple subjects live in `common/` and use the `eq_base_` prefix. Unique topic equations use `eq_<topic>_<name>`.
+2. **Formula Syntax:** Explicit `*`, parenthesized compound exponents (`x^(k - 1)`), parenthesized compound denominators (`a / (b * c)`), bare angle arguments in trig (`cos(psi)`).
+3. **Pure Physics:** Never bake `60`, `3600`, `25.4`, or `1.341` into a formula to convert units. Let the `AffineScale` engine project units coherently.
+
+---
+
+### 7.4 Ground Truth Generator Blueprint (`system.js`)
+
+`createSystem({ sys })` generates the independent mathematical ground truth. It must **never** call `solveDAG`, `isolateVariable`, or the unit engine.
+
+```javascript
+/**
+ * src/topics/<subject>/<topic>/system.js
+ */
+import { MY_TOPIC_VARS_DB } from "./schema.js";
+
+export function createMyTopicSystem({ sys = "SI" } = {}) {
+  const isUS = sys === "US";
+
+  // 1. Independent Ground Truth Calculation (hand arithmetic)
+  const m_flow = isUS ? 50.0 : 25.0;        // lb/s vs kg/s
+  const w_net = isUS ? 120.0 : 280.0;       // Btu/lb vs kJ/kg
+  const P = m_flow * w_net;                 // Pure hand arithmetic
+
+  // 2. Build Human-Readable Aliases Map
+  const _names = {};
+  for (const [k, meta] of Object.entries(MY_TOPIC_VARS_DB)) {
+    _names[k] = meta.nameAliases?.[0] || meta.name;
+  }
+
+  // 3. Coherent System Units Map
+  const _u = isUS
+    ? { m_flow: "lb/s", w_net: "Btu/lb", P: "Btu/s" }
+    : { m_flow: "kg/s", w_net: "kJ/kg", P: "kW" };
+
+  return {
+    sys,
+    m_flow,
+    w_net,
+    P,
+    _names,
+    _u
+  };
+}
+```
+
+---
+
+### 7.5 Subject Export Registration
+
+Once the 4 files are written, wire them into the subject and global registries:
+1. Export the topic in `src/topics/<subject>/index.js`.
+2. Confirm the topic ID matches its dictionary key in `TOPICS`.
+
+---
+
+### 7.6 Topic Validation Checklist (Definition of Done)
+
+Before committing any new topic, run the test suites:
+```bash
+node --test test/run_test.js test/run_hygiene_test.js
+```
+
+Ensure the topic satisfies:
+- [ ] **Dual-System Inversion:** Tested via `test/validator.js` across both SI and US with $< 0.1\%$ relative error on all invertible variable pairs.
+- [ ] **Zero Schema Orphans:** Every variable in `varsDb` is active in relations or generated in `createSystem`.
+- [ ] **Zero Alias Collisions:** Human aliases are unique across variables.
+- [ ] **No Duplicate Formulas:** Base formulas are unique within the topic. Shared formulas use `eq_base_` in `common/`.
+- [ ] **Native Degree:** Uses `°` exclusively, zero instances of `\circ`.
+- [ ] **Derivation Quality:** Boxed answers are valid, unit cancellations follow the 4-row cap, percentages render as `\text{\%}`, and numbers omit coefficients of 1.
