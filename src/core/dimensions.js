@@ -89,13 +89,13 @@ export function formatGivenValue(value, meta = {}, isLatex = true) {
 
 export function cancelUnit(unitStr) {
   if (!unitStr) return "";
-  if (unitStr === "%") return "\\cancel{\\%}";
+  if (unitStr === "%" || unitStr === "\\%") return "\\cancel{\\text{\\%}}";
   return `\\cancel{\\text{${unitStr}}}`;
 }
 
 export function textUnit(unitStr) {
   if (!unitStr) return "";
-  if (unitStr === "%") return "\\%";
+  if (unitStr === "%" || unitStr === "\\%") return "\\text{\\%}";
   if (unitStr.startsWith("°")) return unitStr;
   return `\\text{${unitStr}}`;
 }
