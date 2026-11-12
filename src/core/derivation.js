@@ -42,7 +42,7 @@ export function buildAlignedDerivation(
     });
   }
 
-  // 1. Build Localized Substitution Mapping with in-situ factor-label and affine conversions
+  // 1. Build Localized Substitution Mapping with explicit `\,` spacing
   const subsMap = {};
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
@@ -54,7 +54,7 @@ export function buildAlignedDerivation(
       if (inlineConv === "__AFFINE_CONVERTED__") {
         subsMap[k] = unitMarkup;
       } else if (unitMarkup !== "" || inlineConv !== "") {
-        subsMap[k] = `${formattedNum}${unitMarkup ? (unitMarkup.startsWith("\\cfrac") || unitMarkup.startsWith("\\cancel{\\cfrac") ? unitMarkup : `\\,${unitMarkup}`) : ""}${inlineConv}`;
+        subsMap[k] = `${formattedNum} \\, ${unitMarkup}${inlineConv}`;
       } else {
         subsMap[k] = formattedNum;
       }
@@ -143,7 +143,7 @@ export function buildAlignedDerivation(
     line1 = `${displayCanonical} \\;\\Rightarrow\\; ${targetSymbol} &= ${symRhs} \\\\[6pt]\n  &= ${numTex}`;
   }
 
-  // 4. Final Boxed Answer with \tfrac for compact units
+  // 4. Final Boxed Answer with strict `\,` unit spacing
   const val = step.expectedVal !== undefined ? step.expectedVal : S[canonicalTarget];
   const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
 
@@ -151,12 +151,16 @@ export function buildAlignedDerivation(
   if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
     if (targetUnit === "deg" || targetUnit === "°") {
       unitTex = "°";
+    } else if (targetUnit === "%") {
+      unitTex = "\\text{\\%}";
     } else {
-      unitTex = `\\,${unitToTex(targetUnit, true)}`;
+      unitTex = unitToTex(targetUnit, true);
     }
   }
 
-  const finalLine = `${targetSymbol} &= \\boxed{${formattedVal}${unitTex}}`;
+  const finalLine = unitTex
+    ? (unitTex === "°" ? `${targetSymbol} &= \\boxed{${formattedVal}°}` : `${targetSymbol} &= \\boxed{${formattedVal} \\, ${unitTex}}`)
+    : `${targetSymbol} &= \\boxed{${formattedVal}}`;
 
   return `$$\\begin{aligned}\n  ${line1} \\\\[6pt]\n  ${finalLine}\n\\end{aligned}$$`;
 }
