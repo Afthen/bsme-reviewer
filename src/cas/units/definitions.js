@@ -66,7 +66,7 @@ export const SUBSTITUTION_GRAPH = Object.freeze({
 });
 
 export function resolveUnitToken(tokenBody, dimension = null) {
-  if (tokenBody === "%") return { prefix: null, base: "percent" };
+  if (tokenBody === "%" || tokenBody === "\\%") return { prefix: null, base: "percent" };
   if (tokenBody === "°" || tokenBody === "deg") return { prefix: null, base: "deg" };
   if (tokenBody === "F" || tokenBody === "°F") return { prefix: null, base: "Fahrenheit" };
   if (tokenBody === "C" || tokenBody === "°C") return { prefix: null, base: "Celsius" };
@@ -127,15 +127,32 @@ export function parseUnitToSemanticAST(uName, dimension = null) {
   if (uName === "rpm") return [{ prefix: null, base: "rev", power: 1 }, { prefix: null, base: "minute", power: -1 }];
   if (uName === "cfm") return [{ prefix: null, base: "foot", power: 3 }, { prefix: null, base: "minute", power: -1 }];
 
-  // Fully AST-driven unit parsing; zero hardcoded string checks
   const ast = parseUnitAST(uName, dimension);
   return flattenUnitAST(ast);
 }
 
-export function semanticASTToTex(factors, inline = false) {
+export function getAbsoluteCompanionUnit(uName) {
+  const ast = parseUnitToSemanticAST(uName);
+  if (ast.length !== 1) return uName;
+  const meta = BASE_UNITS[ast[0].base];
+  if (meta?.dim !== "Th" || !meta.offset) return uName;
+
+  for (const b of Object.values(BASE_UNITS)) {
+    if (b.dim === "Th" && !b.offset && Math.abs(b.baseScale - meta.baseScale) < 1e-6) {
+      return b.symbol;
+    }
+  }
+  return "K";
+}
+
+export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
   if (!factors || factors.length === 0) return "";
-  if (factors.length === 1 && factors[0].base === "percent" && factors[0].power === 1) return "\\%";
-  if (factors.length === 1 && factors[0].base === "deg" && factors[0].power === 1) return "°";
+  if (factors.length === 1 && factors[0].base === "percent" && factors[0].power === 1) {
+    return cancelMode !== "none" ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+  }
+  if (factors.length === 1 && factors[0].base === "deg" && factors[0].power === 1) {
+    return cancelMode !== "none" ? "\\cancel{°}" : "°";
+  }
 
   const prefixSymbols = { pico: "p", nano: "n", micro: "u", milli: "m", centi: "c", deci: "d", kilo: "k", mega: "M", giga: "G" };
   const numStrs = [];
@@ -149,24 +166,44 @@ export function semanticASTToTex(factors, inline = false) {
 
     const absP = Math.abs(f.power);
     const expStr = absP > 1 ? `^{${absP}}` : "";
-    const termTex = `\\text{${fullSym}}${expStr}`;
+
+    let termTex = "";
+    if (fullSym === "%") {
+      termTex = cancelMode === "component" ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+    } else if (fullSym.startsWith("°")) {
+      termTex = cancelMode === "component" ? `\\cancel{${fullSym}${expStr}}` : `${fullSym}${expStr}`;
+    } else {
+      termTex = cancelMode === "component" ? `\\cancel{\\text{${fullSym}}}${expStr}` : `\\text{${fullSym}}${expStr}`;
+    }
 
     if (f.power > 0) numStrs.push(termTex);
     else if (f.power < 0) denStrs.push(termTex);
   });
 
-  const nStr = numStrs.join("\\cdot ");
-  const dStr = denStrs.join("\\cdot ");
+  const nStr = numStrs.join(" \\cdot ");
+  const dStr = denStrs.join(" \\cdot ");
+  let res = "";
   if (dStr) {
     const fracCmd = inline ? "\\tfrac" : "\\cfrac";
-    return `${fracCmd}{${nStr || "1"}}{${dStr}}`;
+    res = `${fracCmd}{${nStr || "1"}}{${dStr}}`;
+  } else {
+    res = nStr;
   }
-  return nStr;
+
+  if (cancelMode === "whole") {
+    return `\\cancel{${res}}`;
+  }
+  return res;
 }
 
 export function unitToTex(unitName = "", inline = false, dimension = null) {
   const ast = parseUnitToSemanticAST(unitName, dimension);
-  return semanticASTToTex(ast, inline);
+  return semanticASTToTex(ast, inline, "none");
+}
+
+export function unitToCancelledTex(unitName = "", inline = false, dimension = null, mode = "whole") {
+  const ast = parseUnitToSemanticAST(unitName, dimension);
+  return semanticASTToTex(ast, inline, mode);
 }
 
 export function getSemanticScale(factors) {
