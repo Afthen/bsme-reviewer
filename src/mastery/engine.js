@@ -18,7 +18,8 @@ let masteryState = {};
 
 /** Single source of the shared-material prefix convention. */
 export function isCommonEq(eq) {
-  return !!eq && typeof eq.id === "string" && eq.id.startsWith("eq_base_");
+  const id = eq?.masteryId || eq?.id;
+  return typeof id === "string" && id.startsWith("eq_base_");
 }
 
 export function loadMastery() {
@@ -49,8 +50,14 @@ export function calculateTopicLambda(topic) {
     return phi(-7);
   }
 
-  const commonRels = topic.relations.filter(isCommonEq);
-  const uniqueRels = topic.relations.filter(r => !isCommonEq(r));
+  const seen = new Map();
+  topic.relations.forEach(r => {
+    const key = r.masteryId || r.id;
+    if (key && !seen.has(key)) seen.set(key, r);
+  });
+  const deduped = Array.from(seen.values());
+  const commonRels = deduped.filter(isCommonEq);
+  const uniqueRels = deduped.filter(r => !isCommonEq(r));
 
   const tokensCommon = commonRels.reduce((acc, r) => acc + tokenizeExpr(r.baseFormula || "").length, 0);
   const tokensUnique = uniqueRels.reduce((acc, r) => acc + tokenizeExpr(r.baseFormula || "").length, 0);
@@ -62,9 +69,10 @@ export function calculateTopicLambda(topic) {
 }
 
 export function getDecayedMastery(eq, topic = null) {
-  if (!eq || !eq.id) return 0;
+  const eqId = eq?.masteryId || eq?.id;
+  if (!eqId) return 0;
 
-  const h = masteryState[eq.id];
+  const h = masteryState[eqId];
   const history = h && Array.isArray(h.attempts) ? h.attempts : [];
 
   const tokens = tokenizeExpr(eq.baseFormula || "").length;
