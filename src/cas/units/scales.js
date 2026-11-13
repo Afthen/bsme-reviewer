@@ -50,9 +50,9 @@ function expandNamedRate(unitStr) {
  * Decomposes compound-to-compound rates (e.g. Btu/min -> ft-lb/s) into
  * canonical numerator and denominator steps rather than lumping ratios.
  */
-export function formatPairConversion(fromUnit, toUnit, dim = null, cancelMode = "whole") {
-  const fromScale = getUnitAtomBag(fromUnit, dim).scale;
-  const toScale = getUnitAtomBag(toUnit, dim).scale;
+export function formatPairConversion(fromUnit, toUnit, fromDim = null, toDim = fromDim, cancelMode = "whole") {
+  const fromScale = getUnitAtomBag(fromUnit, fromDim).scale;
+  const toScale = getUnitAtomBag(toUnit, toDim).scale;
   const ratio = fromScale / toScale;
 
   if (Math.abs(ratio - 1) < 1e-6) return { tex: "", scalar: null, scalars: [], isDecomposed: false };
@@ -68,10 +68,10 @@ export function formatPairConversion(fromUnit, toUnit, dim = null, cancelMode = 
     const tParts = splitRateParts(expandNamedRate(toUnit));
 
     if (fParts && tParts) {
-      const fNumBag = getUnitAtomBag(fParts.num, dim);
-      const tNumBag = getUnitAtomBag(tParts.num, dim);
-      const fDenBag = getUnitAtomBag(fParts.den, dim);
-      const tDenBag = getUnitAtomBag(tParts.den, dim);
+      const fNumBag = getUnitAtomBag(fParts.num, fromDim);
+      const tNumBag = getUnitAtomBag(tParts.num, toDim);
+      const fDenBag = getUnitAtomBag(fParts.den, fromDim);
+      const tDenBag = getUnitAtomBag(tParts.den, toDim);
 
       if (isDimEqual(fNumBag.dimMap, tNumBag.dimMap) && isDimEqual(fDenBag.dimMap, tDenBag.dimMap)) {
         const numRatio = fNumBag.scale / tNumBag.scale;
@@ -80,8 +80,8 @@ export function formatPairConversion(fromUnit, toUnit, dim = null, cancelMode = 
         const scalars = [];
 
         if (Math.abs(numRatio - 1) >= 1e-6) {
-          const fNTex = unitToCancelledTex(fParts.num, false, dim, "whole");
-          const tNTex = unitToTex(tParts.num, false, dim);
+          const fNTex = unitToCancelledTex(fParts.num, false, fromDim, "whole");
+          const tNTex = unitToTex(tParts.num, false, toDim);
           if (numRatio > 1) {
             steps.push(` \\cdot ${fmtScale(numRatio)} \\, \\cfrac{${tNTex}}{${fNTex}}`);
             scalars.push(parseFloat(numRatio.toPrecision(6)));
@@ -93,9 +93,8 @@ export function formatPairConversion(fromUnit, toUnit, dim = null, cancelMode = 
         }
 
         if (Math.abs(denRatio - 1) >= 1e-6) {
-          const fDTex = unitToCancelledTex(fParts.den, false, dim, "whole");
-          const tDTex = unitToTex(tParts.den, false, dim);
-          // Denominator conversion: 1/fDen -> 1/tDen multiplies by fDen/tDen
+          const fDTex = unitToCancelledTex(fParts.den, false, fromDim, "whole");
+          const tDTex = unitToTex(tParts.den, false, toDim);
           if (denRatio > 1) {
             steps.push(` \\cdot \\cfrac{${fDTex}}{${fmtScale(denRatio)} \\, ${tDTex}}`);
             scalars.push(parseFloat(denRatio.toPrecision(6)));
@@ -113,8 +112,8 @@ export function formatPairConversion(fromUnit, toUnit, dim = null, cancelMode = 
     }
   }
 
-  const fromTex = unitToCancelledTex(fromUnit, false, dim, cancelMode);
-  const toTex = unitToTex(toUnit, false, dim);
+  const fromTex = unitToCancelledTex(fromUnit, false, fromDim, cancelMode);
+  const toTex = unitToTex(toUnit, false, toDim);
 
   if (ratio > 1) {
     const s = parseFloat(ratio.toPrecision(6));
@@ -194,16 +193,35 @@ function atomToUnitString(atom) {
  * Decomposes a compound expression conversion (e.g. (lb/min)/(Btu/h) -> kg/kWh)
  * into canonical atomic factor-label steps attached in-situ to each token.
  */
-export function buildCompoundTokenConversions(tokenEntries, targetUnit) {
-  const targetAst = parseUnitToSemanticAST(targetUnit);
+export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDim = null) {
+  const targetAst = parseUnitToSemanticAST(targetUnit, targetDim);
   const conversionsByToken = {};
   const scalars = [];
   const usedTargetIndices = new Set();
 
-  // Flatten all source atoms with their net formula exponent
+  const targetHasEnergy = targetAst.some(a => BASE_UNITS[a.base]?.dim === "E");
+  const targetPrefersBtu = targetAst.some(a => a.base === "Btu");
+
+  // Flatten all source atoms, expanding Power units (W, kW, hp) when targeting Energy/Time
   const sourceAtoms = [];
   for (const entry of tokenEntries) {
-    const ast = parseUnitToSemanticAST(entry.uName, entry.dim);
+    let workingUnit = entry.uName;
+    if (targetHasEnergy && (workingUnit === "W" || workingUnit === "kW" || workingUnit === "hp")) {
+      if (workingUnit === "W") {
+        workingUnit = "J/s";
+      } else if (workingUnit === "kW") {
+        workingUnit = "kJ/s";
+      } else if (workingUnit === "hp") {
+        const rateTarget = targetPrefersBtu ? "Btu/min" : "kJ/s";
+        const r = getUnitAtomBag("hp").scale / getUnitAtomBag(rateTarget).scale;
+        if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+        conversionsByToken[entry.tok].push(` \\cdot ${fmtScale(r)} \\, \\cfrac{${unitToTex(rateTarget, true)}}{\\cancel{\\text{hp}}}`);
+        scalars.push(parseFloat(r.toPrecision(6)));
+        workingUnit = rateTarget;
+      }
+    }
+
+    const ast = parseUnitToSemanticAST(workingUnit, entry.dim);
     ast.forEach(atom => {
       sourceAtoms.push({
         tok: entry.tok,
@@ -213,7 +231,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit) {
       });
     });
   }
-
+  
   // 1. Pair source atoms with matching target atoms by base dimension
   for (const src of sourceAtoms) {
     const tIdx = targetAst.findIndex((tAtom, idx) => {
