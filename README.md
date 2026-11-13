@@ -86,7 +86,7 @@ Software engineering in this repository is governed by physical and mathematical
 - **R16. Variant-aware planning.** Graph reachability calls must receive the active system context: `canSolveTarget(givens, goal, relations, S)`.
 - **R17. Respect the mastery lookup contract.** `getDecayedMastery(eq, topic)` requires an object with an `id` and `baseFormula`. Steps provide `{ id: step.eqId || step.id, baseFormula: step.baseFormula }`.
 - **R18. Direction-Agnostic Problem Solving.** Topics define only the physical network (`varsDb`, `relations`, `createSystem`). There are zero hardcoded starting points, fixed givens, or static goal lists. An engineer must be able to solve problems forwards, backwards, or diagonally.
-- **R19. Dynamic Per-Problem Deliverables & Cognitive Fading.** Problem goals are determined dynamically at runtime based on topological distance and mastery level. Mastered intermediate steps ($\text{mastery} \ge \text{FADING\_THRESHOLD}$) are omitted from statement prompts and **literally hidden** from the interactive solution flow, while the active problem's final deliverable always remains active.
+- **R19. Dynamic Per-Problem Deliverables & Cognitive Fading.** Problem goals are determined dynamically at runtime based on topological distance and mastery level. Mastered intermediate steps ($\text{mastery} \ge \text{FADING THRESHOLD}$) are omitted from statement prompts and **literally hidden** from the interactive solution flow, while the active problem's final deliverable always remains active.
 
 ### Derivations & Unit Layout (The Visual Invariants)
 - **R20. Textbook derivations.**
@@ -283,8 +283,8 @@ Topics have no fixed starting or ending variables. The generator treats every re
 - `solveDAG` resolves paths forwards, backwards, or diagonally from the minimal pruned givens.
 
 ### 7.2 Cognitive Fading Step Hiding
-- **Beginner ($< \text{FADING\_THRESHOLD} \approx 76.4\%$):** Short 0–1 hop problems; every intermediate step is actively prompted.
-- **Advanced ($\ge \text{FADING\_THRESHOLD}$):** Multi-hop interconnected chains; mastered intermediate steps are **literally hidden** from the solution steps and omitted from statement prompts. The learner calculates intermediate states independently to solve the dynamic active deliverable.
+- **Beginner ($< \text{FADING THRESHOLD} \approx 76.4\%$):** Short 0–1 hop problems; every intermediate step is actively prompted.
+- **Advanced ($\ge \text{FADING THRESHOLD}$):** Multi-hop interconnected chains; mastered intermediate steps are **literally hidden** from the solution steps and omitted from statement prompts. The learner calculates intermediate states independently to solve the dynamic active deliverable.
 - **Ancestry Propagation:** Submitting a correct active step reinforces all its faded ancestor equations. Failing or revealing an active step penalizes faded ancestors so scaffolding reappears on future problems.
 
 ---
