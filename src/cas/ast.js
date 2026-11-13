@@ -30,6 +30,11 @@ export function tokenizeExpr(str) {
       while (i < str.length && /[0-9.]/.test(str[i])) {
         num += str[i++];
       }
+      if ((str[i] === "e" || str[i] === "E") && /[0-9]/.test((str[i + 1] === "+" || str[i + 1] === "-") ? (str[i + 2] || "") : (str[i + 1] || ""))) {
+        num += str[i++];
+        if (str[i] === "+" || str[i] === "-") num += str[i++];
+        while (i < str.length && /[0-9]/.test(str[i])) num += str[i++];
+      }
       tokens.push({ type: "num", val: num });
     } else if (/[a-zA-Z_]/.test(ch)) {
       let id = "";
@@ -92,20 +97,33 @@ export function parseMathAST(exprStr) {
   }
 
   function parsePower() {
-    let left = parsePrimary();
-    while (peek() && peek().val === "^") {
+    const left = parsePrimary();
+    if (peek() && peek().val === "^") {
       const op = consume().val;
-      const right = parsePrimary();
-      left = { type: "binary", op, left, right };
+      const right = parseUnary();
+      return { type: "binary", op, left, right };
     }
     return left;
   }
 
+  function parseUnary() {
+    if (peek() && peek().val === "-") {
+      consume("-");
+      return {
+        type: "binary",
+        op: "-",
+        left: { type: "num", val: "0" },
+        right: { type: "group", expr: parseUnary() }
+      };
+    }
+    return parsePower();
+  }
+
   function parseMulDiv() {
-    let left = parsePower();
+    let left = parseUnary();
     while (peek() && (peek().val === "*" || peek().val === "/")) {
       const op = consume().val;
-      const right = parsePower();
+      const right = parseUnary();
       left = { type: "binary", op, left, right };
     }
     return left;
@@ -121,7 +139,8 @@ export function parseMathAST(exprStr) {
     return left;
   }
 
-  return parseAddSub();
+  const tree = parseAddSub();
+  return pos < tokens.length ? null : tree;
 }
 
 /**
@@ -136,6 +155,12 @@ export function astToExprStr(node) {
   if (node.type === "call") return `${node.fn}(${astToExprStr(node.arg)})`;
 
   if (node.type === "binary") {
+    if (node.op === "-" && node.left.type === "num" && node.left.val === "0") {
+      const uR = unwrapGroup(node.right);
+      const rStr = astToExprStr(uR);
+      return (uR.type === "binary" && uR.op !== "^") ? `-(${rStr})` : `-${rStr}`;
+    }
+
     let leftStr = astToExprStr(node.left);
     let rightStr = astToExprStr(node.right);
 
