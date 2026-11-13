@@ -118,9 +118,59 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const branchTokens = Array.from(new Set(getAstIdentifiers(branchAst).filter(t => !isReservedMathToken(t))));
     const exps = collectTokenExponents(branchAst);
 
+    // Pre-align any nested additive subtrees (e.g. 1 / (1/k_1 + 1/k_2) or (delta_o - e))
+    const innerHandledTokens = new Set();
+    const innerAdditiveNodes = [];
+    (function findInnerAdds(n, atRoot) {
+      if (!n) return;
+      if (n.type === "group") { findInnerAdds(n.expr, atRoot); return; }
+      if (n.type === "call") { findInnerAdds(n.arg, false); return; }
+      if (n.type === "binary") {
+        if (!atRoot && (n.op === "+" || n.op === "-")) {
+          innerAdditiveNodes.push(n);
+          return;
+        }
+        findInnerAdds(n.left, false);
+        findInnerAdds(n.right, false);
+      }
+    })(branchAst, true);
+
+    for (const addNode of innerAdditiveNodes) {
+      const addToks = Array.from(new Set(getAstIdentifiers(addNode).filter(t => !isReservedMathToken(t))));
+      if (addToks.length < 2) continue;
+      const infos = addToks.map(t => {
+        const ck = resolveCanonicalKey(t, varsDb);
+        const m = varsDb[ck] || varsDb[t] || {};
+        const u = S._u?.[ck] || S._u?.[t] || m.unit || "";
+        return { tok: t, ck, meta: m, u, bag: u ? getUnitAtomBag(u, m.dimension) : null };
+      }).filter(x => x.u && x.u !== "dimless" && x.u !== "ratio");
+
+      if (infos.length < 2) continue;
+      const firstDim = infos[0].bag.dimMap;
+      if (!infos.every(x => isDimEqual(firstDim, x.bag.dimMap))) continue;
+
+      const targetBag = (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio")
+        ? getUnitAtomBag(targetUnit, targetDim) : null;
+      const anchorUnit = (targetBag && isDimEqual(firstDim, targetBag.dimMap)) ? targetUnit : infos[0].u;
+      const anchorDim = (anchorUnit === targetUnit) ? targetDim : infos[0].meta.dimension;
+
+      for (const info of infos) {
+        const conv = formatPairConversion(info.u, anchorUnit, info.meta.dimension, anchorDim, "whole");
+        if (!conv.tex) {
+          tokenMarkup[info.tok] = unitToTex(info.u, false, info.meta.dimension);
+        } else {
+          const cancelMode = conv.isDecomposed ? "component" : "whole";
+          tokenMarkup[info.tok] = unitToCancelledTex(info.u, false, info.meta.dimension, cancelMode);
+          tokenConversions[info.tok] = [conv.tex];
+          conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+        }
+        innerHandledTokens.add(info.tok);
+      }
+    }
+
     const tokenBags = {};
     for (const tok of branchTokens) {
-      if (exps[tok] === undefined) continue;
+      if (exps[tok] === undefined || innerHandledTokens.has(tok)) continue;
       const cKey = resolveCanonicalKey(tok, varsDb);
       const meta = varsDb[cKey] || varsDb[tok] || {};
       const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
@@ -131,6 +181,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     let compoundComputed = false;
 
     for (const tok of branchTokens) {
+      if (innerHandledTokens.has(tok)) continue;
       const cKey = resolveCanonicalKey(tok, varsDb);
       const meta = varsDb[cKey] || varsDb[tok] || {};
       const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
