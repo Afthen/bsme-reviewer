@@ -81,7 +81,10 @@ const ATOM_DIM_VECTORS = Object.freeze({
   "Btu":            { M: 1, L: 2, T: -2 },
   "kWh":            { M: 1, L: 2, T: -2 },
   "Watt":           { M: 1, L: 2, T: -3 },
-  "horsepower":     { M: 1, L: 2, T: -3 }
+  "horsepower":     { M: 1, L: 2, T: -3 },
+  "deg":            { Ang: 1 },
+  "rad":            { Ang: 1 },
+  "percent":        { Pct: 1 }
 });
 
 export const SUBSTITUTION_GRAPH = Object.freeze({
