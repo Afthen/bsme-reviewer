@@ -97,155 +97,156 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions, conversionScalars };
   }
 
-  // 2. Pure Physics: Comprehensive AST token traversal
-  const allVarTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
-  const exps = collectTokenExponents(ast);
+  // 2. Pure Physics: Recursive Additive-Branch + Multiplicative AST Analysis
+  const cTarget = resolveCanonicalKey(targetVar, varsDb);
+  const targetDim = (varsDb[cTarget] || varsDb[targetVar] || {}).dimension || null;
 
-  const tokenBags = {};
-  for (const tok of allVarTokens) {
-    if (exps[tok] === undefined) continue; // Transcendental function args (cos(psi), exp(...)) do not scale output units
-    const cKey = resolveCanonicalKey(tok, varsDb);
-    const meta = varsDb[cKey] || varsDb[tok] || {};
-    const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-    if (!uName || uName === "dimless" || uName === "ratio" || uName === "%" || uName === "\\%") continue;
-    tokenBags[tok] = { uName, dim: meta.dimension, exp: exps[tok], bag: getUnitAtomBag(uName, meta.dimension) };
+  function collectAdditiveBranches(node) {
+    if (!node) return [];
+    if (node.type === "group") return collectAdditiveBranches(node.expr);
+    if (node.type === "call" && node.fn === "sqrt") return collectAdditiveBranches(node.arg);
+    if (node.type === "binary" && (node.op === "+" || node.op === "-")) {
+      return [...collectAdditiveBranches(node.left), ...collectAdditiveBranches(node.right)];
+    }
+    return [node];
   }
 
-  const isAdditiveExpression = ast && (ast.op === "+" || ast.op === "-" || (ast.type === "call" && ast.fn === "sqrt"));
-  let compoundComputed = false;
+  const branches = collectAdditiveBranches(ast);
+  const isMultiBranch = branches.length > 1;
 
-  for (const tok of allVarTokens) {
-    const cKey = resolveCanonicalKey(tok, varsDb);
-    const meta = varsDb[cKey] || varsDb[tok] || {};
-    const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-    if (!uName || uName === "dimless" || uName === "ratio") continue;
+  for (const branchAst of branches) {
+    const branchTokens = Array.from(new Set(getAstIdentifiers(branchAst).filter(t => !isReservedMathToken(t))));
+    const exps = collectTokenExponents(branchAst);
 
-    // Percentages and transcendental function arguments render their unit directly without target-unit scaling
-    if (uName === "%" || uName === "\\%" || exps[tok] === undefined) {
-      tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
-      continue;
+    const tokenBags = {};
+    for (const tok of branchTokens) {
+      if (exps[tok] === undefined) continue;
+      const cKey = resolveCanonicalKey(tok, varsDb);
+      const meta = varsDb[cKey] || varsDb[tok] || {};
+      const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
+      if (!uName || uName === "dimless" || uName === "ratio" || uName === "%" || uName === "\\%") continue;
+      tokenBags[tok] = { uName, dim: meta.dimension, exp: exps[tok], bag: getUnitAtomBag(uName, meta.dimension) };
     }
 
-    const fDepth = getFormulaFractionDepth(ast, tok) || 0;
-    const parsed = parseUnitToSemanticAST(uName);
+    let compoundComputed = false;
 
-    // A. Additive / Subtractive Term Conversions (IP = BP + FP, FP = IP - BP)
-    if (isAdditiveExpression) {
+    for (const tok of branchTokens) {
+      const cKey = resolveCanonicalKey(tok, varsDb);
+      const meta = varsDb[cKey] || varsDb[tok] || {};
+      const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
+      if (!uName || uName === "dimless" || uName === "ratio") continue;
+
+      if (uName === "%" || uName === "\\%" || exps[tok] === undefined) {
+        tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
+        continue;
+      }
+
+      const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
+      const parsed = parseUnitToSemanticAST(uName, meta.dimension);
+
+      // A. Counterpart Discovery within this branch via 7D Dimensional Vectors
+      const myInfo = tokenBags[tok];
+      let counterpart = null;
+      if (myInfo) {
+        for (const [otherTok, otherInfo] of Object.entries(tokenBags)) {
+          if (otherTok !== tok && otherInfo.exp * myInfo.exp < 0 && isDimEqual(myInfo.bag.dimMap, otherInfo.bag.dimMap)) {
+            counterpart = { tok: otherTok, uName: otherInfo.uName, dim: otherInfo.dim };
+            break;
+          }
+        }
+      }
+
+      // B. Affine Temperature Conversion (e.g. °F -> °R, °C -> K)
+      if (parsed.length === 1 && BASE_UNITS[parsed[0].base]?.dim === "Th") {
+        const baseMeta = BASE_UNITS[parsed[0].base];
+        const isDiff = meta.dimension === "Temperature Difference" || !!meta.isDifference;
+
+        if (!isDiff && baseMeta.offset) {
+          const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
+          const absUnit = getAbsoluteCompanionUnit(uName);
+          const offsetVal = baseMeta.offset;
+          const formattedNum = fmtSigFig(rawVal, 6);
+
+          if (counterpart) {
+            tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToCancelledTex(absUnit, false, null, "whole")}`;
+          } else {
+            tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToTex(absUnit)}`;
+          }
+          tokenConversions[tok] = ["__AFFINE_CONVERTED__"];
+          continue;
+        } else if (!isDiff && counterpart) {
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, null, "whole");
+          continue;
+        }
+      }
+
+      // C. Counterpart with Matching Dimension Vector
+      if (counterpart) {
+        const bagCurrent = getUnitAtomBag(uName, meta.dimension);
+        const bagTarget = getUnitAtomBag(counterpart.uName, counterpart.dim);
+        const scaleRatio = bagCurrent.scale / bagTarget.scale;
+
+        if (Math.abs(scaleRatio - 1) < 1e-6) {
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "whole");
+          continue;
+        }
+
+        if (isDimEqual(bagCurrent.dimMap, bagTarget.dimMap)) {
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
+          const mismatch = formatComponentMismatch(uName, counterpart.uName, meta.dimension, counterpart.dim);
+          if (fDepth <= 1) {
+            if (!tokenConversions[tok] && !branchTokens.some(t => tokenConversions[t]?.length > 0)) {
+              tokenConversions[tok] = [mismatch.tex];
+              if (mismatch.scalar !== null) conversionScalars.push(mismatch.scalar);
+            }
+          } else if (!isMultiBranch && !globalConversionTex) {
+            globalConversionTex = mismatch.tex;
+            if (mismatch.scalar !== null) conversionScalars.push(mismatch.scalar);
+          }
+          continue;
+        }
+      }
+
+      // D. Target Unit Scaling (Single-Dimension vs Compound Branch Decomposition)
       if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
-        const conv = formatPairConversion(uName, targetUnit, meta.dimension, "whole");
-        if (!conv.tex) {
-          tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
+        const tokBag = getUnitAtomBag(uName, meta.dimension);
+        const targetBag = getUnitAtomBag(targetUnit, targetDim);
+
+        if (isDimEqual(tokBag.dimMap, targetBag.dimMap)) {
+          const conv = formatPairConversion(uName, targetUnit, meta.dimension, targetDim, "whole");
+          if (!conv.tex) {
+            tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
+          } else {
+            const cancelMode = conv.isDecomposed ? "component" : "whole";
+            tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, cancelMode);
+            if (isMultiBranch) {
+              // Inside an additive branch, keep conversion in-situ on the term
+              tokenConversions[tok] = [conv.tex];
+              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+            } else if (!globalConversionTex) {
+              // Single-branch Option B: preserves target unit intact on main line
+              globalConversionTex = conv.tex;
+              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+            }
+          }
         } else {
-          const cancelMode = conv.isDecomposed ? "component" : "whole";
-          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, cancelMode);
-          tokenConversions[tok] = [conv.tex];
-          conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+          // Compound branch (e.g. m_f / IP or Q_rej / m_a)
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
+          if (!compoundComputed) {
+            compoundComputed = true;
+            const entries = Object.entries(tokenBags).map(([t, info]) => ({
+              tok: t, uName: info.uName, dim: info.dim, exp: info.exp
+            }));
+            const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
+            for (const [k, convList] of Object.entries(conversionsByToken)) {
+              tokenConversions[k] = convList;
+            }
+            conversionScalars.push(...scalars);
+          }
         }
       } else {
         tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
       }
-      continue;
-    }
-    
-    // B. Counterpart Discovery via 7D Dimensional Vectors
-    const myInfo = tokenBags[tok];
-    let counterpart = null;
-    if (myInfo) {
-      for (const [otherTok, otherInfo] of Object.entries(tokenBags)) {
-        if (otherTok !== tok && otherInfo.exp * myInfo.exp < 0 && isDimEqual(myInfo.bag.dimMap, otherInfo.bag.dimMap)) {
-          counterpart = { tok: otherTok, uName: otherInfo.uName, dim: otherInfo.dim };
-          break;
-        }
-      }
-    }
-
-    // C. Affine Temperature Conversion (e.g. °F -> °R, °C -> K)
-    if (parsed.length === 1 && BASE_UNITS[parsed[0].base]?.dim === "Th") {
-      const baseMeta = BASE_UNITS[parsed[0].base];
-      const isDiff = meta.dimension === "Temperature Difference" || !!meta.isDifference;
-
-      if (!isDiff && baseMeta.offset) {
-        const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-        const absUnit = getAbsoluteCompanionUnit(uName);
-        const offsetVal = baseMeta.offset;
-        const formattedNum = fmtSigFig(rawVal, 6);
-
-        if (counterpart) {
-          tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToCancelledTex(absUnit, false, null, "whole")}`;
-        } else {
-          tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToTex(absUnit)}`;
-        }
-        tokenConversions[tok] = ["__AFFINE_CONVERTED__"];
-        continue;
-      } else if (!isDiff && counterpart) {
-        tokenMarkup[tok] = unitToCancelledTex(uName, false, null, "whole");
-        continue;
-      }
-    }
-
-    // D. Counterpart with Matching Dimension Vector
-    if (counterpart) {
-      const bagCurrent = getUnitAtomBag(uName, meta.dimension);
-      const bagTarget = getUnitAtomBag(counterpart.uName);
-      const scaleRatio = bagCurrent.scale / bagTarget.scale;
-
-      if (Math.abs(scaleRatio - 1) < 1e-6) {
-        tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "whole");
-        continue;
-      }
-
-      // E. Mismatched Scales in Dimensionless Ratio (AST-driven component conversion)
-      if (isDimEqual(bagCurrent.dimMap, bagTarget.dimMap)) {
-        tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
-        const mismatch = formatComponentMismatch(uName, counterpart.uName, meta.dimension);
-        if (fDepth <= 1) {
-          if (!tokenConversions[tok] && !Object.values(tokenConversions).some(v => v.length > 0)) {
-            tokenConversions[tok] = [mismatch.tex];
-            if (mismatch.scalar !== null) conversionScalars.push(mismatch.scalar);
-          }
-        } else if (!globalConversionTex) {
-          globalConversionTex = mismatch.tex;
-          if (mismatch.scalar !== null) conversionScalars.push(mismatch.scalar);
-        }
-        continue;
-      }
-    }
-
-    // F. Target Unit Scaling (Single-Dimension Option B vs Compound Decomposition)
-    if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
-      const tokBag = getUnitAtomBag(uName, meta.dimension);
-      const targetBag = getUnitAtomBag(targetUnit);
-
-      if (isDimEqual(tokBag.dimMap, targetBag.dimMap)) {
-        const conv = formatPairConversion(uName, targetUnit, meta.dimension, "whole");
-        if (!conv.tex) {
-          tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
-        } else {
-          // Single-dimension Option B: preserves target unit intact on main line
-          const cancelMode = conv.isDecomposed ? "component" : "whole";
-          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, cancelMode);
-          if (!globalConversionTex) {
-            globalConversionTex = conv.tex;
-            conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
-          }
-        }
-      } else {
-        // Compound expression: compute decomposed AST conversions once across all tokens
-        tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
-        if (!compoundComputed) {
-          compoundComputed = true;
-          const entries = Object.entries(tokenBags).map(([t, info]) => ({
-            tok: t, uName: info.uName, dim: info.dim, exp: info.exp
-          }));
-          const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit);
-          for (const [k, convList] of Object.entries(conversionsByToken)) {
-            tokenConversions[k] = convList;
-          }
-          conversionScalars.push(...scalars);
-        }
-      }
-    } else {
-      tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
     }
   }
 
