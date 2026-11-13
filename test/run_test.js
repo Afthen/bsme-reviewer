@@ -35,7 +35,7 @@ import { ALL_TOPICS, TOPICS } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
-import { evaluatePhysicalAST } from "../src/cas/units/index.js";
+import { evaluatePhysicalAST, isCanonicalScaleFactor } from "../src/cas/units/index.js";
 import { parseMathAST } from "../src/cas/ast.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
@@ -161,6 +161,18 @@ export function validateDerivationLatex(derivLatex) {
   const beginAligned = derivLatex.split("\\begin{aligned}").length - 1;
   const endAligned = derivLatex.split("\\end{aligned}").length - 1;
   assert.equal(beginAligned, endAligned, `Mismatched aligned environment in: ${derivLatex}`);
+
+  // Alien Scale Factor Detector (Single Source of Truth via scales.js)
+  const convMatches = derivLatex.matchAll(/\\cdot\s*([\d.,]+)\s*\\,\s*\\cfrac/g);
+  for (const m of convMatches) {
+    const rawNum = parseFloat(m[1].replace(/[{,}]/g, ""));
+    if (!isNaN(rawNum) && rawNum > 0) {
+      assert.ok(
+        isCanonicalScaleFactor(rawNum),
+        `Alien scale factor detected in derivation: [${rawNum}]. Compound conversions must decompose into canonical registered unit pairs.`
+      );
+    }
+  }
 
   if (katex && typeof katex.renderToString === "function") {
     let raw = derivLatex.trim();
