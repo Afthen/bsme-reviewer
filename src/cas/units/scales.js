@@ -41,21 +41,27 @@ export function formatPairConversion(fromUnit, toUnit, dim = null, cancelMode = 
   const toScale = getUnitAtomBag(toUnit, dim).scale;
   const ratio = fromScale / toScale;
 
-  if (Math.abs(ratio - 1) < 1e-6) return "";
+  if (Math.abs(ratio - 1) < 1e-6) return { tex: "", scalar: null };
 
   const fromTex = unitToCancelledTex(fromUnit, false, dim, cancelMode);
   const toTex = unitToTex(toUnit, false, dim);
 
   if (ratio > 1) {
-    return ` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${toTex}}{${fromTex}}`;
+    return {
+      tex: ` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${toTex}}{${fromTex}}`,
+      scalar: parseFloat(ratio.toPrecision(6))
+    };
   }
-  return ` \\cdot \\cfrac{${toTex}}{${fmtScale(1 / ratio)} \\, ${fromTex}}`;
+  const inv = 1 / ratio;
+  return {
+    tex: ` \\cdot \\cfrac{${toTex}}{${fmtScale(inv)} \\, ${fromTex}}`,
+    scalar: parseFloat(inv.toPrecision(6))
+  };
 }
 
 /**
  * Resolves a component mismatch between two units in a dimensionless ratio
  * (e.g. Btu/h vs Btu/min, or m^3/h vs m^3/s) directly from their semantic ASTs.
- * Returns { factorTex, preferToken }: the conversion LaTeX and which token holds it.
  */
 export function formatComponentMismatch(unitA, unitB, dimA = null, dimB = null) {
   const astA = parseUnitToSemanticAST(unitA, dimA);
@@ -80,19 +86,24 @@ export function formatComponentMismatch(unitA, unitB, dimA = null, dimB = null) 
 
       if (Math.abs(ratio - 1) < 1e-6) continue;
 
-      // Positive power: uA -> uB; Negative power (in denominator): uB/uA cancels 1/uA -> 1/uB
       const fromAtom = fA.power < 0 ? uStrA : uStrB;
       const toAtom = fA.power < 0 ? uStrB : uStrA;
       const effRatio = fA.power < 0 ? (sA / sB) : (sB / sA);
 
       if (effRatio > 1) {
-        return ` \\cdot ${fmtScale(effRatio)} \\, \\cfrac{\\cancel{${unitToTex(fromAtom)}}}{\\cancel{${unitToTex(toAtom)}}}`;
+        return {
+          tex: ` \\cdot ${fmtScale(effRatio)} \\, \\cfrac{\\cancel{${unitToTex(fromAtom)}}}{\\cancel{${unitToTex(toAtom)}}}`,
+          scalar: parseFloat(effRatio.toPrecision(6))
+        };
       }
-      return ` \\cdot \\cfrac{\\cancel{${unitToTex(fromAtom)}}}{${fmtScale(1 / effRatio)} \\, \\cancel{${unitToTex(toAtom)}}}`;
+      const inv = 1 / effRatio;
+      return {
+        tex: ` \\cdot \\cfrac{\\cancel{${unitToTex(fromAtom)}}}{${fmtScale(inv)} \\, \\cancel{${unitToTex(toAtom)}}}`,
+        scalar: parseFloat(inv.toPrecision(6))
+      };
     }
   }
 
-  // Fallback to whole-unit ratio if mismatch is across composite atoms
   return formatPairConversion(unitA, unitB, dimA, "whole");
 }
 
@@ -109,7 +120,8 @@ function atomToUnitString(atom) {
  */
 export function buildCompoundTokenConversions(tokenEntries, targetUnit) {
   const targetAst = parseUnitToSemanticAST(targetUnit);
-  const result = {};
+  const conversionsByToken = {};
+  const scalars = [];
   const usedTargetIndices = new Set();
 
   // Flatten all source atoms with their net formula exponent
@@ -144,20 +156,21 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit) {
       const ratio = sSrc / sTgt;
 
       if (Math.abs(ratio - 1) > 1e-6) {
-        if (!result[src.tok]) result[src.tok] = [];
-        // If src is in token's numerator (atom.power > 0), multiply by tgt/src
-        // If src is in token's denominator (atom.power < 0), multiply by src/tgt
+        if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
+        const sVal = ratio > 1 ? ratio : (1 / ratio);
+        scalars.push(parseFloat(sVal.toPrecision(6)));
+
         if (src.atom.power > 0) {
           if (ratio > 1) {
-            result[src.tok].push(` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${unitToTex(tgtStr)}}{\\cancel{${unitToTex(srcStr)}}}`);
+            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${unitToTex(tgtStr)}}{\\cancel{${unitToTex(srcStr)}}}`);
           } else {
-            result[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)}}{${fmtScale(1 / ratio)} \\, \\cancel{${unitToTex(srcStr)}}}`);
+            conversionsByToken[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)}}{${fmtScale(1 / ratio)} \\, \\cancel{${unitToTex(srcStr)}}}`);
           }
         } else {
           if (ratio > 1) {
-            result[src.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${fmtScale(ratio)} \\, ${unitToTex(tgtStr)}}`);
+            conversionsByToken[src.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${fmtScale(ratio)} \\, ${unitToTex(tgtStr)}}`);
           } else {
-            result[src.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${unitToTex(tgtStr)}}`);
+            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${unitToTex(tgtStr)}}`);
           }
         }
       }
@@ -183,25 +196,28 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit) {
       const ratio = sA / sB;
 
       if (Math.abs(ratio - 1) > 1e-6) {
-        if (!result[a.tok]) result[a.tok] = [];
+        if (!conversionsByToken[a.tok]) conversionsByToken[a.tok] = [];
+        const sVal = ratio > 1 ? ratio : (1 / ratio);
+        scalars.push(parseFloat(sVal.toPrecision(6)));
+
         if (a.atom.power < 0) {
           if (ratio < 1) {
-            result[a.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(strA)}}}{\\cancel{${unitToTex(strB)}}}`);
+            conversionsByToken[a.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(strA)}}}{\\cancel{${unitToTex(strB)}}}`);
           } else {
-            result[a.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(strA)}}}{${fmtScale(ratio)} \\, \\cancel{${unitToTex(strB)}}}`);
+            conversionsByToken[a.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(strA)}}}{${fmtScale(ratio)} \\, \\cancel{${unitToTex(strB)}}}`);
           }
         } else {
           if (ratio > 1) {
-            result[a.tok].push(` \\cdot ${fmtScale(ratio)} \\, \\cfrac{\\cancel{${unitToTex(strB)}}}{\\cancel{${unitToTex(strA)}}}`);
+            conversionsByToken[a.tok].push(` \\cdot ${fmtScale(ratio)} \\, \\cfrac{\\cancel{${unitToTex(strB)}}}{\\cancel{${unitToTex(strA)}}}`);
           } else {
-            result[a.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(strB)}}}{${fmtScale(1 / ratio)} \\, \\cancel{${unitToTex(strA)}}}`);
+            conversionsByToken[a.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(strB)}}}{${fmtScale(1 / ratio)} \\, \\cancel{${unitToTex(strA)}}}`);
           }
         }
       }
     }
   }
 
-  return result;
+  return { conversionsByToken, scalars };
 }
 
 // ============================================================================
