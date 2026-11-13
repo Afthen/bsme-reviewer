@@ -52,6 +52,7 @@ export const BASE_UNITS = Object.freeze({
   "bar":            { dim: "P", baseScale: 100000.0, symbol: "bar" },
   "litre":          { dim: "Vol", baseScale: 0.001, symbol: "L" },
   "rpm":            { dim: "Freq", baseScale: 1/60, symbol: "rpm" },
+  "hertz":          { dim: "Freq", baseScale: 1.0, symbol: "Hz" },
   "cfm":            { dim: "VolFlow", baseScale: 0.3048**3 / 60, symbol: "cfm" }
 });
 
@@ -67,6 +68,7 @@ const ATOM_DIM_VECTORS = Object.freeze({
   "minute":         { T: 1 },
   "hour":           { T: 1 },
   "rpm":            { T: -1 },
+  "hertz":          { T: -1 },
   "cfm":            { L: 3, T: -1 },
   "Kelvin":         { Th: 1 },
   "Celsius":        { Th: 1 },
