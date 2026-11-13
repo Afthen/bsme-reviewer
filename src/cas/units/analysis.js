@@ -129,16 +129,17 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         if (!conv.tex) {
           tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
         } else {
-          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "whole");
+          const cancelMode = conv.isDecomposed ? "component" : "whole";
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, cancelMode);
           tokenConversions[tok] = [conv.tex];
-          if (conv.scalar !== null) conversionScalars.push(conv.scalar);
+          conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
         }
       } else {
         tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
       }
       continue;
     }
-
+    
     // B. Counterpart Discovery via 7D Dimensional Vectors
     const myInfo = tokenBags[tok];
     let counterpart = null;
@@ -214,10 +215,11 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
           tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
         } else {
           // Single-dimension Option B: preserves target unit intact on main line
-          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "whole");
+          const cancelMode = conv.isDecomposed ? "component" : "whole";
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, cancelMode);
           if (!globalConversionTex) {
             globalConversionTex = conv.tex;
-            if (conv.scalar !== null) conversionScalars.push(conv.scalar);
+            conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
           }
         }
       } else {
