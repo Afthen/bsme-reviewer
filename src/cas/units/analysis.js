@@ -103,14 +103,15 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
   const tokenBags = {};
   for (const tok of allVarTokens) {
+    if (exps[tok] === undefined) continue; // Transcendental function args (cos(psi), exp(...)) do not scale output units
     const cKey = resolveCanonicalKey(tok, varsDb);
     const meta = varsDb[cKey] || varsDb[tok] || {};
     const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-    if (!uName || uName === "dimless" || uName === "ratio") continue;
-    tokenBags[tok] = { uName, dim: meta.dimension, exp: exps[tok] ?? 1, bag: getUnitAtomBag(uName, meta.dimension) };
+    if (!uName || uName === "dimless" || uName === "ratio" || uName === "%" || uName === "\\%") continue;
+    tokenBags[tok] = { uName, dim: meta.dimension, exp: exps[tok], bag: getUnitAtomBag(uName, meta.dimension) };
   }
 
-  const isAdditiveExpression = ast && (ast.op === "+" || ast.op === "-");
+  const isAdditiveExpression = ast && (ast.op === "+" || ast.op === "-" || (ast.type === "call" && ast.fn === "sqrt"));
   let compoundComputed = false;
 
   for (const tok of allVarTokens) {
@@ -118,6 +119,12 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const meta = varsDb[cKey] || varsDb[tok] || {};
     const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
     if (!uName || uName === "dimless" || uName === "ratio") continue;
+
+    // Percentages and transcendental function arguments render their unit directly without target-unit scaling
+    if (uName === "%" || uName === "\\%" || exps[tok] === undefined) {
+      tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
+      continue;
+    }
 
     const fDepth = getFormulaFractionDepth(ast, tok) || 0;
     const parsed = parseUnitToSemanticAST(uName);
@@ -261,15 +268,23 @@ function collectTokenExponents(node, sign = 1, acc = {}) {
     acc[node.name] = (acc[node.name] || 0) + sign;
     return acc;
   }
+  if (node.type === "call") {
+    if (node.fn === "sqrt") {
+      return collectTokenExponents(node.arg, sign * 0.5, acc);
+    }
+    // Transcendental calls (sin, cos, tan, exp, ln, log, etc.) consume their argument units
+    return acc;
+  }
   if (node.type === "binary") {
-    if (node.op === "*") {
+    if (node.op === "*" || node.op === "+" || node.op === "-") {
       collectTokenExponents(node.left, sign, acc);
       collectTokenExponents(node.right, sign, acc);
     } else if (node.op === "/") {
       collectTokenExponents(node.left, sign, acc);
       collectTokenExponents(node.right, -sign, acc);
     } else if (node.op === "^") {
-      const p = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
+      const rawP = evalAST(node.right, {});
+      const p = Number.isFinite(rawP) ? rawP : 1;
       collectTokenExponents(node.left, sign * p, acc);
     }
   }
