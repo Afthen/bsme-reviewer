@@ -27,7 +27,7 @@ You are modifying the BSME Reviewer repository.
    the resulting diff syntax is shorter in character count than returning the drop-in
    replacement (that is the tipping point). Documentation (README.md) changes are
    always returned as a full drop-in replacement.
-6. Run: node --test test/run_test.js test/run_hygiene_test.js
+6. Run: node --test test/runtest.js test/runhygiene_test.js
 7. Reply with: files changed, a summary of test output, and anything you could
    not verify. Do not claim a test passed unless you ran it.
 ```
