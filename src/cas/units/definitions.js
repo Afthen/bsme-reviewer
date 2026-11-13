@@ -36,8 +36,8 @@ export const BASE_UNITS = Object.freeze({
   "Rankine":        { dim: "Th", baseScale: 5/9, symbol: "°R" },
   "Btu":            { dim: "E", baseScale: 1055.056, symbol: "Btu" },
   "Joule":          { dim: "E", baseScale: 1.0, symbol: "J" },
-  "Watt":           { dim: "E", baseScale: 1.0, symbol: "W" },
-  "Pascal":         { dim: "F", baseScale: 1.0, symbol: "Pa" },
+  "Watt":           { dim: "Pow", baseScale: 1.0, symbol: "W" },
+  "Pascal":         { dim: "P", baseScale: 1.0, symbol: "Pa" },
   "teeth":          { dim: "C", baseScale: 1.0, symbol: "teeth" },
   "rad":            { dim: "C", baseScale: 1.0, symbol: "rad" },
   "rev":            { dim: "C", baseScale: 1.0, symbol: "rev" },
@@ -47,12 +47,12 @@ export const BASE_UNITS = Object.freeze({
   "inch":           { dim: "L", baseScale: 0.0254, symbol: "in" },
   "foot":           { dim: "L", baseScale: 0.3048, symbol: "ft" },
   "yard":           { dim: "L", baseScale: 0.9144, symbol: "yd" },
-  "horsepower":     { dim: "E", baseScale: 745.69987, symbol: "hp" },
+  "horsepower":     { dim: "Pow", baseScale: 745.69987, symbol: "hp" },
   "kWh":            { dim: "E", baseScale: 3600000.0, symbol: "kWh" },
   "bar":            { dim: "P", baseScale: 100000.0, symbol: "bar" },
-  "litre":          { dim: "L", baseScale: 0.001, symbol: "L" },
-  "rpm":            { dim: "T", baseScale: 1/60, symbol: "rpm" },
-  "cfm":            { dim: "L", baseScale: 0.3048**3 / 60, symbol: "cfm" }
+  "litre":          { dim: "Vol", baseScale: 0.001, symbol: "L" },
+  "rpm":            { dim: "Freq", baseScale: 1/60, symbol: "rpm" },
+  "cfm":            { dim: "VolFlow", baseScale: 0.3048**3 / 60, symbol: "cfm" }
 });
 
 const ATOM_DIM_VECTORS = Object.freeze({
