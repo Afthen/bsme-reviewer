@@ -49,9 +49,39 @@ export const BASE_UNITS = Object.freeze({
   "yard":           { dim: "L", baseScale: 0.9144, symbol: "yd" },
   "horsepower":     { dim: "E", baseScale: 745.69987, symbol: "hp" },
   "kWh":            { dim: "E", baseScale: 3600000.0, symbol: "kWh" },
+  "bar":            { dim: "P", baseScale: 100000.0, symbol: "bar" },
   "litre":          { dim: "L", baseScale: 0.001, symbol: "L" },
   "rpm":            { dim: "T", baseScale: 1/60, symbol: "rpm" },
   "cfm":            { dim: "L", baseScale: 0.3048**3 / 60, symbol: "cfm" }
+});
+
+const ATOM_DIM_VECTORS = Object.freeze({
+  "gram":           { M: 1 },
+  "pound_mass":     { M: 1 },
+  "meter":          { L: 1 },
+  "inch":           { L: 1 },
+  "foot":           { L: 1 },
+  "yard":           { L: 1 },
+  "litre":          { L: 3 },
+  "second":         { T: 1 },
+  "minute":         { T: 1 },
+  "hour":           { T: 1 },
+  "rpm":            { T: -1 },
+  "cfm":            { L: 3, T: -1 },
+  "Kelvin":         { Th: 1 },
+  "Celsius":        { Th: 1 },
+  "Fahrenheit":     { Th: 1 },
+  "Rankine":        { Th: 1 },
+  "newton":         { M: 1, L: 1, T: -2 },
+  "pound_force":    { M: 1, L: 1, T: -2 },
+  "kilogram_force": { M: 1, L: 1, T: -2 },
+  "Pascal":         { M: 1, L: -1, T: -2 },
+  "bar":            { M: 1, L: -1, T: -2 },
+  "Joule":          { M: 1, L: 2, T: -2 },
+  "Btu":            { M: 1, L: 2, T: -2 },
+  "kWh":            { M: 1, L: 2, T: -2 },
+  "Watt":           { M: 1, L: 2, T: -3 },
+  "horsepower":     { M: 1, L: 2, T: -3 }
 });
 
 export const SUBSTITUTION_GRAPH = Object.freeze({
@@ -223,7 +253,18 @@ export function getSemanticScale(factors) {
 export function getUnitAtomBag(uName, dimension = null) {
   const ast = parseUnitToSemanticAST(uName, dimension);
   const scale = getSemanticScale(ast);
-  return { scale, isDimensionless: !uName || uName === "dimless" || uName === "ratio" };
+  const dimMap = {};
+  ast.forEach(f => {
+    const vec = ATOM_DIM_VECTORS[f.base];
+    if (vec) {
+      for (const [d, p] of Object.entries(vec)) {
+        const next = (dimMap[d] || 0) + p * f.power;
+        if (next === 0) delete dimMap[d];
+        else dimMap[d] = next;
+      }
+    }
+  });
+  return { scale, dimMap, isDimensionless: !uName || uName === "dimless" || uName === "ratio" };
 }
 
 export function formatValueInUnit(value, unitName = "", isDifference = false, dimension = null) {
@@ -246,6 +287,9 @@ export function valueToCoherentBase(value, unitName = "", isDifference = false, 
   return value * scale;
 }
 
-export function isDimEqual(aMap, bMap) {
-  return true;
+export function isDimEqual(aMap = {}, bMap = {}) {
+  const keysA = Object.keys(aMap);
+  const keysB = Object.keys(bMap);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(k => aMap[k] === bMap[k]);
 }
