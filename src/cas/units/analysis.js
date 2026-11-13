@@ -40,6 +40,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const tokenMarkup = {};
   const tokenConversions = {};
   const preConversions = [];
+  const conversionScalars = [];
   let globalConversionTex = "";
   let numericConversionFactor = 1.0;
 
@@ -93,29 +94,24 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         }
       }
     }
-    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions };
+    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions, conversionScalars };
   }
 
   // 2. Pure Physics: Comprehensive AST token traversal
   const allVarTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
   const exps = collectTokenExponents(ast);
 
-  const dimensionUnits = {};
+  const tokenBags = {};
   for (const tok of allVarTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
-    const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+    const meta = varsDb[cKey] || varsDb[tok] || {};
+    const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
     if (!uName || uName === "dimless" || uName === "ratio") continue;
-
-    const tokExp = exps[tok] || 1;
-    const factors = parseUnitToSemanticAST(uName);
-    factors.forEach(f => {
-      const dim = BASE_UNITS[f.base]?.dim || f.base;
-      if (!dimensionUnits[dim]) dimensionUnits[dim] = [];
-      dimensionUnits[dim].push({ tok, uName, power: f.power * tokExp });
-    });
+    tokenBags[tok] = { uName, dim: meta.dimension, exp: exps[tok] ?? 1, bag: getUnitAtomBag(uName, meta.dimension) };
   }
 
   const isAdditiveExpression = ast && (ast.op === "+" || ast.op === "-");
+  let compoundComputed = false;
 
   for (const tok of allVarTokens) {
     const cKey = resolveCanonicalKey(tok, varsDb);
@@ -130,11 +126,12 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     if (isAdditiveExpression) {
       if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
         const conv = formatPairConversion(uName, targetUnit, meta.dimension, "whole");
-        if (!conv) {
+        if (!conv.tex) {
           tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
         } else {
           tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "whole");
-          tokenConversions[tok] = [conv];
+          tokenConversions[tok] = [conv.tex];
+          if (conv.scalar !== null) conversionScalars.push(conv.scalar);
         }
       } else {
         tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
@@ -142,15 +139,15 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       continue;
     }
 
-    // B. Counterpart Discovery in Multiplicative Expressions
+    // B. Counterpart Discovery via 7D Dimensional Vectors
+    const myInfo = tokenBags[tok];
     let counterpart = null;
-    for (const f of parsed) {
-      const dim = BASE_UNITS[f.base]?.dim || f.base;
-      const list = dimensionUnits[dim] || [];
-      const match = list.find(entry => entry.tok !== tok && entry.power * (exps[tok] || 1) < 0);
-      if (match) {
-        counterpart = match;
-        break;
+    if (myInfo) {
+      for (const [otherTok, otherInfo] of Object.entries(tokenBags)) {
+        if (otherTok !== tok && otherInfo.exp * myInfo.exp < 0 && isDimEqual(myInfo.bag.dimMap, otherInfo.bag.dimMap)) {
+          counterpart = { tok: otherTok, uName: otherInfo.uName, dim: otherInfo.dim };
+          break;
+        }
       }
     }
 
@@ -192,13 +189,15 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       // E. Mismatched Scales in Dimensionless Ratio (AST-driven component conversion)
       if (isDimEqual(bagCurrent.dimMap, bagTarget.dimMap)) {
         tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
-        const mismatchConv = formatComponentMismatch(uName, counterpart.uName, meta.dimension);
+        const mismatch = formatComponentMismatch(uName, counterpart.uName, meta.dimension);
         if (fDepth <= 1) {
           if (!tokenConversions[tok] && !Object.values(tokenConversions).some(v => v.length > 0)) {
-            tokenConversions[tok] = [mismatchConv];
+            tokenConversions[tok] = [mismatch.tex];
+            if (mismatch.scalar !== null) conversionScalars.push(mismatch.scalar);
           }
         } else if (!globalConversionTex) {
-          globalConversionTex = mismatchConv;
+          globalConversionTex = mismatch.tex;
+          if (mismatch.scalar !== null) conversionScalars.push(mismatch.scalar);
         }
         continue;
       }
@@ -211,30 +210,29 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
       if (isDimEqual(tokBag.dimMap, targetBag.dimMap)) {
         const conv = formatPairConversion(uName, targetUnit, meta.dimension, "whole");
-        if (!conv) {
+        if (!conv.tex) {
           tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
         } else {
           // Single-dimension Option B: preserves target unit intact on main line
           tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "whole");
-          if (!globalConversionTex) globalConversionTex = conv;
+          if (!globalConversionTex) {
+            globalConversionTex = conv.tex;
+            if (conv.scalar !== null) conversionScalars.push(conv.scalar);
+          }
         }
       } else {
         // Compound expression: compute decomposed AST conversions once across all tokens
         tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
-        if (!tokenConversions.__compoundComputed) {
-          tokenConversions.__compoundComputed = true;
-          const entries = allVarTokens
-            .map(t => {
-              const ck = resolveCanonicalKey(t, varsDb);
-              const m = varsDb[ck] || varsDb[t] || {};
-              const u = S._u?.[ck] || S._u?.[t] || m.unit || "";
-              return { tok: t, uName: u, dim: m.dimension, exp: exps[t] ?? 1 };
-            })
-            .filter(e => e.uName && e.uName !== "dimless" && e.uName !== "ratio");
-          const decomposed = buildCompoundTokenConversions(entries, targetUnit);
-          for (const [k, convList] of Object.entries(decomposed)) {
+        if (!compoundComputed) {
+          compoundComputed = true;
+          const entries = Object.entries(tokenBags).map(([t, info]) => ({
+            tok: t, uName: info.uName, dim: info.dim, exp: info.exp
+          }));
+          const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit);
+          for (const [k, convList] of Object.entries(conversionsByToken)) {
             tokenConversions[k] = convList;
           }
+          conversionScalars.push(...scalars);
         }
       }
     } else {
@@ -249,7 +247,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     numericConversionFactor: 1.0,
     globalConversionTex,
     preConversions,
-    tokenConversions
+    tokenConversions,
+    conversionScalars
   };
 }
 
