@@ -37,6 +37,20 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "kPa", tokens: 1 },
       { unit: "bar", tokens: 1 }
     ],
+    [DIMENSIONS.MODULUS]: [
+      { unit: "GPa", tokens: 1 },
+      { unit: "MPa", tokens: 1 },
+      { unit: "N/mm^2", tokens: 2 }
+    ],
+    [DIMENSIONS.STIFFNESS]: [
+      { unit: "N/mm", tokens: 2 },
+      { unit: "N/m", tokens: 2 },
+      { unit: "kN/m", tokens: 2 }
+    ],
+    [DIMENSIONS.AREA_MOMENT]: [
+      { unit: "mm^4", tokens: 1 },
+      { unit: "cm^4", tokens: 1 }
+    ],
     [DIMENSIONS.POWER]: [
       { unit: "kW", tokens: 1 },
       { unit: "kJ/s", tokens: 2 },
@@ -54,6 +68,21 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "kJ", tokens: 1 },
       { unit: "J", tokens: 1 },
       { unit: "kWh", tokens: 1 }
+    ],
+    [DIMENSIONS.MASS]: [
+      { unit: "kg", tokens: 1 },
+      { unit: "g", tokens: 1 }
+    ],
+    [DIMENSIONS.TIME]: [
+      { unit: "s", tokens: 1 },
+      { unit: "ms", tokens: 1 }
+    ],
+    [DIMENSIONS.FREQUENCY]: [
+      { unit: "Hz", tokens: 1 },
+      { unit: "1/s", tokens: 2 }
+    ],
+    [DIMENSIONS.ACCELERATION]: [
+      { unit: "m/s^2", tokens: 2 }
     ],
     [DIMENSIONS.SPECIFIC_ENERGY]: [
       { unit: "kJ/kg", tokens: 2 }
@@ -111,6 +140,17 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "lb/in^2", tokens: 2 },
       { unit: "ksi", tokens: 1 }
     ],
+    [DIMENSIONS.MODULUS]: [
+      { unit: "ksi", tokens: 1 },
+      { unit: "lb/in^2", tokens: 2 }
+    ],
+    [DIMENSIONS.STIFFNESS]: [
+      { unit: "lb/in", tokens: 2 },
+      { unit: "lb/ft", tokens: 2 }
+    ],
+    [DIMENSIONS.AREA_MOMENT]: [
+      { unit: "in^4", tokens: 1 }
+    ],
     [DIMENSIONS.POWER]: [
       { unit: "hp", tokens: 1 },
       { unit: "Btu/min", tokens: 2 },
@@ -123,7 +163,24 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "lb-ft", tokens: 2 }
     ],
     [DIMENSIONS.ENERGY]: [
+      { unit: "in-lb", tokens: 2 },
+      { unit: "ft-lb", tokens: 2 },
       { unit: "Btu", tokens: 1 }
+    ],
+    [DIMENSIONS.MASS]: [
+      { unit: "lb", tokens: 1 }
+    ],
+    [DIMENSIONS.TIME]: [
+      { unit: "s", tokens: 1 },
+      { unit: "ms", tokens: 1 }
+    ],
+    [DIMENSIONS.FREQUENCY]: [
+      { unit: "Hz", tokens: 1 },
+      { unit: "1/s", tokens: 2 }
+    ],
+    [DIMENSIONS.ACCELERATION]: [
+      { unit: "ft/s^2", tokens: 2 },
+      { unit: "in/s^2", tokens: 2 }
     ],
     [DIMENSIONS.SPECIFIC_ENERGY]: [
       { unit: "Btu/lb", tokens: 2 }
@@ -227,7 +284,13 @@ const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["pct_ip", "pct_cw", "pct_exh", "pct_rad"]),
   new Set(["phi_n", "phi_t", "psi"]),
   new Set(["p_n", "p_t", "p_x"]),
-  new Set(["W_t", "F_a", "F_r", "F_N"])
+  new Set(["W_t", "F_a", "F_r", "F_N"]),
+  new Set(["F_o", "F_i"]),
+  new Set(["delta_o", "delta_i"]),
+  new Set(["k_o", "k_i"]),
+  new Set(["k_1", "k_2", "k_3", "k_4"]),
+  new Set(["F_1", "F_2", "F_3", "F_4"]),
+  new Set(["delta_1", "delta_2", "delta_3", "delta_4"])
 ]);
 
 export function findCoupledGroup(varKey) {
