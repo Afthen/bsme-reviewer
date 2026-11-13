@@ -35,7 +35,7 @@ import { ALL_TOPICS, TOPICS } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
-import { evaluatePhysicalAST, isCanonicalScaleFactor } from "../src/cas/units/index.js";
+import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor } from "../src/cas/units/index.js";
 import { parseMathAST } from "../src/cas/ast.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
@@ -161,18 +161,6 @@ export function validateDerivationLatex(derivLatex) {
   const beginAligned = derivLatex.split("\\begin{aligned}").length - 1;
   const endAligned = derivLatex.split("\\end{aligned}").length - 1;
   assert.equal(beginAligned, endAligned, `Mismatched aligned environment in: ${derivLatex}`);
-
-  // Alien Scale Factor Detector (Single Source of Truth via scales.js)
-  const convMatches = derivLatex.matchAll(/\\cdot\s*([\d.,]+)\s*\\,\s*\\cfrac/g);
-  for (const m of convMatches) {
-    const rawNum = parseFloat(m[1].replace(/[{,}]/g, ""));
-    if (!isNaN(rawNum) && rawNum > 0) {
-      assert.ok(
-        isCanonicalScaleFactor(rawNum),
-        `Alien scale factor detected in derivation: [${rawNum}]. Compound conversions must decompose into canonical registered unit pairs.`
-      );
-    }
-  }
 
   if (katex && typeof katex.renderToString === "function") {
     let raw = derivLatex.trim();
@@ -302,12 +290,23 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
         assert.ok(relErr < 0.001, `Target unit projection failed on step ${step.targetVar}: expected ${expected}, got ${projected}`);
       });
 
-      // 3. Verify derivation output syntax and KaTeX rendering
+      // 3. Verify derivation output syntax, KaTeX rendering, and zero alien conversion scalars
       for (const step of problem.solution) {
         const deriv = buildAlignedDerivation(
           step, problem.system, problem.allSteps, problem.varsDb, topic.relations
         );
         validateDerivationLatex(deriv);
+
+        const formulaRhs = step.rhsExpr || (step.baseFormula?.includes("=") ? step.baseFormula.split("=")[1].trim() : step.baseFormula) || "";
+        const targetUnit = problem.system._u?.[step.targetVar] || problem.varsDb[step.targetVar]?.unit || "";
+        const unitAnalysis = solveUnitAlgebra(formulaRhs, problem.system, step.targetVar, targetUnit, problem.varsDb, step.requiredUnits);
+
+        for (const scalar of (unitAnalysis.conversionScalars || [])) {
+          assert.ok(
+            isCanonicalScaleFactor(scalar),
+            `Alien scale factor detected in conversion [${topic.id}/${step.targetVar}]: [${scalar}]`
+          );
+        }
       }
     }
   });
