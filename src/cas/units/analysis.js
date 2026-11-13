@@ -8,14 +8,18 @@ import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { fmtSigFig } from "../../core/dimensions.js";
 import {
   parseUnitToSemanticAST,
-  semanticASTToTex,
-  SUBSTITUTION_GRAPH,
   BASE_UNITS,
   getUnitAtomBag,
+  isDimEqual,
   unitToTex,
   unitToCancelledTex,
   getAbsoluteCompanionUnit
 } from "./definitions.js";
+import {
+  formatPairConversion,
+  formatComponentMismatch,
+  buildCompoundTokenConversions
+} from "./scales.js";
 
 function getFormulaFractionDepth(node, targetName, currentDepth = 0) {
   if (!node) return null;
