@@ -117,8 +117,11 @@ function renderTopicBadge(topic) {
     view.prepend(badge);
   }
 
-  badge.textContent = topic.category
-    ? `${topic.subject} · ${topic.category}: ${topic.title}`
+  const catLabel = Array.isArray(topic.category)
+    ? topic.category.join(" · ")
+    : (topic.category ? topic.category.split("/").map(s => s.trim()).filter(Boolean).join(" · ") : "");
+  badge.textContent = catLabel
+    ? `${topic.subject} · ${catLabel}: ${topic.title}`
     : `${topic.subject}: ${topic.title}`;
 }
 
@@ -161,18 +164,22 @@ function setupTopicSelector() {
   const label = document.getElementById("topic-dropdown-label");
   const menu = document.getElementById("topic-dropdown-menu");
 
-  const subjects = {};
+  const getCategoryParts = (cat) => {
+    if (!cat) return [];
+    if (Array.isArray(cat)) return cat.map(s => String(s).trim()).filter(Boolean);
+    return String(cat).split("/").map(s => s.trim()).filter(Boolean);
+  };
+
+  const makeNode = (name) => ({ name, children: new Map(), topics: [] });
+  const rootTree = makeNode("root");
   ALL_TOPICS.forEach(topic => {
-    const subj = topic.subject || "General Engineering";
-    if (!subjects[subj]) subjects[subj] = { categories: {}, standalone: [] };
-    if (topic.category) {
-      if (!subjects[subj].categories[topic.category]) {
-        subjects[subj].categories[topic.category] = [];
-      }
-      subjects[subj].categories[topic.category].push(topic);
-    } else {
-      subjects[subj].standalone.push(topic);
+    const pathParts = [topic.subject || "General Engineering", ...getCategoryParts(topic.category)];
+    let cursor = rootTree;
+    for (const part of pathParts) {
+      if (!cursor.children.has(part)) cursor.children.set(part, makeNode(part));
+      cursor = cursor.children.get(part);
     }
+    cursor.topics.push(topic);
   });
 
   menu.innerHTML = "";
@@ -188,7 +195,8 @@ function setupTopicSelector() {
       label.textContent = "Select topics…";
     } else if (topics.length === 1) {
       const t = topics[0];
-      label.textContent = t.category ? `${t.category}: ${t.title}` : t.title;
+      const parts = getCategoryParts(t.category);
+      label.textContent = parts.length > 0 ? `${parts.join(" · ")}: ${t.title}` : t.title;
     } else {
       label.textContent = `${topics.length} topics selected`;
     }
@@ -230,9 +238,10 @@ function setupTopicSelector() {
     }
   }
 
-  function createTopicLeaf(t, levelClass) {
+  function createTopicLeaf(t, depth = 1) {
     const leaf = document.createElement("label");
-    leaf.className = `topic-item topic-leaf ${levelClass}`;
+    leaf.className = "topic-item topic-leaf";
+    leaf.style.setProperty("--depth", String(depth));
     leaf.dataset.topicId = t.id;
 
     const box = document.createElement("input");
@@ -277,64 +286,45 @@ function setupTopicSelector() {
     return box;
   }
 
-  for (const [subjName, { categories, standalone }] of Object.entries(subjects)) {
-    const subjectGroup = document.createElement("div");
-    subjectGroup.className = "subject-group";
+  function renderFolderNode(node, depth = 0) {
+    const isRootSubject = depth === 0;
+    const group = document.createElement("div");
+    group.className = isRootSubject ? "subject-group" : "category-group";
 
-    const subjectHeader = document.createElement("div");
-    subjectHeader.className = "subject-header";
-    const subjectBox = createGroupBox(() =>
-      Array.from(subjectGroup.querySelectorAll(".topic-checkbox")));
-    const subjectChevron = document.createElement("span");
-    subjectChevron.className = "subject-chevron";
-    subjectChevron.textContent = "▶";
-    const subjectName = document.createElement("span");
-    subjectName.textContent = subjName;
+    const header = document.createElement("div");
+    header.className = isRootSubject ? "subject-header" : "category-header";
+    if (!isRootSubject) header.style.setProperty("--depth", String(depth));
 
-    subjectHeader.append(subjectBox, subjectChevron, subjectName);
-    subjectHeader.addEventListener("click", (e) => {
+    const box = createGroupBox(() => Array.from(group.querySelectorAll(".topic-checkbox")));
+    const chevron = document.createElement("span");
+    chevron.className = isRootSubject ? "subject-chevron" : "category-chevron";
+    chevron.textContent = "▶";
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = node.name;
+
+    header.append(box, chevron, nameSpan);
+    header.addEventListener("click", (e) => {
       e.stopPropagation();
-      subjectGroup.classList.toggle("open");
+      group.classList.toggle("open");
     });
 
-    const subjectList = document.createElement("div");
-    subjectList.className = "topic-list";
+    const list = document.createElement("div");
+    list.className = isRootSubject ? "topic-list" : "category-list";
 
-    for (const [catName, catTopics] of Object.entries(categories)) {
-      const catGroup = document.createElement("div");
-      catGroup.className = "category-group";
-
-      const catHeader = document.createElement("div");
-      catHeader.className = "category-header";
-      const catBox = createGroupBox(() =>
-        Array.from(catGroup.querySelectorAll(".topic-checkbox")));
-      const catChevron = document.createElement("span");
-      catChevron.className = "category-chevron";
-      catChevron.textContent = "▶";
-      const catNameSpan = document.createElement("span");
-      catNameSpan.textContent = catName;
-
-      catHeader.append(catBox, catChevron, catNameSpan);
-      catHeader.addEventListener("click", (e) => {
-        e.stopPropagation();
-        catGroup.classList.toggle("open");
-      });
-
-      const catList = document.createElement("div");
-      catList.className = "category-list";
-      catTopics.forEach(t => catList.appendChild(createTopicLeaf(t, "level-3")));
-
-      catGroup.append(catHeader, catList);
-      if (hasChecked(catGroup)) catGroup.classList.add("open");
-      subjectList.appendChild(catGroup);
+    for (const childNode of node.children.values()) {
+      list.appendChild(renderFolderNode(childNode, depth + 1));
     }
+    node.topics.forEach(t => list.appendChild(createTopicLeaf(t, depth + 1)));
 
-    standalone.forEach(t => subjectList.appendChild(createTopicLeaf(t, "level-2")));
-    subjectGroup.append(subjectHeader, subjectList);
-    if (hasChecked(subjectGroup)) subjectGroup.classList.add("open");
-    menu.appendChild(subjectGroup);
+    group.append(header, list);
+    if (hasChecked(group)) group.classList.add("open");
+    return group;
   }
 
+  for (const subjNode of rootTree.children.values()) {
+    menu.appendChild(renderFolderNode(subjNode, 0));
+  }
+  
   // Footer: live count, Select all & Deselect all buttons
   const footer = document.createElement("div");
   footer.className = "topic-menu-footer";
@@ -457,7 +447,7 @@ function generateNewProblem() {
   incrementTopicTick("common");
 
   currentProblem = generateProblem(topic, masteryFor(topic));
-  renderProblemView(currentProblem, topic.relations, topic.id);
+  renderProblemView(currentProblem, currentProblem.relations || topic.relations, topic.id);
   renderTopicBadge(topic);
   updateSidebarRelations(
     topic.relations,
