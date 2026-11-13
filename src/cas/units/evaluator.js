@@ -25,6 +25,7 @@ export function isExpressionInDegrees(node, S, varsDb) {
     return u === "deg" || u === "°";
   }
   if (node.type === "group") return isExpressionInDegrees(node.expr, S, varsDb);
+  if (node.type === "binary") return isExpressionInDegrees(node.left, S, varsDb) || isExpressionInDegrees(node.right, S, varsDb);
   return false;
 }
 
@@ -69,7 +70,7 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     const meta = varsDb[cKey] || varsDb[tok] || {};
     const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
 
-    if (uName && uName !== "dimless" && uName !== "ratio" && uName !== "deg" && uName !== "°") {
+    if (uName && uName !== "dimless" && uName !== "ratio") {
       const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
       if (typeof rawVal === "number" && !isNaN(rawVal)) {
         const isDiff = isDifferenceVariable(cKey, varsDb) || isDifferenceVariable(tok, varsDb);
@@ -80,8 +81,7 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     }
   });
 
-  const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
-  const coherentNum = evalAST(node, coherentState, unitResolver);
+  const coherentNum = evalAST(node, coherentState, null);
   if (isNaN(coherentNum)) return { value: NaN, unitAnalysis };
 
   // Project coherent SI base result into requested targetUnit with target dimension awareness
