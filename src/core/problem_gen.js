@@ -296,13 +296,20 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 }
 
 export function generateProblem(topic, getMastery = () => 0) {
-  const { title, varsDb, relations, createSystem } = topic;
+  let { title, varsDb, relations, createSystem } = topic;
+  if (typeof topic.instantiate === "function") {
+    const [minN, maxN] = topic.countRange || [2, 4];
+    const n = minN + Math.floor(Math.random() * (maxN - minN + 1));
+    const inst = topic.instantiate(n);
+    varsDb = inst.varsDb;
+    relations = inst.relations;
+    createSystem = inst.createSystem;
+  }
 
   // 1. Establish ground truth system with 40-40-20 unit distribution
   const targetMode = sampleSystemMode();
   let S_raw = createSystem({ sys: targetMode === "MIXED" ? "SI" : targetMode });
   S_raw = applyProblemUnitSampling(S_raw, varsDb, targetMode);
-
   // 2. Autonomous graph path unrolling
   const path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
 
@@ -395,6 +402,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     distractors: path.distractors,
     system: S_neat,
     varsDb,
+    relations,
     topicId: topic.id,
     hopDistance: path.hopDistance
   };
