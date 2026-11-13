@@ -30,14 +30,21 @@ export function relationShare(eq) {
  * @returns {number} mean weakness weight in [phi(-7), (1+phi(-6))^fib(4)]
  */
 export function topicScore(relations = [], getMastery = () => 0) {
+  const unique = new Map();
+  relations.forEach(rel => {
+    if (!rel) return;
+    const key = rel.masteryId || rel.id;
+    if (key && !unique.has(key)) unique.set(key, rel);
+  });
   let shareSum = 0;
   let weighted = 0;
-  relations.forEach(rel => {
+  unique.forEach(rel => {
     const share = relationShare(rel);
     shareSum += share;
     weighted += share * relationWeaknessWeight(getMastery(rel));
   });
   return shareSum > 0 ? weighted / shareSum : 0;
+}
 }
 
 /**
