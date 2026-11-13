@@ -32,30 +32,106 @@ export function fmtScale(n, isLatex = true) {
   return addSeparators(str, isLatex);
 }
 
+function splitRateParts(unitStr) {
+  if (!unitStr || unitStr.includes("(")) return null;
+  const parts = unitStr.split("/");
+  if (parts.length !== 2) return null;
+  return { num: parts[0].trim(), den: parts[1].trim() };
+}
+
+function expandNamedRate(unitStr) {
+  if (unitStr === "W") return "J/s";
+  if (unitStr === "kW") return "kJ/s";
+  return unitStr;
+}
+
 /**
- * Formats a single-step conversion factor between two units sharing a dimension.
- * Enforces the "Omit 1" rule and places scalar multipliers outside unit fractions.
+ * Formats conversion factor(s) between two units sharing a dimension.
+ * Decomposes compound-to-compound rates (e.g. Btu/min -> ft-lb/s) into
+ * canonical numerator and denominator steps rather than lumping ratios.
  */
 export function formatPairConversion(fromUnit, toUnit, dim = null, cancelMode = "whole") {
   const fromScale = getUnitAtomBag(fromUnit, dim).scale;
   const toScale = getUnitAtomBag(toUnit, dim).scale;
   const ratio = fromScale / toScale;
 
-  if (Math.abs(ratio - 1) < 1e-6) return { tex: "", scalar: null };
+  if (Math.abs(ratio - 1) < 1e-6) return { tex: "", scalar: null, scalars: [], isDecomposed: false };
+
+  // Check if decomposing into Num / Den steps yields cleaner canonical factors
+  const rawFromParts = splitRateParts(fromUnit);
+  const rawToParts = splitRateParts(toUnit);
+  const canDecompose = (rawFromParts && rawToParts) ||
+    ((rawFromParts || rawToParts) && (fromUnit === "W" || fromUnit === "kW" || toUnit === "W" || toUnit === "kW"));
+
+  if (canDecompose && !(fromUnit === "W" && toUnit === "kW") && !(fromUnit === "kW" && toUnit === "W")) {
+    const fParts = splitRateParts(expandNamedRate(fromUnit));
+    const tParts = splitRateParts(expandNamedRate(toUnit));
+
+    if (fParts && tParts) {
+      const fNumBag = getUnitAtomBag(fParts.num, dim);
+      const tNumBag = getUnitAtomBag(tParts.num, dim);
+      const fDenBag = getUnitAtomBag(fParts.den, dim);
+      const tDenBag = getUnitAtomBag(tParts.den, dim);
+
+      if (isDimEqual(fNumBag.dimMap, tNumBag.dimMap) && isDimEqual(fDenBag.dimMap, tDenBag.dimMap)) {
+        const numRatio = fNumBag.scale / tNumBag.scale;
+        const denRatio = fDenBag.scale / tDenBag.scale;
+        const steps = [];
+        const scalars = [];
+
+        if (Math.abs(numRatio - 1) >= 1e-6) {
+          const fNTex = unitToCancelledTex(fParts.num, false, dim, "whole");
+          const tNTex = unitToTex(tParts.num, false, dim);
+          if (numRatio > 1) {
+            steps.push(` \\cdot ${fmtScale(numRatio)} \\, \\cfrac{${tNTex}}{${fNTex}}`);
+            scalars.push(parseFloat(numRatio.toPrecision(6)));
+          } else {
+            const inv = 1 / numRatio;
+            steps.push(` \\cdot \\cfrac{${tNTex}}{${fmtScale(inv)} \\, ${fNTex}}`);
+            scalars.push(parseFloat(inv.toPrecision(6)));
+          }
+        }
+
+        if (Math.abs(denRatio - 1) >= 1e-6) {
+          const fDTex = unitToCancelledTex(fParts.den, false, dim, "whole");
+          const tDTex = unitToTex(tParts.den, false, dim);
+          // Denominator conversion: 1/fDen -> 1/tDen multiplies by fDen/tDen
+          if (denRatio > 1) {
+            steps.push(` \\cdot \\cfrac{${fDTex}}{${fmtScale(denRatio)} \\, ${tDTex}}`);
+            scalars.push(parseFloat(denRatio.toPrecision(6)));
+          } else {
+            const inv = 1 / denRatio;
+            steps.push(` \\cdot ${fmtScale(inv)} \\, \\cfrac{${fDTex}}{${tDTex}}`);
+            scalars.push(parseFloat(inv.toPrecision(6)));
+          }
+        }
+
+        if (steps.length > 0) {
+          return { tex: steps.join(""), scalar: scalars[0] ?? null, scalars, isDecomposed: true };
+        }
+      }
+    }
+  }
 
   const fromTex = unitToCancelledTex(fromUnit, false, dim, cancelMode);
   const toTex = unitToTex(toUnit, false, dim);
 
   if (ratio > 1) {
+    const s = parseFloat(ratio.toPrecision(6));
     return {
       tex: ` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${toTex}}{${fromTex}}`,
-      scalar: parseFloat(ratio.toPrecision(6))
+      scalar: s,
+      scalars: [s],
+      isDecomposed: false
     };
   }
   const inv = 1 / ratio;
+  const s = parseFloat(inv.toPrecision(6));
   return {
     tex: ` \\cdot \\cfrac{${toTex}}{${fmtScale(inv)} \\, ${fromTex}}`,
-    scalar: parseFloat(inv.toPrecision(6))
+    scalar: s,
+    scalars: [s],
+    isDecomposed: false
   };
 }
 
@@ -230,24 +306,38 @@ function getRegisteredPairwiseRatios() {
   if (cachedRatios) return cachedRatios;
   const ratios = new Set();
 
-  // Build representative registered unit strings from BASE_UNITS + common compounds
+  // Explicit unit-to-dimension pairs (no substring guessing like .includes("lb/"))
   const registeredUnits = [
-    "g", "kg", "lb", "lbm", "lbf", "N", "kN", "kgf", "kip",
-    "m", "mm", "cm", "in", "ft", "yd",
-    "s", "min", "h", "rpm",
-    "K", "°C", "°F", "°R",
-    "J", "kJ", "Btu", "kWh", "ft-lb",
-    "W", "kW", "hp", "kJ/s", "J/s", "Btu/min", "Btu/h", "ft-lb/s", "ft-lb/min",
-    "Pa", "kPa", "MPa", "bar", "psi", "psf", "ksi", "N/m^2", "kN/m^2", "N/mm^2",
-    "m^3", "L", "ft^3", "m^3/s", "m^3/h", "L/h", "cfm",
-    "kg/s", "kg/min", "kg/h", "g/s", "lb/s", "lb/min", "lb/h",
-    "kJ/kg", "Btu/lb", "kJ/kg-K", "Btu/(lb*F)"
+    { u: "g", dim: DIMENSIONS.MASS }, { u: "kg", dim: DIMENSIONS.MASS }, { u: "lb", dim: DIMENSIONS.MASS },
+    { u: "lbm", dim: DIMENSIONS.MASS },
+    { u: "N", dim: DIMENSIONS.FORCE }, { u: "kN", dim: DIMENSIONS.FORCE }, { u: "lb", dim: DIMENSIONS.FORCE },
+    { u: "lbf", dim: DIMENSIONS.FORCE }, { u: "kgf", dim: DIMENSIONS.FORCE }, { u: "kip", dim: DIMENSIONS.FORCE },
+    { u: "m", dim: DIMENSIONS.LENGTH }, { u: "mm", dim: DIMENSIONS.LENGTH }, { u: "cm", dim: DIMENSIONS.LENGTH },
+    { u: "in", dim: DIMENSIONS.LENGTH }, { u: "ft", dim: DIMENSIONS.LENGTH }, { u: "yd", dim: DIMENSIONS.LENGTH },
+    { u: "s", dim: null }, { u: "min", dim: null }, { u: "h", dim: null }, { u: "rpm", dim: DIMENSIONS.ROT_SPEED },
+    { u: "K", dim: DIMENSIONS.TEMPERATURE }, { u: "°C", dim: DIMENSIONS.TEMPERATURE },
+    { u: "°F", dim: DIMENSIONS.TEMPERATURE }, { u: "°R", dim: DIMENSIONS.TEMPERATURE },
+    { u: "J", dim: DIMENSIONS.ENERGY }, { u: "kJ", dim: DIMENSIONS.ENERGY }, { u: "Btu", dim: DIMENSIONS.ENERGY },
+    { u: "kWh", dim: DIMENSIONS.ENERGY }, { u: "ft-lb", dim: DIMENSIONS.ENERGY }, { u: "N-m", dim: DIMENSIONS.TORQUE },
+    { u: "W", dim: DIMENSIONS.POWER }, { u: "kW", dim: DIMENSIONS.POWER }, { u: "hp", dim: DIMENSIONS.POWER },
+    { u: "kJ/s", dim: DIMENSIONS.POWER }, { u: "J/s", dim: DIMENSIONS.POWER },
+    { u: "Btu/min", dim: DIMENSIONS.POWER }, { u: "Btu/h", dim: DIMENSIONS.POWER },
+    { u: "ft-lb/s", dim: DIMENSIONS.POWER }, { u: "ft-lb/min", dim: DIMENSIONS.POWER },
+    { u: "Pa", dim: DIMENSIONS.PRESSURE }, { u: "kPa", dim: DIMENSIONS.PRESSURE }, { u: "MPa", dim: DIMENSIONS.PRESSURE },
+    { u: "bar", dim: DIMENSIONS.PRESSURE }, { u: "psi", dim: DIMENSIONS.PRESSURE }, { u: "psf", dim: DIMENSIONS.PRESSURE },
+    { u: "ksi", dim: DIMENSIONS.PRESSURE }, { u: "N/m^2", dim: DIMENSIONS.PRESSURE },
+    { u: "kN/m^2", dim: DIMENSIONS.PRESSURE }, { u: "N/mm^2", dim: DIMENSIONS.PRESSURE },
+    { u: "m^3", dim: DIMENSIONS.VOLUME }, { u: "L", dim: DIMENSIONS.VOLUME }, { u: "ft^3", dim: DIMENSIONS.VOLUME },
+    { u: "m^3/s", dim: DIMENSIONS.VOLUME_FLOW }, { u: "m^3/h", dim: DIMENSIONS.VOLUME_FLOW },
+    { u: "L/h", dim: DIMENSIONS.VOLUME_FLOW }, { u: "cfm", dim: DIMENSIONS.VOLUME_FLOW },
+    { u: "kg/s", dim: DIMENSIONS.MASS_FLOW }, { u: "kg/min", dim: DIMENSIONS.MASS_FLOW },
+    { u: "kg/h", dim: DIMENSIONS.MASS_FLOW }, { u: "g/s", dim: DIMENSIONS.MASS_FLOW },
+    { u: "lb/s", dim: DIMENSIONS.MASS_FLOW }, { u: "lb/min", dim: DIMENSIONS.MASS_FLOW }, { u: "lb/h", dim: DIMENSIONS.MASS_FLOW },
+    { u: "kJ/kg", dim: DIMENSIONS.SPECIFIC_ENERGY }, { u: "Btu/lb", dim: DIMENSIONS.SPECIFIC_ENERGY },
+    { u: "kJ/kg-K", dim: DIMENSIONS.SPECIFIC_ENERGY }, { u: "Btu/(lb*F)", dim: DIMENSIONS.SPECIFIC_ENERGY }
   ];
 
-  const bags = registeredUnits.map(u => {
-    const dimHint = (u.includes("lb/") || u.includes("/lb")) ? DIMENSIONS.MASS_FLOW : null;
-    return { u, bag: getUnitAtomBag(u, dimHint) };
-  });
+  const bags = registeredUnits.map(({ u, dim }) => ({ u, dim, bag: getUnitAtomBag(u, dim) }));
 
   for (let i = 0; i < bags.length; i++) {
     for (let j = i + 1; j < bags.length; j++) {
