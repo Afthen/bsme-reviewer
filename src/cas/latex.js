@@ -89,16 +89,19 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
 
   if (node.type === "binary") {
     if (node.op === "/") {
+      const uL = unwrapGroup(node.left);
+      const uR = unwrapGroup(node.right);
+      if (uL.type === "num" && uL.val === "1" && hasAdditiveFraction(uR)) {
+        return `\\left(${stripOuterParens(astToLatex(uR, substituteMap, varsDb))}\\right)^{-1}`;
+      }
       return `\\cfrac{${stripOuterParens(astToLatex(node.left, substituteMap, varsDb))}}{${stripOuterParens(astToLatex(node.right, substituteMap, varsDb))}}`;
     }
     if (node.op === "*") {
       const L = astToLatex(node.left, substituteMap, varsDb);
       const R = astToLatex(node.right, substituteMap, varsDb);
 
-      const leftIsSimpleNum = /^[+-]?[\d.]+$/.test(L.trim());
-      const rightIsSimpleNum = /^[+-]?[\d.]+$/.test(R.trim());
-      // Unit-carrying substituted tokens (incl. unitToTex \cfrac compounds)
-      // are numeric factors: they multiply explicitly, never juxtaposed.
+      const leftIsSimpleNum = /^[+-]?[\d.,]+°?$/.test(L.trim());
+      const rightIsSimpleNum = /^[+-]?[\d.,]+°?$/.test(R.trim());
       const leftHasUnit = L.includes("\\text{");
       const rightHasUnit = R.includes("\\text{");
 
@@ -112,6 +115,11 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
       return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
     }
     if (node.op === "-") {
+      if (node.left.type === "num" && node.left.val === "0") {
+        const uR = unwrapGroup(node.right);
+        const innerTex = stripOuterParens(astToLatex(uR, substituteMap, varsDb));
+        return (uR.type === "binary" && (uR.op === "+" || uR.op === "-")) ? `-(${innerTex})` : `-${innerTex}`;
+      }
       return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
     }
     if (node.op === "^") {
@@ -135,6 +143,18 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
     }
   }
   return "";
+}
+
+function containsDiv(node) {
+  if (!node) return false;
+  if (node.type === "group") return containsDiv(node.expr);
+  if (node.type === "binary") return node.op === "/" || containsDiv(node.left) || containsDiv(node.right);
+  return false;
+}
+
+function hasAdditiveFraction(node) {
+  const u = unwrapGroup(node);
+  return !!u && u.type === "binary" && (u.op === "+" || u.op === "-") && (containsDiv(u.left) || containsDiv(u.right));
 }
 
 function unwrapGroup(node) {
