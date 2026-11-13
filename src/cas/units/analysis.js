@@ -8,14 +8,18 @@ import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { fmtSigFig } from "../../core/dimensions.js";
 import {
   parseUnitToSemanticAST,
-  semanticASTToTex,
-  SUBSTITUTION_GRAPH,
   BASE_UNITS,
   getUnitAtomBag,
+  isDimEqual,
   unitToTex,
   unitToCancelledTex,
   getAbsoluteCompanionUnit
 } from "./definitions.js";
+import {
+  formatPairConversion,
+  formatComponentMismatch,
+  buildCompoundTokenConversions
+} from "./scales.js";
 
 function getFormulaFractionDepth(node, targetName, currentDepth = 0) {
   if (!node) return null;
@@ -36,6 +40,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
   const tokenMarkup = {};
   const tokenConversions = {};
   const preConversions = [];
+  const conversionScalars = [];
   let globalConversionTex = "";
   let numericConversionFactor = 1.0;
 
@@ -89,153 +94,159 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         }
       }
     }
-    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions };
+    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions, conversionScalars };
   }
 
-  // 2. Pure Physics: Comprehensive AST token traversal
-  const allVarTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
-  const exps = collectTokenExponents(ast);
+  // 2. Pure Physics: Recursive Additive-Branch + Multiplicative AST Analysis
+  const cTarget = resolveCanonicalKey(targetVar, varsDb);
+  const targetDim = (varsDb[cTarget] || varsDb[targetVar] || {}).dimension || null;
 
-  const dimensionUnits = {};
-  for (const tok of allVarTokens) {
-    const cKey = resolveCanonicalKey(tok, varsDb);
-    const uName = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
-    if (!uName || uName === "dimless" || uName === "ratio") continue;
-
-    const tokExp = exps[tok] || 1;
-    const factors = parseUnitToSemanticAST(uName);
-    factors.forEach(f => {
-      const dim = BASE_UNITS[f.base]?.dim || f.base;
-      if (!dimensionUnits[dim]) dimensionUnits[dim] = [];
-      dimensionUnits[dim].push({ tok, uName, power: f.power * tokExp });
-    });
+  function collectAdditiveBranches(node) {
+    if (!node) return [];
+    if (node.type === "group") return collectAdditiveBranches(node.expr);
+    if (node.type === "call" && node.fn === "sqrt") return collectAdditiveBranches(node.arg);
+    if (node.type === "binary" && (node.op === "+" || node.op === "-")) {
+      return [...collectAdditiveBranches(node.left), ...collectAdditiveBranches(node.right)];
+    }
+    return [node];
   }
 
-  const isAdditiveExpression = ast && (ast.op === "+" || ast.op === "-");
+  const branches = collectAdditiveBranches(ast);
+  const isMultiBranch = branches.length > 1;
 
-  for (const tok of allVarTokens) {
-    const cKey = resolveCanonicalKey(tok, varsDb);
-    const meta = varsDb[cKey] || varsDb[tok] || {};
-    const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-    if (!uName || uName === "dimless" || uName === "ratio") continue;
+  for (const branchAst of branches) {
+    const branchTokens = Array.from(new Set(getAstIdentifiers(branchAst).filter(t => !isReservedMathToken(t))));
+    const exps = collectTokenExponents(branchAst);
 
-    const fDepth = getFormulaFractionDepth(ast, tok) || 0;
-    const parsed = parseUnitToSemanticAST(uName);
+    const tokenBags = {};
+    for (const tok of branchTokens) {
+      if (exps[tok] === undefined) continue;
+      const cKey = resolveCanonicalKey(tok, varsDb);
+      const meta = varsDb[cKey] || varsDb[tok] || {};
+      const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
+      if (!uName || uName === "dimless" || uName === "ratio" || uName === "%" || uName === "\\%") continue;
+      tokenBags[tok] = { uName, dim: meta.dimension, exp: exps[tok], bag: getUnitAtomBag(uName, meta.dimension) };
+    }
 
-    // A. Additive / Subtractive Term Conversions (IP = BP + FP, FP = IP - BP)
-    if (isAdditiveExpression) {
-      if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
-        const fromScale = getUnitAtomBag(uName).scale;
-        const toScale = getUnitAtomBag(targetUnit).scale;
-        const ratio = fromScale / toScale;
+    let compoundComputed = false;
 
-        if (Math.abs(ratio - 1) < 1e-6) {
-          tokenMarkup[tok] = unitToTex(uName);
-        } else {
+    for (const tok of branchTokens) {
+      const cKey = resolveCanonicalKey(tok, varsDb);
+      const meta = varsDb[cKey] || varsDb[tok] || {};
+      const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
+      if (!uName || uName === "dimless" || uName === "ratio") continue;
+
+      if (uName === "%" || uName === "\\%" || exps[tok] === undefined) {
+        tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
+        continue;
+      }
+
+      const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
+      const parsed = parseUnitToSemanticAST(uName, meta.dimension);
+
+      // A. Counterpart Discovery within this branch via 7D Dimensional Vectors
+      const myInfo = tokenBags[tok];
+      let counterpart = null;
+      if (myInfo) {
+        for (const [otherTok, otherInfo] of Object.entries(tokenBags)) {
+          if (otherTok !== tok && otherInfo.exp * myInfo.exp < 0 && isDimEqual(myInfo.bag.dimMap, otherInfo.bag.dimMap)) {
+            counterpart = { tok: otherTok, uName: otherInfo.uName, dim: otherInfo.dim };
+            break;
+          }
+        }
+      }
+
+      // B. Affine Temperature Conversion (e.g. °F -> °R, °C -> K)
+      if (parsed.length === 1 && BASE_UNITS[parsed[0].base]?.dim === "Th") {
+        const baseMeta = BASE_UNITS[parsed[0].base];
+        const isDiff = meta.dimension === "Temperature Difference" || !!meta.isDifference;
+
+        if (!isDiff && baseMeta.offset) {
+          const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
+          const absUnit = getAbsoluteCompanionUnit(uName);
+          const offsetVal = baseMeta.offset;
+          const formattedNum = fmtSigFig(rawVal, 6);
+
+          if (counterpart) {
+            tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToCancelledTex(absUnit, false, null, "whole")}`;
+          } else {
+            tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToTex(absUnit)}`;
+          }
+          tokenConversions[tok] = ["__AFFINE_CONVERTED__"];
+          continue;
+        } else if (!isDiff && counterpart) {
           tokenMarkup[tok] = unitToCancelledTex(uName, false, null, "whole");
-          if (ratio > 1) {
-            tokenConversions[tok] = [` \\cdot ${fmtSigFig(ratio)} \\, \\cfrac{${unitToTex(targetUnit)}}{${unitToCancelledTex(uName, false, null, "whole")}}`];
-          } else {
-            tokenConversions[tok] = [` \\cdot \\cfrac{${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)} \\, ${unitToCancelledTex(uName, false, null, "whole")}}`];
-          }
+          continue;
         }
-      } else {
-        tokenMarkup[tok] = unitToTex(uName);
       }
-      continue;
-    }
 
-    // B. Counterpart Discovery in Multiplicative Expressions
-    let counterpart = null;
-    for (const f of parsed) {
-      const dim = BASE_UNITS[f.base]?.dim || f.base;
-      const list = dimensionUnits[dim] || [];
-      const match = list.find(entry => entry.tok !== tok && entry.power * (exps[tok] || 1) < 0);
-      if (match) {
-        counterpart = match;
-        break;
+      // C. Counterpart with Matching Dimension Vector
+      if (counterpart) {
+        const bagCurrent = getUnitAtomBag(uName, meta.dimension);
+        const bagTarget = getUnitAtomBag(counterpart.uName, counterpart.dim);
+        const scaleRatio = bagCurrent.scale / bagTarget.scale;
+
+        if (Math.abs(scaleRatio - 1) < 1e-6) {
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "whole");
+          continue;
+        }
+
+        if (isDimEqual(bagCurrent.dimMap, bagTarget.dimMap)) {
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
+          const mismatch = formatComponentMismatch(uName, counterpart.uName, meta.dimension, counterpart.dim);
+          if (fDepth <= 1) {
+            if (!tokenConversions[tok] && !branchTokens.some(t => tokenConversions[t]?.length > 0)) {
+              tokenConversions[tok] = [mismatch.tex];
+              if (mismatch.scalar !== null) conversionScalars.push(mismatch.scalar);
+            }
+          } else if (!isMultiBranch && !globalConversionTex) {
+            globalConversionTex = mismatch.tex;
+            if (mismatch.scalar !== null) conversionScalars.push(mismatch.scalar);
+          }
+          continue;
+        }
       }
-    }
 
-    // C. Affine Temperature Conversion (e.g. °F -> °R, °C -> K)
-    if (parsed.length === 1 && BASE_UNITS[parsed[0].base]?.dim === "Th") {
-      const baseMeta = BASE_UNITS[parsed[0].base];
-      const isDiff = meta.dimension === "Temperature Difference" || !!meta.isDifference;
+      // D. Target Unit Scaling (Single-Dimension vs Compound Branch Decomposition)
+      if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
+        const tokBag = getUnitAtomBag(uName, meta.dimension);
+        const targetBag = getUnitAtomBag(targetUnit, targetDim);
 
-      if (!isDiff && baseMeta.offset) {
-        const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-        const absUnit = getAbsoluteCompanionUnit(uName);
-        const offsetVal = baseMeta.offset;
-        const formattedNum = fmtSigFig(rawVal, 6);
-
-        if (counterpart) {
-          tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToCancelledTex(absUnit, false, null, "whole")}`;
+        if (isDimEqual(tokBag.dimMap, targetBag.dimMap)) {
+          const conv = formatPairConversion(uName, targetUnit, meta.dimension, targetDim, "whole");
+          if (!conv.tex) {
+            tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
+          } else {
+            const cancelMode = conv.isDecomposed ? "component" : "whole";
+            tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, cancelMode);
+            if (isMultiBranch) {
+              // Inside an additive branch, keep conversion in-situ on the term
+              tokenConversions[tok] = [conv.tex];
+              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+            } else if (!globalConversionTex) {
+              // Single-branch Option B: preserves target unit intact on main line
+              globalConversionTex = conv.tex;
+              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+            }
+          }
         } else {
-          tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToTex(absUnit)}`;
-        }
-        tokenConversions[tok] = ["__AFFINE_CONVERTED__"];
-        continue;
-      } else if (!isDiff && counterpart) {
-        tokenMarkup[tok] = unitToCancelledTex(uName, false, null, "whole");
-        continue;
-      }
-    }
-
-    // D. Counterpart with Identical Scale: Encompassing whole-unit cancellation (kW vs kJ/s)
-    if (counterpart) {
-      const scaleCurrent = getUnitAtomBag(uName).scale;
-      const scaleTarget = getUnitAtomBag(counterpart.uName).scale;
-      const scaleRatio = scaleCurrent / scaleTarget;
-
-      if (Math.abs(scaleRatio - 1) < 1e-6) {
-        tokenMarkup[tok] = unitToCancelledTex(uName, false, null, "whole");
-        continue;
-      }
-
-      // E. Mismatched Scales in Dimensionless Ratio (e.g. Btu/h vs. Btu/min)
-      // Component-level cancellation fallback since different components cancel in different places
-      tokenMarkup[tok] = unitToCancelledTex(uName, false, null, "component");
-
-      // Invariant: In-situ is canonical default within 4 visual rows
-      if (fDepth <= 1) {
-        if (!tokenConversions[tok]) {
-          if (scaleRatio > 1) {
-            tokenConversions[tok] = [` \\cdot ${fmtSigFig(scaleRatio)} \\, \\cfrac{\\cancel{\\text{min}}}{\\cancel{\\text{h}}}`];
-          } else {
-            tokenConversions[tok] = [` \\cdot ${fmtSigFig(1 / scaleRatio)} \\, \\cfrac{\\cancel{\\text{h}}}{\\cancel{\\text{min}}}`];
+          // Compound branch (e.g. m_f / IP or Q_rej / m_a)
+          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
+          if (!compoundComputed) {
+            compoundComputed = true;
+            const entries = Object.entries(tokenBags).map(([t, info]) => ({
+              tok: t, uName: info.uName, dim: info.dim, exp: info.exp
+            }));
+            const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
+            for (const [k, convList] of Object.entries(conversionsByToken)) {
+              tokenConversions[k] = convList;
+            }
+            conversionScalars.push(...scalars);
           }
         }
       } else {
-        if (!globalConversionTex) {
-          if (scaleRatio > 1) {
-            globalConversionTex = ` \\cdot ${fmtSigFig(scaleRatio)} \\, \\cfrac{\\cancel{\\text{min}}}{\\cancel{\\text{h}}}`;
-          } else {
-            globalConversionTex = ` \\cdot ${fmtSigFig(1 / scaleRatio)} \\, \\cfrac{\\cancel{\\text{h}}}{\\cancel{\\text{min}}}`;
-          }
-        }
+        tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
       }
-      continue;
-    }
-
-    // F. Compound Delivery Variable (e.g. isfc = m_f / IP in kg/kWh)
-    if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio" && ast && ast.op === "/") {
-      tokenMarkup[tok] = unitToCancelledTex(uName, false, null, "component");
-
-      // Canonical in-situ conversions for isfc (mass in numerator, time and energy in-situ)
-      if (targetUnit === "kg/kWh") {
-        if (tok === ast.left.name) {
-          tokenConversions[tok] = [
-            ` \\cdot 60 \\, \\cfrac{\\cancel{\\text{min}}}{\\cancel{\\text{h}}}`,
-            ` \\cdot \\cfrac{\\text{kg}}{2.205 \\, \\cancel{\\text{lb}}}`
-          ];
-        } else if (tok === ast.right.name) {
-          tokenConversions[tok] = [
-            ` \\cdot \\cfrac{\\text{kWh}}{3{,}412.14 \\, \\cancel{\\text{Btu}}}`
-          ];
-        }
-      }
-    } else {
-      tokenMarkup[tok] = unitToTex(uName);
     }
   }
 
@@ -246,7 +257,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     numericConversionFactor: 1.0,
     globalConversionTex,
     preConversions,
-    tokenConversions
+    tokenConversions,
+    conversionScalars
   };
 }
 
@@ -257,15 +269,23 @@ function collectTokenExponents(node, sign = 1, acc = {}) {
     acc[node.name] = (acc[node.name] || 0) + sign;
     return acc;
   }
+  if (node.type === "call") {
+    if (node.fn === "sqrt") {
+      return collectTokenExponents(node.arg, sign * 0.5, acc);
+    }
+    // Transcendental calls (sin, cos, tan, exp, ln, log, etc.) consume their argument units
+    return acc;
+  }
   if (node.type === "binary") {
-    if (node.op === "*") {
+    if (node.op === "*" || node.op === "+" || node.op === "-") {
       collectTokenExponents(node.left, sign, acc);
       collectTokenExponents(node.right, sign, acc);
     } else if (node.op === "/") {
       collectTokenExponents(node.left, sign, acc);
       collectTokenExponents(node.right, -sign, acc);
     } else if (node.op === "^") {
-      const p = typeof evalAST(node.right, {}) === "number" ? evalAST(node.right, {}) : 1;
+      const rawP = evalAST(node.right, {});
+      const p = Number.isFinite(rawP) ? rawP : 1;
       collectTokenExponents(node.left, sign * p, acc);
     }
   }
