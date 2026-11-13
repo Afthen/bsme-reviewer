@@ -57,6 +57,7 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
           targetVar,
           id: eq.id,
           eqId: eq.id,
+          masteryId: eq.masteryId || eq.id,
           eqName: eq.name,
           baseFormula,
           canonicalTex,
@@ -129,19 +130,20 @@ export function pruneSolutionPath(steps = [], goalVar = null, getMastery = () =>
       : (solution.length > 0 ? [solution[solution.length - 1].targetVar] : [])
   );
 
-  const fadedAncestorEqIds = [];
+  const fadedAncestorSet = new Set();
   solution.forEach(step => {
     const isTerminal = terminalSet.has(step.targetVar);
-    const eqObj = { id: step.eqId || step.id, baseFormula: step.baseFormula };
+    const mId = step.masteryId || step.eqId || step.id;
+    const eqObj = { id: mId, masteryId: step.masteryId, baseFormula: step.baseFormula };
     const mastery = getMastery(eqObj);
 
     if (!isTerminal && mastery >= FADING_THRESHOLD) {
       step.isFaded = true;
-      fadedAncestorEqIds.push(step.eqId || step.id);
+      fadedAncestorSet.add(mId);
     } else {
       step.isFaded = false;
     }
-    step.fadedAncestorEqIds = [...fadedAncestorEqIds];
+    step.fadedAncestorEqIds = Array.from(fadedAncestorSet);
   });
 
   return solution;
