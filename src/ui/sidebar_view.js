@@ -144,8 +144,9 @@ function renderMasteryView() {
   const rawList = sidebarScope === "all" ? activeAllRelations : activeCurrentRelations;
   const uniqueMap = new Map();
   rawList.forEach(r => {
-    if (r && r.id && !uniqueMap.has(r.id)) {
-      uniqueMap.set(r.id, r);
+    const key = r?.masteryId || r?.id;
+    if (r && key && !uniqueMap.has(key)) {
+      uniqueMap.set(key, r);
     }
   });
 
