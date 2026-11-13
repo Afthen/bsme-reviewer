@@ -201,8 +201,11 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
 
   const targetHasEnergy = targetAst.some(a => BASE_UNITS[a.base]?.dim === "E");
   const targetPrefersBtu = targetAst.some(a => a.base === "Btu");
+  const targetHasFreq = targetAst.some(a => a.base === "hertz");
+  const targetHasTime = targetAst.some(a => BASE_UNITS[a.base]?.dim === "T");
+  const targetHasForce = targetAst.some(a => BASE_UNITS[a.base]?.dim === "F");
 
-  // Flatten all source atoms, expanding Power units (W, kW, hp) when targeting Energy/Time
+  // Flatten all source atoms, expanding Power/Frequency/Force when targeting compatible base dimensions
   const sourceAtoms = [];
   for (const entry of tokenEntries) {
     let workingUnit = entry.uName;
@@ -221,7 +224,42 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
       }
     }
 
-    const ast = parseUnitToSemanticAST(workingUnit, entry.dim);
+    if (!targetHasFreq && (workingUnit === "Hz" || workingUnit === "kHz")) {
+      if (workingUnit === "kHz") {
+        if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+        conversionsByToken[entry.tok].push(` \\cdot 1{,}000 \\, \\cfrac{1/\\text{s}}{\\cancel{\\text{kHz}}}`);
+        scalars.push(1000);
+      }
+      workingUnit = "1/s";
+    }
+
+    let ast = parseUnitToSemanticAST(workingUnit, entry.dim);
+    if (targetHasTime && !targetHasForce && !targetHasEnergy) {
+      const expanded = [];
+      for (const atom of ast) {
+        if (atom.base === "newton" && !atom.prefix) {
+          expanded.push({ prefix: "kilo", base: "gram", power: atom.power });
+          expanded.push({ prefix: null, base: "meter", power: atom.power });
+          expanded.push({ prefix: null, base: "second", power: -2 * atom.power });
+        } else if (atom.base === "pound_force" && !atom.prefix) {
+          const gc = getUnitAtomBag("lb", DIMENSIONS.FORCE).scale / getUnitAtomBag("lb*ft/s^2", DIMENSIONS.MASS).scale;
+          if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+          const gcTex = `\\cfrac{\\text{lb}\\cdot\\text{ft}/\\text{s}^{2}}{\\cancel{\\text{lb}}}`;
+          if (atom.power > 0) {
+            conversionsByToken[entry.tok].push(` \\cdot ${fmtScale(gc)} \\, ${gcTex}`);
+          } else {
+            conversionsByToken[entry.tok].push(` \\cdot \\cfrac{\\cancel{\\text{lb}}}{${fmtScale(gc)} \\, \\text{lb}\\cdot\\text{ft}/\\text{s}^{2}}`);
+          }
+          scalars.push(parseFloat(gc.toPrecision(6)));
+          expanded.push({ prefix: null, base: "pound_mass", power: atom.power });
+          expanded.push({ prefix: null, base: "foot", power: atom.power });
+          expanded.push({ prefix: null, base: "second", power: -2 * atom.power });
+        } else {
+          expanded.push(atom);
+        }
+      }
+      ast = expanded;
+    }
     ast.forEach(atom => {
       sourceAtoms.push({
         tok: entry.tok,
@@ -249,22 +287,27 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
       const sTgt = getUnitAtomBag(tgtStr).scale;
       const ratio = sSrc / sTgt;
 
-      if (Math.abs(ratio - 1) > 1e-6) {
+      const absP = Math.abs(src.atom.power);
+      const effRatio = absP > 1 ? Math.pow(ratio, absP) : ratio;
+      if (Math.abs(effRatio - 1) > 1e-6) {
         if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
-        const sVal = ratio > 1 ? ratio : (1 / ratio);
+        const sVal = effRatio > 1 ? effRatio : (1 / effRatio);
         scalars.push(parseFloat(sVal.toPrecision(6)));
 
+        const srcPowTex = absP > 1 ? `${unitToTex(srcStr)}^{${absP}}` : unitToTex(srcStr);
+        const tgtPowTex = absP > 1 ? `${unitToTex(tgtStr)}^{${absP}}` : unitToTex(tgtStr);
+
         if (src.atom.power > 0) {
-          if (ratio > 1) {
-            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${unitToTex(tgtStr)}}{\\cancel{${unitToTex(srcStr)}}}`);
+          if (effRatio > 1) {
+            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(effRatio)} \\, \\cfrac{${tgtPowTex}}{\\cancel{${srcPowTex}}}`);
           } else {
-            conversionsByToken[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)}}{${fmtScale(1 / ratio)} \\, \\cancel{${unitToTex(srcStr)}}}`);
+            conversionsByToken[src.tok].push(` \\cdot \\cfrac{${tgtPowTex}}{${fmtScale(1 / effRatio)} \\, \\cancel{${srcPowTex}}}`);
           }
         } else {
-          if (ratio > 1) {
-            conversionsByToken[src.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${fmtScale(ratio)} \\, ${unitToTex(tgtStr)}}`);
+          if (effRatio > 1) {
+            conversionsByToken[src.tok].push(` \\cdot \\cfrac{\\cancel{${srcPowTex}}}{${fmtScale(effRatio)} \\, ${tgtPowTex}}`);
           } else {
-            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${unitToTex(tgtStr)}}`);
+            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(1 / effRatio)} \\, \\cfrac{\\cancel{${srcPowTex}}}{${tgtPowTex}}`);
           }
         }
       }
@@ -330,21 +373,34 @@ function getRegisteredPairwiseRatios() {
     { u: "lbm", dim: DIMENSIONS.MASS },
     { u: "N", dim: DIMENSIONS.FORCE }, { u: "kN", dim: DIMENSIONS.FORCE }, { u: "lb", dim: DIMENSIONS.FORCE },
     { u: "lbf", dim: DIMENSIONS.FORCE }, { u: "kgf", dim: DIMENSIONS.FORCE }, { u: "kip", dim: DIMENSIONS.FORCE },
+    { u: "lb*ft/s^2", dim: DIMENSIONS.MASS }, { u: "kg*m/s^2", dim: DIMENSIONS.FORCE },
     { u: "m", dim: DIMENSIONS.LENGTH }, { u: "mm", dim: DIMENSIONS.LENGTH }, { u: "cm", dim: DIMENSIONS.LENGTH },
     { u: "in", dim: DIMENSIONS.LENGTH }, { u: "ft", dim: DIMENSIONS.LENGTH }, { u: "yd", dim: DIMENSIONS.LENGTH },
-    { u: "s", dim: null }, { u: "min", dim: null }, { u: "h", dim: null }, { u: "rpm", dim: DIMENSIONS.ROT_SPEED },
+    { u: "ms", dim: DIMENSIONS.TIME }, { u: "s", dim: null }, { u: "min", dim: null }, { u: "h", dim: null },
+    { u: "rpm", dim: DIMENSIONS.ROT_SPEED }, { u: "Hz", dim: DIMENSIONS.FREQUENCY },
+    { u: "kHz", dim: DIMENSIONS.FREQUENCY }, { u: "1/s", dim: DIMENSIONS.FREQUENCY },
+    { u: "m/s^2", dim: DIMENSIONS.ACCELERATION }, { u: "ft/s^2", dim: DIMENSIONS.ACCELERATION },
+    { u: "in/s^2", dim: DIMENSIONS.ACCELERATION },
     { u: "K", dim: DIMENSIONS.TEMPERATURE }, { u: "°C", dim: DIMENSIONS.TEMPERATURE },
     { u: "°F", dim: DIMENSIONS.TEMPERATURE }, { u: "°R", dim: DIMENSIONS.TEMPERATURE },
     { u: "J", dim: DIMENSIONS.ENERGY }, { u: "kJ", dim: DIMENSIONS.ENERGY }, { u: "Btu", dim: DIMENSIONS.ENERGY },
-    { u: "kWh", dim: DIMENSIONS.ENERGY }, { u: "ft-lb", dim: DIMENSIONS.ENERGY }, { u: "N-m", dim: DIMENSIONS.TORQUE },
+    { u: "kWh", dim: DIMENSIONS.ENERGY }, { u: "ft-lb", dim: DIMENSIONS.ENERGY }, { u: "in-lb", dim: DIMENSIONS.ENERGY },
+    { u: "N-m", dim: DIMENSIONS.TORQUE }, { u: "N-mm", dim: DIMENSIONS.TORQUE },
+    { u: "lb-in", dim: DIMENSIONS.TORQUE }, { u: "lb-ft", dim: DIMENSIONS.TORQUE },
     { u: "W", dim: DIMENSIONS.POWER }, { u: "kW", dim: DIMENSIONS.POWER }, { u: "hp", dim: DIMENSIONS.POWER },
     { u: "kJ/s", dim: DIMENSIONS.POWER }, { u: "J/s", dim: DIMENSIONS.POWER },
     { u: "Btu/min", dim: DIMENSIONS.POWER }, { u: "Btu/h", dim: DIMENSIONS.POWER },
     { u: "ft-lb/s", dim: DIMENSIONS.POWER }, { u: "ft-lb/min", dim: DIMENSIONS.POWER },
-    { u: "Pa", dim: DIMENSIONS.PRESSURE }, { u: "kPa", dim: DIMENSIONS.PRESSURE }, { u: "MPa", dim: DIMENSIONS.PRESSURE },
+    { u: "Pa", dim: DIMENSIONS.PRESSURE }, { u: "kPa", dim: DIMENSIONS.PRESSURE },
+    { u: "MPa", dim: DIMENSIONS.PRESSURE }, { u: "GPa", dim: DIMENSIONS.MODULUS },
     { u: "bar", dim: DIMENSIONS.PRESSURE }, { u: "psi", dim: DIMENSIONS.PRESSURE }, { u: "psf", dim: DIMENSIONS.PRESSURE },
     { u: "ksi", dim: DIMENSIONS.PRESSURE }, { u: "N/m^2", dim: DIMENSIONS.PRESSURE },
     { u: "kN/m^2", dim: DIMENSIONS.PRESSURE }, { u: "N/mm^2", dim: DIMENSIONS.PRESSURE },
+    { u: "N/m", dim: DIMENSIONS.STIFFNESS }, { u: "N/mm", dim: DIMENSIONS.STIFFNESS },
+    { u: "kN/m", dim: DIMENSIONS.STIFFNESS }, { u: "lb/in", dim: DIMENSIONS.STIFFNESS },
+    { u: "lb/ft", dim: DIMENSIONS.STIFFNESS },
+    { u: "mm^4", dim: DIMENSIONS.AREA_MOMENT }, { u: "cm^4", dim: DIMENSIONS.AREA_MOMENT },
+    { u: "m^4", dim: DIMENSIONS.AREA_MOMENT }, { u: "in^4", dim: DIMENSIONS.AREA_MOMENT },
     { u: "m^3", dim: DIMENSIONS.VOLUME }, { u: "L", dim: DIMENSIONS.VOLUME }, { u: "ft^3", dim: DIMENSIONS.VOLUME },
     { u: "m^3/s", dim: DIMENSIONS.VOLUME_FLOW }, { u: "m^3/h", dim: DIMENSIONS.VOLUME_FLOW },
     { u: "L/h", dim: DIMENSIONS.VOLUME_FLOW }, { u: "cfm", dim: DIMENSIONS.VOLUME_FLOW },
