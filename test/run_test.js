@@ -36,7 +36,8 @@ import { validateTopic } from "./validator.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
 import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor } from "../src/cas/units/index.js";
-import { parseMathAST } from "../src/cas/ast.js";
+import { parseMathAST, evalAST } from "../src/cas/ast.js";
+import { defineRelation, compileRelations, expandIndexedVarsDb } from "../src/core/relation_builder.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
 import { pruneSolutionPath, solveDAG } from "../src/core/graph_solver.js";
@@ -725,6 +726,65 @@ describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
     for (const topic of ALL_TOPICS) {
       assert.ok(mod.TOPICS[topic.id], `app.js TOPICS export is missing topic '${topic.id}'`);
     }
+  });
+});
+
+// ============================================================================
+// 12. REGRESSION: UNARY MINUS, RIGHT-ASSOC ^, COMPOUND TRIG & CONTINUED FORMULAS
+// ============================================================================
+describe("CAS Enhancements & Unified Continued-Formula Engine", () => {
+  test("ast.js supports unary minus, right-associative ^, and rejects trailing tokens", () => {
+    assert.equal(evalAST(parseMathAST("-x^2"), { x: 3 }), -9);
+    assert.equal(evalAST(parseMathAST("2^3^2"), {}), 512);
+    assert.equal(evalAST(parseMathAST("x^(-2)"), { x: 2 }), 0.25);
+    assert.equal(parseMathAST("2a"), null, "Implicit multiplication typo must not silently parse as 2");
+  });
+
+  test("Bare-angle restriction removed: sin(2 * phi) evaluates accurately in degrees", () => {
+    const ast = parseMathAST("sin(2 * phi)");
+    const S = { phi: 15, _u: { phi: "°", y: "dimless" } };
+    const varsDb = { phi: { dimension: "Angle", unit: "°" }, y: { dimension: "Dimensionless", unit: "dimless" } };
+    const res = evaluatePhysicalAST(ast, S, "y", varsDb);
+    assert.ok(Math.abs(res.value - 0.5) < 1e-6);
+  });
+
+  test("Unified defineRelation / compileRelations supports nested sum, chain, _i, and shared masteryId", () => {
+    const varsDb = expandIndexedVarsDb(
+      { k_T: { symbol: "k_T", unit: "N/mm", dimension: "Spring Rate / Stiffness" }, F_T: { symbol: "F_T", unit: "N", dimension: "Force" } },
+      { k_i: { name: "Rate {i}", symbol: "k_{i}", unit: "N/mm", dimension: "Spring Rate / Stiffness" }, F_i: { name: "Force {i}", symbol: "F_{i}", unit: "N", dimension: "Force" } },
+      3
+    );
+    const rels = compileRelations([
+      defineRelation({ id: "eq_test_k", name: "Nested Series Rate", formula: "k_T = 1 / sum(1 / k_i)" }),
+      defineRelation({ id: "eq_test_f", name: "Series Force Chain", formula: "F_T = chain(F_i)" })
+    ], { varsDb, count: 3 });
+
+    assert.equal(rels.length, 4);
+    assert.ok(rels[0].canonicalTex.includes("\\dots"));
+    assert.deepEqual(rels[0].nodes.sort(), ["k_1", "k_2", "k_3", "k_T"]);
+    assert.equal(rels[1].masteryId, "eq_test_f");
+    assert.equal(rels[3].masteryId, "eq_test_f");
+
+    const deriv = buildAlignedDerivation(
+      { targetVar: "k_T", baseFormula: rels[0].baseFormula, rhsExpr: "1 / ((1 / k_1) + (1 / k_2) + (1 / k_3))", expectedVal: 5.4545, canonicalTex: rels[0].canonicalTex },
+      { k_1: 10, k_2: 20, k_3: 114.202, _u: { k_1: "N/mm", k_2: "N/mm", k_3: "lb/in", k_T: "N/mm" } },
+      [],
+      varsDb,
+      rels
+    );
+    validateDerivationLatex(deriv);
+  });
+
+  test("Springs US Mass-Spring dynamics & Leaf/Rectangular typo invariants", () => {
+    const dyn = TOPICS.md_springs_helical_dynamics;
+    const S_dyn = dyn.createSystem({ sys: "US" });
+    const deriv = buildAlignedDerivation(
+      { targetVar: "T", baseFormula: "T = 2 * pi * sqrt(m / k)", rhsExpr: "2 * pi * sqrt(m / k)", expectedVal: S_dyn.T },
+      S_dyn, [], dyn.varsDb, dyn.relations
+    );
+    validateDerivationLatex(deriv);
+    assert.ok(TOPICS.md_springs_leaf_multi.relations.some(r => r.baseFormula.includes("E * b")));
+    assert.ok(TOPICS.md_springs_helical_rectangular.relations.some(r => r.baseFormula.includes("0.56 * t")));
   });
 });
 
