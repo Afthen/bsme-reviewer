@@ -1,2089 +1,1594 @@
-#### 1. `src/core/relation_builder.js` (new file — drop-in)
-
+FILE: src/topics/machine_design/springs/common/schema.js
 ```javascript
 /**
- * src/core/relation_builder.js
- * Unified Relation Constructor & Continued-Formula Compiler.
- * Supports standard equations, SI/US variants, requiredUnits, multi-"=" chains,
- * indexed (_i) laws, and nested continued operators: sum(...), prod(...), chain(...).
+ * src/topics/machine_design/springs/common/schema.js
+ * Universal core spring variables shared across all mechanical spring subtopics.
  */
 
-import { parseMathAST, astToExprStr, getAstIdentifiers, unwrapGroup } from "../cas/ast.js";
-import { isReservedMathToken } from "../cas/algebra.js";
-import { astToLatex } from "../cas/latex.js";
+import { DIMENSIONS } from "../../../../core/dimensions.js";
 
-const DEFAULT_COUNT = 3;
-
-function instantiateIdName(name, idx) {
-  if (name.endsWith("_i")) {
-    return `${name.slice(0, -1)}${idx}`;
+export const SPRING_BASE_VARS = Object.freeze({
+  "F": {
+    name: "Applied Load",
+    symbol: "F",
+    dimension: DIMENSIONS.FORCE,
+    unit: "N",
+    nameAliases: ["Applied Load", "Spring Force", "Axial Load", "Compressive Load"],
+    symbolAliases: ["F", "W", "P"],
+    aliases: ["Applied Load", "Spring Force", "Axial Load", "Compressive Load", "F", "W"]
+  },
+  "delta": {
+    name: "Spring Deflection",
+    symbol: "\\delta",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Spring Deflection", "Axial Deflection", "Elongation", "Compression Distance"],
+    symbolAliases: ["\\delta", "y", "x"],
+    aliases: ["Spring Deflection", "Axial Deflection", "Elongation", "Compression Distance", "delta", "y"]
+  },
+  "k": {
+    name: "Spring Rate",
+    symbol: "k",
+    dimension: DIMENSIONS.STIFFNESS,
+    unit: "N/mm",
+    nameAliases: ["Spring Rate", "Spring Stiffness", "Spring Constant", "Load Gradient"],
+    symbolAliases: ["k", "K"],
+    aliases: ["Spring Rate", "Spring Stiffness", "Spring Constant", "Load Gradient", "k"]
+  },
+  "SPE": {
+    name: "Spring Potential Energy",
+    symbol: "SPE",
+    dimension: DIMENSIONS.ENERGY,
+    unit: "J",
+    nameAliases: ["Spring Potential Energy", "Strain Energy", "Stored Elastic Energy", "Resilience"],
+    symbolAliases: ["SPE", "U", "E_p"],
+    aliases: ["Spring Potential Energy", "Strain Energy", "Stored Elastic Energy", "Resilience", "SPE", "U"]
   }
-  return name;
-}
-
-function instantiateAST(node, idx) {
-  if (!node) return null;
-  if (node.type === "id") return { type: "id", name: instantiateIdName(node.name, idx) };
-  if (node.type === "group") return { type: "group", expr: instantiateAST(node.expr, idx) };
-  if (node.type === "call") return { type: "call", fn: node.fn, arg: instantiateAST(node.arg, idx) };
-  if (node.type === "binary") {
-    return {
-      type: "binary",
-      op: node.op,
-      left: instantiateAST(node.left, idx),
-      right: instantiateAST(node.right, idx)
-    };
-  }
-  return { ...node };
-}
-
-function astHasIndexedToken(node) {
-  return getAstIdentifiers(node).some(id => id.endsWith("_i"));
-}
-
-function astHasFoldCall(node) {
-  if (!node) return false;
-  if (node.type === "call") {
-    if (node.fn === "sum" || node.fn === "prod" || node.fn === "chain") return true;
-    return astHasFoldCall(node.arg);
-  }
-  if (node.type === "group") return astHasFoldCall(node.expr);
-  if (node.type === "binary") return astHasFoldCall(node.left) || astHasFoldCall(node.right);
-  return false;
-}
-
-function expandFoldCallsAST(node, count) {
-  if (!node) return null;
-  if (node.type === "group") return { type: "group", expr: expandFoldCallsAST(node.expr, count) };
-  if (node.type === "call") {
-    if (node.fn === "sum" || node.fn === "prod") {
-      const op = node.fn === "sum" ? "+" : "*";
-      const terms = [];
-      for (let i = 1; i <= count; i++) {
-        let termAst = expandFoldCallsAST(instantiateAST(node.arg, i), count);
-        if (op === "*" && termAst.type === "binary" && (termAst.op === "+" || termAst.op === "-")) {
-          termAst = { type: "group", expr: termAst };
-        }
-        terms.push(termAst);
-      }
-      let acc = terms[0];
-      for (let i = 1; i < terms.length; i++) {
-        acc = { type: "binary", op, left: acc, right: terms[i] };
-      }
-      return { type: "group", expr: acc };
-    }
-    return { type: "call", fn: node.fn, arg: expandFoldCallsAST(node.arg, count) };
-  }
-  if (node.type === "binary") {
-    return {
-      type: "binary",
-      op: node.op,
-      left: expandFoldCallsAST(node.left, count),
-      right: expandFoldCallsAST(node.right, count)
-    };
-  }
-  return node;
-}
-
-function astToEllipsisLatex(node, varsDb = {}) {
-  if (!node) return "";
-  if (node.type === "group") {
-    const inner = unwrapGroup(node.expr);
-    if (inner?.type === "call" && (inner.fn === "sum" || inner.fn === "prod")) {
-      return `\\left(${astToEllipsisLatex(inner, varsDb)}\\right)`;
-    }
-    return `(${astToEllipsisLatex(node.expr, varsDb)})`;
-  }
-  if (node.type === "call") {
-    if (node.fn === "sum" || node.fn === "prod") {
-      const t1 = astToEllipsisLatex(instantiateAST(node.arg, 1), varsDb);
-      const t2 = astToEllipsisLatex(instantiateAST(node.arg, 2), varsDb);
-      const tn = astToEllipsisLatex(instantiateAST(node.arg, "n"), varsDb);
-      if (node.fn === "sum") return `${t1} + ${t2} + \\dots + ${tn}`;
-      return `${t1} \\cdot ${t2} \\cdots ${tn}`;
-    }
-    if (node.fn === "chain") {
-      const t1 = astToEllipsisLatex(instantiateAST(node.arg, 1), varsDb);
-      const t2 = astToEllipsisLatex(instantiateAST(node.arg, 2), varsDb);
-      const tn = astToEllipsisLatex(instantiateAST(node.arg, "n"), varsDb);
-      return `${t1} = ${t2} = \\dots = ${tn}`;
-    }
-    const wrapper = { ...node, arg: astToEllipsisLatexNodeSafe(node.arg, varsDb) };
-    if (typeof wrapper.arg === "string") return `\\text{${node.fn}}\\left(${wrapper.arg}\\right)`;
-    return astToLatex(node, null, varsDb);
-  }
-  if (node.type === "binary") {
-    if (node.op === "/") {
-      return `\\cfrac{${astToEllipsisLatex(node.left, varsDb)}}{${astToEllipsisLatex(node.right, varsDb)}}`;
-    }
-    if (node.op === "*") {
-      const L = astToEllipsisLatex(node.left, varsDb);
-      const R = astToEllipsisLatex(node.right, varsDb);
-      const uR = unwrapGroup(node.right);
-      const wrapR = (uR?.type === "call" && uR.fn === "sum") ? `\\left(${R}\\right)` : R;
-      return `${L} \\, ${wrapR}`;
-    }
-    if (node.op === "+" || node.op === "-") {
-      return `${astToEllipsisLatex(node.left, varsDb)} ${node.op} ${astToEllipsisLatex(node.right, varsDb)}`;
-    }
-    if (node.op === "^") {
-      return `{${astToEllipsisLatex(node.left, varsDb)}}^{${astToEllipsisLatex(node.right, varsDb)}}`;
-    }
-  }
-  return astToLatex(node, null, varsDb);
-}
-
-function astToEllipsisLatexNodeSafe(node, varsDb) {
-  if (!astHasFoldCall(node)) return node;
-  return astToEllipsisLatex(node, varsDb);
-}
-
-function extractNodesFromFormula(formulaStr) {
-  const parts = formulaStr.split("=").map(s => s.trim());
-  const seen = new Set();
-  const ordered = [];
-  for (const part of parts) {
-    const ast = parseMathAST(part);
-    if (!ast) continue;
-    for (const id of getAstIdentifiers(ast)) {
-      if (!isReservedMathToken(id) && !seen.has(id)) {
-        seen.add(id);
-        ordered.push(id);
-      }
-    }
-  }
-  return ordered;
-}
-
-function compileSingleEquation(spec, formulaStr, count, varsDb, idOverride = null, masteryIdOverride = null, texOverride = null) {
-  const parts = formulaStr.split("=").map(s => s.trim());
-  const lhsAst = parseMathAST(parts[0]);
-  const rhsAst = parseMathAST(parts[1]);
-
-  if (!lhsAst || !rhsAst) {
-    throw new Error(`Invalid formula in relation [${spec.id}]: "${formulaStr}"`);
-  }
-
-  // Case 1: Symmetric equality chain: lhs = chain(term_i)
-  const uRhs = unwrapGroup(rhsAst);
-  if (uRhs?.type === "call" && uRhs.fn === "chain") {
-    const lhsExpanded = expandFoldCallsAST(lhsAst, count);
-    const lhsStr = astToExprStr(lhsExpanded);
-    const lhsTex = astToEllipsisLatex(lhsAst, varsDb);
-    const chainTex = astToEllipsisLatex(uRhs, varsDb);
-    const canonicalTex = texOverride || `${lhsTex} = ${chainTex}`;
-
-    const out = [];
-    for (let i = 1; i <= count; i++) {
-      const termInst = expandFoldCallsAST(instantiateAST(uRhs.arg, i), count);
-      const baseFormula = `${astToExprStr(termInst)} = ${lhsStr}`;
-      out.push({
-        id: `${spec.id}__${i}`,
-        masteryId: spec.id,
-        name: spec.name,
-        canonicalTex,
-        baseFormula,
-        nodes: extractNodesFromFormula(baseFormula),
-        ...(spec.requiredUnits ? { requiredUnits: spec.requiredUnits } : {})
-      });
-    }
-    return out;
-  }
-
-  // Case 2: Indexed per-element equation outside sum/prod (e.g. delta_i = F_T / k_i)
-  const lhsHasFold = astHasFoldCall(lhsAst);
-  const rhsHasFold = astHasFoldCall(rhsAst);
-  const templateWithoutFolds = {
-    lhs: lhsHasFold ? null : lhsAst,
-    rhs: rhsHasFold ? null : rhsAst
-  };
-  const hasLooseIndexed =
-    (!lhsHasFold && astHasIndexedToken(lhsAst)) ||
-    (!rhsHasFold && astHasIndexedToken(rhsAst));
-
-  if (hasLooseIndexed) {
-    const canonicalTex = texOverride || `${astToEllipsisLatex(lhsAst, varsDb)} = ${astToEllipsisLatex(rhsAst, varsDb)}`;
-    const out = [];
-    for (let i = 1; i <= count; i++) {
-      const lInst = expandFoldCallsAST(instantiateAST(lhsAst, i), count);
-      const rInst = expandFoldCallsAST(instantiateAST(rhsAst, i), count);
-      const baseFormula = `${astToExprStr(lInst)} = ${astToExprStr(rInst)}`;
-      out.push({
-        id: `${spec.id}__${i}`,
-        masteryId: spec.id,
-        name: spec.name,
-        canonicalTex,
-        baseFormula,
-        nodes: extractNodesFromFormula(baseFormula),
-        ...(spec.requiredUnits ? { requiredUnits: spec.requiredUnits } : {})
-      });
-    }
-    return out;
-  }
-
-  // Case 3: Standard or folded (sum/prod) binary equation
-  void templateWithoutFolds;
-  const expandedLhs = expandFoldCallsAST(lhsAst, count);
-  const expandedRhs = expandFoldCallsAST(rhsAst, count);
-  const baseFormula = `${astToExprStr(expandedLhs)} = ${astToExprStr(expandedRhs)}`;
-  const canonicalTex = texOverride || `${astToEllipsisLatex(lhsAst, varsDb)} = ${astToEllipsisLatex(rhsAst, varsDb)}`;
-
-  return [{
-    id: idOverride || spec.id,
-    masteryId: masteryIdOverride || spec.id,
-    name: spec.name,
-    canonicalTex,
-    baseFormula,
-    nodes: extractNodesFromFormula(baseFormula),
-    ...(spec.requiredUnits ? { requiredUnits: spec.requiredUnits } : {})
-  }];
-}
-
-function compileVariantMap(variantsSpec, count, varsDb, spec) {
-  if (!variantsSpec) return null;
-  const compiled = {};
-  for (const [sysKey, vSpec] of Object.entries(variantsSpec)) {
-    const fStr = vSpec.formula || vSpec.baseFormula;
-    const [res] = compileSingleEquation(
-      spec,
-      fStr,
-      count,
-      varsDb,
-      spec.id,
-      spec.id,
-      vSpec.canonicalTex || null
-    );
-    compiled[sysKey] = {
-      canonicalTex: res.canonicalTex,
-      baseFormula: res.baseFormula,
-      nodes: res.nodes,
-      ...(vSpec.requiredUnits ? { requiredUnits: vSpec.requiredUnits } : {})
-    };
-  }
-  return compiled;
-}
-
-export function defineRelation(spec, options = {}) {
-  const count = options.count ?? spec.count ?? DEFAULT_COUNT;
-  const varsDb = options.varsDb || {};
-  const rawFormula = spec.formula || spec.baseFormula;
-
-  if (!rawFormula || !rawFormula.includes("=")) {
-    throw new Error(`Relation [${spec.id}] missing valid "=" formula`);
-  }
-
-  const segments = rawFormula.split("=").map(s => s.trim()).filter(Boolean);
-  const compiledVariants = compileVariantMap(spec.variants, count, varsDb, spec);
-
-  // Multi-"=" chain: A = B = C -> distinct binary edges A = B, A = C
-  if (segments.length > 2) {
-    const chainTex = spec.canonicalTex || segments
-      .map(seg => astToEllipsisLatex(parseMathAST(seg), varsDb))
-      .join(" = ");
-
-    const out = [];
-    for (let j = 1; j < segments.length; j++) {
-      const subFormula = `${segments[0]} = ${segments[j]}`;
-      const subId = `${spec.id}__${j}`;
-      const entries = compileSingleEquation(spec, subFormula, count, varsDb, subId, subId, chainTex);
-      entries.forEach(e => {
-        if (compiledVariants) e.variants = compiledVariants;
-        out.push(e);
-      });
-    }
-    return out;
-  }
-
-  const entries = compileSingleEquation(spec, rawFormula, count, varsDb, spec.id, spec.id, spec.canonicalTex || null);
-  entries.forEach(e => {
-    if (compiledVariants) e.variants = compiledVariants;
-  });
-  return entries.length === 1 ? entries[0] : entries;
-}
-
-export function compileRelations(items = [], options = {}) {
-  const flat = [];
-  for (const item of items) {
-    if (!item) continue;
-    if (Array.isArray(item)) {
-      flat.push(...compileRelations(item, options));
-      continue;
-    }
-    // Already-compiled concrete relation (e.g. spread from a common/ base file)
-    if (item.baseFormula && Array.isArray(item.nodes) && !item.formula) {
-      flat.push(item);
-      continue;
-    }
-    const built = defineRelation(item, options);
-    if (Array.isArray(built)) flat.push(...built);
-    else flat.push(built);
-  }
-  return Object.freeze(flat);
-}
-
-export function expandIndexedVarsDb(templateDb, count = DEFAULT_COUNT) {
-  const out = {};
-  const replaceIdx = (str, i) => typeof str === "string"
-    ? str.replaceAll("{i}", String(i)).replaceAll("_i", `_${i}`)
-    : str;
-
-  for (const [key, meta] of Object.entries(templateDb)) {
-    if (!key.endsWith("_i")) {
-      out[key] = meta;
-      continue;
-    }
-    const stem = key.slice(0, -1); // e.g. "k_"
-    for (let i = 1; i <= count; i++) {
-      const concreteKey = `${stem}${i}`;
-      out[concreteKey] = {
-        ...meta,
-        name: replaceIdx(meta.name, i),
-        symbol: replaceIdx(meta.symbol, i),
-        ...(meta.aliases ? { aliases: meta.aliases.map(a => replaceIdx(a, i)) } : {}),
-        ...(meta.nameAliases ? { nameAliases: meta.nameAliases.map(a => replaceIdx(a, i)) } : {}),
-        ...(meta.symbolAliases ? { symbolAliases: meta.symbolAliases.map(a => replaceIdx(a, i)) } : {})
-      };
-    }
-  }
-  return Object.freeze(out);
-}
-```
-
----
-
-#### 2. `src/cas/ast.js`
-
-```diff
-<<<<
-  function parsePower() {
-    let left = parsePrimary();
-    while (peek() && peek().val === "^") {
-      const op = consume().val;
-      const right = parsePrimary();
-      left = { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  function parseMulDiv() {
-    let left = parsePower();
-    while (peek() && (peek().val === "*" || peek().val === "/")) {
-      const op = consume().val;
-      const right = parsePower();
-      left = { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  function parseAddSub() {
-    let left = parseMulDiv();
-    while (peek() && (peek().val === "+" || peek().val === "-")) {
-      const op = consume().val;
-      const right = parseMulDiv();
-      left = { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  return parseAddSub();
-}
-====
-  function parsePower() {
-    const left = parsePrimary();
-    if (peek() && peek().val === "^") {
-      const op = consume().val;
-      const right = parseUnary();
-      return { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  function parseUnary() {
-    if (peek() && peek().val === "-") {
-      consume("-");
-      const right = parseUnary();
-      if (!right) return null;
-      return { type: "binary", op: "-", left: { type: "num", val: "0" }, right };
-    }
-    return parsePower();
-  }
-
-  function parseMulDiv() {
-    let left = parseUnary();
-    while (peek() && (peek().val === "*" || peek().val === "/")) {
-      const op = consume().val;
-      const right = parseUnary();
-      left = { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  function parseAddSub() {
-    let left = parseMulDiv();
-    while (peek() && (peek().val === "+" || peek().val === "-")) {
-      const op = consume().val;
-      const right = parseMulDiv();
-      left = { type: "binary", op, left, right };
-    }
-    return left;
-  }
-
-  const tree = parseAddSub();
-  return pos < tokens.length ? null : tree;
-}
->>>>
-```
-
-```diff
-<<<<
-    // 3. Subtraction: Right-hand additive terms must be parenthesized: A - (B + C)
-    if (node.op === "-" && node.right.type === "binary" && (node.right.op === "+" || node.right.op === "-")) {
-      rightStr = `(${rightStr})`;
-    }
-
-    // 4. Power: Complex base or exponent must be parenthesized: (A / B) ^ (1 / 2)
-====
-    // 3. Unary negation sentinel (0 - X) and binary subtraction grouping
-    if (node.op === "-" && node.left.type === "num" && node.left.val === "0") {
-      const needParens = node.right.type === "binary" && (node.right.op === "+" || node.right.op === "-");
-      return needParens ? `-(${rightStr})` : `-${rightStr}`;
-    }
-    if (node.op === "-" && node.right.type === "binary" && (node.right.op === "+" || node.right.op === "-")) {
-      rightStr = `(${rightStr})`;
-    }
-
-    // 4. Power: Complex base or exponent must be parenthesized: (A / B) ^ (1 / 2)
->>>>
-```
-
----
-
-#### 3. `src/cas/latex.js`
-
-```diff
-<<<<
-      const leftIsSimpleNum = /^[+-]?[\d.]+$/.test(L.trim());
-      const rightIsSimpleNum = /^[+-]?[\d.]+$/.test(R.trim());
-      // Unit-carrying substituted tokens (incl. unitToTex \cfrac compounds)
-      // are numeric factors: they multiply explicitly, never juxtaposed.
-      const leftHasUnit = L.includes("\\text{");
-      const rightHasUnit = R.includes("\\text{");
-
-      let sep = " \\, ";
-      if ((leftIsSimpleNum || leftHasUnit) && (rightIsSimpleNum || rightHasUnit)) sep = " \\cdot ";
-      else if (R.startsWith("(") || R.startsWith("\\cos") || R.startsWith("\\sin") || R.startsWith("\\tan")) sep = " \\, ";
-
-      return `${L}${sep}${R}`.trim();
-    }
-    if (node.op === "+") {
-      return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
-    }
-    if (node.op === "-") {
-      return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
-    }
-====
-      const leftIsSimpleNum = /^[+-]?[\d.,]+(?:°)?$/.test(L.trim());
-      const rightIsSimpleNum = /^[+-]?[\d.,]+(?:°)?$/.test(R.trim());
-      // Unit-carrying substituted tokens (incl. unitToTex \cfrac compounds)
-      // are numeric factors: they multiply explicitly, never juxtaposed.
-      const leftHasUnit = L.includes("\\text{");
-      const rightHasUnit = R.includes("\\text{");
-
-      let sep = " \\, ";
-      if ((leftIsSimpleNum || leftHasUnit) && (rightIsSimpleNum || rightHasUnit)) sep = " \\cdot ";
-      else if (R.startsWith("(") || R.startsWith("\\cos") || R.startsWith("\\sin") || R.startsWith("\\tan")) sep = " \\, ";
-
-      const wrappedR = (R.trim().startsWith("-") && !R.trim().startsWith("(")) ? `(${R})` : R;
-      return `${L}${sep}${wrappedR}`.trim();
-    }
-    if (node.op === "+") {
-      return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
-    }
-    if (node.op === "-") {
-      if (node.left?.type === "num" && node.left.val === "0") {
-        const uR = unwrapGroup(node.right);
-        const rightTex = astToLatex(node.right, substituteMap, varsDb);
-        const needParens = uR?.type === "binary" && (uR.op === "+" || uR.op === "-");
-        return needParens ? `-(${stripOuterParens(rightTex)})` : `-${rightTex}`;
-      }
-      return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
-    }
->>>>
-```
-
-```diff
-<<<<
-export function casToTex(exprStr, varsDb = {}) {
-  const ast = parseMathAST(exprStr);
-  return ast ? astToLatex(ast, null, varsDb) : exprStr;
-}
-====
-export function casToTex(exprStr, varsDb = {}) {
-  if (!exprStr) return "";
-  if (exprStr.includes("=")) {
-    return exprStr
-      .split("=")
-      .map(part => {
-        const ast = parseMathAST(part.trim());
-        return ast ? astToLatex(ast, null, varsDb) : part.trim();
-      })
-      .join(" = ");
-  }
-  const ast = parseMathAST(exprStr);
-  return ast ? astToLatex(ast, null, varsDb) : exprStr;
-}
->>>>
-```
-
----
-
-#### 4. `src/core/dimensions.js`
-
-```diff
-<<<<
-  PRESSURE: "Pressure / Stress",
-  STRESS: "Pressure / Stress",
-  VELOCITY: "Linear Velocity",
-  ROT_SPEED: "Rotational Speed",
-  PITCH: "Tooth Pitch",
-  ANGLE: "Angle",
-  COUNT: "Count",
-  ENERGY: "Energy / Work",
-  SPECIFIC_ENERGY: "Specific Energy / Enthalpy",
-  MASS: "Mass",
-  MASS_FLOW: "Mass Flow Rate",
-  VOLUME: "Volume",
-  VOLUME_FLOW: "Volume Flow Rate",
-  SPECIFIC_CONSUMPTION: "Specific Fuel Consumption",
-  TEMPERATURE: "Temperature",
-  TEMPERATURE_DIFF: "Temperature Difference",
-  PERCENTAGE: "Percentage",
-  DIMENSIONLESS: "Dimensionless"
 });
-====
-  PRESSURE: "Pressure / Stress",
-  STRESS: "Pressure / Stress",
-  MODULUS: "Elastic / Shear Modulus",
-  STIFFNESS: "Spring Rate / Stiffness",
-  VELOCITY: "Linear Velocity",
-  ACCELERATION: "Linear Acceleration",
-  ROT_SPEED: "Rotational Speed",
-  TIME: "Time / Period",
-  FREQUENCY: "Frequency",
-  PITCH: "Tooth Pitch",
-  ANGLE: "Angle",
-  AREA: "Area",
-  COUNT: "Count",
-  ENERGY: "Energy / Work",
-  SPECIFIC_ENERGY: "Specific Energy / Enthalpy",
-  MASS: "Mass",
-  MASS_FLOW: "Mass Flow Rate",
-  DENSITY: "Density",
-  VOLUME: "Volume",
-  VOLUME_FLOW: "Volume Flow Rate",
-  HEAT_TRANSFER_COEFF: "Heat Transfer Coefficient",
-  SPECIFIC_CONSUMPTION: "Specific Fuel Consumption",
-  TEMPERATURE: "Temperature",
-  TEMPERATURE_DIFF: "Temperature Difference",
-  PERCENTAGE: "Percentage",
-  DIMENSIONLESS: "Dimensionless"
-});
->>>>
 ```
 
----
-
-#### 5. `src/cas/units/definitions.js`
-
-```diff
-<<<<
-  "litre":          { dim: "Vol", baseScale: 0.001, symbol: "L" },
-  "rpm":            { dim: "Freq", baseScale: 1/60, symbol: "rpm" },
-  "cfm":            { dim: "VolFlow", baseScale: 0.3048**3 / 60, symbol: "cfm" }
-});
-====
-  "litre":          { dim: "Vol", baseScale: 0.001, symbol: "L" },
-  "rpm":            { dim: "Freq", baseScale: 1/60, symbol: "rpm" },
-  "hertz":          { dim: "Freq", baseScale: 1.0, symbol: "Hz" },
-  "cfm":            { dim: "VolFlow", baseScale: 0.3048**3 / 60, symbol: "cfm" }
-});
->>>>
-```
-
-```diff
-<<<<
-  "rpm":            { T: -1 },
-  "cfm":            { L: 3, T: -1 },
-====
-  "rpm":            { T: -1 },
-  "hertz":          { T: -1 },
-  "cfm":            { L: 3, T: -1 },
->>>>
-```
-
-```diff
-<<<<
-  if (tokenBody === "kgf") return { prefix: null, base: "kilogram_force" };
-  if (tokenBody === "kips" || tokenBody === "klb") return { prefix: "kilo", base: "pound_force" };
-  if (tokenBody === "kg") return { prefix: "kilo", base: "gram" };
-====
-  if (tokenBody === "kgf") return { prefix: null, base: "kilogram_force" };
-  if (tokenBody === "kip" || tokenBody === "kips" || tokenBody === "klb") return { prefix: "kilo", base: "pound_force" };
-  if (tokenBody === "hr") return { prefix: null, base: "hour" };
-  if (tokenBody === "kg") return { prefix: "kilo", base: "gram" };
->>>>
-```
-
-```diff
-<<<<
-export function getUnitAtomBag(uName, dimension = null) {
-  const ast = parseUnitToSemanticAST(uName, dimension);
-  const scale = getSemanticScale(ast);
-  const dimMap = {};
-  ast.forEach(f => {
-    const vec = ATOM_DIM_VECTORS[f.base];
-    if (vec) {
-      for (const [d, p] of Object.entries(vec)) {
-        const next = (dimMap[d] || 0) + p * f.power;
-        if (next === 0) delete dimMap[d];
-        else dimMap[d] = next;
-      }
-    }
-  });
-  return { scale, dimMap, isDimensionless: !uName || uName === "dimless" || uName === "ratio" };
-}
-====
-export function getUnitAtomBag(uName, dimension = null) {
-  const ast = parseUnitToSemanticAST(uName, dimension);
-  const scale = getSemanticScale(ast);
-  const dimMap = {};
-  let isUnknown = false;
-  const isDimensionless = !uName || uName === "dimless" || uName === "ratio";
-  ast.forEach(f => {
-    if (!BASE_UNITS[f.base]) isUnknown = true;
-    const vec = ATOM_DIM_VECTORS[f.base];
-    if (vec) {
-      for (const [d, p] of Object.entries(vec)) {
-        const next = (dimMap[d] || 0) + p * f.power;
-        if (next === 0) delete dimMap[d];
-        else dimMap[d] = next;
-      }
-    }
-  });
-  return { scale, dimMap, isDimensionless, isUnknown: !isDimensionless && isUnknown };
-}
->>>>
-```
-
----
-
-#### 6. `src/cas/units/evaluator.js`
-
-```diff
-<<<<
-export function isExpressionInDegrees(node, S, varsDb) {
-  if (!node) return false;
-  if (node.type === "id") {
-    const cKey = resolveCanonicalKey(node.name, varsDb);
-    const u = S._u?.[cKey] || S._u?.[node.name] || varsDb[cKey]?.unit || varsDb[node.name]?.unit;
-    return u === "deg" || u === "°";
-  }
-  if (node.type === "group") return isExpressionInDegrees(node.expr, S, varsDb);
-  return false;
-}
-====
-export function isExpressionInDegrees(node, S, varsDb) {
-  if (!node) return false;
-  if (node.type === "id") {
-    const cKey = resolveCanonicalKey(node.name, varsDb);
-    const u = S._u?.[cKey] || S._u?.[node.name] || varsDb[cKey]?.unit || varsDb[node.name]?.unit;
-    return u === "deg" || u === "°";
-  }
-  if (node.type === "group") return isExpressionInDegrees(node.expr, S, varsDb);
-  if (node.type === "binary") {
-    return isExpressionInDegrees(node.left, S, varsDb) || isExpressionInDegrees(node.right, S, varsDb);
-  }
-  return false;
-}
->>>>
-```
-
-```diff
-<<<<
-  // 2. Pure physics relations: transform all input variables into coherent SI base units
-  //    before AST evaluation so multi-unit expressions (e.g. hp + W) evaluate accurately
-  const coherentState = { ...S };
-  const varTokens = getAstIdentifiers(node).filter(t => !isReservedMathToken(t));
-
-  varTokens.forEach(tok => {
-    const cKey = resolveCanonicalKey(tok, varsDb);
-    const meta = varsDb[cKey] || varsDb[tok] || {};
-    const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-
-    if (uName && uName !== "dimless" && uName !== "ratio" && uName !== "deg" && uName !== "°") {
-      const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-      if (typeof rawVal === "number" && !isNaN(rawVal)) {
-        const isDiff = isDifferenceVariable(cKey, varsDb) || isDifferenceVariable(tok, varsDb);
-        const valInBase = valueToCoherentBase(rawVal, uName, isDiff, meta.dimension);
-        coherentState[tok] = valInBase;
-        coherentState[cKey] = valInBase;
-      }
-    }
-  });
-
-  const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
-  const coherentNum = evalAST(node, coherentState, unitResolver);
-====
-  // 2. Pure physics relations: transform all input variables (including degrees -> radians)
-  //    into coherent SI base units before AST evaluation so arbitrary angle expressions work
-  const coherentState = { ...S };
-  const varTokens = getAstIdentifiers(node).filter(t => !isReservedMathToken(t));
-
-  varTokens.forEach(tok => {
-    const cKey = resolveCanonicalKey(tok, varsDb);
-    const meta = varsDb[cKey] || varsDb[tok] || {};
-    const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-
-    if (uName && uName !== "dimless" && uName !== "ratio") {
-      const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-      if (typeof rawVal === "number" && !isNaN(rawVal)) {
-        const isDiff = isDifferenceVariable(cKey, varsDb) || isDifferenceVariable(tok, varsDb);
-        const valInBase = valueToCoherentBase(rawVal, uName, isDiff, meta.dimension);
-        coherentState[tok] = valInBase;
-        coherentState[cKey] = valInBase;
-      }
-    }
-  });
-
-  const coherentNum = evalAST(node, coherentState, null);
->>>>
-```
-
----
-
-#### 7. `src/cas/units/scales.js`
-
-```diff
-<<<<
-      sourceAtoms.push({
-        tok: entry.tok,
-        atom,
-        netPower: atom.power * entry.exp,
-        dim: BASE_UNITS[atom.base]?.dim || atom.base
-      });
-    });
-  }
-  
-  // 1. Pair source atoms with matching target atoms by base dimension
-  for (const src of sourceAtoms) {
-    const tIdx = targetAst.findIndex((tAtom, idx) => {
-      if (usedTargetIndices.has(idx)) return false;
-      const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
-      return tDim === src.dim && Math.sign(tAtom.power) === Math.sign(src.netPower);
-    });
-====
-      sourceAtoms.push({
-        tok: entry.tok,
-        atom,
-        exp: entry.exp,
-        netPower: atom.power * entry.exp,
-        dim: BASE_UNITS[atom.base]?.dim || atom.base
-      });
-    });
-  }
-
-  // 0. Pair reciprocal Frequency (Hz/kHz/MHz) <-> Time (s/ms/min/h) via 1 Hz * 1 s = 1
-  for (const src of sourceAtoms) {
-    if (src.matched || (src.dim !== "Freq" && src.dim !== "T")) continue;
-    const wantedDim = src.dim === "Freq" ? "T" : "Freq";
-    const tIdx = targetAst.findIndex((tAtom, idx) => {
-      if (usedTargetIndices.has(idx)) return false;
-      const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
-      const isRecipPair =
-        (src.dim === "Freq" && src.atom.base === "hertz" && tDim === "T") ||
-        (src.dim === "T" && tAtom.base === "hertz");
-      return isRecipPair && tDim === wantedDim && Math.sign(tAtom.power) === Math.sign(src.netPower);
-    });
-
-    if (tIdx >= 0) {
-      usedTargetIndices.add(tIdx);
-      src.matched = true;
-      const tAtom = targetAst[tIdx];
-      const srcStr = atomToUnitString(src.atom);
-      const tgtStr = atomToUnitString(tAtom);
-      const sSrc = getUnitAtomBag(srcStr).scale;
-      const sTgt = getUnitAtomBag(tgtStr).scale;
-      const prod = sSrc * sTgt;
-
-      if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
-      if (Math.abs(prod - 1) < 1e-6) {
-        conversionsByToken[src.tok].push(` \\cdot ${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}`);
-      } else if (prod < 1) {
-        const factor = 1 / prod;
-        scalars.push(parseFloat(factor.toPrecision(6)));
-        conversionsByToken[src.tok].push(` \\cdot ${fmtScale(factor)} \\, ${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}`);
-      } else {
-        scalars.push(parseFloat(prod.toPrecision(6)));
-        conversionsByToken[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}}{${fmtScale(prod)}}`);
-      }
-    }
-  }
-
-  // 1. Pair source atoms with matching target atoms by base dimension
-  for (const src of sourceAtoms) {
-    if (src.matched) continue;
-    const tIdx = targetAst.findIndex((tAtom, idx) => {
-      if (usedTargetIndices.has(idx)) return false;
-      const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
-      return tDim === src.dim && Math.sign(tAtom.power) === Math.sign(src.netPower);
-    });
->>>>
-```
-
-```diff
-<<<<
-    { u: "J", dim: DIMENSIONS.ENERGY }, { u: "kJ", dim: DIMENSIONS.ENERGY }, { u: "Btu", dim: DIMENSIONS.ENERGY },
-    { u: "kWh", dim: DIMENSIONS.ENERGY }, { u: "ft-lb", dim: DIMENSIONS.ENERGY }, { u: "N-m", dim: DIMENSIONS.TORQUE },
-    { u: "W", dim: DIMENSIONS.POWER }, { u: "kW", dim: DIMENSIONS.POWER }, { u: "hp", dim: DIMENSIONS.POWER },
-    { u: "kJ/s", dim: DIMENSIONS.POWER }, { u: "J/s", dim: DIMENSIONS.POWER },
-    { u: "Btu/min", dim: DIMENSIONS.POWER }, { u: "Btu/h", dim: DIMENSIONS.POWER },
-    { u: "ft-lb/s", dim: DIMENSIONS.POWER }, { u: "ft-lb/min", dim: DIMENSIONS.POWER },
-    { u: "Pa", dim: DIMENSIONS.PRESSURE }, { u: "kPa", dim: DIMENSIONS.PRESSURE }, { u: "MPa", dim: DIMENSIONS.PRESSURE },
-    { u: "bar", dim: DIMENSIONS.PRESSURE }, { u: "psi", dim: DIMENSIONS.PRESSURE }, { u: "psf", dim: DIMENSIONS.PRESSURE },
-    { u: "ksi", dim: DIMENSIONS.PRESSURE }, { u: "N/m^2", dim: DIMENSIONS.PRESSURE },
-    { u: "kN/m^2", dim: DIMENSIONS.PRESSURE }, { u: "N/mm^2", dim: DIMENSIONS.PRESSURE },
-====
-    { u: "ms", dim: DIMENSIONS.TIME },
-    { u: "Hz", dim: DIMENSIONS.FREQUENCY }, { u: "kHz", dim: DIMENSIONS.FREQUENCY }, { u: "1/s", dim: DIMENSIONS.FREQUENCY },
-    { u: "J", dim: DIMENSIONS.ENERGY }, { u: "kJ", dim: DIMENSIONS.ENERGY }, { u: "Btu", dim: DIMENSIONS.ENERGY },
-    { u: "kWh", dim: DIMENSIONS.ENERGY }, { u: "ft-lb", dim: DIMENSIONS.ENERGY }, { u: "in-lb", dim: DIMENSIONS.ENERGY },
-    { u: "N-m", dim: DIMENSIONS.TORQUE }, { u: "N-mm", dim: DIMENSIONS.TORQUE },
-    { u: "lb-in", dim: DIMENSIONS.TORQUE }, { u: "lb-ft", dim: DIMENSIONS.TORQUE },
-    { u: "W", dim: DIMENSIONS.POWER }, { u: "kW", dim: DIMENSIONS.POWER }, { u: "hp", dim: DIMENSIONS.POWER },
-    { u: "kJ/s", dim: DIMENSIONS.POWER }, { u: "J/s", dim: DIMENSIONS.POWER },
-    { u: "Btu/min", dim: DIMENSIONS.POWER }, { u: "Btu/h", dim: DIMENSIONS.POWER },
-    { u: "ft-lb/s", dim: DIMENSIONS.POWER }, { u: "ft-lb/min", dim: DIMENSIONS.POWER },
-    { u: "Pa", dim: DIMENSIONS.PRESSURE }, { u: "kPa", dim: DIMENSIONS.PRESSURE },
-    { u: "MPa", dim: DIMENSIONS.PRESSURE }, { u: "GPa", dim: DIMENSIONS.MODULUS },
-    { u: "bar", dim: DIMENSIONS.PRESSURE }, { u: "psi", dim: DIMENSIONS.PRESSURE }, { u: "psf", dim: DIMENSIONS.PRESSURE },
-    { u: "ksi", dim: DIMENSIONS.PRESSURE }, { u: "N/m^2", dim: DIMENSIONS.PRESSURE },
-    { u: "kN/m^2", dim: DIMENSIONS.PRESSURE }, { u: "N/mm^2", dim: DIMENSIONS.PRESSURE },
-    { u: "N/m", dim: DIMENSIONS.STIFFNESS }, { u: "N/mm", dim: DIMENSIONS.STIFFNESS },
-    { u: "kN/m", dim: DIMENSIONS.STIFFNESS }, { u: "kgf/mm", dim: DIMENSIONS.STIFFNESS },
-    { u: "lb/in", dim: DIMENSIONS.STIFFNESS }, { u: "lb/ft", dim: DIMENSIONS.STIFFNESS },
-    { u: "kip/in", dim: DIMENSIONS.STIFFNESS },
-    { u: "m/s^2", dim: DIMENSIONS.ACCELERATION }, { u: "ft/s^2", dim: DIMENSIONS.ACCELERATION },
-    { u: "in/s^2", dim: DIMENSIONS.ACCELERATION },
->>>>
-```
-
----
-
-#### 8. `src/cas/units/analysis.js`
-
-```diff
-<<<<
-  function collectAdditiveBranches(node) {
-    if (!node) return [];
-    if (node.type === "group") return collectAdditiveBranches(node.expr);
-    if (node.type === "call" && node.fn === "sqrt") return collectAdditiveBranches(node.arg);
-    if (node.type === "binary" && (node.op === "+" || node.op === "-")) {
-      return [...collectAdditiveBranches(node.left), ...collectAdditiveBranches(node.right)];
-    }
-    return [node];
-  }
-
-  const branches = collectAdditiveBranches(ast);
-  const isMultiBranch = branches.length > 1;
-====
-  function collectAdditiveBranches(node) {
-    if (!node) return [];
-    if (node.type === "group") return collectAdditiveBranches(node.expr);
-    if (node.type === "call" && node.fn === "sqrt") return collectAdditiveBranches(node.arg);
-    if (node.type === "binary" && (node.op === "+" || node.op === "-")) {
-      return [...collectAdditiveBranches(node.left), ...collectAdditiveBranches(node.right)];
-    }
-    return [node];
-  }
-
-  function isTokenInAdditiveSubtree(node, targetTok, insideAdd = false) {
-    if (!node) return false;
-    if (node.type === "id") return insideAdd && node.name === targetTok;
-    if (node.type === "group") return isTokenInAdditiveSubtree(node.expr, targetTok, insideAdd);
-    if (node.type === "call") return isTokenInAdditiveSubtree(node.arg, targetTok, insideAdd);
-    if (node.type === "binary") {
-      const nextAdd = insideAdd || node.op === "+" || node.op === "-";
-      return isTokenInAdditiveSubtree(node.left, targetTok, nextAdd) ||
-        isTokenInAdditiveSubtree(node.right, targetTok, nextAdd);
-    }
-    return false;
-  }
-
-  const branches = collectAdditiveBranches(ast);
-  const isMultiBranch = branches.length > 1;
->>>>
-```
-
-```diff
-<<<<
-      const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
-      const parsed = parseUnitToSemanticAST(uName, meta.dimension);
-====
-      const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
-      const useInlineUnit = fDepth >= 2;
-      const parsed = parseUnitToSemanticAST(uName, meta.dimension);
->>>>
-```
-
-```diff
-<<<<
-      // D. Target Unit Scaling (Single-Dimension vs Compound Branch Decomposition)
-      if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
-        const tokBag = getUnitAtomBag(uName, meta.dimension);
-        const targetBag = getUnitAtomBag(targetUnit, targetDim);
-
-        if (isDimEqual(tokBag.dimMap, targetBag.dimMap)) {
-          const conv = formatPairConversion(uName, targetUnit, meta.dimension, targetDim, "whole");
-          if (!conv.tex) {
-            tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
-          } else {
-            const cancelMode = conv.isDecomposed ? "component" : "whole";
-            tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, cancelMode);
-            if (isMultiBranch) {
-              // Inside an additive branch, keep conversion in-situ on the term
-              tokenConversions[tok] = [conv.tex];
-              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
-            } else if (!globalConversionTex) {
-              // Single-branch Option B: preserves target unit intact on main line
-              globalConversionTex = conv.tex;
-              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
-            }
-          }
-        } else {
-          // Compound branch (e.g. m_f / IP or Q_rej / m_a)
-          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
-          if (!compoundComputed) {
-            compoundComputed = true;
-            const entries = Object.entries(tokenBags).map(([t, info]) => ({
-              tok: t, uName: info.uName, dim: info.dim, exp: info.exp
-            }));
-            const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
-            for (const [k, convList] of Object.entries(conversionsByToken)) {
-              tokenConversions[k] = convList;
-            }
-            conversionScalars.push(...scalars);
-          }
-        }
-      } else {
-        tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
-      }
-====
-      // D. Target Unit Scaling (Single-Dimension vs Compound Branch Decomposition)
-      if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
-        const tokBag = getUnitAtomBag(uName, meta.dimension);
-        const targetBag = getUnitAtomBag(targetUnit, targetDim);
-        const inAdditive = isMultiBranch || isTokenInAdditiveSubtree(branchAst, tok);
-
-        if (isDimEqual(tokBag.dimMap, targetBag.dimMap)) {
-          const conv = formatPairConversion(uName, targetUnit, meta.dimension, targetDim, "whole");
-          if (!conv.tex) {
-            tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
-          } else {
-            const cancelMode = conv.isDecomposed ? "component" : "whole";
-            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, cancelMode);
-            const convTex = useInlineUnit ? conv.tex.replaceAll("\\cfrac", "\\tfrac") : conv.tex;
-            if (inAdditive) {
-              // Inside any additive subtree (incl. 1/(1/k_1 + 1/k_2)), convert in-situ
-              tokenConversions[tok] = [convTex];
-              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
-            } else if (!globalConversionTex) {
-              // Single-branch Option B: preserves target unit intact on main line
-              globalConversionTex = convTex;
-              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
-            }
-          }
-        } else {
-          // Compound branch (e.g. m_f / IP or Q_rej / m_a)
-          tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, "component");
-          if (!compoundComputed) {
-            compoundComputed = true;
-            const entries = Object.entries(tokenBags).map(([t, info]) => ({
-              tok: t, uName: info.uName, dim: info.dim, exp: info.exp
-            }));
-            const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
-            for (const [k, convList] of Object.entries(conversionsByToken)) {
-              tokenConversions[k] = useInlineUnit
-                ? convList.map(c => c.replaceAll("\\cfrac", "\\tfrac"))
-                : convList;
-            }
-            conversionScalars.push(...scalars);
-          }
-        }
-      } else {
-        tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
-      }
->>>>
-```
-
----
-
-#### 9. `src/core/derivation.js`
-
-```diff
-<<<<
-        const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
-        subsMap[factoredId] = uTex ? `(${inner})\\,${uTex}` : `(${inner})`;
-====
-        const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
-        const groupConv = unitAnalysis.tokenConversions?.[leaves[0].key]?.join("") || "";
-        subsMap[factoredId] = uTex ? `(${inner})\\,${uTex}${groupConv}` : `(${inner})${groupConv}`;
->>>>
-```
-
----
-
-#### 10. `src/core/unit_sampler.js`
-
-```diff
-<<<<
-    [DIMENSIONS.STRESS]: [
-      { unit: "MPa", tokens: 1 },
-      { unit: "N/mm^2", tokens: 2 },
-      { unit: "kPa", tokens: 1 },
-      { unit: "bar", tokens: 1 }
-    ],
-    [DIMENSIONS.POWER]: [
-====
-    [DIMENSIONS.STRESS]: [
-      { unit: "MPa", tokens: 1 },
-      { unit: "N/mm^2", tokens: 2 },
-      { unit: "kPa", tokens: 1 },
-      { unit: "bar", tokens: 1 }
-    ],
-    [DIMENSIONS.MODULUS]: [
-      { unit: "GPa", tokens: 1 },
-      { unit: "MPa", tokens: 1 },
-      { unit: "N/mm^2", tokens: 2 }
-    ],
-    [DIMENSIONS.STIFFNESS]: [
-      { unit: "N/mm", tokens: 2 },
-      { unit: "kN/m", tokens: 2 },
-      { unit: "N/m", tokens: 2 },
-      { unit: "kgf/mm", tokens: 3 }
-    ],
-    [DIMENSIONS.TIME]: [
-      { unit: "s", tokens: 1 },
-      { unit: "ms", tokens: 1 },
-      { unit: "min", tokens: 1 }
-    ],
-    [DIMENSIONS.FREQUENCY]: [
-      { unit: "Hz", tokens: 1 },
-      { unit: "kHz", tokens: 1 }
-    ],
-    [DIMENSIONS.ACCELERATION]: [
-      { unit: "m/s^2", tokens: 2 }
-    ],
-    [DIMENSIONS.POWER]: [
->>>>
-```
-
-```diff
-<<<<
-    [DIMENSIONS.FORCE]: [
-      { unit: "lb", tokens: 1 },
-      { unit: "kip", tokens: 1 }
-    ],
-    [DIMENSIONS.PRESSURE]: [
-      { unit: "psi", tokens: 1 },
-      { unit: "lb/in^2", tokens: 2 },
-      { unit: "psf", tokens: 1 },
-      { unit: "lb/ft^2", tokens: 2 },
-      { unit: "ksi", tokens: 1 }
-    ],
-    [DIMENSIONS.STRESS]: [
-      { unit: "psi", tokens: 1 },
-      { unit: "lb/in^2", tokens: 2 },
-      { unit: "ksi", tokens: 1 }
-    ],
-    [DIMENSIONS.POWER]: [
-====
-    [DIMENSIONS.FORCE]: [
-      { unit: "lb", tokens: 1 },
-      { unit: "kip", tokens: 1 }
-    ],
-    [DIMENSIONS.PRESSURE]: [
-      { unit: "psi", tokens: 1 },
-      { unit: "lb/in^2", tokens: 2 },
-      { unit: "psf", tokens: 1 },
-      { unit: "lb/ft^2", tokens: 2 },
-      { unit: "ksi", tokens: 1 }
-    ],
-    [DIMENSIONS.STRESS]: [
-      { unit: "psi", tokens: 1 },
-      { unit: "lb/in^2", tokens: 2 },
-      { unit: "ksi", tokens: 1 }
-    ],
-    [DIMENSIONS.MODULUS]: [
-      { unit: "ksi", tokens: 1 },
-      { unit: "psi", tokens: 1 },
-      { unit: "lb/in^2", tokens: 2 }
-    ],
-    [DIMENSIONS.STIFFNESS]: [
-      { unit: "lb/in", tokens: 2 },
-      { unit: "lb/ft", tokens: 2 },
-      { unit: "kip/in", tokens: 2 }
-    ],
-    [DIMENSIONS.TIME]: [
-      { unit: "s", tokens: 1 },
-      { unit: "ms", tokens: 1 },
-      { unit: "min", tokens: 1 }
-    ],
-    [DIMENSIONS.FREQUENCY]: [
-      { unit: "Hz", tokens: 1 },
-      { unit: "kHz", tokens: 1 }
-    ],
-    [DIMENSIONS.ACCELERATION]: [
-      { unit: "ft/s^2", tokens: 2 },
-      { unit: "in/s^2", tokens: 2 }
-    ],
-    [DIMENSIONS.MASS]: [
-      { unit: "lb", tokens: 1 }
-    ],
-    [DIMENSIONS.POWER]: [
->>>>
-```
-
-*(Also add `DIMENSIONS.MASS` to `SI` and spring `COUPLED_VARIABLE_GROUPS`, and pass `meta.dimension` during unit conversion:)*
-
-```diff
-<<<<
-    [DIMENSIONS.ENERGY]: [
-      { unit: "kJ", tokens: 1 },
-      { unit: "J", tokens: 1 },
-      { unit: "kWh", tokens: 1 }
-    ],
-====
-    [DIMENSIONS.MASS]: [
-      { unit: "kg", tokens: 1 },
-      { unit: "g", tokens: 1 }
-    ],
-    [DIMENSIONS.ENERGY]: [
-      { unit: "kJ", tokens: 1 },
-      { unit: "J", tokens: 1 },
-      { unit: "N-m", tokens: 2 },
-      { unit: "kWh", tokens: 1 }
-    ],
->>>>
-```
-
-```diff
-<<<<
-    [DIMENSIONS.ENERGY]: [
-      { unit: "Btu", tokens: 1 }
-    ],
-====
-    [DIMENSIONS.ENERGY]: [
-      { unit: "in-lb", tokens: 2 },
-      { unit: "ft-lb", tokens: 2 },
-      { unit: "Btu", tokens: 1 }
-    ],
->>>>
-```
-
-```diff
-<<<<
-  new Set(["p_n", "p_t", "p_x"]),
-  new Set(["W_t", "F_a", "F_r", "F_N"])
-]);
-====
-  new Set(["p_n", "p_t", "p_x"]),
-  new Set(["W_t", "F_a", "F_r", "F_N"]),
-  new Set(["D_o", "D_i", "D_m", "R_m", "d_w", "FL", "SL", "OL", "delta", "delta_solid"]),
-  new Set(["F_1", "F_2", "F_3", "F_4"]),
-  new Set(["delta_1", "delta_2", "delta_3", "delta_4"]),
-  new Set(["k_1", "k_2", "k_3", "k_4"])
-]);
->>>>
-```
-
-```diff
-<<<<
-    const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-    const canonBag = getUnitAtomBag(canonUnit);
-    const canonVal = S[k];
-    const coherentVal = valueToCoherentBase(canonVal, canonUnit, isDiff);
-
-    const palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
-
-    const validCandidates = palette.filter(p => {
-      const b = getUnitAtomBag(p.unit);
-      return isDimEqual(canonBag.dimMap, b.dimMap);
-    });
-
-    if (validCandidates.length === 0) return;
-
-    const shuffledCandidates = [...validCandidates].sort(() => Math.random() - 0.5);
-    let chosenUnit = null;
-
-    for (const cand of shuffledCandidates) {
-      const candVal = formatValueInUnit(coherentVal, cand.unit, isDiff);
-====
-    const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-    const canonBag = getUnitAtomBag(canonUnit, meta.dimension);
-    const canonVal = S[k];
-    const coherentVal = valueToCoherentBase(canonVal, canonUnit, isDiff, meta.dimension);
-
-    const palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
-
-    const validCandidates = palette.filter(p => {
-      const b = getUnitAtomBag(p.unit, meta.dimension);
-      return isDimEqual(canonBag.dimMap, b.dimMap);
-    });
-
-    if (validCandidates.length === 0) return;
-
-    const shuffledCandidates = [...validCandidates].sort(() => Math.random() - 0.5);
-    let chosenUnit = null;
-
-    for (const cand of shuffledCandidates) {
-      const candVal = formatValueInUnit(coherentVal, cand.unit, isDiff, meta.dimension);
->>>>
-```
-
----
-
-#### 11. Mastery, DAG, Topic Mix, UI & Problem Gen (`masteryId` + dynamic `n`)
-
-**`src/mastery/engine.js`:**
-```diff
-<<<<
-export function getDecayedMastery(eq, topic = null) {
-  if (!eq || !eq.id) return 0;
-
-  const h = masteryState[eq.id];
-====
-export function getDecayedMastery(eq, topic = null) {
-  const key = eq?.masteryId || eq?.id;
-  if (!key) return 0;
-
-  const h = masteryState[key];
->>>>
-```
-
-**`src/core/graph_solver.js`:**
-```diff
-<<<<
-        steps.push({
-          stepIdx,
-          type: "single",
-          targetVar,
-          id: eq.id,
-          eqId: eq.id,
-          eqName: eq.name,
-====
-        steps.push({
-          stepIdx,
-          type: "single",
-          targetVar,
-          id: eq.id,
-          eqId: eq.id,
-          masteryId: eq.masteryId || eq.id,
-          eqName: eq.name,
->>>>
-```
-
-```diff
-<<<<
-  const fadedAncestorEqIds = [];
-  solution.forEach(step => {
-    const isTerminal = terminalSet.has(step.targetVar);
-    const eqObj = { id: step.eqId || step.id, baseFormula: step.baseFormula };
-    const mastery = getMastery(eqObj);
-
-    if (!isTerminal && mastery >= FADING_THRESHOLD) {
-      step.isFaded = true;
-      fadedAncestorEqIds.push(step.eqId || step.id);
-    } else {
-      step.isFaded = false;
-    }
-    step.fadedAncestorEqIds = [...fadedAncestorEqIds];
-  });
-====
-  const fadedAncestorEqIds = [];
-  const fadedSeen = new Set();
-  solution.forEach(step => {
-    const isTerminal = terminalSet.has(step.targetVar);
-    const mId = step.masteryId || step.eqId || step.id;
-    const eqObj = { id: mId, masteryId: mId, baseFormula: step.baseFormula };
-    const mastery = getMastery(eqObj);
-
-    if (!isTerminal && mastery >= FADING_THRESHOLD) {
-      step.isFaded = true;
-      if (!fadedSeen.has(mId)) {
-        fadedSeen.add(mId);
-        fadedAncestorEqIds.push(mId);
-      }
-    } else {
-      step.isFaded = false;
-    }
-    step.fadedAncestorEqIds = [...fadedAncestorEqIds];
-  });
->>>>
-```
-
-**`src/core/problem_gen.js`:**
-```diff
-<<<<
-export function generateProblem(topic, getMastery = () => 0) {
-  const { title, varsDb, relations, createSystem } = topic;
-====
-export function generateProblem(topic, getMastery = () => 0) {
-  let { title, varsDb, relations, createSystem } = topic;
-  if (typeof topic.instantiate === "function" && Array.isArray(topic.countRange)) {
-    const [minN, maxN] = topic.countRange;
-    const n = minN + Math.floor(Math.random() * (maxN - minN + 1));
-    const inst = topic.instantiate(n);
-    varsDb = inst.varsDb;
-    relations = inst.relations;
-    createSystem = inst.createSystem;
-  }
->>>>
-```
-
-```diff
-<<<<
-          if (currentUnit !== targetUnit) {
-            const meta = varsDb[step.targetVar] || {};
-            const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-            const coherentVal = valueToCoherentBase(step.expectedVal, currentUnit, isDiff);
-            const newVal = formatValueInUnit(coherentVal, targetUnit, isDiff);
-            S_neat[step.targetVar] = newVal;
-====
-          if (currentUnit !== targetUnit) {
-            const meta = varsDb[step.targetVar] || {};
-            const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-            const coherentVal = valueToCoherentBase(step.expectedVal, currentUnit, isDiff, meta.dimension);
-            const newVal = formatValueInUnit(coherentVal, targetUnit, isDiff, meta.dimension);
-            S_neat[step.targetVar] = newVal;
->>>>
-```
-
-```diff
-<<<<
-  return {
-    title: problemTitle,
-    statement,
-    solution,
-    solutionSteps: solution,
-    allSteps,
-    givens: path.givens,
-    distractors: path.distractors,
-    system: S_neat,
-    varsDb,
-    topicId: topic.id,
-    hopDistance: path.hopDistance
-  };
-====
-  return {
-    title: problemTitle,
-    statement,
-    solution,
-    solutionSteps: solution,
-    allSteps,
-    givens: path.givens,
-    distractors: path.distractors,
-    system: S_neat,
-    varsDb,
-    relations,
-    topicId: topic.id,
-    hopDistance: path.hopDistance
-  };
->>>>
-```
-
-**`src/core/topic_mix.js`:**
-```diff
-<<<<
-export function topicScore(relations = [], getMastery = () => 0) {
-  let shareSum = 0;
-  let weighted = 0;
-  relations.forEach(rel => {
-    const share = relationShare(rel);
-    shareSum += share;
-    weighted += share * relationWeaknessWeight(getMastery(rel));
-  });
-  return shareSum > 0 ? weighted / shareSum : 0;
-}
-====
-export function topicScore(relations = [], getMastery = () => 0) {
-  let shareSum = 0;
-  let weighted = 0;
-  const seen = new Set();
-  relations.forEach(rel => {
-    const key = rel.masteryId || rel.id;
-    if (key && seen.has(key)) return;
-    if (key) seen.add(key);
-    const share = relationShare(rel);
-    shareSum += share;
-    weighted += share * relationWeaknessWeight(getMastery(rel));
-  });
-  return shareSum > 0 ? weighted / shareSum : 0;
-}
->>>>
-```
-
-**`src/ui/problem_view.js`:**
-```diff
-<<<<
-    if (step.systemEqIds) {
-      step.systemEqIds.forEach(id => recordAttempt(id, true, topicScope));
-    } else {
-      recordAttempt(step.eqId, true, topicScope);
-    }
-====
-    if (step.systemEqIds) {
-      step.systemEqIds.forEach(id => recordAttempt(id, true, topicScope));
-    } else {
-      recordAttempt(step.masteryId || step.eqId, true, topicScope);
-    }
->>>>
-```
-
-```diff
-<<<<
-    if (step.systemEqIds) {
-      step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
-    } else {
-      recordAttempt(step.eqId, false, topicScope);
-    }
-====
-    if (step.systemEqIds) {
-      step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
-    } else {
-      recordAttempt(step.masteryId || step.eqId, false, topicScope);
-    }
->>>>
-```
-
-```diff
-<<<<
-  if (step.systemEqIds) {
-    step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
-  } else {
-    recordAttempt(step.eqId, false, topicScope);
-  }
-====
-  if (step.systemEqIds) {
-    step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
-  } else {
-    recordAttempt(step.masteryId || step.eqId, false, topicScope);
-  }
->>>>
-```
-
-**`src/ui/sidebar_view.js`:**
-```diff
-<<<<
-  const uniqueMap = new Map();
-  rawList.forEach(r => {
-    if (r && r.id && !uniqueMap.has(r.id)) {
-      uniqueMap.set(r.id, r);
-    }
-  });
-====
-  const uniqueMap = new Map();
-  rawList.forEach(r => {
-    const key = r && (r.masteryId || r.id);
-    if (key && !uniqueMap.has(key)) {
-      uniqueMap.set(key, r);
-    }
-  });
->>>>
-```
-
-**`app.js`:**
-```diff
-<<<<
-  currentProblem = generateProblem(topic, masteryFor(topic));
-  renderProblemView(currentProblem, topic.relations, topic.id);
-====
-  currentProblem = generateProblem(topic, masteryFor(topic));
-  renderProblemView(currentProblem, currentProblem.relations || topic.relations, topic.id);
->>>>
-```
-
----
-
-#### 12. `migrate_relations.mjs` (temporary one-shot CLI script — run once in Codespaces, then delete)
-
+FILE: src/topics/machine_design/springs/common/relations.js
 ```javascript
 /**
- * migrate_relations.mjs
- * Temporary deterministic codemod: converts all existing relations.js files under
- * src/topics/ to use defineRelation + compileRelations (drops manual nodes arrays,
- * renames baseFormula -> formula). Delete this file after running!
+ * src/topics/machine_design/springs/common/relations.js
+ * Universal spring physics relations shared across all spring topics.
  */
 
-import fs from "node:fs";
-import path from "node:path";
-import vm from "node:vm";
+import { defineRelation, compileRelations } from "../../../../core/relation_builder.js";
 
-const TOPICS_DIR = path.resolve("src/topics");
-const BUILDER_PATH = path.resolve("src/core/relation_builder.js");
-
-function findRelationFiles(dir) {
-  const results = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "springs") continue;
-      results.push(...findRelationFiles(full));
-    } else if (entry.name.endsWith("relations.js")) {
-      results.push(full);
-    }
-  }
-  return results;
-}
-
-function splitTopLevelArrayItems(arrBody) {
-  const items = [];
-  let depth = 0;
-  let inStr = null;
-  let inLineComment = false;
-  let inBlockComment = false;
-  let start = 0;
-
-  for (let i = 0; i < arrBody.length; i++) {
-    const ch = arrBody[i];
-    const next = arrBody[i + 1];
-
-    if (inLineComment) {
-      if (ch === "\n") inLineComment = false;
-      continue;
-    }
-    if (inBlockComment) {
-      if (ch === "*" && next === "/") { inBlockComment = false; i++; }
-      continue;
-    }
-    if (inStr) {
-      if (ch === "\\") { i++; continue; }
-      if (ch === inStr) inStr = null;
-      continue;
-    }
-    if (ch === "/" && next === "/") { inLineComment = true; i++; continue; }
-    if (ch === "/" && next === "*") { inBlockComment = true; i++; continue; }
-    if (ch === `"` || ch === `'` || ch === "`") { inStr = ch; continue; }
-
-    if (ch === "{" || ch === "[" || ch === "(") depth++;
-    else if (ch === "}" || ch === "]" || ch === ")") depth--;
-    else if (ch === "," && depth === 0) {
-      const slice = arrBody.slice(start, i).trim();
-      if (slice) items.push(slice);
-      start = i + 1;
-    }
-  }
-  const tail = arrBody.slice(start).trim();
-  if (tail) items.push(tail);
-  return items;
-}
-
-function formatSpecObj(obj) {
-  const out = {
-    id: obj.id,
-    name: obj.name,
-    formula: obj.baseFormula || obj.formula
-  };
-  if (obj.canonicalTex) out.canonicalTex = obj.canonicalTex;
-  if (obj.requiredUnits) out.requiredUnits = obj.requiredUnits;
-  if (obj.variants) {
-    out.variants = {};
-    for (const [k, v] of Object.entries(obj.variants)) {
-      const vOut = { formula: v.baseFormula || v.formula };
-      if (v.canonicalTex) vOut.canonicalTex = v.canonicalTex;
-      if (v.requiredUnits) vOut.requiredUnits = v.requiredUnits;
-      out.variants[k] = vOut;
-    }
-  }
-  return `defineRelation(${JSON.stringify(out, null, 2).replace(/\n/g, "\n  ")})`;
-}
-
-let migrated = 0;
-for (const file of findRelationFiles(TOPICS_DIR)) {
-  const raw = fs.readFileSync(file, "utf8");
-  if (raw.includes("compileRelations(")) continue;
-
-  const exportMatch = raw.match(/export const ([A-Za-z0-9_]+)\s*=\s*(?:Object\.freeze\(\s*)?\[/);
-  if (!exportMatch) {
-    console.warn(`Skipped (unrecognized export): ${file}`);
-    continue;
-  }
-
-  const openBracketIdx = raw.indexOf("[", exportMatch.index);
-  let depth = 0, closeBracketIdx = -1, inStr = null;
-  for (let i = openBracketIdx; i < raw.length; i++) {
-    const ch = raw[i];
-    if (inStr) {
-      if (ch === "\\") { i++; continue; }
-      if (ch === inStr) inStr = null;
-      continue;
-    }
-    if (ch === `"` || ch === `'` || ch === "`") { inStr = ch; continue; }
-    if (ch === "[") depth++;
-    else if (ch === "]") {
-      depth--;
-      if (depth === 0) { closeBracketIdx = i; break; }
-    }
-  }
-
-  const arrBody = raw.slice(openBracketIdx + 1, closeBracketIdx);
-  const items = splitTopLevelArrayItems(arrBody);
-  const transformedItems = items.map(chunk => {
-    const cleaned = chunk.replace(/^\s*\/\/.*$/gm, "").trim();
-    if (cleaned.startsWith("...")) return `  ${cleaned}`;
-    const obj = vm.runInNewContext(`(${cleaned})`, {});
-    return `  ${formatSpecObj(obj)}`;
-  });
-
-  let relImport = path.relative(path.dirname(file), BUILDER_PATH).replace(/\\/g, "/");
-  if (!relImport.startsWith(".")) relImport = `./${relImport}`;
-
-  const headerEnd = raw.slice(0, exportMatch.index);
-  const importLine = `import { defineRelation, compileRelations } from "${relImport}";\n`;
-  const hasImports = /^import\s/m.test(headerEnd);
-  const newPrefix = hasImports
-    ? headerEnd.replace(/(import[^\n]+\n)(?![\s\S]*import\s)/, `$1${importLine}`)
-    : `${headerEnd}${importLine}\n`;
-
-  const output = `${newPrefix}export const ${exportMatch[1]} = compileRelations([\n${transformedItems.join(",\n")}\n]);\n`;
-  fs.writeFileSync(file, output.replace(/\r\n/g, "\n"), "utf8");
-  migrated++;
-  console.log(`Migrated: ${path.relative(process.cwd(), file)}`);
-}
-
-console.log(`Done. Migrated ${migrated} file(s). Delete migrate_relations.mjs and run: npm test && npm run audit`);
-```
-
----
-
-#### 13. `README.md` (full drop-in replacement — encapsulated in four backticks)
-
-````markdown
-# BSME Reviewer
-
-A graph-based engineering problem generator, symbolic solver, and spaced-repetition reviewer for Mechanical Engineering board-exam subjects (Machine Design, Air Conditioning / HVAC, and Powerplant Design). Every equation is a node in a graph. The engine chains equations into multi-step problems, checks numerical answers, renders textbook-grade derivations, and models cognitive memory curves using golden-ratio ($\phi$) and Fibonacci decay functions.
-
-- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage`.
-- **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
-- **Test:** `node --test test/run_test.js test/run_hygiene_test.js` (Node 22).
-
----
-
-## 0. Using this file with an AI model
-
-When modifying this repository, prompt the model with:
-
-```text
-You are modifying the BSME Reviewer repository.
-1. Read README.md completely before writing any code. It overrides your defaults.
-2. Always stay in brainstorm mode first: analyze root causes, design general invariants,
-   and confirm alignment. Never write code or emit diffs until given explicit permission
-   to proceed.
-3. Before coding, state: (a) which Hard Rules (section 2) apply, (b) the files you
-   will touch, (c) which tests will prove the change works.
-4. Obey the Engineering Philosophy (section 1): fix root causes, write general invariants,
-   avoid tunnel vision, and never patch symptoms.
-5. Code output convention: When given permission to code, the diff syntax
-   (<<<< ==== >>>>) is the canonical way to present code changes, but strictly only when
-   the resulting diff syntax is shorter in character count than returning the drop-in
-   replacement (that is the tipping point). Documentation (README.md) changes are
-   always returned as a full drop-in replacement.
-6. Run: node --test test/run_test.js test/run_hygiene_test.js
-7. Reply with: files changed, a summary of test output, and anything you could
-   not verify. Do not claim a test passed unless you ran it.
-```
-
----
-
-## 1. Engineering Philosophy: Root Causes over Symptoms
-
-Software engineering in this repository is governed by physical and mathematical principles, not ad-hoc heuristics:
-
-1. **Fix Root Causes, Never Patch Symptoms (Anti-Whack-a-Mole):**
-   When an unexpected value appears, identify the mathematical breakdown at the foundational layer. Never apply per-variable scalar patches, hardcoded string comparison branches, or localized `if (key === '...')` overrides.
-2. **Design for General Invariants (Branchless Mathematics):**
-   Prefer abstract mathematical representations over nested `if` statements. Units are affine metric spaces $(s, o)$ with 7D dimensional vectors. Scale parity, companion resolutions, continued formulas (`...`), and factor-label decompositions must fall out naturally from continuous AST equations, not system-specific switches.
-3. **Avoid Tunnel Vision:**
-   Never evaluate a formula in isolation. Ask: *How does this change affect the solution DAG? How does it behave in a MIXED unit problem? Does the derivation reflect the actual arithmetic performed? Will ancestor equations receive reinforcement?*
-4. **Anti-Pattern Blacklist:**
-   - **No string comparisons for physical scale:** Never do `if (u === "°F")` or `if (sys === "US")` to decide absolute temperature targets. Use affine space definitions.
-   - **No hardcoded conversion constants or rounded duplicates:** Never hardcode `2.205`, `3,412.14`, or bespoke test scale arrays. `definitions.js` and `scales.js` are the Single Source of Truth.
-   - **No per-variable conversion logic:** All unit conversions route through the semantic unit AST and dimensional registry.
-   - **No regex-based syntax assertions on math strings:** Tests must validate structural ASTs, balance, and KaTeX rendering. Do not write catch-all regexes like `!/,/.test()` that falsely reject valid math subscripts like $c_{p,w}$ or $m_{m,w}$.
-   - **No fragmentation of coupled state points:** Thermodynamic states of the same working fluid must never be split across incompatible units.
-   - **No bespoke solvers:** If an equation cannot be solved by `solveDAG` and `isolateVariable`, fix the algebraic graph, never write a hardcoded solver.
-
----
-
-## 2. Hard Rules (Non-Negotiable)
-
-### Math and Formulas
-- **R1. Formulas are nodes.** Equations are declared via the unified relation constructor (`defineRelation` / `compileRelations`); variables are edges derived automatically from the AST. `solveDAG` finds the path dynamically. Never write bespoke "solve for X" functions or hardcoded solution orders.
-- **R2. AST only.** All symbolic operations pass through `src/cas/ast.js`, `src/cas/algebra.js`, and `src/core/relation_builder.js`. No regex rewriting of formulas, no `eval` / `new Function`, no runtime CAS dependencies.
-- **R3. Obey formula language rules (section 5).** Explicit `*`, parenthesised complex exponents, binary AST equality (`=` per edge; multi-`=` and `chain(...)` expand automatically into binary edges). Unary `-`, right-associative `^`, arbitrary angle expressions inside trig functions, and nested `sum(...)` / `prod(...)` / `chain(...)` continued operators are natively supported.
-- **R4. Case-sensitive canonical keys.** Variable keys match `[A-Za-z][A-Za-z0-9_]*` (`P_d`, `D_P1`, `m_cw`). Never lowercase or normalize keys. LaTeX formatting belongs in `symbol`, never in the canonical key.
-
-### Physical Units & Dimensions
-- **R5. Relations are pure physics.** No unit-conversion constants (`25.4`, `1000`, `60`, `3600`, `12`, `1.341`). Coherent base conversions handle scaling automatically.
-- **R6. Declare empirical exceptions.**
-  - Empirical correlations valid only in specific units: declare `requiredUnits: { token: "unit", targetVar: "unit" }`.
-  - Differing mathematical formulations between SI and US: declare `variants.SI` and `variants.US`.
-- **R7. Register every unit.** Every unit string must exist in `src/cas/units/definitions.js`, with dimensions and conversion scales registered across `dimensions.js`, `scales.js`, and `unit_sampler.js`. Unknown units fail validation.
-- **R8. Thermodynamic Temperature Consistency.**
-  - Ideal-gas and isentropic relations requiring absolute temperatures ($T_2 = T_1 r_k^{k-1}$) strictly evaluate in absolute scales ($\text{K}$ in SI, $^\circ\text{R}$ in US).
-  - All state point temperatures of a cycle share an identical unit when appearing as deliverables.
-  - Affine conversions must use exact offsets ($\pm 273.15$, $\pm 459.67$) and map strictly to their natural absolute companion ($^\circ\text{F} \to ^\circ\text{R}$, $^\circ\text{C} \to \text{K}$).
-
-### Topics, Fractal Architecture, and Data Contracts
-- **R9. Ground truth is independent.** `system.js` computes true values by hand with explicit arithmetic. It never calls the solver or unit engine.
-- **R10. `createSystem` contract.** `createSystem({ sys })` accepts `"SI"` or `"US"`, returns `sys`, `_u` (unit map), and `_names`, and provides values for every non-abstract variable in `varsDb`. SI-only topics ignore `sys` but still return `sys: "SI"`. Variadic continued-formula topics default `n` deterministically when `n` is omitted so static validation stays exact.
-- **R11. Globally unique equation IDs** (`eq_<topic>_<name>`), with expanded indexed/continued edges sharing one `masteryId` when they express the same symmetric law across $i = 1 \dots n$.
-- **R12. Fractal composition: share, don't copy.** Folders repeat a self-similar fractal structure: whenever two or more child topics share schemas or relations, extract a `common/` folder at that branch (`index.js`, `schema.js`, `relations.js`) and re-export through `index.js` at every level. Shared equations use the `eq_base_` prefix, and children always import from `../common/index.js`.
-- **R13. Clean schemas.** Zero orphan variables, zero duplicate formulas within a topic, and zero alias collisions across `varsDb` (including indexed expansions `k_1..k_n`).
-- **R14. Honest engineering data.** Every constant, table value, and coefficient must carry a source comment (textbook, equation/table, page).
-
-### Mastery, Direction-Agnostic Graphs & Cognitive Fading
-- **R15. No magic numbers in learning logic.** Use `phi(n)`, `fib(n)`, `FADING_THRESHOLD`, `snapToFibonacci` from `src/mastery/constants.js`.
-- **R16. Variant-aware planning.** Graph reachability calls must receive the active system context: `canSolveTarget(givens, goal, relations, S)`.
-- **R17. Respect the mastery lookup contract.** `getDecayedMastery(eq, topic)` reads `eq.masteryId || eq.id` and `eq.baseFormula`. Steps provide `{ id: step.masteryId || step.eqId || step.id, masteryId: step.masteryId, baseFormula: step.baseFormula }`.
-- **R18. Direction-Agnostic Problem Solving.** Topics define only the physical network (`varsDb`, `relations`, `createSystem`). There are zero hardcoded starting points, fixed givens, or static goal lists. An engineer must be able to solve problems forwards, backwards, or diagonally.
-- **R19. Dynamic Per-Problem Deliverables & Cognitive Fading.** Problem goals are determined dynamically at runtime based on topological distance and mastery level. Mastered intermediate steps ($\text{mastery} \ge \text{FADING THRESHOLD}$) are omitted from statement prompts and **literally hidden** from the interactive solution flow, while the active problem's final deliverable always remains active.
-
-### Derivations & Unit Layout (The Visual Invariants)
-- **R20. Textbook derivations.**
-  - **Native Degree Symbol:** Native `°` only, never `\circ`, `^\circ`, or `^{\circ}`.
-  - **Zero Leading Space in `\text{}`:** Use `\text{kW}`, never `\text{ kW}`.
-  - **Strict `\,` Spacing:** Numbers and variables are separated from units by LaTeX thin spacing (`5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}}`), including inside compound fraction bars. Zero commas before physical units.
-  - **Universal Percent Mirroring:** Percentages render strictly as `\text{\%}` (and `\cancel{\text{\%}}` when cancelled), mirroring all other text units. Never write raw `%`.
-  - **Additive Factoring:** Like-unit sums and differences factor outside parentheses: $(a \pm b) \, \text{unit}$ (e.g. $(10 + 20) \, \text{kW}$). Mismatched terms convert in-situ to the target unit before evaluation—even inside nested denominators such as $\frac{1}{1/k_1 + 1/k_2}$.
-  - **In-Situ Conversion Default:** Unit conversions are placed immediately adjacent to the token being converted by default.
-  - **The Hard 4-Row Fraction Tower Cap:** A compound fraction tower may not exceed 4 vertical visual rows (2 in numerator, 2 in denominator). Stepping down to the main line ($A/B \cdot E/F$) or switching deeply nested unit ratios (`fDepth >= 2`) to inline `\tfrac` occurs *only* to enforce the 4-row cap, or for single-dimension Option B scaling that preserves an intact compound target unit.
-  - **The "Omit 1" Rule:** Never write a coefficient of $1$ before a unit token ($\cfrac{\text{kg}}{2.20462 \, \cancel{\text{lb}}}$, $\cfrac{\text{kW}}{1{,}000 \, \cancel{\text{W}}}$, $\cfrac{\cancel{\text{h}}}{60 \, \cancel{\text{min}}}$).
-  - **Scalar Multiplier Placement:** Scalar multipliers sit outside the unit fraction: $60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$, never $\cfrac{60 \, \cancel{\text{h}}}{\cancel{\text{min}}}$.
-  - **Cancellation Hierarchy:** Wrap the highest possible AST node with `\cancel{}`. Whole-unit cancellation ($\cancel{\cfrac{\text{kJ}}{\text{s}}}$) is canonical; component-level cancellation ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}}$) is used only as fallback when components cancel in separate places.
-- **R21. Specific Energy Notation.** Quantities per unit mass ($\text{kJ/kg}$, $\text{Btu/lb}$) strictly use lowercase symbols ($q_A, q_R, w_{net}, h$), reserving uppercase ($Q, W, P$) for total energy or power.
-- **R22. Number formatting.** Measured values pass through `fmtSigFig` (up to 6 significant figures, max 3 decimal places). Unit conversion scale factors pass through `fmtScale` (6 significant figures without the 3-decimal-place truncation cap).
-
-### AI Collaboration, Testing & Process
-- **R23. Never make a red test invisible.** No renaming, skipping, narrowing globs, loosening tolerances, or deleting tests. Fix the root cause.
-- **R24. Bug fixes ship with regression tests.** Tests that touch mastery use real mastery functions (`recordAttempt`, `getDecayedMastery`), not constant stubs.
-- **R25. Report honestly.** State files changed, test output, and anything that could not be verified.
-- **R26. Brainstorm mode by default.** Always operate in brainstorm mode first (and whenever a question is asked) to analyze root causes, establish mathematical invariants, and verify alignment. Never write code or emit diffs until given explicit permission to proceed.
-- **R27. Canonical diff syntax & tipping point.** When authorized to write code, the diff syntax (`<<<< ==== >>>>`) is the canonical method, strictly when the resulting diff is shorter in character count than returning the drop-in replacement. Documentation (`README.md`) edits are always returned as full drop-in replacements.
-
----
-
-## 3. Architecture
-
-```text
-app.js                       Application shell, 3-tier checklist dropdown, storage & event wiring
-index.html                   DOM structure, KaTeX CDN loader
-styles/                      base.css, components.css, problem.css, modals.css
-src/
-  cas/
-    ast.js                   Lexer, parser (with unary - & right-assoc ^), AST walkers, evalAST
-    algebra.js               isolateVariable (onion peeler + linear-rational factoring)
-    latex.js                 AST to LaTeX serializer with explicit spacing
-    units/
-      definitions.js         AffineScale model, 7D dimensional vectors, BASE_UNITS, unitToCancelledTex
-      scales.js              Single Source of Truth: 6-sig-fig scale computation & factor-label decomposition
-      analysis.js            solveUnitAlgebra: token inspection, 4-row tower enforcement, in-situ cancellations
-      evaluator.js           evaluatePhysicalAST: coherent base evaluation (incl. angles) & empirical target scaling
-  core/
-    relation_builder.js      Unified defineRelation, compileRelations, continued (...) & indexed _i expansion
-    graph_solver.js          solveDAG, canSolveTarget, pruneSolutionPath (cognitive fading & masteryId)
-    problem_gen.js           generateProblem: autonomous graph unrolling, dynamic n instantiation, statement builder
-    unit_sampler.js          40/40/20 distribution, coupled variable coherence, inverse-token probability
-    derivation.js            buildAlignedDerivation: no-comma spacing, additive unit factoring, factor-labels
-    dimensions.js            DIMENSIONS, fmtSigFig, formatGivenValue, cancelUnit, textUnit
-    topic_mix.js             Tournament targeting over multi-topic review pools
-  mastery/                   constants.js (phi, fib), engine.js, storage.js
-  topics/
-    <subject>/
-      index.js               Subject-level export aggregation
-      common/                Shared schemas & eq_base_* relations when 2+ children overlap
-      <subtopic_branch>/     Self-similar fractal branch (index.js, common/, nested leaves)
-      <leaf_topic>/          index.js, schema.js, relations.js, system.js
-test/
-  validator.js               Topic schema, dual-system AST inversion, and numerical fidelity harness
-  run_test.js                Universal property invariants, alien scale detector, derivation rendering
-  run_hygiene_test.js        In-tree dead code, invariants, schema orphans, duplicates, alias collisions
-```
-
----
-
-## 4. Data Contracts
-
-### 4.1 Topic Object (`<topic>/index.js`)
-
-| Field | Required | Type | Meaning |
-|---|---|---|---|
-| `id` | Yes | `string` | Unique identifier; must equal its export key in `<SUBJECT>_TOPICS`. |
-| `title` | Yes | `string` | Dropdown label. |
-| `subject` | Yes | `string` | Dropdown level 1 (e.g. `"Machine Design"`). |
-| `category` | No | `string|null` | Dropdown level 2 subfolder (e.g. `"Springs"`), or `null` if standalone under subject. |
-| `noun` | No | `string` | Reads: "A/An {noun} operates with the following specifications...". |
-| `varsDb` | Yes | `object` | Variable schema dictionary (section 4.2). |
-| `relations` | Yes | `Array` | Compiled array of relation objects via `compileRelations` (section 4.3). |
-| `createSystem` | Yes | `Function` | Ground truth generator: `({ sys }) => SystemState` (section 4.4). |
-| `countRange` | No | `[number, number]` | Optional `[minN, maxN]` for variadic continued-formula topics. |
-| `instantiate` | No | `Function` | `(n) => { varsDb, relations, createSystem }` for dynamic `n` sampling. |
-
-Export the topic frozen: `export const myTopic = Object.freeze({...});`.
-
-### 4.2 `varsDb` Entry (incl. Indexed `_i` Templates)
-
-```javascript
-"T_2": {
-  name: "Temperature after Compression",
-  symbol: "T_2",
-  dimension: DIMENSIONS.TEMPERATURE,
-  unit: "K",
-  nameAliases: ["Temperature after Compression", "State 2 Temperature", "Discharge Temp"],
-  symbolAliases: ["T_2", "T_c"],
-  aliases: ["Temperature after Compression", "Discharge Temperature", "T_2"]
-},
-// Indexed variable template expanded via expandIndexedVarsDb(template, n):
-"k_i": {
-  name: "Spring {i} Stiffness",
-  symbol: "k_{i}",
-  dimension: DIMENSIONS.STIFFNESS,
-  unit: "N/mm",
-  aliases: ["Spring {i} Stiffness", "Spring {i} Rate"]
-}
-```
-
-- `dimension`: One of `DIMENSIONS.*` (`LENGTH`, `FORCE`, `STIFFNESS`, `PRESSURE`, `STRESS`, `MODULUS`, `POWER`, `TEMPERATURE`, `TIME`, `FREQUENCY`, `ACCELERATION`, etc.).
-- `unit`: Registered unit string from `definitions.js`.
-- `nameAliases` / `symbolAliases`: Pools sampled at runtime for statement variety while derivations maintain canonical notation.
-- `isConstant`: Tags fundamental physical constants (e.g. $c_{pa}$, $c_{pw}$, $E$, $g$) for recall-mode omission at high mastery.
-- `isInteger`: Answer checking uses $\pm 0.5$ tolerance and the neatness pass rounds to integer.
-- `isAbstract`: Tags category parents (e.g. `D_P`, `T`); exempt from orphan audits.
-
-### 4.3 Unified Relation Specification (`defineRelation` / `compileRelations`)
-
-All relations are constructed through `defineRelation` and flattened with `compileRelations`. `nodes` is derived automatically from the AST, and `canonicalTex` is auto-generated from the AST when omitted:
-
-```javascript
-export const MY_RELATIONS = compileRelations([
-  // 1. Standard equation (nodes & canonicalTex auto-derived)
+export const SPRING_BASE_RELATIONS = compileRelations([
   defineRelation({
-    id: "eq_<topic>_power_flow",
-    name: "Power from Mass Flow and Work",
-    canonicalTex: "P = \\dot{m} w_{net}",
-    formula: "P = m_flow * w_net"
-  }),
-
-  // 2. Multi-"=" chain (expands into distinct binary DAG edges)
-  defineRelation({
-    id: "eq_<topic>_lengths",
-    name: "Spring Length Relations",
-    formula: "FL = SL + delta_solid = OL + delta"
-  }),
-
-  // 3. Continued / nested pattern operators (sum, prod, chain) & indexed _i laws
-  defineRelation({
-    id: "eq_<topic>_series_k",
-    name: "Equivalent Stiffness (Series)",
-    formula: "1 / k_T = sum(1 / k_i)"          // Nested e.g. "k_T = 1 / sum(1 / k_i)" also supported
+    id: "eq_base_spring_rate",
+    name: "Hooke's Law Spring Rate",
+    canonicalTex: "k = \\frac{F}{\\delta}",
+    formula: "k = F / delta"
   }),
   defineRelation({
-    id: "eq_<topic>_series_force",
-    name: "Force Equality (Series)",
-    formula: "F_T = chain(F_i)"               // Renders F_T = F_1 = F_2 = ... = F_n; shares masteryId
+    id: "eq_base_spring_energy_f_delta",
+    name: "Spring Potential Energy (Force-Deflection)",
+    canonicalTex: "SPE = \\frac{1}{2} F \\delta",
+    formula: "SPE = 0.5 * F * delta"
   }),
   defineRelation({
-    id: "eq_<topic>_element_rate",
-    name: "Individual Spring Rate",
-    formula: "F_i = k_i * delta_i"            // Instantiates i=1..n edges sharing one masteryId
-  }),
-
-  // 4. SI / US variants and empirical requiredUnits
-  defineRelation({
-    id: "eq_<topic>_bending_stress",
-    name: "Tooth Bending Stress",
-    formula: "s = W_t / (b * m * Y)",
-    variants: {
-      SI: { canonicalTex: "s = \\frac{F_t}{b m Y}", formula: "s = W_t / (b * m * Y)" },
-      US: { canonicalTex: "s = \\frac{F_t P_d}{b Y}", formula: "s = (W_t * P_d) / (b * Y)" }
-    }
+    id: "eq_base_spring_energy_k_delta",
+    name: "Spring Potential Energy (Stiffness-Deflection)",
+    canonicalTex: "SPE = \\frac{1}{2} k \\delta^2",
+    formula: "SPE = 0.5 * k * (delta^2)"
   })
 ]);
 ```
 
-### 4.4 `createSystem({ sys })` Contract
-
+FILE: src/topics/machine_design/springs/common/index.js
 ```javascript
-export function createMyTopicSystem({ sys = "SI" } = {}) {
+/**
+ * src/topics/machine_design/springs/common/index.js
+ * Fractal barrel export for common spring schemas and relations.
+ */
+
+export * from "./schema.js";
+export * from "./relations.js";
+```
+
+FILE: src/topics/machine_design/springs/helical_coil/schema.js
+```javascript
+/**
+ * src/topics/machine_design/springs/helical_coil/schema.js
+ * Round-wire helical coil spring schema (Lecture Video sections 1-4).
+ */
+
+import { SPRING_BASE_VARS } from "../common/index.js";
+import { DIMENSIONS } from "../../../../core/dimensions.js";
+
+export const HELICAL_COIL_VARS_DB = Object.freeze({
+  ...SPRING_BASE_VARS,
+
+  // Diameters & Spring Index
+  "D_m": {
+    name: "Mean Coil Diameter",
+    symbol: "D_m",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Mean Coil Diameter", "Mean Spring Diameter", "Pitch Diameter"],
+    symbolAliases: ["D_m", "D"],
+    aliases: ["Mean Coil Diameter", "Mean Spring Diameter", "Pitch Diameter", "D_m"]
+  },
+  "D_o": {
+    name: "Outer Diameter",
+    symbol: "D_o",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Outer Diameter", "Outside Diameter", "External Diameter"],
+    symbolAliases: ["D_o", "OD"],
+    aliases: ["Outer Diameter", "Outside Diameter", "External Diameter", "D_o", "OD"]
+  },
+  "D_i": {
+    name: "Inner Diameter",
+    symbol: "D_i",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Inner Diameter", "Inside Diameter", "Internal Diameter"],
+    symbolAliases: ["D_i", "ID"],
+    aliases: ["Inner Diameter", "Inside Diameter", "Internal Diameter", "D_i", "ID"]
+  },
+  "R_m": {
+    name: "Mean Coil Radius",
+    symbol: "R_m",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Mean Coil Radius", "Mean Radius"],
+    symbolAliases: ["R_m", "R"],
+    aliases: ["Mean Coil Radius", "Mean Radius", "R_m"]
+  },
+  "d_w": {
+    name: "Wire Diameter",
+    symbol: "d_w",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Wire Diameter", "Spring Wire Diameter"],
+    symbolAliases: ["d_w", "d"],
+    aliases: ["Wire Diameter", "Spring Wire Diameter", "d_w", "d"]
+  },
+  "C": {
+    name: "Spring Index",
+    symbol: "C",
+    dimension: DIMENSIONS.DIMENSIONLESS,
+    unit: "dimless",
+    nameAliases: ["Spring Index", "Coil Index"],
+    symbolAliases: ["C"],
+    aliases: ["Spring Index", "Coil Index", "C"]
+  },
+
+  // Pitch, Helix Angle & Developed Length
+  "p": {
+    name: "Coil Pitch",
+    symbol: "p",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Coil Pitch", "Pitch between Coils"],
+    symbolAliases: ["p"],
+    aliases: ["Coil Pitch", "Pitch between Coils", "p"]
+  },
+  "alpha": {
+    name: "Pitch Angle",
+    symbol: "\\alpha",
+    dimension: DIMENSIONS.ANGLE,
+    unit: "°",
+    nameAliases: ["Pitch Angle", "Helix Pitch Angle", "Lead Angle"],
+    symbolAliases: ["\\alpha", "\\lambda"],
+    aliases: ["Pitch Angle", "Helix Pitch Angle", "Lead Angle", "alpha"]
+  },
+  "L_wire": {
+    name: "Active Wire Length",
+    symbol: "L",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Active Wire Length", "Developed Wire Length", "Total Coil Length"],
+    symbolAliases: ["L", "l_w"],
+    aliases: ["Active Wire Length", "Developed Wire Length", "Total Coil Length", "L_wire", "L"]
+  },
+
+  // Coil Counts & End Connection Factors
+  "n_e": {
+    name: "Active Coils",
+    symbol: "n_e",
+    dimension: DIMENSIONS.COUNT,
+    unit: "dimless",
+    isInteger: false,
+    nameAliases: ["Active Coils", "Effective Number of Coils", "Active Turns"],
+    symbolAliases: ["n_e", "n"],
+    aliases: ["Active Coils", "Effective Number of Coils", "Active Turns", "n_e", "n"]
+  },
+  "n_a": {
+    name: "Total Coils",
+    symbol: "n_a",
+    dimension: DIMENSIONS.COUNT,
+    unit: "dimless",
+    isInteger: false,
+    nameAliases: ["Total Coils", "Actual Coils", "Total Number of Turns"],
+    symbolAliases: ["n_a", "N_t"],
+    aliases: ["Total Coils", "Actual Coils", "Total Number of Turns", "n_a"]
+  },
+  "n_dead": {
+    name: "Inactive Coils",
+    symbol: "n_{dead}",
+    dimension: DIMENSIONS.COUNT,
+    unit: "dimless",
+    isInteger: true,
+    nameAliases: ["Inactive Coils", "Dead Coils", "End Coils"],
+    symbolAliases: ["n_{dead}"],
+    aliases: ["Inactive Coils", "Dead Coils", "End Coils", "n_dead"]
+  },
+  "k_end": {
+    name: "End Connection Offset",
+    symbol: "k_{end}",
+    dimension: DIMENSIONS.COUNT,
+    unit: "dimless",
+    isInteger: true,
+    nameAliases: ["End Connection Offset", "End Factor"],
+    symbolAliases: ["k_{end}"],
+    aliases: ["End Connection Offset", "End Factor", "k_end"]
+  },
+
+  // Stress & Correction Factors
+  "S_f": {
+    name: "Torsional Shear Stress",
+    symbol: "S_f",
+    dimension: DIMENSIONS.STRESS,
+    unit: "MPa",
+    nameAliases: ["Torsional Shear Stress", "Maximum Shear Stress", "Corrected Shear Stress"],
+    symbolAliases: ["S_f", "\\tau", "\\tau_{max}"],
+    aliases: ["Torsional Shear Stress", "Maximum Shear Stress", "Corrected Shear Stress", "S_f", "\\tau"]
+  },
+  "G": {
+    name: "Modulus of Rigidity",
+    symbol: "G",
+    dimension: DIMENSIONS.MODULUS,
+    unit: "GPa",
+    isConstant: true,
+    display: 80,
+    nameAliases: ["Modulus of Rigidity", "Shear Modulus", "Torsional Modulus"],
+    symbolAliases: ["G"],
+    aliases: ["Modulus of Rigidity", "Shear Modulus", "Torsional Modulus", "G"]
+  },
+  "K_w": {
+    name: "Wahl Factor",
+    symbol: "K_w",
+    dimension: DIMENSIONS.DIMENSIONLESS,
+    unit: "dimless",
+    nameAliases: ["Wahl Factor", "Wahl Correction Factor", "Stress Concentration Factor"],
+    symbolAliases: ["K_w", "W"],
+    aliases: ["Wahl Factor", "Wahl Correction Factor", "Stress Concentration Factor", "K_w"]
+  },
+  "K_b": {
+    name: "Bergsträsser Factor",
+    symbol: "K_b",
+    dimension: DIMENSIONS.DIMENSIONLESS,
+    unit: "dimless",
+    nameAliases: ["Bergsträsser Factor", "Bergstrasser Factor"],
+    symbolAliases: ["K_b"],
+    aliases: ["Bergsträsser Factor", "Bergstrasser Factor", "K_b"]
+  },
+  "K_s": {
+    name: "Direct Shear Factor",
+    symbol: "K_s",
+    dimension: DIMENSIONS.DIMENSIONLESS,
+    unit: "dimless",
+    nameAliases: ["Direct Shear Factor", "Shear Stress Factor"],
+    symbolAliases: ["K_s"],
+    aliases: ["Direct Shear Factor", "Shear Stress Factor", "K_s"]
+  },
+  "K_c": {
+    name: "Curvature Correction Factor",
+    symbol: "K_c",
+    dimension: DIMENSIONS.DIMENSIONLESS,
+    unit: "dimless",
+    nameAliases: ["Curvature Correction Factor", "Curvature Factor"],
+    symbolAliases: ["K_c"],
+    aliases: ["Curvature Correction Factor", "Curvature Factor", "K_c"]
+  },
+
+  // Length Relations
+  "FL": {
+    name: "Free Length",
+    symbol: "FL",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Free Length", "Unloaded Length", "Initial Free Height"],
+    symbolAliases: ["FL", "L_0", "L_f"],
+    aliases: ["Free Length", "Unloaded Length", "Initial Free Height", "FL", "L_f"]
+  },
+  "SL": {
+    name: "Solid Length",
+    symbol: "SL",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Solid Length", "Solid Height", "Compressed Solid Height"],
+    symbolAliases: ["SL", "L_s"],
+    aliases: ["Solid Length", "Solid Height", "Compressed Solid Height", "SL", "L_s"]
+  },
+  "OL": {
+    name: "Operating Length",
+    symbol: "OL",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Operating Length", "Compressed Length", "Operating Height"],
+    symbolAliases: ["OL", "L_{op}"],
+    aliases: ["Operating Length", "Compressed Length", "Operating Height", "OL"]
+  },
+  "delta_solid": {
+    name: "Deflection to Solid",
+    symbol: "\\delta_{solid}",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Deflection to Solid", "Solid Deflection", "Maximum Deflection"],
+    symbolAliases: ["\\delta_{solid}", "\\delta_s"],
+    aliases: ["Deflection to Solid", "Solid Deflection", "Maximum Deflection", "delta_solid"]
+  },
+
+  // Dual-Load Calibration States
+  "F_1": {
+    name: "Initial Load",
+    symbol: "F_1",
+    dimension: DIMENSIONS.FORCE,
+    unit: "N",
+    nameAliases: ["Initial Load", "Minimum Operating Load", "Load 1"],
+    symbolAliases: ["F_1", "P_1"],
+    aliases: ["Initial Load", "Minimum Operating Load", "Load 1", "F_1"]
+  },
+  "F_2": {
+    name: "Final Load",
+    symbol: "F_2",
+    dimension: DIMENSIONS.FORCE,
+    unit: "N",
+    nameAliases: ["Final Load", "Maximum Operating Load", "Load 2"],
+    symbolAliases: ["F_2", "P_2"],
+    aliases: ["Final Load", "Maximum Operating Load", "Load 2", "F_2"]
+  },
+  "delta_1": {
+    name: "Initial Deflection",
+    symbol: "\\delta_1",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Initial Deflection", "Deflection 1"],
+    symbolAliases: ["\\delta_1", "y_1"],
+    aliases: ["Initial Deflection", "Deflection 1", "delta_1"]
+  },
+  "delta_2": {
+    name: "Final Deflection",
+    symbol: "\\delta_2",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Final Deflection", "Deflection 2"],
+    symbolAliases: ["\\delta_2", "y_2"],
+    aliases: ["Final Deflection", "Deflection 2", "delta_2"]
+  },
+  "dF": {
+    name: "Load Change",
+    symbol: "\\Delta F",
+    dimension: DIMENSIONS.FORCE,
+    unit: "N",
+    nameAliases: ["Load Change", "Load Difference", "Force Increment"],
+    symbolAliases: ["\\Delta F", "\\Delta P"],
+    aliases: ["Load Change", "Load Difference", "Force Increment", "dF"]
+  },
+  "ddelta": {
+    name: "Deflection Change",
+    symbol: "\\Delta \\delta",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Deflection Change", "Deflection Difference"],
+    symbolAliases: ["\\Delta \\delta", "\\Delta y"],
+    aliases: ["Deflection Change", "Deflection Difference", "ddelta"]
+  },
+  "OL_1": {
+    name: "Initial Operating Length",
+    symbol: "OL_1",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Initial Operating Length", "Length at Load 1"],
+    symbolAliases: ["OL_1", "L_1"],
+    aliases: ["Initial Operating Length", "Length at Load 1", "OL_1"]
+  },
+  "OL_2": {
+    name: "Final Operating Length",
+    symbol: "OL_2",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Final Operating Length", "Length at Load 2"],
+    symbolAliases: ["OL_2", "L_2"],
+    aliases: ["Final Operating Length", "Length at Load 2", "OL_2"]
+  }
+});
+```
+
+FILE: src/topics/machine_design/springs/helical_coil/relations.js
+```javascript
+/**
+ * src/topics/machine_design/springs/helical_coil/relations.js
+ * Invertible Helical Coil Spring relations (Lecture Video sections 1-4).
+ */
+
+import { defineRelation, compileRelations } from "../../../../core/relation_builder.js";
+import { SPRING_BASE_RELATIONS } from "../common/index.js";
+
+export const HELICAL_COIL_RELATIONS = compileRelations([
+  ...SPRING_BASE_RELATIONS,
+
+  // Geometric Relations
+  defineRelation({
+    id: "eq_spring_dm_avg",
+    name: "Mean Diameter from Outer & Inner",
+    canonicalTex: "D_m = \\frac{D_o + D_i}{2}",
+    formula: "D_m = (D_o + D_i) / 2"
+  }),
+  defineRelation({
+    id: "eq_spring_dm_outer",
+    name: "Mean Diameter from Outer",
+    canonicalTex: "D_m = D_o - d_w",
+    formula: "D_m = D_o - d_w"
+  }),
+  defineRelation({
+    id: "eq_spring_dm_inner",
+    name: "Mean Diameter from Inner",
+    canonicalTex: "D_m = D_i + d_w",
+    formula: "D_m = D_i + d_w"
+  }),
+  defineRelation({
+    id: "eq_spring_dm_radius",
+    name: "Mean Diameter from Mean Radius",
+    canonicalTex: "D_m = 2 R_m",
+    formula: "D_m = 2 * R_m"
+  }),
+  defineRelation({
+    id: "eq_spring_index",
+    name: "Spring Index Definition",
+    canonicalTex: "C = \\frac{D_m}{d_w}",
+    formula: "C = D_m / d_w"
+  }),
+  defineRelation({
+    id: "eq_spring_pitch_angle",
+    name: "Helix Pitch Angle",
+    canonicalTex: "\\tan\\alpha = \\frac{p}{\\pi D_m}",
+    formula: "tan(alpha) = p / (pi * D_m)"
+  }),
+  defineRelation({
+    id: "eq_spring_wire_length",
+    name: "Active Wire Length",
+    canonicalTex: "L = \\pi D_m n_e",
+    formula: "L_wire = pi * D_m * n_e"
+  }),
+
+  // Stress Factors (Wahl, Bergsträsser, Direct Shear, Curvature)
+  defineRelation({
+    id: "eq_spring_wahl_factor",
+    name: "Wahl Stress Factor",
+    canonicalTex: "K_w = \\frac{4C - 1}{4C - 4} + \\frac{0.615}{C}",
+    formula: "K_w = (4 * C - 1) / (4 * C - 4) + 0.615 / C"
+  }),
+  defineRelation({
+    id: "eq_spring_bergstrasser",
+    name: "Bergsträsser Factor",
+    canonicalTex: "K_b = \\frac{4C + 2}{4C - 3}",
+    formula: "K_b = (4 * C + 2) / (4 * C - 3)"
+  }),
+  defineRelation({
+    id: "eq_spring_direct_shear",
+    name: "Direct Shear Factor",
+    canonicalTex: "K_s = 1 + \\frac{1}{2C}",
+    formula: "K_s = 1 + 1 / (2 * C)"
+  }),
+  defineRelation({
+    id: "eq_spring_curvature_factor",
+    name: "Curvature Correction Factor",
+    canonicalTex: "K_c = \\frac{K_w}{K_s}",
+    formula: "K_c = K_w / K_s"
+  }),
+
+  // Shear Stress (Dm and C variants)
+  defineRelation({
+    id: "eq_spring_stress_dm",
+    name: "Torsional Shear Stress (Mean Diameter)",
+    canonicalTex: "S_f = \\frac{8 K_w F D_m}{\\pi d_w^3}",
+    formula: "S_f = (8 * K_w * F * D_m) / (pi * (d_w^3))"
+  }),
+  defineRelation({
+    id: "eq_spring_stress_c",
+    name: "Torsional Shear Stress (Spring Index)",
+    canonicalTex: "S_f = \\frac{8 K_w F C}{\\pi d_w^2}",
+    formula: "S_f = (8 * K_w * F * C) / (pi * (d_w^2))"
+  }),
+
+  // Deflection (Dm and C variants)
+  defineRelation({
+    id: "eq_spring_deflection_dm",
+    name: "Spring Deflection (Mean Diameter)",
+    canonicalTex: "\\delta = \\frac{8 F D_m^3 n_e}{G d_w^4}",
+    formula: "delta = (8 * F * (D_m^3) * n_e) / (G * (d_w^4))"
+  }),
+  defineRelation({
+    id: "eq_spring_deflection_c",
+    name: "Spring Deflection (Spring Index)",
+    canonicalTex: "\\delta = \\frac{8 F C^3 n_e}{G d_w}",
+    formula: "delta = (8 * F * (C^3) * n_e) / (G * d_w)"
+  }),
+
+  // Length Relations
+  defineRelation({
+    id: "eq_spring_fl_solid",
+    name: "Free Length from Solid Length",
+    canonicalTex: "FL = SL + \\delta_{solid}",
+    formula: "FL = SL + delta_solid"
+  }),
+  defineRelation({
+    id: "eq_spring_fl_operating",
+    name: "Free Length from Operating Length",
+    canonicalTex: "FL = OL + \\delta",
+    formula: "FL = OL + delta"
+  }),
+  defineRelation({
+    id: "eq_spring_solid_length",
+    name: "Solid Length from Coils",
+    canonicalTex: "SL = (n_e + k_{end}) d_w",
+    formula: "SL = (n_e + k_end) * d_w"
+  }),
+  defineRelation({
+    id: "eq_spring_free_length_pitch",
+    name: "Free Length from Pitch",
+    canonicalTex: "FL = n_e p + k_{end} d_w",
+    formula: "FL = n_e * p + k_end * d_w"
+  }),
+  defineRelation({
+    id: "eq_spring_active_total_coils",
+    name: "Actual Coils from Active and Dead",
+    canonicalTex: "n_a = n_e + n_{dead}",
+    formula: "n_a = n_e + n_dead"
+  }),
+
+  // Multi-Load Dual States
+  defineRelation({
+    id: "eq_spring_load_change",
+    name: "Force Increment",
+    canonicalTex: "\\Delta F = F_2 - F_1",
+    formula: "dF = F_2 - F_1"
+  }),
+  defineRelation({
+    id: "eq_spring_deflection_change",
+    name: "Deflection Increment",
+    canonicalTex: "\\Delta \\delta = \\delta_2 - \\delta_1",
+    formula: "ddelta = delta_2 - delta_1"
+  }),
+  defineRelation({
+    id: "eq_spring_rate_increment",
+    name: "Spring Rate from Increments",
+    canonicalTex: "k = \\frac{\\Delta F}{\\Delta \\delta}",
+    formula: "k = dF / ddelta"
+  }),
+  defineRelation({
+    id: "eq_spring_rate_state1",
+    name: "Spring Rate at State 1",
+    canonicalTex: "k = \\frac{F_1}{\\delta_1}",
+    formula: "k = F_1 / delta_1"
+  }),
+  defineRelation({
+    id: "eq_spring_rate_state2",
+    name: "Spring Rate at State 2",
+    canonicalTex: "k = \\frac{F_2}{\\delta_2}",
+    formula: "k = F_2 / delta_2"
+  }),
+  defineRelation({
+    id: "eq_spring_ol1",
+    name: "Operating Length 1",
+    canonicalTex: "OL_1 = FL - \\delta_1",
+    formula: "OL_1 = FL - delta_1"
+  }),
+  defineRelation({
+    id: "eq_spring_ol2",
+    name: "Operating Length 2",
+    canonicalTex: "OL_2 = FL - \\delta_2",
+    formula: "OL_2 = FL - delta_2"
+  }),
+  defineRelation({
+    id: "eq_spring_ddelta_ol",
+    name: "Deflection Increment from Operating Lengths",
+    canonicalTex: "\\Delta \\delta = OL_1 - OL_2",
+    formula: "ddelta = OL_1 - OL_2"
+  })
+]);
+```
+
+FILE: src/topics/machine_design/springs/helical_coil/system.js
+```javascript
+/**
+ * src/topics/machine_design/springs/helical_coil/system.js
+ * Independent ground-truth generator for helical coil springs.
+ */
+
+import { HELICAL_COIL_VARS_DB } from "./schema.js";
+
+export function createHelicalCoilSystem({ sys = "SI" } = {}) {
   const isUS = sys === "US";
 
-  const m_flow = isUS ? 50.0 : 25.0;        // lb/s vs kg/s
-  const w_net = isUS ? 120.0 : 280.0;       // Btu/lb vs kJ/kg
-  const P = m_flow * w_net;                 // Pure hand arithmetic
+  // End connection: standard Squared & Ground (n_dead = 2, k_end = 2)
+  const n_dead = 2;
+  const k_end = 2;
 
-  const _names = {};
-  for (const [k, meta] of Object.entries(MY_TOPIC_VARS_DB)) {
-    _names[k] = meta.nameAliases?.[0] || meta.name;
+  let d_w, C, D_m, R_m, D_o, D_i, p, n_e, n_a, SL, FL, delta_solid, alpha, L_wire;
+  let K_w, K_b, K_s, K_c, G, k, F, delta, OL, S_f, SPE;
+  let F_1, F_2, dF, delta_1, delta_2, ddelta, OL_1, OL_2;
+  let _u;
+
+  if (isUS) {
+    d_w = 0.25; // in
+    C = 8.0;
+    D_m = C * d_w; // 2.0 in
+    R_m = D_m / 2; // 1.0 in
+    D_o = D_m + d_w; // 2.25 in
+    D_i = D_m - d_w; // 1.75 in
+    p = 0.6; // in
+    n_e = 10.0;
+    n_a = n_e + n_dead; // 12.0
+    SL = (n_e + k_end) * d_w; // 3.0 in
+    FL = n_e * p + k_end * d_w; // 6.5 in
+    delta_solid = FL - SL; // 3.5 in
+    alpha = Math.atan(p / (Math.PI * D_m)) * (180 / Math.PI); // deg
+    L_wire = Math.PI * D_m * n_e; // 62.8319 in
+
+    K_w = (4 * C - 1) / (4 * C - 4) + 0.615 / C; // ~1.184018
+    K_b = (4 * C + 2) / (4 * C - 3); // ~1.172414
+    K_s = 1 + 1 / (2 * C); // 1.0625
+    K_c = K_w / K_s; // ~1.11437
+
+    G = 11.5e6; // psi
+    k = (G * d_w) / (8 * Math.pow(C, 3) * n_e); // ~70.19043 lb/in
+    F = 100.0; // lb
+    delta = F / k; // ~1.4247 in
+    OL = FL - delta; // ~5.0753 in
+    S_f = (8 * K_w * F * C) / (Math.PI * Math.pow(d_w, 2)); // ~38590.2 psi
+    SPE = 0.5 * F * delta; // in-lb
+
+    F_1 = 50.0;
+    F_2 = 120.0;
+    dF = F_2 - F_1;
+    delta_1 = F_1 / k;
+    delta_2 = F_2 / k;
+    ddelta = delta_2 - delta_1;
+    OL_1 = FL - delta_1;
+    OL_2 = FL - delta_2;
+
+    _u = {
+      F: "lb", delta: "in", k: "lb/in", SPE: "in-lb",
+      D_m: "in", D_o: "in", D_i: "in", R_m: "in", d_w: "in", C: "dimless",
+      p: "in", alpha: "°", L_wire: "in",
+      n_e: "dimless", n_a: "dimless", n_dead: "dimless", k_end: "dimless",
+      S_f: "psi", G: "psi", K_w: "dimless", K_b: "dimless", K_s: "dimless", K_c: "dimless",
+      FL: "in", SL: "in", OL: "in", delta_solid: "in",
+      F_1: "lb", F_2: "lb", dF: "lb",
+      delta_1: "in", delta_2: "in", ddelta: "in",
+      OL_1: "in", OL_2: "in"
+    };
+  } else {
+    d_w = 10.0; // mm
+    C = 8.0;
+    D_m = C * d_w; // 80 mm
+    R_m = D_m / 2; // 40 mm
+    D_o = D_m + d_w; // 90 mm
+    D_i = D_m - d_w; // 70 mm
+    p = 25.0; // mm
+    n_e = 10.0;
+    n_a = n_e + n_dead; // 12.0
+    SL = (n_e + k_end) * d_w; // 120 mm
+    FL = n_e * p + k_end * d_w; // 270 mm
+    delta_solid = FL - SL; // 150 mm
+    alpha = Math.atan(p / (Math.PI * D_m)) * (180 / Math.PI); // deg
+    L_wire = Math.PI * D_m * n_e; // 2513.27 mm
+
+    K_w = (4 * C - 1) / (4 * C - 4) + 0.615 / C; // ~1.184018
+    K_b = (4 * C + 2) / (4 * C - 3); // ~1.172414
+    K_s = 1 + 1 / (2 * C); // 1.0625
+    K_c = K_w / K_s; // ~1.11437
+
+    G = 80.0; // GPa
+    // In mm and N: G = 80000 N/mm^2
+    const G_mmpa = G * 1000;
+    k = (G_mmpa * d_w) / (8 * Math.pow(C, 3) * n_e); // 19.53125 N/mm
+    F = 500.0; // N
+    delta = F / k; // 25.6 mm
+    OL = FL - delta; // 244.4 mm
+    S_f = (8 * K_w * F * C) / (Math.PI * Math.pow(d_w, 2)); // ~120.6 MPa
+    SPE = (0.5 * F * delta) / 1000; // J (N-m)
+
+    F_1 = 300.0;
+    F_2 = 600.0;
+    dF = F_2 - F_1;
+    delta_1 = F_1 / k;
+    delta_2 = F_2 / k;
+    ddelta = delta_2 - delta_1;
+    OL_1 = FL - delta_1;
+    OL_2 = FL - delta_2;
+
+    _u = {
+      F: "N", delta: "mm", k: "N/mm", SPE: "J",
+      D_m: "mm", D_o: "mm", D_i: "mm", R_m: "mm", d_w: "mm", C: "dimless",
+      p: "mm", alpha: "°", L_wire: "mm",
+      n_e: "dimless", n_a: "dimless", n_dead: "dimless", k_end: "dimless",
+      S_f: "MPa", G: "GPa", K_w: "dimless", K_b: "dimless", K_s: "dimless", K_c: "dimless",
+      FL: "mm", SL: "mm", OL: "mm", delta_solid: "mm",
+      F_1: "N", F_2: "N", dF: "N",
+      delta_1: "mm", delta_2: "mm", ddelta: "mm",
+      OL_1: "mm", OL_2: "mm"
+    };
   }
 
-  const _u = isUS
-    ? { m_flow: "lb/s", w_net: "Btu/lb", P: "Btu/s" }
-    : { m_flow: "kg/s", w_net: "kJ/kg", P: "kW" };
+  const _names = {};
+  for (const [k_key, meta] of Object.entries(HELICAL_COIL_VARS_DB)) {
+    _names[k_key] = meta.nameAliases?.[0] || meta.name;
+  }
 
-  return { sys, m_flow, w_net, P, _names, _u };
+  return {
+    sys,
+    F, delta, k, SPE,
+    D_m, D_o, D_i, R_m, d_w, C, p, alpha, L_wire,
+    n_e, n_a, n_dead, k_end,
+    S_f, G, K_w, K_b, K_s, K_c,
+    FL, SL, OL, delta_solid,
+    F_1, F_2, dF, delta_1, delta_2, ddelta, OL_1, OL_2,
+    _names, _u
+  };
 }
 ```
 
----
+FILE: src/topics/machine_design/springs/helical_coil/index.js
+```javascript
+/**
+ * src/topics/machine_design/springs/helical_coil/index.js
+ * Round-wire Helical Coil Spring Topic.
+ */
 
-## 5. Formula Language (`formula`)
+import { HELICAL_COIL_VARS_DB } from "./schema.js";
+import { HELICAL_COIL_RELATIONS } from "./relations.js";
+import { createHelicalCoilSystem } from "./system.js";
 
-The parser grammar enforces standard infix mathematical notation:
-- Numbers, canonical variable keys, operators `+ - * / ^` (with right-associative `^` and unary `-`), parentheses.
-- Functions: `sin cos tan asin acos atan sqrt exp ln log abs`, plus continued constructors `sum(expr)`, `prod(expr)`, `chain(expr)`, and constants `pi`, `e`.
-- Angles inside `sin`, `cos`, `tan` accept any expression (e.g. `sin(2 * phi)`, `tan(alpha)`) because all angles convert uniformly to coherent SI radians (`rad`) in pure-physics mode.
-- Chained equalities (`A = B = C` or `A = chain(B_i)`) are allowed in `defineRelation` and expand cleanly into binary AST relations.
-
-| Allowed | Forbidden | Failure Mode | Rule |
-|---|---|---|---|
-| `2 * a` | `2a` | Parser rejects trailing tokens (`null`) | Always include explicit multiplication `*`. |
-| `P_sat` | `P_{sat}` | **Silent Truncation** (truncates to `P_`) | No LaTeX braces in variable keys or formulas. |
-| `x^(k - 1)` | `x^k-1` | Evaluates as $(x^k) - 1$ | Always parenthesise complex exponents. |
-| `a / (b * c)` | `a / b / c` | Left-associative: $(a/b)/c$ | Always parenthesise compound denominators. |
-| `sin(2 * phi)` | — | Supported natively via coherent `rad` base | Arbitrary angle expressions evaluate accurately. |
-
----
-
-## 6. Physical Units & Dimensional Architecture
-
-### 6.1 The AffineScale Invariant Model
-All physical evaluation rests on branchless affine transformations and 7D dimensional vectors:
-$$\phi_u(x) = s_u \cdot (x + o_u)$$
-$$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
-
-- **Coherent Base Magnitudes:** Every physical state has an invariant representation in coherent SI units ($\text{m}, \text{s}, \text{kg}, \text{N}, \text{K}, \text{W}, \text{J}, \text{rad}, \text{Hz}$).
-- **Linear Units ($o_u = 0$):** Multiplicative scale only ($y = s_u \cdot x$).
-- **Affine Units ($o_u \neq 0$):** Exact offsets ($\pm 273.15$, $\pm 459.67$). The absolute companion unit is resolved mathematically by matching scale $s$ in thermal dimension $\Theta$ where $o = 0$:
-  - $^\circ\text{F}$ ($s = 5/9, o = 459.67$) $\implies ^\circ\text{R}$ ($s = 5/9, o = 0$)
-  - $^\circ\text{C}$ ($s = 1.0, o = 273.15$) $\implies \text{K}$ ($s = 1.0, o = 0$)
-- **Scale Parity ($|\Delta| < 10^{-6}$):** If two units in a ratio share 7D dimensions and $|s_A - s_B| < 10^{-6}$ (e.g. $\text{kW}$ vs $\text{kJ/s}$, $\text{N/mm}$ vs $\text{kN/m}$, $\text{Hz}$ vs $1/\text{s}$), they are physically equal.
-- **Empirical Target Scaling:** When a relation specifies `requiredUnits`, the formula evaluates in those required units; the result then scales to `targetUnit` via `numericConversionFactor = scale(reqTargetU) / scale(targetUnit)`.
-
-### 6.2 `scales.js`: Single Source of Truth & 6-Sig-Fig Precision
-`src/cas/units/scales.js` computes all conversion scalars directly from `BASE_UNITS` and `PREFIXES` in `definitions.js` using `fmtScale` (6 significant figures without the 3-decimal truncation cap):
-- **Single-Dimension Scaling (Option B):** When an expression evaluates to a single dimension differing from `targetUnit` (e.g. $\text{hp} \to \text{ft}\cdot\text{lb/s}$), `scales.js` preserves the target unit intact on the main line.
-- **Compound Ratio Decomposition:** Compound unit conversions (e.g. $\frac{\text{lb/min}}{\text{Btu/h}} \to \frac{\text{kg}}{\text{kWh}}$) and reciprocal Frequency $\leftrightarrow$ Time pairs ($1\,\text{Hz} \cdot 1\,\text{s} = 1$) decompose into atomic factor-label steps applied in-situ.
-- **AST-Driven Mismatches:** Ratios with differing unit scales (e.g. $\text{Btu/h}$ vs $\text{Btu/min}$) extract the exact differing atomic pair from the unit AST.
-
-### 6.3 Factor-Label Derivations & The 4-Row Cap
-Derivations default to **in-situ conversions** placed directly beside the converted token, including inside nested additive expressions (such as $\frac{1}{1/k_1 + 1/k_2}$).
-
-A compound fraction has 4 vertical visual row slots:
-$$\cfrac{\text{Row 1}}{\text{Row 2}} \Bigg/ \cfrac{\text{Row 3}}{\text{Row 4}}$$
-
-- **Stepping Down / Inline Sub-Units:** Stepping down to the main line or switching unit sub-fractions at fraction depth $\ge 2$ to inline `\tfrac` enforces the 4-row cap automatically.
-
-### 6.4 Multi-System Sampling & Coupled State Coherence
-- **Problem Distribution:** 40% Pure SI / 40% Pure US / 20% MIXED.
-- **Coupled Variable Coherence:** State deliverables of the same fluid or coupled mechanical set share an identical unit when requested as outputs; boundary givens roll freely to test multi-unit fluency.
-- **Significant Figure Retention:** Conversions to alternative units must retain $\ge 3$ significant figures under the 3-decimal-place limit ($|v| \ge 0.100$).
-- **Compound Decomposition:** Decomposed unit options are sampled with probability inversely proportional to token count: $w_i = 1/t_i$.
-
----
-
-## 7. Direction-Agnostic Synthesis & Natural Cognitive Fading
-
-### 7.1 Direction-Agnostic Graph Unrolling
-Topics have no fixed starting or ending variables. The generator treats every relation network as an undirected bipartite graph:
-- `generateAutonomousProblem` prioritizes the learner's weakest relations and samples any valid variable as the dynamic deliverable (`goalVar`).
-- `determineGraphDistance(mastery)` scales chain length monotonically via Fibonacci hops (`0` $\to$ `1` $\to$ `2` $\to$ `3` $\to$ `5` $\to$ `8` $\to$ `21`) as mastery increases.
-- `solveDAG` resolves paths forwards, backwards, or diagonally from the minimal pruned givens.
-
-### 7.2 Cognitive Fading Step Hiding
-- **Beginner ($< \text{FADING THRESHOLD} \approx 76.4\%$):** Short 0–1 hop problems; every intermediate step is actively prompted.
-- **Advanced ($\ge \text{FADING THRESHOLD}$):** Multi-hop interconnected chains; mastered intermediate steps are **literally hidden** from the solution steps and omitted from statement prompts.
-- **Ancestry Propagation:** Submitting a correct active step reinforces all its faded ancestor equations (deduplicated by `masteryId`). Failing or revealing an active step penalizes faded ancestors so scaffolding reappears on future problems.
-
----
-
-## 8. Derivations & UI Typesetting
-
-- **Canonical Cancellation Hierarchy:** Whole-unit cancellation (`\cancel{\cfrac{\text{kJ}}{\text{s}}}`) is canonical; component-level cancellation is fallback when sub-tokens cancel separately.
-- **Omit 1:** Write $\cfrac{\text{kg}}{2.20462 \, \cancel{\text{lb}}}$, never $\cfrac{1 \, \text{kg}}{\dots}$.
-- **Scalars Outside:** Write $60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$, never $\cfrac{60 \, \cancel{\text{h}}}{\cancel{\text{min}}}$.
-- **Percent Symbol:** Always `\text{\%}` (and `\cancel{\text{\%}}`), mirrored across all unit pipelines.
-- **Zero-Comma Spacing:** Units are separated from numbers by LaTeX thin spacing (`\,`), never literal commas.
-- **Additive Unit Grouping:** Like-unit sums and differences factor outside parentheses: $(a \pm b) \, \text{unit}$.
-- **Perceptual Mastery Gradient:** Formula mastery bars interpolate continuously in Oklab color space from danger red (`oklab(0.63 0.22 0.12)`) through warm amber (`oklab(0.75 0.06 0.16)`) to emerald green (`oklab(0.72 -0.17 0.14)`), sorted ascending.
-
----
-
-## 9. Authoring Guide & Fractal Structure for Topics & Subjects
-
-Topics follow a **fractal, self-similar directory structure** under `src/topics/<subject>/`:
-- **Branch folders** (contain 2+ subtopics/sub-branches): contain `index.js` (aggregating child topic maps upward) and, whenever children overlap, a `common/` folder (`index.js`, `schema.js`, `relations.js`, and optional `system_helper.js`).
-- **Leaf topic folders**: strictly contain `index.js`, `schema.js`, `relations.js`, and `system.js`, importing shared material upward through `../common/index.js`.
-
-```text
-src/topics/<subject>/<topic_branch>/
-├── index.js           # Aggregates child topics upward
-├── common/            # Extracted when 2+ children share schemas/relations
-│   ├── index.js       # Barrel re-exporting schema, relations, helpers
-│   ├── schema.js      # Shared varsDb definitions
-│   └── relations.js   # Shared eq_base_* relations via compileRelations
-└── <leaf_topic>/
-    ├── index.js       # Topic manifest (or countRange + instantiate(n) for variadic topics)
-    ├── schema.js      # Composes ../common/index.js + topic-specific vars
-    ├── relations.js   # Composes ../common/index.js + topic-specific defineRelation specs
-    └── system.js      # Independent ground truth generator ({ sys } => SystemState)
+export const helicalCoilTopic = Object.freeze({
+  id: "springs_helical_coil",
+  title: "Helical Coil Springs",
+  subject: "Machine Design",
+  category: "Springs",
+  noun: "helical coil spring (round wire)",
+  varsDb: HELICAL_COIL_VARS_DB,
+  relations: HELICAL_COIL_RELATIONS,
+  createSystem: createHelicalCoilSystem
+});
 ```
 
-### 9.1 Subject Export Registration
+FILE: src/topics/machine_design/springs/systems/common/schema.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/common/schema.js
+ * Fractal schema template for multi-spring network systems (Series & Parallel).
+ */
 
-1. Bubble exports upward via `index.js` at every nested level (`<subbranch>/index.js` $\to$ `<branch>/index.js` $\to$ `<subject>/index.js` $\to$ `src/topics/index.js`).
-2. Confirm every topic `id` matches its dictionary key in `TOPICS`.
-3. Always import shared definitions via `common/index.js` (never bypass the barrel, so `knip` reports zero dead exports).
-4. Run `node --test test/run_test.js test/run_hygiene_test.js` and `npm run audit`.
+import { DIMENSIONS } from "../../../../../core/dimensions.js";
 
----
+export const SPRING_SYSTEM_BASE_VARS = Object.freeze({
+  "F_T": {
+    name: "Total Applied Load",
+    symbol: "F_T",
+    dimension: DIMENSIONS.FORCE,
+    unit: "N",
+    nameAliases: ["Total Applied Load", "Total Spring Force", "System Load"],
+    symbolAliases: ["F_T", "F_{total}", "W_T"],
+    aliases: ["Total Applied Load", "Total Spring Force", "System Load", "F_T"]
+  },
+  "delta_T": {
+    name: "Total Deflection",
+    symbol: "\\delta_T",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Total Deflection", "System Deflection", "Total Displacement"],
+    symbolAliases: ["\\delta_T", "\\delta_{total}", "y_T"],
+    aliases: ["Total Deflection", "System Deflection", "Total Displacement", "delta_T"]
+  },
+  "k_T": {
+    name: "Equivalent Stiffness",
+    symbol: "k_T",
+    dimension: DIMENSIONS.STIFFNESS,
+    unit: "N/mm",
+    nameAliases: ["Equivalent Stiffness", "Equivalent Spring Rate", "Total System Rate"],
+    symbolAliases: ["k_T", "k_{eq}", "K_T"],
+    aliases: ["Equivalent Stiffness", "Equivalent Spring Rate", "Total System Rate", "k_T"]
+  },
 
-## 10. Testing & Invariant Verification Suite
-
-Run both test suites:
-
-```bash
-node --test test/run_test.js test/run_hygiene_test.js
+  // Indexed templates instantiated via expandIndexedVarsDb
+  "k_i": {
+    name: "Spring {i} Stiffness",
+    symbol: "k_{i}",
+    dimension: DIMENSIONS.STIFFNESS,
+    unit: "N/mm",
+    nameAliases: ["Spring {i} Stiffness", "Spring {i} Rate"],
+    symbolAliases: ["k_{i}"],
+    aliases: ["Spring {i} Stiffness", "Spring {i} Rate", "k_i"]
+  },
+  "F_i": {
+    name: "Spring {i} Load",
+    symbol: "F_{i}",
+    dimension: DIMENSIONS.FORCE,
+    unit: "N",
+    nameAliases: ["Spring {i} Load", "Spring {i} Force"],
+    symbolAliases: ["F_{i}"],
+    aliases: ["Spring {i} Load", "Spring {i} Force", "F_i"]
+  },
+  "delta_i": {
+    name: "Spring {i} Deflection",
+    symbol: "\\delta_{i}",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Spring {i} Deflection", "Spring {i} Compression"],
+    symbolAliases: ["\\delta_{i}"],
+    aliases: ["Spring {i} Deflection", "Spring {i} Compression", "delta_i"]
+  }
+});
 ```
 
-| Suite | Invariant Verified |
-|---|---|
-| `test/run_test.js` | **Universal Round-Trip Invariant:** $u \to \text{base} \to u$ identity across all registered units. <br>**100-Problem Stress Invariant:** 100 randomized problems (SI, US, MIXED) verify physical conservation ($< 0.05\%$), valid boxed answers, and error-free KaTeX rendering. <br>**Alien Scale Factor Detector:** Queries `scales.js` (`isCanonicalScaleFactor`) to reject any lumped or unfamiliar conversion scalars without bespoke test lists. <br>**Direction-Agnostic Synthesis:** Dynamic longest-path generation at high mastery, natural step hiding, 4-row tower cap, and encompassing cancellations. |
-| `test/run_hygiene_test.js` | Zero legacy shadows, exact $\phi$/Fibonacci progressions, zero schema orphan variables, zero duplicate formulas within topics, zero alias collisions across `varsDb`, cross-subject commonality rules, and native `°` symbols (no `\circ`). |
+FILE: src/topics/machine_design/springs/systems/common/relations.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/common/relations.js
+ * Fractal base relations for spring systems.
+ */
 
----
+import { defineRelation, compileRelations } from "../../../../../core/relation_builder.js";
 
-## 11. Definition of Done (Checklist before submitting code)
+export const SPRING_SYSTEM_BASE_RELATIONS = compileRelations([
+  defineRelation({
+    id: "eq_base_spring_system_rate",
+    name: "System Hooke's Law",
+    canonicalTex: "k_T = \\frac{F_T}{\\delta_T}",
+    formula: "k_T = F_T / delta_T"
+  }),
+  defineRelation({
+    id: "eq_base_spring_element_rate",
+    name: "Individual Spring Element Rate",
+    canonicalTex: "F_i = k_i \\delta_i",
+    formula: "F_i = k_i * delta_i"
+  })
+]);
+```
 
-- [ ] Stayed in brainstorm mode until explicit permission to code was granted.
-- [ ] Addressed the root cause rather than patching a symptom.
-- [ ] No Hard Rules in Section 2 are violated.
-- [ ] Any new unit is registered in `definitions.js`, `dimensions.js`, `scales.js`, and `unit_sampler.js`.
-- [ ] New formulas are pure physics via `defineRelation` / `compileRelations`; empirical exceptions declare `requiredUnits`.
-- [ ] `system.js` is independent of the solver and honors `{ sys }`.
-- [ ] Unit conversions default to in-situ, respect the 4-row fraction tower cap, omit coefficients of 1, keep scalars outside unit ratios, and use canonical encompassing `\cancel`.
-- [ ] Percentages render as `\text{\%}` and degree symbols use native `°`.
-- [ ] Code changes use canonical diff syntax (`<<<< ==== >>>>`) unless shorter as a drop-in replacement; `README.md` edits use full drop-in replacement.
-- [ ] `node --test test/run_test.js test/run_hygiene_test.js` and `npm run audit` passed with 0 failures.
-- [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
-- [ ] No tests were renamed, skipped, loosened, or deleted.
-- [ ] LF line endings, header comment on every new file, no dead code, and no new duplication.
-````
+FILE: src/topics/machine_design/springs/systems/common/system_helper.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/common/system_helper.js
+ * Shared ground truth builder for Series and Parallel spring systems.
+ * Eliminates duplicate arithmetic logic across series/parallel system generators.
+ */
+
+export function createSpringSystemGroundTruth({ sys = "SI", isParallel = false, count = 3 } = {}) {
+  const isUS = sys === "US";
+
+  // Individual spring rates
+  const k_rates = isUS
+    ? [20.0, 30.0, 40.0, 50.0, 60.0].slice(0, count) // lb/in
+    : [1.0, 1.5, 2.0, 2.5, 3.0].slice(0, count);     // N/mm
+
+  let k_T, F_T, delta_T;
+  const F_arr = [];
+  const delta_arr = [];
+
+  if (isParallel) {
+    k_T = k_rates.reduce((sum, ki) => sum + ki, 0);
+    delta_T = isUS ? 1.5 : 25.0; // in or mm
+    F_T = k_T * delta_T;
+
+    for (let i = 0; i < count; i++) {
+      delta_arr[i] = delta_T;
+      F_arr[i] = k_rates[i] * delta_T;
+    }
+  } else {
+    const sumRecip = k_rates.reduce((sum, ki) => sum + 1 / ki, 0);
+    k_T = 1 / sumRecip;
+    F_T = isUS ? 120.0 : 500.0; // lb or N
+    delta_T = F_T / k_T;
+
+    for (let i = 0; i < count; i++) {
+      F_arr[i] = F_T;
+      delta_arr[i] = F_T / k_rates[i];
+    }
+  }
+
+  const S = { sys, F_T, delta_T, k_T };
+  const _u = {
+    F_T: isUS ? "lb" : "N",
+    delta_T: isUS ? "in" : "mm",
+    k_T: isUS ? "lb/in" : "N/mm"
+  };
+
+  for (let i = 1; i <= count; i++) {
+    const ki = k_rates[i - 1];
+    const fi = F_arr[i - 1];
+    const di = delta_arr[i - 1];
+
+    S[`k_${i}`] = ki;
+    S[`F_${i}`] = fi;
+    S[`delta_${i}`] = di;
+
+    _u[`k_${i}`] = isUS ? "lb/in" : "N/mm";
+    _u[`F_${i}`] = isUS ? "lb" : "N";
+    _u[`delta_${i}`] = isUS ? "in" : "mm";
+  }
+
+  return { S, _u };
+}
+```
+
+FILE: src/topics/machine_design/springs/systems/common/index.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/common/index.js
+ * Fractal barrel export for spring systems common definitions.
+ */
+
+export * from "./schema.js";
+export * from "./relations.js";
+export * from "./system_helper.js";
+```
+
+FILE: src/topics/machine_design/springs/systems/series/schema.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/series/schema.js
+ * Series Spring System Schema.
+ */
+
+import { SPRING_SYSTEM_BASE_VARS } from "../common/index.js";
+import { expandIndexedVarsDb } from "../../../../../core/relation_builder.js";
+
+export function createSeriesVarsDb(count = 3) {
+  return expandIndexedVarsDb(SPRING_SYSTEM_BASE_VARS, count);
+}
+
+export const SERIES_VARS_DB = createSeriesVarsDb(3);
+```
+
+FILE: src/topics/machine_design/springs/systems/series/relations.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/series/relations.js
+ * Series Spring System relations using continued-formula operators.
+ */
+
+import { defineRelation, compileRelations } from "../../../../../core/relation_builder.js";
+import { SPRING_SYSTEM_BASE_RELATIONS } from "../common/index.js";
+
+export function createSeriesRelations(count = 3) {
+  return compileRelations([
+    ...SPRING_SYSTEM_BASE_RELATIONS,
+
+    defineRelation({
+      id: "eq_spring_series_stiffness",
+      name: "Equivalent Stiffness (Series)",
+      canonicalTex: "\\frac{1}{k_T} = \\frac{1}{k_1} + \\frac{1}{k_2} + \\dots + \\frac{1}{k_n}",
+      formula: "1 / k_T = sum(1 / k_i)",
+      count
+    }),
+    defineRelation({
+      id: "eq_spring_series_force",
+      name: "Force Equality (Series)",
+      canonicalTex: "F_T = F_1 = F_2 = \\dots = F_n",
+      formula: "F_T = chain(F_i)",
+      count
+    }),
+    defineRelation({
+      id: "eq_spring_series_deflection",
+      name: "Total Deflection (Series)",
+      canonicalTex: "\\delta_T = \\delta_1 + \\delta_2 + \\dots + \\delta_n",
+      formula: "delta_T = sum(delta_i)",
+      count
+    }),
+    defineRelation({
+      id: "eq_spring_series_elem_disp",
+      name: "Element Deflection from Total Force",
+      canonicalTex: "\\delta_i = \\frac{F_T}{k_i}",
+      formula: "delta_i = F_T / k_i",
+      count
+    })
+  ], { count });
+}
+
+export const SERIES_RELATIONS = createSeriesRelations(3);
+```
+
+FILE: src/topics/machine_design/springs/systems/series/system.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/series/system.js
+ * Series Spring System ground truth generator.
+ */
+
+import { createSpringSystemGroundTruth } from "../common/index.js";
+import { createSeriesVarsDb } from "./schema.js";
+
+export function createSeriesSystem({ sys = "SI", count = 3 } = {}) {
+  const { S, _u } = createSpringSystemGroundTruth({ sys, isParallel: false, count });
+  const varsDb = createSeriesVarsDb(count);
+
+  const _names = {};
+  for (const [k, meta] of Object.entries(varsDb)) {
+    _names[k] = meta.nameAliases?.[0] || meta.name;
+  }
+
+  return { ...S, _names, _u };
+}
+```
+
+FILE: src/topics/machine_design/springs/systems/series/index.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/series/index.js
+ * Series Spring System topic with dynamic variadic n support.
+ */
+
+import { SERIES_VARS_DB, createSeriesVarsDb } from "./schema.js";
+import { SERIES_RELATIONS, createSeriesRelations } from "./relations.js";
+import { createSeriesSystem } from "./system.js";
+
+export const springSeriesTopic = Object.freeze({
+  id: "springs_series",
+  title: "Springs in Series",
+  subject: "Machine Design",
+  category: "Springs",
+  noun: "series-connected spring system",
+  varsDb: SERIES_VARS_DB,
+  relations: SERIES_RELATIONS,
+  createSystem: (opts) => createSeriesSystem({ ...opts, count: 3 }),
+  countRange: [2, 4],
+  instantiate: (n) => ({
+    varsDb: createSeriesVarsDb(n),
+    relations: createSeriesRelations(n),
+    createSystem: (opts) => createSeriesSystem({ ...opts, count: n })
+  })
+});
+```
+
+FILE: src/topics/machine_design/springs/systems/parallel/schema.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/parallel/schema.js
+ * Parallel Spring System Schema.
+ */
+
+import { SPRING_SYSTEM_BASE_VARS } from "../common/index.js";
+import { expandIndexedVarsDb } from "../../../../../core/relation_builder.js";
+
+export function createParallelVarsDb(count = 3) {
+  return expandIndexedVarsDb(SPRING_SYSTEM_BASE_VARS, count);
+}
+
+export const PARALLEL_VARS_DB = createParallelVarsDb(3);
+```
+
+FILE: src/topics/machine_design/springs/systems/parallel/relations.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/parallel/relations.js
+ * Parallel Spring System relations using continued-formula operators.
+ */
+
+import { defineRelation, compileRelations } from "../../../../../core/relation_builder.js";
+import { SPRING_SYSTEM_BASE_RELATIONS } from "../common/index.js";
+
+export function createParallelRelations(count = 3) {
+  return compileRelations([
+    ...SPRING_SYSTEM_BASE_RELATIONS,
+
+    defineRelation({
+      id: "eq_spring_parallel_stiffness",
+      name: "Equivalent Stiffness (Parallel)",
+      canonicalTex: "k_T = k_1 + k_2 + \\dots + k_n",
+      formula: "k_T = sum(k_i)",
+      count
+    }),
+    defineRelation({
+      id: "eq_spring_parallel_force",
+      name: "Total Load (Parallel)",
+      canonicalTex: "F_T = F_1 + F_2 + \\dots + F_n",
+      formula: "F_T = sum(F_i)",
+      count
+    }),
+    defineRelation({
+      id: "eq_spring_parallel_deflection",
+      name: "Deflection Equality (Parallel)",
+      canonicalTex: "\\delta_T = \\delta_1 = \\delta_2 = \\dots = \\delta_n",
+      formula: "delta_T = chain(delta_i)",
+      count
+    }),
+    defineRelation({
+      id: "eq_spring_parallel_elem_force",
+      name: "Element Force from Total Deflection",
+      canonicalTex: "F_i = k_i \\delta_T",
+      formula: "F_i = k_i * delta_T",
+      count
+    })
+  ], { count });
+}
+
+export const PARALLEL_RELATIONS = createParallelRelations(3);
+```
+
+FILE: src/topics/machine_design/springs/systems/parallel/system.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/parallel/system.js
+ * Parallel Spring System ground truth generator (mirrors Video Problem 3).
+ */
+
+import { createSpringSystemGroundTruth } from "../common/index.js";
+import { createParallelVarsDb } from "./schema.js";
+
+export function createParallelSystem({ sys = "SI", count = 3 } = {}) {
+  const { S, _u } = createSpringSystemGroundTruth({ sys, isParallel: true, count });
+  const varsDb = createParallelVarsDb(count);
+
+  const _names = {};
+  for (const [k, meta] of Object.entries(varsDb)) {
+    _names[k] = meta.nameAliases?.[0] || meta.name;
+  }
+
+  return { ...S, _names, _u };
+}
+```
+
+FILE: src/topics/machine_design/springs/systems/parallel/index.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/parallel/index.js
+ * Parallel Spring System topic with dynamic variadic n support.
+ */
+
+import { PARALLEL_VARS_DB, createParallelVarsDb } from "./schema.js";
+import { PARALLEL_RELATIONS, createParallelRelations } from "./relations.js";
+import { createParallelSystem } from "./system.js";
+
+export const springParallelTopic = Object.freeze({
+  id: "springs_parallel",
+  title: "Springs in Parallel",
+  subject: "Machine Design",
+  category: "Springs",
+  noun: "parallel-connected spring system",
+  varsDb: PARALLEL_VARS_DB,
+  relations: PARALLEL_RELATIONS,
+  createSystem: (opts) => createParallelSystem({ ...opts, count: 3 }),
+  countRange: [2, 4],
+  instantiate: (n) => ({
+    varsDb: createParallelVarsDb(n),
+    relations: createParallelRelations(n),
+    createSystem: (opts) => createParallelSystem({ ...opts, count: n })
+  })
+});
+```
+
+FILE: src/topics/machine_design/springs/systems/index.js
+```javascript
+/**
+ * src/topics/machine_design/springs/systems/index.js
+ * Fractal barrel export aggregating spring systems topics upward.
+ */
+
+import { springSeriesTopic } from "./series/index.js";
+import { springParallelTopic } from "./parallel/index.js";
+
+export const SPRING_SYSTEMS_TOPICS = Object.freeze({
+  springs_series: springSeriesTopic,
+  springs_parallel: springParallelTopic
+});
+```
+
+FILE: src/topics/machine_design/springs/cantilever_leaf/schema.js
+```javascript
+/**
+ * src/topics/machine_design/springs/cantilever_leaf/schema.js
+ * Cantilever leaf spring schema (Lecture Video Problem 4).
+ */
+
+import { SPRING_BASE_VARS } from "../common/index.js";
+import { DIMENSIONS } from "../../../../core/dimensions.js";
+
+export const CANTILEVER_LEAF_VARS_DB = Object.freeze({
+  "F": {
+    ...SPRING_BASE_VARS.F,
+    nameAliases: ["Applied Load", "End Load", "Cantilever Load"],
+    aliases: ["Applied Load", "End Load", "Cantilever Load", "F"]
+  },
+  "delta": {
+    ...SPRING_BASE_VARS.delta,
+    nameAliases: ["Spring Deflection", "Tip Deflection", "Cantilever Deflection"],
+    aliases: ["Spring Deflection", "Tip Deflection", "Cantilever Deflection", "delta"]
+  },
+  "k": SPRING_BASE_VARS.k,
+  "S": {
+    name: "Maximum Bending Stress",
+    symbol: "S",
+    dimension: DIMENSIONS.STRESS,
+    unit: "MPa",
+    nameAliases: ["Maximum Bending Stress", "Bending Stress", "Leaf Stress"],
+    symbolAliases: ["S", "\\sigma", "\\sigma_b"],
+    aliases: ["Maximum Bending Stress", "Bending Stress", "Leaf Stress", "S"]
+  },
+  "L": {
+    name: "Cantilever Length",
+    symbol: "L",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Cantilever Length", "Spring Length", "Span"],
+    symbolAliases: ["L"],
+    aliases: ["Cantilever Length", "Spring Length", "Span", "L"]
+  },
+  "b": {
+    name: "Leaf Width",
+    symbol: "b",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Leaf Width", "Width of Leaves"],
+    symbolAliases: ["b"],
+    aliases: ["Leaf Width", "Width of Leaves", "b"]
+  },
+  "t": {
+    name: "Leaf Thickness",
+    symbol: "t",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "mm",
+    nameAliases: ["Leaf Thickness", "Thickness of Leaves"],
+    symbolAliases: ["t"],
+    aliases: ["Leaf Thickness", "Thickness of Leaves", "t"]
+  },
+  "n_leaves": {
+    name: "Number of Leaves",
+    symbol: "n",
+    dimension: DIMENSIONS.COUNT,
+    unit: "dimless",
+    isInteger: true,
+    nameAliases: ["Number of Leaves", "Leaf Count"],
+    symbolAliases: ["n", "N_l"],
+    aliases: ["Number of Leaves", "Leaf Count", "n_leaves", "n"]
+  },
+  "E": {
+    name: "Modulus of Elasticity",
+    symbol: "E",
+    dimension: DIMENSIONS.MODULUS,
+    unit: "GPa",
+    isConstant: true,
+    display: 207,
+    nameAliases: ["Modulus of Elasticity", "Young's Modulus"],
+    symbolAliases: ["E"],
+    aliases: ["Modulus of Elasticity", "Young's Modulus", "E"]
+  }
+});
+```
+
+FILE: src/topics/machine_design/springs/cantilever_leaf/relations.js
+```javascript
+/**
+ * src/topics/machine_design/springs/cantilever_leaf/relations.js
+ * Invertible Cantilever Leaf Spring relations (Video Problem 4).
+ */
+
+import { defineRelation, compileRelations } from "../../../../core/relation_builder.js";
+
+export const CANTILEVER_LEAF_RELATIONS = compileRelations([
+  defineRelation({
+    id: "eq_cantilever_leaf_deflection",
+    name: "Cantilever Leaf Deflection",
+    canonicalTex: "\\delta = \\frac{S L^2}{t E}",
+    formula: "delta = (S * (L^2)) / (t * E)"
+  }),
+  defineRelation({
+    id: "eq_cantilever_leaf_stress",
+    name: "Cantilever Leaf Bending Stress",
+    canonicalTex: "S = \\frac{6 F L}{n b t^2}",
+    formula: "S = (6 * F * L) / (n_leaves * b * (t^2))"
+  }),
+  defineRelation({
+    id: "eq_cantilever_leaf_rate",
+    name: "Leaf Spring Rate",
+    canonicalTex: "k = \\frac{F}{\\delta}",
+    formula: "k = F / delta"
+  })
+]);
+```
+
+FILE: src/topics/machine_design/springs/cantilever_leaf/system.js
+```javascript
+/**
+ * src/topics/machine_design/springs/cantilever_leaf/system.js
+ * Ground truth generator for Cantilever Leaf Springs (mirrors Video Problem 4).
+ */
+
+import { CANTILEVER_LEAF_VARS_DB } from "./schema.js";
+
+export function createCantileverLeafSystem({ sys = "SI" } = {}) {
+  const isUS = sys === "US";
+
+  let F, L, delta, S, n_leaves, b, t, E, k, _u;
+
+  if (isUS) {
+    // Problem 4 exact values: 6-leaf steel, 13 in long, 375 lb, delta = 1.25 in, S = 50,000 psi
+    n_leaves = 6;
+    L = 13.0; // in
+    F = 375.0; // lb
+    delta = 1.25; // in
+    S = 50000.0; // psi
+    E = 30e6; // psi (steel)
+
+    // delta = S*L^2 / (t*E) => t = S*L^2 / (delta*E)
+    t = (S * Math.pow(L, 2)) / (delta * E); // 0.22533 in (~0.225 in)
+    // S = 6*F*L / (n*b*t^2) => b = 6*F*L / (n*S*t^2)
+    b = (6 * F * L) / (n_leaves * S * Math.pow(t, 2)); // ~1.926 in
+    k = F / delta; // 300 lb/in
+
+    _u = {
+      F: "lb", delta: "in", S: "psi", L: "in",
+      b: "in", t: "in", n_leaves: "dimless", E: "psi", k: "lb/in"
+    };
+  } else {
+    // SI metric counterpart
+    n_leaves = 6;
+    L = 350.0; // mm
+    F = 1800.0; // N
+    S = 350.0; // MPa
+    E = 207.0; // GPa = 207000 MPa
+    delta = 30.0; // mm
+
+    const E_mmpa = E * 1000;
+    t = (S * Math.pow(L, 2)) / (delta * E_mmpa); // mm
+    b = (6 * F * L) / (n_leaves * S * Math.pow(t, 2)); // mm
+    k = F / delta; // N/mm
+
+    _u = {
+      F: "N", delta: "mm", S: "MPa", L: "mm",
+      b: "mm", t: "mm", n_leaves: "dimless", E: "GPa", k: "N/mm"
+    };
+  }
+
+  const _names = {};
+  for (const [key, meta] of Object.entries(CANTILEVER_LEAF_VARS_DB)) {
+    _names[key] = meta.nameAliases?.[0] || meta.name;
+  }
+
+  return { sys, F, delta, S, L, b, t, n_leaves, E, k, _names, _u };
+}
+```
+
+FILE: src/topics/machine_design/springs/cantilever_leaf/index.js
+```javascript
+/**
+ * src/topics/machine_design/springs/cantilever_leaf/index.js
+ * Cantilever Leaf Spring Topic.
+ */
+
+import { CANTILEVER_LEAF_VARS_DB } from "./schema.js";
+import { CANTILEVER_LEAF_RELATIONS } from "./relations.js";
+import { createCantileverLeafSystem } from "./system.js";
+
+export const cantileverLeafTopic = Object.freeze({
+  id: "springs_cantilever_leaf",
+  title: "Cantilever Leaf Springs",
+  subject: "Machine Design",
+  category: "Springs",
+  noun: "cantilever leaf spring",
+  varsDb: CANTILEVER_LEAF_VARS_DB,
+  relations: CANTILEVER_LEAF_RELATIONS,
+  createSystem: createCantileverLeafSystem
+});
+```
+
+FILE: src/topics/machine_design/springs/period_frequency/schema.js
+```javascript
+/**
+ * src/topics/machine_design/springs/period_frequency/schema.js
+ * Period and Frequency schema (Lecture Video section 11).
+ */
+
+import { SPRING_BASE_VARS } from "../common/index.js";
+import { DIMENSIONS } from "../../../../core/dimensions.js";
+
+export const PERIOD_FREQUENCY_VARS_DB = Object.freeze({
+  "T_period": {
+    name: "Oscillation Period",
+    symbol: "T",
+    dimension: DIMENSIONS.TIME,
+    unit: "s",
+    nameAliases: ["Oscillation Period", "Period of Motion", "Cycle Time"],
+    symbolAliases: ["T"],
+    aliases: ["Oscillation Period", "Period of Motion", "Cycle Time", "T_period", "T"]
+  },
+  "f": {
+    name: "Frequency",
+    symbol: "f",
+    dimension: DIMENSIONS.FREQUENCY,
+    unit: "Hz",
+    nameAliases: ["Frequency", "Cyclic Frequency", "Natural Frequency"],
+    symbolAliases: ["f", "n_f"],
+    aliases: ["Frequency", "Cyclic Frequency", "Natural Frequency", "f"]
+  },
+  "m": {
+    name: "Vibrating Mass",
+    symbol: "m",
+    dimension: DIMENSIONS.MASS,
+    unit: "kg",
+    nameAliases: ["Vibrating Mass", "Attached Mass", "Suspended Mass"],
+    symbolAliases: ["m", "M"],
+    aliases: ["Vibrating Mass", "Attached Mass", "Suspended Mass", "m"]
+  },
+  "k": {
+    ...SPRING_BASE_VARS.k,
+    unit: "N/m"
+  },
+  "L_p": {
+    name: "Pendulum Length",
+    symbol: "L",
+    dimension: DIMENSIONS.LENGTH,
+    unit: "m",
+    nameAliases: ["Pendulum Length", "Simple Pendulum Length"],
+    symbolAliases: ["L", "L_p"],
+    aliases: ["Pendulum Length", "Simple Pendulum Length", "L_p", "L"]
+  },
+  "g": {
+    name: "Gravitational Acceleration",
+    symbol: "g",
+    dimension: DIMENSIONS.ACCELERATION,
+    unit: "m/s^2",
+    isConstant: true,
+    display: 9.81,
+    nameAliases: ["Gravitational Acceleration", "Acceleration Due to Gravity"],
+    symbolAliases: ["g"],
+    aliases: ["Gravitational Acceleration", "Acceleration Due to Gravity", "g"]
+  }
+});
+```
+
+FILE: src/topics/machine_design/springs/period_frequency/relations.js
+```javascript
+/**
+ * src/topics/machine_design/springs/period_frequency/relations.js
+ * Period and Frequency relations (Lecture Video section 11).
+ */
+
+import { defineRelation, compileRelations } from "../../../../core/relation_builder.js";
+
+export const PERIOD_FREQUENCY_RELATIONS = compileRelations([
+  defineRelation({
+    id: "eq_spring_period_frequency",
+    name: "Period from Frequency",
+    canonicalTex: "T = \\frac{1}{f}",
+    formula: "T_period = 1 / f"
+  }),
+  defineRelation({
+    id: "eq_spring_period_mass",
+    name: "Mass-Spring Oscillation Period",
+    canonicalTex: "T = 2\\pi \\sqrt{\\frac{m}{k}}",
+    formula: "T_period = 2 * pi * sqrt(m / k)"
+  }),
+  defineRelation({
+    id: "eq_pendulum_period_length",
+    name: "Simple Pendulum Period",
+    canonicalTex: "T = 2\\pi \\sqrt{\\frac{L}{g}}",
+    formula: "T_period = 2 * pi * sqrt(L_p / g)"
+  })
+]);
+```
+
+FILE: src/topics/machine_design/springs/period_frequency/system.js
+```javascript
+/**
+ * src/topics/machine_design/springs/period_frequency/system.js
+ * Ground truth generator for spring & pendulum period/frequency.
+ */
+
+import { PERIOD_FREQUENCY_VARS_DB } from "./schema.js";
+
+export function createPeriodFrequencySystem({ sys = "SI" } = {}) {
+  const isUS = sys === "US";
+
+  let T_period, f, m, k, L_p, g, _u;
+
+  if (isUS) {
+    m = 10.0; // lb (pound_mass)
+    k = 50.0; // lb/ft
+    g = 32.2; // ft/s^2
+    const gc = 32.174049;
+
+    // T = 2*pi * sqrt(m / (k * gc))
+    T_period = 2 * Math.PI * Math.sqrt(m / (k * gc)); // ~0.495388 s
+    f = 1 / T_period; // ~2.0186 Hz
+    L_p = g * Math.pow(T_period / (2 * Math.PI), 2); // ~0.20016 ft
+
+    _u = {
+      T_period: "s", f: "Hz", m: "lb", k: "lb/ft", L_p: "ft", g: "ft/s^2"
+    };
+  } else {
+    m = 2.5; // kg
+    k = 1000.0; // N/m
+    g = 9.81; // m/s^2
+
+    T_period = 2 * Math.PI * Math.sqrt(m / k); // 0.314159 s
+    f = 1 / T_period; // 3.1831 Hz
+    L_p = g * Math.pow(T_period / (2 * Math.PI), 2); // 0.024525 m
+
+    _u = {
+      T_period: "s", f: "Hz", m: "kg", k: "N/m", L_p: "m", g: "m/s^2"
+    };
+  }
+
+  const _names = {};
+  for (const [key, meta] of Object.entries(PERIOD_FREQUENCY_VARS_DB)) {
+    _names[key] = meta.nameAliases?.[0] || meta.name;
+  }
+
+  return { sys, T_period, f, m, k, L_p, g, _names, _u };
+}
+```
+
+FILE: src/topics/machine_design/springs/period_frequency/index.js
+```javascript
+/**
+ * src/topics/machine_design/springs/period_frequency/index.js
+ * Period and Frequency Topic.
+ */
+
+import { PERIOD_FREQUENCY_VARS_DB } from "./schema.js";
+import { PERIOD_FREQUENCY_RELATIONS } from "./relations.js";
+import { createPeriodFrequencySystem } from "./system.js";
+
+export const periodFrequencyTopic = Object.freeze({
+  id: "springs_period_frequency",
+  title: "Spring Period & Frequency",
+  subject: "Machine Design",
+  category: "Springs",
+  noun: "mass-spring oscillatory system",
+  varsDb: PERIOD_FREQUENCY_VARS_DB,
+  relations: PERIOD_FREQUENCY_RELATIONS,
+  createSystem: createPeriodFrequencySystem
+});
+```
+
+FILE: src/topics/machine_design/springs/index.js
+```javascript
+/**
+ * src/topics/machine_design/springs/index.js
+ * Fractal barrel export aggregating all spring subtopics upward to Machine Design.
+ */
+
+import { helicalCoilTopic } from "./helical_coil/index.js";
+import { SPRING_SYSTEMS_TOPICS } from "./systems/index.js";
+import { cantileverLeafTopic } from "./cantilever_leaf/index.js";
+import { periodFrequencyTopic } from "./period_frequency/index.js";
+
+export const SPRINGS_TOPICS = Object.freeze({
+  springs_helical_coil: helicalCoilTopic,
+  ...SPRING_SYSTEMS_TOPICS,
+  springs_cantilever_leaf: cantileverLeafTopic,
+  springs_period_frequency: periodFrequencyTopic
+});
+```
+
+FILE: src/topics/machine_design/index.js
+```diff
+<<<<
+import { spurGearsTopic } from "./spur_gears/index.js";
+import { helicalGearsTopic } from "./helical_gears/index.js";
+
+export const MACHINE_DESIGN_TOPICS = Object.freeze({
+  spur_gears: spurGearsTopic,
+  helical_gears: helicalGearsTopic
+});
+====
+import { spurGearsTopic } from "./spur_gears/index.js";
+import { helicalGearsTopic } from "./helical_gears/index.js";
+import { SPRINGS_TOPICS } from "./springs/index.js";
+
+export const MACHINE_DESIGN_TOPICS = Object.freeze({
+  spur_gears: spurGearsTopic,
+  helical_gears: helicalGearsTopic,
+  ...SPRINGS_TOPICS
+});
+>>>>
+```
