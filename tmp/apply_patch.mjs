@@ -1,44 +1,48 @@
-cat << 'EOF' > /tmp/apply_patch.mjs
+cat << 'EOF' > tmp/apply_patch.mjs
 import fs from "node:fs";
 import path from "node:path";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
-const fileArg = args.find(a => !a.startsWith("-"));
-const raw = fs.readFileSync(fileArg || 0, "utf8").replace(/\r\n/g, "\n");
+const fileArg = args.find(a => !a.startsWith("-")) || "tmp/patch.txt";
 
-const FILE_PATH_RE = /^(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.(?:js|mjs|cjs|ts|md|html|css|json|txt)$/;
+if (!fs.existsSync(fileArg)) {
+  console.error(`File not found: ${fileArg}`);
+  process.exit(1);
+}
 
-function extractFileTarget(line) {
-  const trimmed = line.trim();
-  const explicit = trimmed.match(/^FILE:\s*(\S+)$/);
-  if (explicit && FILE_PATH_RE.test(explicit[1])) return explicit[1];
+const raw = fs.readFileSync(fileArg, "utf8").replace(/\r\n/g, "\n");
 
-  const isHeading = /^#{1,6}\s+/.test(trimmed);
-  const isBoldLabel = /^\*\*`[^`]+`[:*]*\*\*[:\s]*$/.test(trimmed);
-  if (!isHeading && !isBoldLabel) return null;
+// Look for file headers like "FILE: path/to/file", "#### 1. `path/to/file`", or "**`path/to/file`**"
+function findFilePath(line) {
+  const t = line.trim();
+  const filePrefix = t.match(/^FILE:\s*(\S+)/);
+  if (filePrefix) return filePrefix[1].replace(/[`*:]/g, "");
 
-  for (const m of trimmed.matchAll(/`([^`]+)`/g)) {
-    if (FILE_PATH_RE.test(m[1])) return m[1];
+  if (t.startsWith("#") || t.startsWith("**")) {
+    const match = t.match(/`([^`]+\.[a-zA-Z0-9]+)`/);
+    if (match) return match[1];
+    const match2 = t.match(/(?:^|[\s*#])((?:src|test|styles|app|README|migrate)[^\s*:`]+\.[a-zA-Z0-9]+)/);
+    if (match2) return match2[1];
   }
   return null;
 }
 
-function parseHunks(block) {
-  const lines = block.split("\n");
+function parseHunks(diffBlock) {
+  const lines = diffBlock.split("\n");
   const hunks = [];
   let state = "idle";
   let search = [];
   let replace = [];
 
   for (const line of lines) {
-    if (state === "idle" && line === "<<<<") {
+    if (state === "idle" && line.trim() === "<<<<") {
       state = "search";
       search = [];
       replace = [];
-    } else if (state === "search" && line === "====") {
+    } else if (state === "search" && line.trim() === "====") {
       state = "replace";
-    } else if (state === "replace" && line === ">>>>") {
+    } else if (state === "replace" && line.trim() === ">>>>") {
       hunks.push({ search: search.join("\n"), replace: replace.join("\n") });
       state = "idle";
     } else if (state === "search") {
@@ -47,7 +51,6 @@ function parseHunks(block) {
       replace.push(line);
     }
   }
-  if (state !== "idle") throw new Error("Unclosed <<<< ==== >>>> diff hunk.");
   return hunks;
 }
 
@@ -55,37 +58,32 @@ const lines = raw.split("\n");
 const operations = [];
 let currentFile = null;
 let inFence = false;
-let fenceLen = 0;
-let fenceLang = "";
+let fenceMarker = "";
 let fenceBuf = [];
 
-for (const line of lines) {
+for (let i = 0; i < lines.length; i++) {
+  const line = lines[i];
+
   if (!inFence) {
-    const target = extractFileTarget(line);
-    if (target) {
-      currentFile = target;
+    const detected = findFilePath(line);
+    if (detected) {
+      currentFile = detected;
       continue;
     }
-    const open = line.match(/^(`{3,})([A-Za-z0-9_-]*)\s*$/);
-    if (open) {
+
+    if (line.startsWith("```")) {
       inFence = true;
-      fenceLen = open[1].length;
-      fenceLang = open[2].toLowerCase();
+      fenceMarker = line.startsWith("````") ? "````" : "```";
       fenceBuf = [];
     }
   } else {
-    const closeRe = new RegExp(`^\`{${fenceLen},}\\s*$`);
-    if (closeRe.test(line)) {
+    if (line.startsWith(fenceMarker)) {
+      inFence = false;
       const content = fenceBuf.join("\n");
-      const hasHunkMarkers = /^<<<<\n[\s\S]*?\n====\n[\s\S]*?\n>>>>$/m.test(content);
-      const isDiff = fenceLang === "diff" || (fenceLang === "" && hasHunkMarkers);
-
+      const isDiff = content.includes("<<<<") && content.includes("====") && content.includes(">>>>");
       if (currentFile) {
         operations.push({ file: currentFile, isDiff, content });
       }
-      inFence = false;
-      fenceLen = 0;
-      fenceLang = "";
       fenceBuf = [];
     } else {
       fenceBuf.push(line);
@@ -94,55 +92,57 @@ for (const line of lines) {
 }
 
 if (operations.length === 0) {
-  throw new Error("No file operations parsed. Ensure FILE: <path> or heading/bold labels precede code blocks.");
+  console.error("No code blocks parsed from patch file. Make sure patch.txt has file headings and code blocks.");
+  process.exit(1);
 }
 
-// Transactional in-memory pass (all hunks must match uniquely before touching disk)
-const fileBuffers = new Map();
-const getBuffer = (relPath) => {
-  if (!fileBuffers.has(relPath)) {
-    fileBuffers.set(relPath, fs.existsSync(relPath) ? fs.readFileSync(relPath, "utf8").replace(/\r\n/g, "\n") : null);
+// In-memory application & validation
+const fileMap = new Map();
+function getFile(rel) {
+  if (!fileMap.has(rel)) {
+    const full = path.resolve(rel);
+    fileMap.set(rel, fs.existsSync(full) ? fs.readFileSync(full, "utf8").replace(/\r\n/g, "\n") : null);
   }
-  return fileBuffers.get(relPath);
-};
+  return fileMap.get(rel);
+}
 
 for (const op of operations) {
   if (op.isDiff) {
-    let text = getBuffer(op.file);
-    if (text === null) throw new Error(`Cannot apply diff: "${op.file}" does not exist.`);
-    const hunks = parseHunks(op.content);
-    if (hunks.length === 0) throw new Error(`Diff block for "${op.file}" contained no <<<< ==== >>>> hunks.`);
-
-    for (const { search, replace } of hunks) {
-      let count = 0;
-      let pos = 0;
-      while ((pos = text.indexOf(search, pos)) !== -1) {
-        count++;
-        pos += search.length;
-      }
-      if (count === 0) {
-        throw new Error(`Search block not found in "${op.file}":\n---\n${search}\n---`);
-      }
-      if (count > 1) {
-        throw new Error(`Search block matched ${count} times (ambiguous) in "${op.file}":\n---\n${search}\n---`);
-      }
-      const idx = text.indexOf(search);
-      text = text.slice(0, idx) + replace + text.slice(idx + search.length);
+    let text = getFile(op.file);
+    if (text === null) {
+      console.error(`Error: Cannot patch non-existent file: ${op.file}`);
+      process.exit(1);
     }
-    fileBuffers.set(op.file, text);
+    const hunks = parseHunks(op.content);
+    for (const { search, replace } of hunks) {
+      if (!text.includes(search)) {
+        console.error(`Error: Search block not found in "${op.file}":\n---\n${search.slice(0, 160)}...\n---`);
+        process.exit(1);
+      }
+      const firstIdx = text.indexOf(search);
+      const lastIdx = text.lastIndexOf(search);
+      if (firstIdx !== lastIdx) {
+        console.error(`Error: Search block matched multiple times in "${op.file}".`);
+        process.exit(1);
+      }
+      text = text.slice(0, firstIdx) + replace + text.slice(firstIdx + search.length);
+    }
+    fileMap.set(op.file, text);
   } else {
-    fileBuffers.set(op.file, op.content.endsWith("\n") ? op.content : `${op.content}\n`);
+    // Drop-in replacement
+    fileMap.set(op.file, op.content.endsWith("\n") ? op.content : op.content + "\n");
   }
 }
 
-for (const [relPath, text] of fileBuffers.entries()) {
+for (const [relPath, text] of fileMap.entries()) {
   if (dryRun) {
     console.log(`[dry-run] Would write: ${relPath}`);
   } else {
-    fs.mkdirSync(path.dirname(relPath), { recursive: true });
-    fs.writeFileSync(relPath, text, "utf8");
+    fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
+    fs.writeFileSync(path.resolve(relPath), text, "utf8");
     console.log(`Updated: ${relPath}`);
   }
 }
-console.log(`${dryRun ? "Dry-run passed" : "Applied"} (${operations.length} block(s) across ${fileBuffers.size} file(s)).`);
+
+console.log(`\n${dryRun ? "Dry-run successful!" : "All changes applied successfully!"} (${operations.length} blocks across ${fileMap.size} files)`);
 EOF
