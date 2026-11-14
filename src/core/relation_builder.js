@@ -157,6 +157,18 @@ function compileSingleEquation(spec, formulaStr, count, varsDb, idOverride = nul
     throw new Error(`Invalid formula in relation [${spec.id}]: "${formulaStr}"`);
   }
 
+  function buildInstantiatedEdge(i, baseFormula, canonicalTex) {
+    return {
+      id: `${spec.id}__${i}`,
+      masteryId: spec.id,
+      name: spec.name,
+      canonicalTex,
+      baseFormula,
+      nodes: extractNodesFromFormula(baseFormula),
+      ...(spec.requiredUnits ? { requiredUnits: spec.requiredUnits } : {})
+    };
+  }
+
   // Case 1: Symmetric equality chain: lhs = chain(term_i)
   const uRhs = unwrapGroup(rhsAst);
   if (uRhs?.type === "call" && uRhs.fn === "chain") {
@@ -169,16 +181,7 @@ function compileSingleEquation(spec, formulaStr, count, varsDb, idOverride = nul
     const out = [];
     for (let i = 1; i <= count; i++) {
       const termInst = expandFoldCallsAST(instantiateAST(uRhs.arg, i), count);
-      const baseFormula = `${astToExprStr(termInst)} = ${lhsStr}`;
-      out.push({
-        id: `${spec.id}__${i}`,
-        masteryId: spec.id,
-        name: spec.name,
-        canonicalTex,
-        baseFormula,
-        nodes: extractNodesFromFormula(baseFormula),
-        ...(spec.requiredUnits ? { requiredUnits: spec.requiredUnits } : {})
-      });
+      out.push(buildInstantiatedEdge(i, `${astToExprStr(termInst)} = ${lhsStr}`, canonicalTex));
     }
     return out;
   }
@@ -192,16 +195,7 @@ function compileSingleEquation(spec, formulaStr, count, varsDb, idOverride = nul
     for (let i = 1; i <= count; i++) {
       const lInst = expandFoldCallsAST(instantiateAST(lhsAst, i), count);
       const rInst = expandFoldCallsAST(instantiateAST(rhsAst, i), count);
-      const baseFormula = `${astToExprStr(lInst)} = ${astToExprStr(rInst)}`;
-      out.push({
-        id: `${spec.id}__${i}`,
-        masteryId: spec.id,
-        name: spec.name,
-        canonicalTex,
-        baseFormula,
-        nodes: extractNodesFromFormula(baseFormula),
-        ...(spec.requiredUnits ? { requiredUnits: spec.requiredUnits } : {})
-      });
+      out.push(buildInstantiatedEdge(i, `${astToExprStr(lInst)} = ${astToExprStr(rInst)}`, canonicalTex));
     }
     return out;
   }

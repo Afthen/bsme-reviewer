@@ -3,7 +3,7 @@
  * Scoped schema for stationary diesel engine heat balance.
  */
 
-import { POWERPLANT_BASE_VARS } from "../common/powerplant_base_schema.js";
+import { POWERPLANT_BASE_VARS } from "../common/index.js";
 import { DIMENSIONS } from "../../../core/dimensions.js";
 
 export const DIESEL_HEAT_BALANCE_VARS_DB = Object.freeze({

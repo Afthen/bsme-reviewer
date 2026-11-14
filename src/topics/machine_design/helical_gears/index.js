@@ -11,5 +11,3 @@ export const helicalGearsTopic = Object.freeze({
   relations: HELICAL_RELATION_GRAPH,
   createSystem: createGroundTruthHelicalSystem
 });
-
-export default helicalGearsTopic;

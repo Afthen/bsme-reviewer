@@ -3,7 +3,7 @@
  * Complete Helical Gear Schema extending Base Gear Schema.
  */
 
-import { BASE_GEAR_VARS } from "../common/gear_base_schema.js";
+import { BASE_GEAR_VARS } from "../common/index.js";
 import { DIMENSIONS } from "../../../core/dimensions.js";
 
 export const HELICAL_VARS_DB = Object.freeze({
@@ -29,12 +29,3 @@ export const HELICAL_VARS_DB = Object.freeze({
   "Q":     { name: "Ratio Factor for Gearing", symbol: "Q", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "Q", aliases: ["Ratio Factor for Gearing", "Q"] },
   "K_w":   { name: "Load-Stress Factor", symbol: "K_w", dimension: DIMENSIONS.STRESS, baseVar: "K_w", aliases: ["Load-Stress Factor", "Wear Factor", "k_g", "K_w"] }
 });
-
-export function getVarMeta(varKey) {
-  return HELICAL_VARS_DB[varKey] || {
-    name: varKey,
-    symbol: varKey,
-    dimension: DIMENSIONS.DIMENSIONLESS,
-    unit: "dimless"
-  };
-}

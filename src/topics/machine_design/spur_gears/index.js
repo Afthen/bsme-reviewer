@@ -11,5 +11,3 @@ export const spurGearsTopic = Object.freeze({
   relations: GEAR_RELATION_GRAPH,
   createSystem: createGroundTruthSystem
 });
-
-export default spurGearsTopic;

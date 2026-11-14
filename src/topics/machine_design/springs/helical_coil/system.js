@@ -11,15 +11,21 @@ export function createHelicalCoilSystem({ sys = "SI" } = {}) {
   // End connection: standard Squared & Ground (n_dead = 2, k_end = 2)
   const n_dead = 2;
   const k_end = 2;
+  const C = 8.0;
 
-  let d_w, C, D_m, R_m, D_o, D_i, p, n_e, n_a, SL, FL, delta_solid, alpha, L_wire;
-  let K_w, K_b, K_s, K_c, G, k, F, delta, OL, S_f, SPE;
+  // Dimensionless stress factors (identical for C = 8 across SI & US)
+  const K_w = (4 * C - 1) / (4 * C - 4) + 0.615 / C; // ~1.184018
+  const K_b = (4 * C + 2) / (4 * C - 3); // ~1.172414
+  const K_s = 1 + 1 / (2 * C); // 1.0625
+  const K_c = K_w / K_s; // ~1.11437
+
+  let d_w, D_m, R_m, D_o, D_i, p, n_e, n_a, SL, FL, delta_solid, alpha, L_wire;
+  let G, k, F, delta, OL, S_f, SPE;
   let F_1, F_2, dF, delta_1, delta_2, ddelta, OL_1, OL_2;
   let _u;
 
   if (isUS) {
     d_w = 0.25; // in
-    C = 8.0;
     D_m = C * d_w; // 2.0 in
     R_m = D_m / 2; // 1.0 in
     D_o = D_m + d_w; // 2.25 in
@@ -32,11 +38,6 @@ export function createHelicalCoilSystem({ sys = "SI" } = {}) {
     delta_solid = FL - SL; // 3.5 in
     alpha = Math.atan(p / (Math.PI * D_m)) * (180 / Math.PI); // deg
     L_wire = Math.PI * D_m * n_e; // 62.8319 in
-
-    K_w = (4 * C - 1) / (4 * C - 4) + 0.615 / C; // ~1.184018
-    K_b = (4 * C + 2) / (4 * C - 3); // ~1.172414
-    K_s = 1 + 1 / (2 * C); // 1.0625
-    K_c = K_w / K_s; // ~1.11437
 
     G = 11.5e6; // psi
     k = (G * d_w) / (8 * Math.pow(C, 3) * n_e); // ~70.19043 lb/in
@@ -68,7 +69,6 @@ export function createHelicalCoilSystem({ sys = "SI" } = {}) {
     };
   } else {
     d_w = 10.0; // mm
-    C = 8.0;
     D_m = C * d_w; // 80 mm
     R_m = D_m / 2; // 40 mm
     D_o = D_m + d_w; // 90 mm
@@ -81,11 +81,6 @@ export function createHelicalCoilSystem({ sys = "SI" } = {}) {
     delta_solid = FL - SL; // 150 mm
     alpha = Math.atan(p / (Math.PI * D_m)) * (180 / Math.PI); // deg
     L_wire = Math.PI * D_m * n_e; // 2513.27 mm
-
-    K_w = (4 * C - 1) / (4 * C - 4) + 0.615 / C; // ~1.184018
-    K_b = (4 * C + 2) / (4 * C - 3); // ~1.172414
-    K_s = 1 + 1 / (2 * C); // 1.0625
-    K_c = K_w / K_s; // ~1.11437
 
     G = 80.0; // GPa
     // In mm and N: G = 80000 N/mm^2

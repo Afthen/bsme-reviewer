@@ -24,4 +24,4 @@ export function createSpringSystemBaseRelations(count = 3) {
   ], { count });
 }
 
-export const SPRING_SYSTEM_BASE_RELATIONS = createSpringSystemBaseRelations(3);
+

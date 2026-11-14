@@ -4,7 +4,7 @@
  * Eliminates duplicate arithmetic logic across series/parallel system generators.
  */
 
-export function createSpringSystemGroundTruth({ sys = "SI", isParallel = false, count = 3 } = {}) {
+export function createSpringSystemGroundTruth({ sys = "SI", isParallel = false, count = 3, varsDb = {} } = {}) {
   const isUS = sys === "US";
 
   // Individual spring rates
@@ -58,5 +58,10 @@ export function createSpringSystemGroundTruth({ sys = "SI", isParallel = false, 
     _u[`delta_${i}`] = isUS ? "in" : "mm";
   }
 
-  return { S, _u };
+  const _names = {};
+  for (const [k, meta] of Object.entries(varsDb)) {
+    _names[k] = meta.nameAliases?.[0] || meta.name;
+  }
+
+  return { ...S, _names, _u };
 }

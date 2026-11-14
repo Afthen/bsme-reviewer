@@ -4,7 +4,7 @@
  * Zero hardcoded conversion factors in physical equations.
  */
 
-import { BASE_GEAR_RELATIONS } from "../common/gear_base_relations.js";
+import { BASE_GEAR_RELATIONS } from "../common/index.js";
 
 export const HELICAL_RELATION_GRAPH = [
   ...BASE_GEAR_RELATIONS,

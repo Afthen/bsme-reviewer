@@ -5,7 +5,9 @@
     "test/**/*.js"
   ],
   "project": [
-    "src/**/*.js",
-    "app.js"
+    "src/**/*.js"
+  ],
+  "ignoreDependencies": [
+    "katex"
   ]
 }

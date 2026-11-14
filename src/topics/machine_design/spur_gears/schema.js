@@ -3,7 +3,7 @@
  * Spur Gear Schema extending universal gear base with Prime's Manual aliases.
  */
 
-import { BASE_GEAR_VARS } from "../common/gear_base_schema.js";
+import { BASE_GEAR_VARS } from "../common/index.js";
 import { DIMENSIONS } from "../../../core/dimensions.js";
 
 export const GEAR_VARS_DB = Object.freeze({
@@ -32,12 +32,3 @@ export const GEAR_VARS_DB = Object.freeze({
   "K_w": { name: "Load-Stress Factor", symbol: "K_w", dimension: DIMENSIONS.STRESS, baseVar: "K_w", aliases: ["Load-Stress Factor", "Wear Factor", "k_g", "K_w"] },
   "N_sf": { name: "Service Factor for Fatigue", symbol: "N_{sf}", dimension: DIMENSIONS.DIMENSIONLESS, unit: "dimless", baseVar: "N_sf", aliases: ["Service Factor for Fatigue", "Fatigue Factor of Safety", "N_sf"] }
 });
-
-export function getVarMeta(varKey) {
-  return GEAR_VARS_DB[varKey] || {
-    name: varKey,
-    symbol: varKey,
-    dimension: DIMENSIONS.DIMENSIONLESS,
-    unit: "dimless"
-  };
-}
