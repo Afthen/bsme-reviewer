@@ -4,11 +4,11 @@
  */
 
 import { defineRelation, compileRelations } from "../../../../../core/relation_builder.js";
-import { SPRING_SYSTEM_BASE_RELATIONS } from "../common/index.js";
+import { createSpringSystemBaseRelations } from "../common/index.js";
 
 export function createParallelRelations(count = 3) {
   return compileRelations([
-    ...SPRING_SYSTEM_BASE_RELATIONS,
+    ...createSpringSystemBaseRelations(count),
 
     defineRelation({
       id: "eq_spring_parallel_stiffness",
@@ -36,6 +36,7 @@ export function createParallelRelations(count = 3) {
       name: "Element Force from Total Deflection",
       canonicalTex: "F_i = k_i \\delta_T",
       formula: "F_i = k_i * delta_T",
+      indexed: true,
       count
     })
   ], { count });

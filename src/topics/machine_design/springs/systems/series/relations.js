@@ -4,11 +4,11 @@
  */
 
 import { defineRelation, compileRelations } from "../../../../../core/relation_builder.js";
-import { SPRING_SYSTEM_BASE_RELATIONS } from "../common/index.js";
+import { createSpringSystemBaseRelations } from "../common/index.js";
 
 export function createSeriesRelations(count = 3) {
   return compileRelations([
-    ...SPRING_SYSTEM_BASE_RELATIONS,
+    ...createSpringSystemBaseRelations(count),
 
     defineRelation({
       id: "eq_spring_series_stiffness",
@@ -36,6 +36,7 @@ export function createSeriesRelations(count = 3) {
       name: "Element Deflection from Total Force",
       canonicalTex: "\\delta_i = \\frac{F_T}{k_i}",
       formula: "delta_i = F_T / k_i",
+      indexed: true,
       count
     })
   ], { count });

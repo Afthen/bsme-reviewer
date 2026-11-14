@@ -34,10 +34,6 @@ function instantiateAST(node, idx) {
   return { ...node };
 }
 
-function astHasIndexedToken(node) {
-  return getAstIdentifiers(node).some(id => id.endsWith("_i"));
-}
-
 function astHasFoldCall(node) {
   if (!node) return false;
   if (node.type === "call") {
@@ -188,17 +184,9 @@ function compileSingleEquation(spec, formulaStr, count, varsDb, idOverride = nul
   }
 
   // Case 2: Indexed per-element equation outside sum/prod (e.g. delta_i = F_T / k_i)
-  const lhsHasFold = astHasFoldCall(lhsAst);
-  const rhsHasFold = astHasFoldCall(rhsAst);
-  const templateWithoutFolds = {
-    lhs: lhsHasFold ? null : lhsAst,
-    rhs: rhsHasFold ? null : rhsAst
-  };
-  const hasLooseIndexed =
-    (!lhsHasFold && astHasIndexedToken(lhsAst)) ||
-    (!rhsHasFold && astHasIndexedToken(rhsAst));
+  const isExplicitIndexed = Boolean(spec.indexed);
 
-  if (hasLooseIndexed) {
+  if (isExplicitIndexed) {
     const canonicalTex = texOverride || `${astToEllipsisLatex(lhsAst, varsDb)} = ${astToEllipsisLatex(rhsAst, varsDb)}`;
     const out = [];
     for (let i = 1; i <= count; i++) {
