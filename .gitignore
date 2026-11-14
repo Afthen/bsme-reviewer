@@ -1,0 +1,3 @@
+.aider*
+tmp/
+migrate_relations.js
