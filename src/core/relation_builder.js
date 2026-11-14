@@ -207,7 +207,6 @@ function compileSingleEquation(spec, formulaStr, count, varsDb, idOverride = nul
   }
 
   // Case 3: Standard or folded (sum/prod) binary equation
-  void templateWithoutFolds;
   const expandedLhs = expandFoldCallsAST(lhsAst, count);
   const expandedRhs = expandFoldCallsAST(rhsAst, count);
   const baseFormula = `${astToExprStr(expandedLhs)} = ${astToExprStr(expandedRhs)}`;
