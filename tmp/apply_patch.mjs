@@ -1,4 +1,3 @@
-cat << 'EOF' > tmp/apply_patch.mjs
 import fs from "node:fs";
 import path from "node:path";
 
@@ -13,7 +12,6 @@ if (!fs.existsSync(fileArg)) {
 
 const raw = fs.readFileSync(fileArg, "utf8").replace(/\r\n/g, "\n");
 
-// Look for file headers like "FILE: path/to/file", "#### 1. `path/to/file`", or "**`path/to/file`**"
 function findFilePath(line) {
   const t = line.trim();
   const filePrefix = t.match(/^FILE:\s*(\S+)/);
@@ -96,7 +94,6 @@ if (operations.length === 0) {
   process.exit(1);
 }
 
-// In-memory application & validation
 const fileMap = new Map();
 function getFile(rel) {
   if (!fileMap.has(rel)) {
@@ -129,7 +126,6 @@ for (const op of operations) {
     }
     fileMap.set(op.file, text);
   } else {
-    // Drop-in replacement
     fileMap.set(op.file, op.content.endsWith("\n") ? op.content : op.content + "\n");
   }
 }
@@ -145,4 +141,3 @@ for (const [relPath, text] of fileMap.entries()) {
 }
 
 console.log(`\n${dryRun ? "Dry-run successful!" : "All changes applied successfully!"} (${operations.length} blocks across ${fileMap.size} files)`);
-EOF
