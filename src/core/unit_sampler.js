@@ -37,6 +37,29 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "kPa", tokens: 1 },
       { unit: "bar", tokens: 1 }
     ],
+    [DIMENSIONS.MODULUS]: [
+      { unit: "GPa", tokens: 1 },
+      { unit: "MPa", tokens: 1 },
+      { unit: "N/mm^2", tokens: 2 }
+    ],
+    [DIMENSIONS.STIFFNESS]: [
+      { unit: "N/mm", tokens: 2 },
+      { unit: "kN/m", tokens: 2 },
+      { unit: "N/m", tokens: 2 },
+      { unit: "kgf/mm", tokens: 3 }
+    ],
+    [DIMENSIONS.TIME]: [
+      { unit: "s", tokens: 1 },
+      { unit: "ms", tokens: 1 },
+      { unit: "min", tokens: 1 }
+    ],
+    [DIMENSIONS.FREQUENCY]: [
+      { unit: "Hz", tokens: 1 },
+      { unit: "kHz", tokens: 1 }
+    ],
+    [DIMENSIONS.ACCELERATION]: [
+      { unit: "m/s^2", tokens: 2 }
+    ],
     [DIMENSIONS.POWER]: [
       { unit: "kW", tokens: 1 },
       { unit: "kJ/s", tokens: 2 },
@@ -50,9 +73,14 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "kN-m", tokens: 2 },
       { unit: "J", tokens: 1 }
     ],
+    [DIMENSIONS.MASS]: [
+      { unit: "kg", tokens: 1 },
+      { unit: "g", tokens: 1 }
+    ],
     [DIMENSIONS.ENERGY]: [
       { unit: "kJ", tokens: 1 },
       { unit: "J", tokens: 1 },
+      { unit: "N-m", tokens: 2 },
       { unit: "kWh", tokens: 1 }
     ],
     [DIMENSIONS.SPECIFIC_ENERGY]: [
@@ -111,6 +139,32 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "lb/in^2", tokens: 2 },
       { unit: "ksi", tokens: 1 }
     ],
+    [DIMENSIONS.MODULUS]: [
+      { unit: "ksi", tokens: 1 },
+      { unit: "psi", tokens: 1 },
+      { unit: "lb/in^2", tokens: 2 }
+    ],
+    [DIMENSIONS.STIFFNESS]: [
+      { unit: "lb/in", tokens: 2 },
+      { unit: "lb/ft", tokens: 2 },
+      { unit: "kip/in", tokens: 2 }
+    ],
+    [DIMENSIONS.TIME]: [
+      { unit: "s", tokens: 1 },
+      { unit: "ms", tokens: 1 },
+      { unit: "min", tokens: 1 }
+    ],
+    [DIMENSIONS.FREQUENCY]: [
+      { unit: "Hz", tokens: 1 },
+      { unit: "kHz", tokens: 1 }
+    ],
+    [DIMENSIONS.ACCELERATION]: [
+      { unit: "ft/s^2", tokens: 2 },
+      { unit: "in/s^2", tokens: 2 }
+    ],
+    [DIMENSIONS.MASS]: [
+      { unit: "lb", tokens: 1 }
+    ],
     [DIMENSIONS.POWER]: [
       { unit: "hp", tokens: 1 },
       { unit: "Btu/min", tokens: 2 },
@@ -123,6 +177,8 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "lb-ft", tokens: 2 }
     ],
     [DIMENSIONS.ENERGY]: [
+      { unit: "in-lb", tokens: 2 },
+      { unit: "ft-lb", tokens: 2 },
       { unit: "Btu", tokens: 1 }
     ],
     [DIMENSIONS.SPECIFIC_ENERGY]: [
@@ -227,7 +283,11 @@ const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["pct_ip", "pct_cw", "pct_exh", "pct_rad"]),
   new Set(["phi_n", "phi_t", "psi"]),
   new Set(["p_n", "p_t", "p_x"]),
-  new Set(["W_t", "F_a", "F_r", "F_N"])
+  new Set(["W_t", "F_a", "F_r", "F_N"]),
+  new Set(["D_o", "D_i", "D_m", "R_m", "d_w", "FL", "SL", "OL", "delta", "delta_solid"]),
+  new Set(["F_1", "F_2", "F_3", "F_4"]),
+  new Set(["delta_1", "delta_2", "delta_3", "delta_4"]),
+  new Set(["k_1", "k_2", "k_3", "k_4"])
 ]);
 
 export function findCoupledGroup(varKey) {
@@ -289,14 +349,14 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
     }
 
     const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-    const canonBag = getUnitAtomBag(canonUnit);
+    const canonBag = getUnitAtomBag(canonUnit, meta.dimension);
     const canonVal = S[k];
-    const coherentVal = valueToCoherentBase(canonVal, canonUnit, isDiff);
+    const coherentVal = valueToCoherentBase(canonVal, canonUnit, isDiff, meta.dimension);
 
     const palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
 
     const validCandidates = palette.filter(p => {
-      const b = getUnitAtomBag(p.unit);
+      const b = getUnitAtomBag(p.unit, meta.dimension);
       return isDimEqual(canonBag.dimMap, b.dimMap);
     });
 
@@ -306,7 +366,7 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
     let chosenUnit = null;
 
     for (const cand of shuffledCandidates) {
-      const candVal = formatValueInUnit(coherentVal, cand.unit, isDiff);
+      const candVal = formatValueInUnit(coherentVal, cand.unit, isDiff, meta.dimension);
       if (retainsSufficientSigFigs(candVal)) {
         chosenUnit = cand.unit;
         S[k] = candVal;

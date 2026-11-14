@@ -32,7 +32,11 @@ export function relationShare(eq) {
 export function topicScore(relations = [], getMastery = () => 0) {
   let shareSum = 0;
   let weighted = 0;
+  const seen = new Set();
   relations.forEach(rel => {
+    const key = rel.masteryId || rel.id;
+    if (key && seen.has(key)) return;
+    if (key) seen.add(key);
     const share = relationShare(rel);
     shareSum += share;
     weighted += share * relationWeaknessWeight(getMastery(rel));

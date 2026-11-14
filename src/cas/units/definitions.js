@@ -52,6 +52,7 @@ export const BASE_UNITS = Object.freeze({
   "bar":            { dim: "P", baseScale: 100000.0, symbol: "bar" },
   "litre":          { dim: "Vol", baseScale: 0.001, symbol: "L" },
   "rpm":            { dim: "Freq", baseScale: 1/60, symbol: "rpm" },
+  "hertz":          { dim: "Freq", baseScale: 1.0, symbol: "Hz" },
   "cfm":            { dim: "VolFlow", baseScale: 0.3048**3 / 60, symbol: "cfm" }
 });
 
@@ -67,6 +68,7 @@ const ATOM_DIM_VECTORS = Object.freeze({
   "minute":         { T: 1 },
   "hour":           { T: 1 },
   "rpm":            { T: -1 },
+  "hertz":          { T: -1 },
   "cfm":            { L: 3, T: -1 },
   "Kelvin":         { Th: 1 },
   "Celsius":        { Th: 1 },
@@ -110,7 +112,8 @@ export function resolveUnitToken(tokenBody, dimension = null) {
   if (tokenBody === "lbf" || tokenBody === "lb_f") return { prefix: null, base: "pound_force" };
   if (tokenBody === "lbm" || tokenBody === "lb_m") return { prefix: null, base: "pound_mass" };
   if (tokenBody === "kgf") return { prefix: null, base: "kilogram_force" };
-  if (tokenBody === "kips" || tokenBody === "klb") return { prefix: "kilo", base: "pound_force" };
+  if (tokenBody === "kip" || tokenBody === "kips" || tokenBody === "klb") return { prefix: "kilo", base: "pound_force" };
+  if (tokenBody === "hr") return { prefix: null, base: "hour" };
   if (tokenBody === "kg") return { prefix: "kilo", base: "gram" };
   if (tokenBody === "g") return { prefix: null, base: "gram" };
   if (tokenBody === "N") return { prefix: null, base: "newton" };
@@ -257,7 +260,10 @@ export function getUnitAtomBag(uName, dimension = null) {
   const ast = parseUnitToSemanticAST(uName, dimension);
   const scale = getSemanticScale(ast);
   const dimMap = {};
+  let isUnknown = false;
+  const isDimensionless = !uName || uName === "dimless" || uName === "ratio";
   ast.forEach(f => {
+    if (!BASE_UNITS[f.base]) isUnknown = true;
     const vec = ATOM_DIM_VECTORS[f.base];
     if (vec) {
       for (const [d, p] of Object.entries(vec)) {
@@ -267,7 +273,7 @@ export function getUnitAtomBag(uName, dimension = null) {
       }
     }
   });
-  return { scale, dimMap, isDimensionless: !uName || uName === "dimless" || uName === "ratio" };
+  return { scale, dimMap, isDimensionless, isUnknown: !isDimensionless && isUnknown };
 }
 
 export function formatValueInUnit(value, unitName = "", isDifference = false, dimension = null) {

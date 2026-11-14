@@ -111,6 +111,19 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     return [node];
   }
 
+  function isTokenInAdditiveSubtree(node, targetTok, insideAdd = false) {
+    if (!node) return false;
+    if (node.type === "id") return insideAdd && node.name === targetTok;
+    if (node.type === "group") return isTokenInAdditiveSubtree(node.expr, targetTok, insideAdd);
+    if (node.type === "call") return isTokenInAdditiveSubtree(node.arg, targetTok, insideAdd);
+    if (node.type === "binary") {
+      const nextAdd = insideAdd || node.op === "+" || node.op === "-";
+      return isTokenInAdditiveSubtree(node.left, targetTok, nextAdd) ||
+        isTokenInAdditiveSubtree(node.right, targetTok, nextAdd);
+    }
+    return false;
+  }
+
   const branches = collectAdditiveBranches(ast);
   const isMultiBranch = branches.length > 1;
 
@@ -142,6 +155,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       }
 
       const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
+      const useInlineUnit = fDepth >= 2;
       const parsed = parseUnitToSemanticAST(uName, meta.dimension);
 
       // A. Counterpart Discovery within this branch via 7D Dimensional Vectors
@@ -211,27 +225,29 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
         const tokBag = getUnitAtomBag(uName, meta.dimension);
         const targetBag = getUnitAtomBag(targetUnit, targetDim);
+        const inAdditive = isMultiBranch || isTokenInAdditiveSubtree(branchAst, tok);
 
         if (isDimEqual(tokBag.dimMap, targetBag.dimMap)) {
           const conv = formatPairConversion(uName, targetUnit, meta.dimension, targetDim, "whole");
           if (!conv.tex) {
-            tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
+            tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
           } else {
             const cancelMode = conv.isDecomposed ? "component" : "whole";
-            tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, cancelMode);
-            if (isMultiBranch) {
-              // Inside an additive branch, keep conversion in-situ on the term
-              tokenConversions[tok] = [conv.tex];
+            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, cancelMode);
+            const convTex = useInlineUnit ? conv.tex.replaceAll("\\cfrac", "\\tfrac") : conv.tex;
+            if (inAdditive) {
+              // Inside any additive subtree (incl. 1/(1/k_1 + 1/k_2)), convert in-situ
+              tokenConversions[tok] = [convTex];
               conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
             } else if (!globalConversionTex) {
               // Single-branch Option B: preserves target unit intact on main line
-              globalConversionTex = conv.tex;
+              globalConversionTex = convTex;
               conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
             }
           }
         } else {
           // Compound branch (e.g. m_f / IP or Q_rej / m_a)
-          tokenMarkup[tok] = unitToCancelledTex(uName, false, meta.dimension, "component");
+          tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, "component");
           if (!compoundComputed) {
             compoundComputed = true;
             const entries = Object.entries(tokenBags).map(([t, info]) => ({
@@ -239,13 +255,15 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
             }));
             const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
             for (const [k, convList] of Object.entries(conversionsByToken)) {
-              tokenConversions[k] = convList;
+              tokenConversions[k] = useInlineUnit
+                ? convList.map(c => c.replaceAll("\\cfrac", "\\tfrac"))
+                : convList;
             }
             conversionScalars.push(...scalars);
           }
         }
       } else {
-        tokenMarkup[tok] = unitToTex(uName, false, meta.dimension);
+        tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
       }
     }
   }

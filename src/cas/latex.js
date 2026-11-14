@@ -95,8 +95,8 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
       const L = astToLatex(node.left, substituteMap, varsDb);
       const R = astToLatex(node.right, substituteMap, varsDb);
 
-      const leftIsSimpleNum = /^[+-]?[\d.]+$/.test(L.trim());
-      const rightIsSimpleNum = /^[+-]?[\d.]+$/.test(R.trim());
+      const leftIsSimpleNum = /^[+-]?[\d.,]+(?:°)?$/.test(L.trim());
+      const rightIsSimpleNum = /^[+-]?[\d.,]+(?:°)?$/.test(R.trim());
       // Unit-carrying substituted tokens (incl. unitToTex \cfrac compounds)
       // are numeric factors: they multiply explicitly, never juxtaposed.
       const leftHasUnit = L.includes("\\text{");
@@ -106,12 +106,19 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
       if ((leftIsSimpleNum || leftHasUnit) && (rightIsSimpleNum || rightHasUnit)) sep = " \\cdot ";
       else if (R.startsWith("(") || R.startsWith("\\cos") || R.startsWith("\\sin") || R.startsWith("\\tan")) sep = " \\, ";
 
-      return `${L}${sep}${R}`.trim();
+      const wrappedR = (R.trim().startsWith("-") && !R.trim().startsWith("(")) ? `(${R})` : R;
+      return `${L}${sep}${wrappedR}`.trim();
     }
     if (node.op === "+") {
       return `${astToLatex(node.left, substituteMap, varsDb)} + ${astToLatex(node.right, substituteMap, varsDb)}`;
     }
     if (node.op === "-") {
+      if (node.left?.type === "num" && node.left.val === "0") {
+        const uR = unwrapGroup(node.right);
+        const rightTex = astToLatex(node.right, substituteMap, varsDb);
+        const needParens = uR?.type === "binary" && (uR.op === "+" || uR.op === "-");
+        return needParens ? `-(${stripOuterParens(rightTex)})` : `-${rightTex}`;
+      }
       return `${astToLatex(node.left, substituteMap, varsDb)} - ${astToLatex(node.right, substituteMap, varsDb)}`;
     }
     if (node.op === "^") {
@@ -144,6 +151,16 @@ function unwrapGroup(node) {
 }
 
 export function casToTex(exprStr, varsDb = {}) {
+  if (!exprStr) return "";
+  if (exprStr.includes("=")) {
+    return exprStr
+      .split("=")
+      .map(part => {
+        const ast = parseMathAST(part.trim());
+        return ast ? astToLatex(ast, null, varsDb) : part.trim();
+      })
+      .join(" = ");
+  }
   const ast = parseMathAST(exprStr);
   return ast ? astToLatex(ast, null, varsDb) : exprStr;
 }

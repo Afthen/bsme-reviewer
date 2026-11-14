@@ -92,20 +92,30 @@ export function parseMathAST(exprStr) {
   }
 
   function parsePower() {
-    let left = parsePrimary();
-    while (peek() && peek().val === "^") {
+    const left = parsePrimary();
+    if (peek() && peek().val === "^") {
       const op = consume().val;
-      const right = parsePrimary();
-      left = { type: "binary", op, left, right };
+      const right = parseUnary();
+      return { type: "binary", op, left, right };
     }
     return left;
   }
 
+  function parseUnary() {
+    if (peek() && peek().val === "-") {
+      consume("-");
+      const right = parseUnary();
+      if (!right) return null;
+      return { type: "binary", op: "-", left: { type: "num", val: "0" }, right };
+    }
+    return parsePower();
+  }
+
   function parseMulDiv() {
-    let left = parsePower();
+    let left = parseUnary();
     while (peek() && (peek().val === "*" || peek().val === "/")) {
       const op = consume().val;
-      const right = parsePower();
+      const right = parseUnary();
       left = { type: "binary", op, left, right };
     }
     return left;
@@ -121,7 +131,8 @@ export function parseMathAST(exprStr) {
     return left;
   }
 
-  return parseAddSub();
+  const tree = parseAddSub();
+  return pos < tokens.length ? null : tree;
 }
 
 /**
@@ -157,7 +168,11 @@ export function astToExprStr(node) {
       }
     }
 
-    // 3. Subtraction: Right-hand additive terms must be parenthesized: A - (B + C)
+    // 3. Unary negation sentinel (0 - X) and binary subtraction grouping
+    if (node.op === "-" && node.left.type === "num" && node.left.val === "0") {
+      const needParens = node.right.type === "binary" && (node.right.op === "+" || node.right.op === "-");
+      return needParens ? `-(${rightStr})` : `-${rightStr}`;
+    }
     if (node.op === "-" && node.right.type === "binary" && (node.right.op === "+" || node.right.op === "-")) {
       rightStr = `(${rightStr})`;
     }

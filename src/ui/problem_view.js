@@ -202,7 +202,7 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
     if (step.systemEqIds) {
       step.systemEqIds.forEach(id => recordAttempt(id, true, topicScope));
     } else {
-      recordAttempt(step.eqId, true, topicScope);
+      recordAttempt(step.masteryId || step.eqId, true, topicScope);
     }
 
     (step.nodes || []).forEach(nodeKey => {
@@ -220,7 +220,7 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
     if (step.systemEqIds) {
       step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
     } else {
-      recordAttempt(step.eqId, false, topicScope);
+      recordAttempt(step.masteryId || step.eqId, false, topicScope);
     }
 
     (step.nodes || []).forEach(nodeKey => {
@@ -257,7 +257,7 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   if (step.systemEqIds) {
     step.systemEqIds.forEach(id => recordAttempt(id, false, topicScope));
   } else {
-    recordAttempt(step.eqId, false, topicScope);
+    recordAttempt(step.masteryId || step.eqId, false, topicScope);
   }
 
   (step.nodes || []).forEach(nodeKey => {

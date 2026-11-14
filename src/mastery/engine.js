@@ -62,9 +62,10 @@ export function calculateTopicLambda(topic) {
 }
 
 export function getDecayedMastery(eq, topic = null) {
-  if (!eq || !eq.id) return 0;
+  const key = eq?.masteryId || eq?.id;
+  if (!key) return 0;
 
-  const h = masteryState[eq.id];
+  const h = masteryState[key];
   const history = h && Array.isArray(h.attempts) ? h.attempts : [];
 
   const tokens = tokenizeExpr(eq.baseFormula || "").length;

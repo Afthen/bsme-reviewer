@@ -457,7 +457,7 @@ function generateNewProblem() {
   incrementTopicTick("common");
 
   currentProblem = generateProblem(topic, masteryFor(topic));
-  renderProblemView(currentProblem, topic.relations, topic.id);
+  renderProblemView(currentProblem, currentProblem.relations || topic.relations, topic.id);
   renderTopicBadge(topic);
   updateSidebarRelations(
     topic.relations,

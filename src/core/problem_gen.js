@@ -296,7 +296,15 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 }
 
 export function generateProblem(topic, getMastery = () => 0) {
-  const { title, varsDb, relations, createSystem } = topic;
+  let { title, varsDb, relations, createSystem } = topic;
+  if (typeof topic.instantiate === "function" && Array.isArray(topic.countRange)) {
+    const [minN, maxN] = topic.countRange;
+    const n = minN + Math.floor(Math.random() * (maxN - minN + 1));
+    const inst = topic.instantiate(n);
+    varsDb = inst.varsDb;
+    relations = inst.relations;
+    createSystem = inst.createSystem;
+  }
 
   // 1. Establish ground truth system with 40-40-20 unit distribution
   const targetMode = sampleSystemMode();
@@ -350,8 +358,8 @@ export function generateProblem(topic, getMastery = () => 0) {
           if (currentUnit !== targetUnit) {
             const meta = varsDb[step.targetVar] || {};
             const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-            const coherentVal = valueToCoherentBase(step.expectedVal, currentUnit, isDiff);
-            const newVal = formatValueInUnit(coherentVal, targetUnit, isDiff);
+            const coherentVal = valueToCoherentBase(step.expectedVal, currentUnit, isDiff, meta.dimension);
+            const newVal = formatValueInUnit(coherentVal, targetUnit, isDiff, meta.dimension);
             S_neat[step.targetVar] = newVal;
             S_neat._u[step.targetVar] = targetUnit;
             step.expectedVal = newVal;
@@ -395,6 +403,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     distractors: path.distractors,
     system: S_neat,
     varsDb,
+    relations,
     topicId: topic.id,
     hopDistance: path.hopDistance
   };

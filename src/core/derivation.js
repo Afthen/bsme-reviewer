@@ -106,7 +106,8 @@ export function buildAlignedDerivation(
           .join("");
 
         const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
-        subsMap[factoredId] = uTex ? `(${inner})\\,${uTex}` : `(${inner})`;
+        const groupConv = unitAnalysis.tokenConversions?.[leaves[0].key]?.join("") || "";
+        subsMap[factoredId] = uTex ? `(${inner})\\,${uTex}${groupConv}` : `(${inner})${groupConv}`;
 
         node.type = "id";
         node.name = factoredId;

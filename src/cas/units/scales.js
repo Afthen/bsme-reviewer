@@ -226,14 +226,53 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
       sourceAtoms.push({
         tok: entry.tok,
         atom,
+        exp: entry.exp,
         netPower: atom.power * entry.exp,
         dim: BASE_UNITS[atom.base]?.dim || atom.base
       });
     });
   }
-  
+
+  // 0. Pair reciprocal Frequency (Hz/kHz/MHz) <-> Time (s/ms/min/h) via 1 Hz * 1 s = 1
+  for (const src of sourceAtoms) {
+    if (src.matched || (src.dim !== "Freq" && src.dim !== "T")) continue;
+    const wantedDim = src.dim === "Freq" ? "T" : "Freq";
+    const tIdx = targetAst.findIndex((tAtom, idx) => {
+      if (usedTargetIndices.has(idx)) return false;
+      const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
+      const isRecipPair =
+        (src.dim === "Freq" && src.atom.base === "hertz" && tDim === "T") ||
+        (src.dim === "T" && tAtom.base === "hertz");
+      return isRecipPair && tDim === wantedDim && Math.sign(tAtom.power) === Math.sign(src.netPower);
+    });
+
+    if (tIdx >= 0) {
+      usedTargetIndices.add(tIdx);
+      src.matched = true;
+      const tAtom = targetAst[tIdx];
+      const srcStr = atomToUnitString(src.atom);
+      const tgtStr = atomToUnitString(tAtom);
+      const sSrc = getUnitAtomBag(srcStr).scale;
+      const sTgt = getUnitAtomBag(tgtStr).scale;
+      const prod = sSrc * sTgt;
+
+      if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
+      if (Math.abs(prod - 1) < 1e-6) {
+        conversionsByToken[src.tok].push(` \\cdot ${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}`);
+      } else if (prod < 1) {
+        const factor = 1 / prod;
+        scalars.push(parseFloat(factor.toPrecision(6)));
+        conversionsByToken[src.tok].push(` \\cdot ${fmtScale(factor)} \\, ${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}`);
+      } else {
+        scalars.push(parseFloat(prod.toPrecision(6)));
+        conversionsByToken[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}}{${fmtScale(prod)}}`);
+      }
+    }
+  }
+
   // 1. Pair source atoms with matching target atoms by base dimension
   for (const src of sourceAtoms) {
+    if (src.matched) continue;
     const tIdx = targetAst.findIndex((tAtom, idx) => {
       if (usedTargetIndices.has(idx)) return false;
       const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
@@ -335,16 +374,27 @@ function getRegisteredPairwiseRatios() {
     { u: "s", dim: null }, { u: "min", dim: null }, { u: "h", dim: null }, { u: "rpm", dim: DIMENSIONS.ROT_SPEED },
     { u: "K", dim: DIMENSIONS.TEMPERATURE }, { u: "°C", dim: DIMENSIONS.TEMPERATURE },
     { u: "°F", dim: DIMENSIONS.TEMPERATURE }, { u: "°R", dim: DIMENSIONS.TEMPERATURE },
+    { u: "ms", dim: DIMENSIONS.TIME },
+    { u: "Hz", dim: DIMENSIONS.FREQUENCY }, { u: "kHz", dim: DIMENSIONS.FREQUENCY }, { u: "1/s", dim: DIMENSIONS.FREQUENCY },
     { u: "J", dim: DIMENSIONS.ENERGY }, { u: "kJ", dim: DIMENSIONS.ENERGY }, { u: "Btu", dim: DIMENSIONS.ENERGY },
-    { u: "kWh", dim: DIMENSIONS.ENERGY }, { u: "ft-lb", dim: DIMENSIONS.ENERGY }, { u: "N-m", dim: DIMENSIONS.TORQUE },
+    { u: "kWh", dim: DIMENSIONS.ENERGY }, { u: "ft-lb", dim: DIMENSIONS.ENERGY }, { u: "in-lb", dim: DIMENSIONS.ENERGY },
+    { u: "N-m", dim: DIMENSIONS.TORQUE }, { u: "N-mm", dim: DIMENSIONS.TORQUE },
+    { u: "lb-in", dim: DIMENSIONS.TORQUE }, { u: "lb-ft", dim: DIMENSIONS.TORQUE },
     { u: "W", dim: DIMENSIONS.POWER }, { u: "kW", dim: DIMENSIONS.POWER }, { u: "hp", dim: DIMENSIONS.POWER },
     { u: "kJ/s", dim: DIMENSIONS.POWER }, { u: "J/s", dim: DIMENSIONS.POWER },
     { u: "Btu/min", dim: DIMENSIONS.POWER }, { u: "Btu/h", dim: DIMENSIONS.POWER },
     { u: "ft-lb/s", dim: DIMENSIONS.POWER }, { u: "ft-lb/min", dim: DIMENSIONS.POWER },
-    { u: "Pa", dim: DIMENSIONS.PRESSURE }, { u: "kPa", dim: DIMENSIONS.PRESSURE }, { u: "MPa", dim: DIMENSIONS.PRESSURE },
+    { u: "Pa", dim: DIMENSIONS.PRESSURE }, { u: "kPa", dim: DIMENSIONS.PRESSURE },
+    { u: "MPa", dim: DIMENSIONS.PRESSURE }, { u: "GPa", dim: DIMENSIONS.MODULUS },
     { u: "bar", dim: DIMENSIONS.PRESSURE }, { u: "psi", dim: DIMENSIONS.PRESSURE }, { u: "psf", dim: DIMENSIONS.PRESSURE },
     { u: "ksi", dim: DIMENSIONS.PRESSURE }, { u: "N/m^2", dim: DIMENSIONS.PRESSURE },
     { u: "kN/m^2", dim: DIMENSIONS.PRESSURE }, { u: "N/mm^2", dim: DIMENSIONS.PRESSURE },
+    { u: "N/m", dim: DIMENSIONS.STIFFNESS }, { u: "N/mm", dim: DIMENSIONS.STIFFNESS },
+    { u: "kN/m", dim: DIMENSIONS.STIFFNESS }, { u: "kgf/mm", dim: DIMENSIONS.STIFFNESS },
+    { u: "lb/in", dim: DIMENSIONS.STIFFNESS }, { u: "lb/ft", dim: DIMENSIONS.STIFFNESS },
+    { u: "kip/in", dim: DIMENSIONS.STIFFNESS },
+    { u: "m/s^2", dim: DIMENSIONS.ACCELERATION }, { u: "ft/s^2", dim: DIMENSIONS.ACCELERATION },
+    { u: "in/s^2", dim: DIMENSIONS.ACCELERATION },
     { u: "m^3", dim: DIMENSIONS.VOLUME }, { u: "L", dim: DIMENSIONS.VOLUME }, { u: "ft^3", dim: DIMENSIONS.VOLUME },
     { u: "m^3/s", dim: DIMENSIONS.VOLUME_FLOW }, { u: "m^3/h", dim: DIMENSIONS.VOLUME_FLOW },
     { u: "L/h", dim: DIMENSIONS.VOLUME_FLOW }, { u: "cfm", dim: DIMENSIONS.VOLUME_FLOW },
