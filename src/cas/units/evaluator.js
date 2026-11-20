@@ -58,7 +58,18 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
     const rawNum = evalAST(node, evalState, unitResolver);
     if (isNaN(rawNum)) return { value: NaN, unitAnalysis };
 
-    const finalValue = rawNum * (unitAnalysis.numericConversionFactor || 1.0);
+    const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
+    let finalValue = rawNum;
+    if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
+      const targetMeta = varsDb[cTarget] || varsDb[targetVar] || {};
+      const targetIsDiff = isDifferenceVariable(cTarget, varsDb) || isDifferenceVariable(targetVar, varsDb);
+      finalValue = formatValueInUnit(
+        valueToCoherentBase(rawNum, reqTargetU, targetIsDiff, targetMeta.dimension),
+        targetUnit,
+        targetIsDiff,
+        targetMeta.dimension
+      );
+    }
     return { value: finalValue, unitAnalysis };
   }
 

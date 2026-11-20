@@ -3,7 +3,7 @@
  * Parallel Spring System ground truth generator (mirrors Video Problem 3).
  */
 
-import { createSpringSystemGroundTruth } from "../common/index.js";
+import { createSpringSystemGroundTruth } from "../common/system_helper.js";
 import { createParallelVarsDb } from "./schema.js";
 
 export function createParallelSystem({ sys = "SI", count = 3 } = {}) {

@@ -3,7 +3,7 @@
  * Period and Frequency schema (Lecture Video section 11).
  */
 
-import { SPRING_BASE_VARS } from "../common/index.js";
+import { SPRING_BASE_VARS } from "../common/schema.js";
 import { DIMENSIONS } from "../../../../core/dimensions.js";
 
 export const PERIOD_FREQUENCY_VARS_DB = Object.freeze({

@@ -4,7 +4,7 @@
  */
 
 import { defineRelation, compileRelations } from "../../../../../core/relation_builder.js";
-import { createSpringSystemBaseRelations } from "../common/index.js";
+import { createSpringSystemBaseRelations } from "../common/relations.js";
 
 export function createParallelRelations(count = 3) {
   return compileRelations([

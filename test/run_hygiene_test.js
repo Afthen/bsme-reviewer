@@ -8,8 +8,10 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { ALL_TOPICS } from "../src/topics/index.js";
+import { loadAllTopics } from "../src/topics/index.js";
 import { phi, fib } from "../src/mastery/constants.js";
+
+const ALL_TOPICS = await loadAllTopics();
 
 // ============================================================================
 // 1. LEGACY SIBLING SHADOW & DEAD FILE DETECTOR
@@ -28,6 +30,32 @@ describe("Hygiene: Legacy Sibling Shadows & Deprecated Paths", () => {
     assert.ok(
       !fs.existsSync(legacyRepetitionDir),
       `Found lingering legacy folder: '${legacyRepetitionDir}'. Delete this folder to prevent stale references now that 'src/mastery/' is active.`
+    );
+  });
+
+  test("No aggregator or common barrel index.js files may exist inside src/topics/", () => {
+    const topicsRoot = path.resolve("src/topics");
+    const offenders = [];
+    (function scan(dir) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scan(full);
+        } else if (entry.name === "index.js" && dir !== topicsRoot) {
+          const text = fs.readFileSync(full, "utf8");
+          const isLeaf = fs.existsSync(path.join(dir, "schema.js"))
+            && fs.existsSync(path.join(dir, "relations.js"))
+            && fs.existsSync(path.join(dir, "system.js"));
+          if (!isLeaf || text.includes("export *")) {
+            offenders.push(path.relative(process.cwd(), full));
+          }
+        }
+      }
+    })(topicsRoot);
+    assert.deepEqual(
+      offenders,
+      [],
+      `Found forbidden non-leaf/barrel index.js files: [${offenders.join(", ")}]`
     );
   });
 });

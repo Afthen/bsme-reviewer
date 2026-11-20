@@ -3,7 +3,7 @@
  * Spur Gear Schema extending universal gear base with Prime's Manual aliases.
  */
 
-import { BASE_GEAR_VARS } from "../common/index.js";
+import { BASE_GEAR_VARS } from "../common/gear_base_schema.js";
 import { DIMENSIONS } from "../../../core/dimensions.js";
 
 export const GEAR_VARS_DB = Object.freeze({

@@ -111,8 +111,10 @@
   </div>
 
   <script type="module">
-    import { ALL_TOPICS } from "../src/topics/index.js";
+    import { loadAllTopics } from "../src/topics/index.js";
     import { validateTopic } from "./validator.js";
+
+    const ALL_TOPICS = await loadAllTopics();
 
     window.runAll = function() {
       const container = document.getElementById("results");

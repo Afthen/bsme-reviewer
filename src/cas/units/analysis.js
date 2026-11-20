@@ -5,7 +5,7 @@
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
-import { fmtSigFig } from "../../core/dimensions.js";
+import { fmtSigFig, DIMENSIONS } from "../../core/dimensions.js";
 import {
   parseUnitToSemanticAST,
   BASE_UNITS,
@@ -13,7 +13,9 @@ import {
   isDimEqual,
   unitToTex,
   unitToCancelledTex,
-  getAbsoluteCompanionUnit
+  getAbsoluteCompanionUnit,
+  valueToCoherentBase,
+  formatValueInUnit
 } from "./definitions.js";
 import {
   formatPairConversion,
@@ -51,27 +53,32 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       const cKey = resolveCanonicalKey(tok, varsDb);
       const reqU = requiredUnits[cKey] || requiredUnits[tok];
       if (!reqU) return;
-      const currU = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+      const meta = varsDb[cKey] || varsDb[tok] || {};
+      const currU = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
 
-      if (currU === "°C" && (reqU === "K" || reqU === "degK")) {
-        const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-        preConversions.push({
-          token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-          conv: { factor: 1.0, latex: `(${fmtSigFig(rawVal)} + 273.15)\\,\\text{K}` },
-          rawVal, convertedVal: rawVal + 273.15
-        });
-        return;
-      }
       if (currU && reqU && currU !== reqU && currU !== "deg" && currU !== "°") {
-        const currScale = getUnitAtomBag(currU).scale;
-        const reqScale = getUnitAtomBag(reqU).scale;
-        if (currScale && reqScale) {
-          const ratio = currScale / reqScale;
+        const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
+        const currBag = getUnitAtomBag(currU, meta.dimension);
+        const reqBag = getUnitAtomBag(reqU, meta.dimension);
+        if (currBag.scale && reqBag.scale) {
           const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
+          const convertedVal = formatValueInUnit(
+            valueToCoherentBase(rawVal, currU, isDiff, meta.dimension),
+            reqU,
+            isDiff,
+            meta.dimension
+          );
+          const ratio = currBag.scale / reqBag.scale;
+          const isAffine = !isDiff && (currBag.dimMap.Th !== undefined || reqBag.dimMap.Th !== undefined);
           preConversions.push({
             token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-            conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}` },
-            rawVal, convertedVal: rawVal * ratio
+            conv: {
+              factor: isAffine ? 1.0 : ratio,
+              latex: isAffine
+                ? `${fmtSigFig(convertedVal)}\\,${unitToTex(reqU)}`
+                : `\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}`
+            },
+            rawVal, convertedVal
           });
         }
       }
@@ -80,10 +87,14 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const cTarget = resolveCanonicalKey(targetVar, varsDb);
     const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
     if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
-      const reqScale = getUnitAtomBag(reqTargetU).scale;
-      const targetScale = getUnitAtomBag(targetUnit).scale;
-      if (reqScale && targetScale) {
-        numericConversionFactor = reqScale / targetScale;
+      const targetMeta = varsDb[cTarget] || varsDb[targetVar] || {};
+      const targetIsDiff = targetMeta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!targetMeta.isDifference;
+      const reqBag = getUnitAtomBag(reqTargetU, targetMeta.dimension);
+      const targetBag = getUnitAtomBag(targetUnit, targetMeta.dimension);
+      const isTargetAffine = !targetIsDiff && (reqBag.dimMap.Th !== undefined || targetBag.dimMap.Th !== undefined);
+
+      if (reqBag.scale && targetBag.scale && !isTargetAffine) {
+        numericConversionFactor = reqBag.scale / targetBag.scale;
         if (Math.abs(numericConversionFactor - 1) > 1e-12) {
           const ratio = numericConversionFactor;
           if (ratio < 1) {

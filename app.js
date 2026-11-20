@@ -3,7 +3,7 @@
  * Application Lifecycle & Multi-Tier Topic Orchestrator.
  */
 
-import { TOPICS, ALL_TOPICS } from "./src/topics/index.js";
+import { TOPIC_MANIFEST, hasTopic, loadTopic, loadTopics } from "./src/topics/index.js";
 import { generateProblem } from "./src/core/problem_gen.js";
 import { pickWeakestTopic } from "./src/core/topic_mix.js";
 import {
@@ -16,7 +16,7 @@ import {
 } from "./src/ui/sidebar_view.js";
 
 const SELECTED_TOPICS_KEY = "bsme.selectedTopicIds";
-const TOPIC_BY_ID = new Map(ALL_TOPICS.map(t => [t.id, t]));
+const MANIFEST_BY_ID = new Map(TOPIC_MANIFEST.map(m => [m.id, m]));
 const masteryFor = topic => eq => getDecayedMastery(eq, topic);
 
 function loadSelectedTopicIds() {
@@ -25,30 +25,30 @@ function loadSelectedTopicIds() {
     if (raw === null) return [];
     const ids = JSON.parse(raw);
     if (Array.isArray(ids)) {
-      return ids.filter(id => TOPIC_BY_ID.has(id));
+      return ids.filter(hasTopic);
     }
   } catch (_) { /* fallback to empty selection */ }
   return [];
 }
 
 let selectedTopicIds = loadSelectedTopicIds();
-let currentTopic = topicById(selectedTopicIds[0]) || null;
+let currentTopic = null;
 let currentProblem = null;
+let selectionSeq = 0;
 
-export { TOPICS };
+export { TOPIC_MANIFEST, loadTopic };
 
-function topicById(id) {
-  return TOPIC_BY_ID.get(id) || null;
+function getSelectedManifests() {
+  return selectedTopicIds.map(id => MANIFEST_BY_ID.get(id)).filter(Boolean);
 }
 
-function getSelectedTopics() {
-  return selectedTopicIds.map(topicById).filter(Boolean);
+async function getSelectedTopics() {
+  return loadTopics(selectedTopicIds);
 }
 
-function getAllSelectedRelations() {
-  const rels = [];
-  getSelectedTopics().forEach(t => rels.push(...t.relations));
-  return rels;
+async function getAllSelectedRelations() {
+  const topics = await getSelectedTopics();
+  return topics.flatMap(t => t.relations);
 }
 
 function isTopicSelected(id) {
@@ -125,18 +125,15 @@ function renderTopicBadge(topic) {
 document.addEventListener("DOMContentLoaded", () => {
   loadMastery();
   setupTopicSelector();
-  initSidebarView(
-    currentTopic ? currentTopic.relations : [],
-    currentTopic ? masteryFor(currentTopic) : () => 0,
-    getAllSelectedRelations()
-  );
+  initSidebarView([], () => 0, []);
   setupHeaderActions();
 
-  document.addEventListener(MASTERY_CHANGED_EVENT, () => {
+  document.addEventListener(MASTERY_CHANGED_EVENT, async () => {
     if (currentTopic) {
+      const allRels = await getAllSelectedRelations();
       updateSidebarRelations(
         currentTopic.relations,
-        getAllSelectedRelations(),
+        allRels,
         masteryFor(currentTopic)
       );
     }
@@ -162,7 +159,7 @@ function setupTopicSelector() {
   const menu = document.getElementById("topic-dropdown-menu");
 
   const subjects = {};
-  ALL_TOPICS.forEach(topic => {
+  TOPIC_MANIFEST.forEach(topic => {
     const subj = topic.subject || "General Engineering";
     if (!subjects[subj]) subjects[subj] = { categories: {}, standalone: [] };
     if (topic.category) {
@@ -183,7 +180,7 @@ function setupTopicSelector() {
   const hasChecked = root => root.querySelector(".topic-checkbox:checked") !== null;
 
   function updateDropdownLabel() {
-    const topics = getSelectedTopics();
+    const topics = getSelectedManifests();
     if (topics.length === 0) {
       label.textContent = "Select topics…";
     } else if (topics.length === 1) {
@@ -194,7 +191,7 @@ function setupTopicSelector() {
     }
     toggleBtn.title = topics.map(t => t.title).join(", ");
     if (footerCount) {
-      footerCount.textContent = `${topics.length} of ${ALL_TOPICS.length} topics in review set`;
+      footerCount.textContent = `${topics.length} of ${TOPIC_MANIFEST.length} topics in review set`;
     }
   }
 
@@ -212,19 +209,23 @@ function setupTopicSelector() {
     });
   }
 
-  function commitSelection() {
+  async function commitSelection() {
     syncGroupBoxes();
     updateDropdownLabel();
     if (selectedTopicIds.length === 0) {
+      selectionSeq++;
       currentTopic = null;
       currentProblem = null;
       renderSelectionPrompt();
     } else if (!currentTopic || !selectedTopicIds.includes(currentTopic.id)) {
-      generateNewProblem();
+      await generateNewProblem();
     } else {
+      const seq = ++selectionSeq;
+      const allRels = await getAllSelectedRelations();
+      if (seq !== selectionSeq || !currentTopic) return;
       updateSidebarRelations(
         currentTopic.relations,
-        getAllSelectedRelations(),
+        allRels,
         masteryFor(currentTopic)
       );
     }
@@ -414,14 +415,15 @@ function setupHeaderActions() {
       const file = e.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = ev => {
+      reader.onload = async ev => {
         const res = importMasteryJSON(ev.target.result);
         if (res.success) {
           alert("Global Mastery profile imported successfully!");
           if (currentTopic) {
+            const allRels = await getAllSelectedRelations();
             updateSidebarRelations(
               currentTopic.relations,
-              getAllSelectedRelations(),
+              allRels,
               masteryFor(currentTopic)
             );
           }
@@ -439,8 +441,20 @@ function setupHeaderActions() {
   }
 }
 
-function generateNewProblem() {
-  const pool = getSelectedTopics();
+async function generateNewProblem() {
+  if (selectedTopicIds.length === 0) {
+    selectionSeq++;
+    currentTopic = null;
+    currentProblem = null;
+    renderSelectionPrompt();
+    openDropdown();
+    return;
+  }
+
+  const seq = ++selectionSeq;
+  const pool = await getSelectedTopics();
+  if (seq !== selectionSeq) return;
+
   if (pool.length === 0) {
     currentTopic = null;
     currentProblem = null;
@@ -461,7 +475,7 @@ function generateNewProblem() {
   renderTopicBadge(topic);
   updateSidebarRelations(
     topic.relations,
-    getAllSelectedRelations(),
+    pool.flatMap(t => t.relations),
     masteryFor(topic)
   );
 }
