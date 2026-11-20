@@ -1,555 +1,1420 @@
-FILE: README.md
-`````markdown
-# BSME Reviewer
+My apologies — the `FILE: styles/mcq.css` header was missing a preceding newline after the closing fence of `src/ui/mcq_view.js`. Here are both blocks cleanly separated:
 
-A graph-based engineering problem generator, symbolic solver, and spaced-repetition reviewer for Mechanical Engineering board-exam subjects (Machine Design, Air Conditioning / HVAC, and Powerplant Design). Every equation is a node in a graph. The engine chains equations into multi-step problems, checks numerical answers, renders textbook-grade derivations, and models cognitive memory curves using golden-ratio ($\phi$) and Fibonacci decay functions.
+FILE: src/ui/mcq_view.js
+````javascript
+/**
+ * src/ui/mcq_view.js
+ * Multiple-Choice Quiz View:
+ * - Setup Lobby: set summary, Study/Exam mode, snapping count slider + editable input, optional timer
+ * - Study Mode: 1-question-at-a-time, 2x2 or 1x4 layout, per-item timer, keyboard shortcuts
+ * - Exam Mode: scrollable borderless-option sheet, click-to-unselect, unanswered guard, total timer
+ * - Summary View: score, time, Retry Missed, New Batch with count picker, graded review
+ */
 
-- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage` (and `IndexedDB` for custom uploaded MCQ sets).
-- **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
-- **Test:** `npm test` (regenerates `src/topics/index.js` + `src/mcq/index.js` and runs `test/run_test.js` + `test/run_hygiene_test.js` in Node 22).
-- **Repo Map:** `npm run skeleton` (prints resolved import graph + function/object signatures for AI context).
+import {
+  selectBatch,
+  buildSessionItems,
+  recordQuestionAttempt,
+  getQuestionMastery,
+  getSetStats,
+  getSetMastery
+} from "../mcq/engine.js";
+import { MASTERY_CHANGED_EVENT } from "./sidebar_view.js";
 
----
+const LETTERS = ["A", "B", "C", "D", "E", "F"];
+const SNAP_STEPS = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100];
 
-## 0. Using this file with an AI model
+let activeSets = [];
+let sessionItems = [];
+let phase = "setup"; // "setup" | "active" | "summary"
+let mcqMode = "study"; // "study" | "exam"
+let batchSize = 25;
 
-When modifying this repository, prompt the model with:
+let timerEnabled = false;
+let studySeconds = 60;
+let examMinutes = 30;
+let remainingSeconds = 0;
+let timerLocked = false;
+let timerId = null;
+let sessionStartMs = 0;
+let elapsedSeconds = 0;
 
-```text
-You are modifying the BSME Reviewer repository.
-1. Read README.md completely before writing any code. It overrides your defaults.
-2. Always stay in brainstorm mode first: analyze root causes, design general invariants,
-   and confirm alignment. Never write code or emit diffs until given explicit permission
-   to proceed.
-3. Before coding, state: (a) which Hard Rules (section 2) apply, (b) the files you
-   will touch, (c) which tests will prove the change works.
-4. Obey the Engineering Philosophy (section 1): fix root causes, write general invariants,
-   avoid tunnel vision, and never patch symptoms.
-5. Context requests: You only see the Repo Skeleton by default. Whenever you need
-   to read files or search the codebase, output a single fenced `text` block with one
-   directive per line (`READ path/to/file.js`, `READ path/to/file.js:10-80`, or
-   `GREP term`) and stop. No XML tags; never ask for files in prose.
-6. Code output convention: When given permission to code, precede code blocks with
-   `FILE: path/to/file.ext` (one `FILE:` header may be followed by one or more blocks
-   for that file). Use 4-backtick fences (````) by default so triple backticks inside
-   files never break parsing; if a file itself contains N-backtick fences (such as
-   README.md), wrap it in N+1 backticks (e.g. `````markdown). Use ````diff with
-   4-character markers (<<<< ==== >>>>) when shorter than a full-file replacement.
-   Documentation (README.md) changes are always returned as a full drop-in replacement.
-7. Run: node --test test/run_test.js test/run_hygiene_test.js
-8. Reply with: files changed, a summary of test output, and anything you could
-   not verify. Do not claim a test passed unless you ran it.
-```
+let currentIndex = 0;
+let answers = {}; // idx -> letter
+let timedOutItems = new Set();
+let examSubmitted = false;
+let unansweredPromptOpen = false;
+let keyHandlerBound = false;
 
-### Canonical Output Examples
+function typeset(el) {
+  if (typeof window !== "undefined" && typeof window.renderMathInElement === "function" && el) {
+    window.renderMathInElement(el, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false }
+      ],
+      throwOnError: false,
+      ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+    });
+  }
+}
 
-**Context Request:**
-```text
-READ app.js:1-60
-GREP parseZipArchive
-```
+function getTotalAvailableQuestions() {
+  return activeSets.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
+}
 
-**Code Diffs (4 backticks, one `FILE:` header per file):**
+function clampBatchSize(val, total) {
+  if (total <= 0) return 0;
+  const n = Math.round(Number(val) || 1);
+  return Math.max(1, Math.min(total, n));
+}
 
-FILE: path/to/file.ext
+function getSnapPoints(total) {
+  if (total <= 1) return [1];
+  const pts = SNAP_STEPS.filter(s => s < total);
+  if (!pts.includes(total)) pts.push(total);
+  return pts;
+}
+
+function snapValue(val, total) {
+  const pts = getSnapPoints(total);
+  let best = pts[0];
+  let bestDist = Math.abs(val - best);
+  for (const p of pts) {
+    const d = Math.abs(val - p);
+    if (d < bestDist) {
+      best = p;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+function formatClock(sec) {
+  const s = Math.max(0, Math.floor(sec));
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const rem = s % 60;
+  const pad = n => String(n).padStart(2, "0");
+  return hrs > 0 ? `${hrs}:${pad(mins)}:${pad(rem)}` : `${pad(mins)}:${pad(rem)}`;
+}
+
+function stopTimer() {
+  if (timerId !== null) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+}
+
+function startCountdown(seconds, onExpire) {
+  stopTimer();
+  remainingSeconds = Math.max(1, Math.floor(seconds));
+  timerLocked = false;
+
+  timerId = setInterval(() => {
+    const view = document.getElementById("view-mcq");
+    if (!view || !view.classList.contains("active") || phase !== "active") {
+      stopTimer();
+      return;
+    }
+    remainingSeconds = Math.max(0, remainingSeconds - 1);
+    updateTimerDisplay();
+    if (remainingSeconds <= 0) {
+      stopTimer();
+      timerLocked = true;
+      onExpire();
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById("mcq-timer-pill");
+  if (!el) return;
+  el.textContent = timerLocked ? "00:00 · Locked" : formatClock(remainingSeconds);
+  el.classList.toggle("is-low", !timerLocked && remainingSeconds > 0 && remainingSeconds <= 10);
+  el.classList.toggle("is-locked", timerLocked);
+}
+
+export function renderMcqSets(sets = []) {
+  activeSets = sets;
+  const view = document.getElementById("view-mcq");
+  if (!view) return;
+
+  if (!keyHandlerBound) {
+    document.addEventListener("keydown", handleKeyDown);
+    keyHandlerBound = true;
+  }
+
+  stopTimer();
+  const total = getTotalAvailableQuestions();
+  if (total > 0) {
+    batchSize = clampBatchSize(batchSize || 25, total);
+  }
+  phase = "setup";
+  sessionItems = [];
+  answers = {};
+  timedOutItems = new Set();
+  examSubmitted = false;
+  timerLocked = false;
+  unansweredPromptOpen = false;
+  renderMcqShell();
+}
+
+export function startNewMcqBatch(customItems = null) {
+  const view = document.getElementById("view-mcq");
+  if (!view) return;
+
+  stopTimer();
+  const total = getTotalAvailableQuestions();
+
+  if (Array.isArray(customItems)) {
+    sessionItems = customItems;
+  } else {
+    batchSize = clampBatchSize(batchSize, total);
+    const packed = selectBatch(activeSets, batchSize);
+    sessionItems = buildSessionItems(packed);
+  }
+
+  phase = "active";
+  currentIndex = 0;
+  answers = {};
+  timedOutItems = new Set();
+  examSubmitted = false;
+  timerLocked = false;
+  unansweredPromptOpen = false;
+  sessionStartMs = Date.now();
+  elapsedSeconds = 0;
+
+  if (timerEnabled && sessionItems.length > 0) {
+    if (mcqMode === "study") {
+      startStudyItemTimer();
+    } else {
+      startCountdown(Math.max(1, examMinutes) * 60, handleExamTimerExpire);
+    }
+  }
+
+  renderMcqShell();
+}
+
+function startStudyItemTimer() {
+  if (!timerEnabled) {
+    stopTimer();
+    timerLocked = false;
+    return;
+  }
+  if (answers[currentIndex] !== undefined || timedOutItems.has(currentIndex)) {
+    stopTimer();
+    timerLocked = timedOutItems.has(currentIndex) && answers[currentIndex] === undefined;
+    return;
+  }
+  startCountdown(Math.max(5, studySeconds), () => {
+    timedOutItems.add(currentIndex);
+    const stage = document.getElementById("mcq-stage");
+    if (stage && phase === "active" && mcqMode === "study") {
+      renderStudyView(stage);
+    }
+  });
+}
+
+function handleExamTimerExpire() {
+  const stage = document.getElementById("mcq-stage");
+  if (stage && phase === "active" && mcqMode === "exam") {
+    renderExamView(stage);
+  }
+}
+
+function returnToSetup() {
+  stopTimer();
+  phase = "setup";
+  timerLocked = false;
+  unansweredPromptOpen = false;
+  renderMcqShell();
+}
+
+function createCountPicker(total, initialVal, onChange) {
+  let current = clampBatchSize(initialVal, total);
+
+  const wrap = document.createElement("div");
+  wrap.className = "mcq-count-picker";
+
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.className = "mcq-count-slider";
+  slider.min = "1";
+  slider.max = String(Math.max(1, total));
+  slider.value = String(current);
+  slider.disabled = total <= 1;
+
+  const numInput = document.createElement("input");
+  numInput.type = "number";
+  numInput.className = "mcq-count-input";
+  numInput.min = "1";
+  numInput.max = String(Math.max(1, total));
+  numInput.value = String(current);
+  numInput.disabled = total <= 1;
+  numInput.setAttribute("aria-label", "Number of questions");
+
+  const suffix = document.createElement("span");
+  suffix.className = "mcq-count-total";
+  suffix.textContent = `/ ${total}`;
+
+  slider.addEventListener("input", () => {
+    const snapped = snapValue(Number(slider.value), total);
+    current = snapped;
+    slider.value = String(snapped);
+    numInput.value = String(snapped);
+    onChange(snapped);
+  });
+
+  numInput.addEventListener("input", () => {
+    if (numInput.value === "") return;
+    const clamped = clampBatchSize(numInput.value, total);
+    current = clamped;
+    slider.value = String(clamped);
+    onChange(clamped);
+  });
+
+  numInput.addEventListener("blur", () => {
+    const clamped = clampBatchSize(numInput.value, total);
+    current = clamped;
+    numInput.value = String(clamped);
+    slider.value = String(clamped);
+    onChange(clamped);
+  });
+
+  wrap.append(slider, numInput, suffix);
+  return wrap;
+}
+
+function renderMcqShell() {
+  const view = document.getElementById("view-mcq");
+  if (!view) return;
+  view.innerHTML = "";
+
+  if (activeSets.length === 0) return;
+
+  const container = document.createElement("div");
+  container.className = "article-container mcq-container";
+
+  if (phase === "active") {
+    container.appendChild(renderActiveToolbar());
+  }
+
+  const stage = document.createElement("div");
+  stage.id = "mcq-stage";
+  container.appendChild(stage);
+  view.appendChild(container);
+
+  if (phase === "setup") {
+    renderSetupView(stage);
+  } else if (phase === "active") {
+    if (mcqMode === "study") {
+      renderStudyView(stage);
+    } else {
+      renderExamView(stage);
+    }
+  } else {
+    renderSummaryView(stage);
+  }
+}
+
+function renderActiveToolbar() {
+  const bar = document.createElement("div");
+  bar.className = "mcq-toolbar";
+
+  const left = document.createElement("div");
+  left.className = "mcq-toolbar-left";
+
+  const modeBadge = document.createElement("span");
+  modeBadge.className = "mcq-mode-badge";
+  modeBadge.textContent = mcqMode === "study" ? "Study Mode" : "Exam Mode";
+
+  const progress = document.createElement("span");
+  progress.id = "mcq-toolbar-progress";
+  progress.className = "mcq-progress-label";
+  if (mcqMode === "study") {
+    progress.textContent = `${currentIndex + 1} / ${sessionItems.length}`;
+  } else {
+    const answeredCount = Object.keys(answers).length;
+    progress.textContent = `${answeredCount} / ${sessionItems.length} answered`;
+  }
+
+  left.append(modeBadge, progress);
+
+  const right = document.createElement("div");
+  right.className = "mcq-toolbar-right";
+
+  if (timerEnabled) {
+    const timerEl = document.createElement("span");
+    timerEl.id = "mcq-timer-pill";
+    timerEl.className = "mcq-timer-pill";
+    right.appendChild(timerEl);
+  }
+
+  const btnQuit = document.createElement("button");
+  btnQuit.type = "button";
+  btnQuit.className = "btn";
+  btnQuit.textContent = "Quit";
+  btnQuit.addEventListener("click", returnToSetup);
+
+  right.appendChild(btnQuit);
+  bar.append(left, right);
+
+  queueMicrotask(updateTimerDisplay);
+  return bar;
+}
+
+function renderSetupView(stage) {
+  stage.innerHTML = "";
+
+  const total = getTotalAvailableQuestions();
+  let totalSeen = 0;
+  let weightedMastery = 0;
+  for (const s of activeSets) {
+    const stats = getSetStats(s);
+    totalSeen += stats.seen;
+    weightedMastery += getSetMastery(s) * (s.questions?.length || 0);
+  }
+  const avgMasteryPct = total > 0 ? Math.round((weightedMastery / total) * 100) : 0;
+  const unseen = Math.max(0, total - totalSeen);
+
+  const card = document.createElement("div");
+  card.className = "mcq-setup-card";
+
+  const header = document.createElement("div");
+  header.className = "mcq-setup-header";
+
+  const title = document.createElement("h2");
+  title.className = "mcq-setup-title";
+  title.textContent = "Quiz Setup";
+
+  const sub = document.createElement("p");
+  sub.className = "mcq-setup-subtitle";
+  sub.textContent = `${activeSets.length} set${activeSets.length === 1 ? "" : "s"} selected · ${total} questions (${unseen} unseen · ${avgMasteryPct}% mastery)`;
+
+  header.append(title, sub);
+  card.appendChild(header);
+
+  const setList = document.createElement("div");
+  setList.className = "mcq-setup-sets";
+  activeSets.forEach(s => {
+    const chip = document.createElement("span");
+    chip.className = "topic-badge";
+    chip.textContent = `${s.title} (${s.questions?.length || 0})`;
+    setList.appendChild(chip);
+  });
+  card.appendChild(setList);
+
+  const modeSection = document.createElement("div");
+  modeSection.className = "mcq-setup-section";
+
+  const modeLabel = document.createElement("div");
+  modeLabel.className = "mcq-setup-label";
+  modeLabel.textContent = "Mode";
+
+  const modeGrid = document.createElement("div");
+  modeGrid.className = "mcq-mode-cards";
+
+  const modes = [
+    {
+      id: "study",
+      title: "Study Mode",
+      desc: "One question at a time with instant feedback, mastery status, and keyboard shortcuts."
+    },
+    {
+      id: "exam",
+      title: "Exam Mode",
+      desc: "Scrollable full sheet with clean letter choices. Grade all answers at the end."
+    }
+  ];
+
+  modes.forEach(m => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `mcq-mode-card ${mcqMode === m.id ? "active" : ""}`;
+    btn.innerHTML = `<span class="mcq-mode-card-title">${m.title}</span><span class="mcq-mode-card-desc">${m.desc}</span>`;
+    btn.addEventListener("click", () => {
+      if (mcqMode === m.id) return;
+      mcqMode = m.id;
+      renderSetupView(stage);
+    });
+    modeGrid.appendChild(btn);
+  });
+
+  modeSection.append(modeLabel, modeGrid);
+  card.appendChild(modeSection);
+
+  const countSection = document.createElement("div");
+  countSection.className = "mcq-setup-section";
+
+  const countLabel = document.createElement("div");
+  countLabel.className = "mcq-setup-label";
+  countLabel.textContent = "Questions";
+
+  const picker = createCountPicker(total, batchSize, val => {
+    batchSize = val;
+  });
+
+  countSection.append(countLabel, picker);
+  card.appendChild(countSection);
+
+  const timerSection = document.createElement("div");
+  timerSection.className = "mcq-setup-section";
+
+  const timerRow = document.createElement("div");
+  timerRow.className = "mcq-timer-config";
+
+  const toggleLabel = document.createElement("label");
+  toggleLabel.className = "mcq-timer-toggle";
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = timerEnabled;
+  checkbox.addEventListener("change", () => {
+    timerEnabled = checkbox.checked;
+    renderSetupView(stage);
+  });
+
+  const toggleText = document.createElement("span");
+  toggleText.textContent = mcqMode === "study" ? "Per-question timer" : "Exam timer";
+  toggleLabel.append(checkbox, toggleText);
+  timerRow.appendChild(toggleLabel);
+
+  if (timerEnabled) {
+    const durWrap = document.createElement("div");
+    durWrap.className = "mcq-timer-duration";
+
+    const durInput = document.createElement("input");
+    durInput.type = "number";
+    durInput.className = "mcq-count-input";
+    durInput.min = mcqMode === "study" ? "5" : "1";
+    durInput.max = mcqMode === "study" ? "600" : "300";
+    durInput.value = String(mcqMode === "study" ? studySeconds : examMinutes);
+    durInput.addEventListener("input", () => {
+      const n = parseInt(durInput.value, 10);
+      if (!Number.isFinite(n) || n <= 0) return;
+      if (mcqMode === "study") studySeconds = Math.min(600, Math.max(5, n));
+      else examMinutes = Math.min(300, Math.max(1, n));
+    });
+
+    const unitText = document.createElement("span");
+    unitText.className = "mcq-count-total";
+    unitText.textContent = mcqMode === "study" ? "sec / item" : "min total";
+
+    durWrap.append(durInput, unitText);
+    timerRow.appendChild(durWrap);
+  }
+
+  timerSection.appendChild(timerRow);
+  card.appendChild(timerSection);
+
+  const actions = document.createElement("div");
+  actions.className = "mcq-setup-actions";
+
+  const btnStart = document.createElement("button");
+  btnStart.type = "button";
+  btnStart.className = "btn-generate-next";
+  btnStart.disabled = total === 0;
+  btnStart.textContent = mcqMode === "study" ? "Start Study Session" : "Start Exam";
+  btnStart.addEventListener("click", () => startNewMcqBatch());
+
+  actions.appendChild(btnStart);
+  card.appendChild(actions);
+  stage.appendChild(card);
+}
+
+function renderQuestionMedia(item) {
+  if (!item.imageSrc) return null;
+  const wrap = document.createElement("div");
+  wrap.className = "mcq-image-wrap";
+  const img = document.createElement("img");
+  img.src = item.imageSrc;
+  img.alt = item.imageAlt || "Question diagram";
+  img.loading = "lazy";
+  wrap.appendChild(img);
+  return wrap;
+}
+
+function renderStudyView(stage) {
+  stage.innerHTML = "";
+  const item = sessionItems[currentIndex];
+  if (!item) return;
+
+  const progEl = document.getElementById("mcq-toolbar-progress");
+  if (progEl) progEl.textContent = `${currentIndex + 1} / ${sessionItems.length}`;
+
+  const metaRow = document.createElement("div");
+  metaRow.className = "mcq-meta-row";
+
+  const badges = document.createElement("div");
+  badges.className = "mcq-badges";
+
+  const statusPill = document.createElement("span");
+  statusPill.className = "topic-badge mcq-status-pill";
+  if (item.seen === 0) {
+    statusPill.textContent = "Fresh";
+  } else {
+    const pct = Math.round(getQuestionMastery(item.setId, item.item.id) * 100);
+    statusPill.textContent = `Seen ${item.seen}× · ${pct}%`;
+  }
+  badges.appendChild(statusPill);
+
+  if (timedOutItems.has(currentIndex) && answers[currentIndex] === undefined) {
+    const lockPill = document.createElement("span");
+    lockPill.className = "mcq-lock-pill";
+    lockPill.textContent = "Time's up — answers locked";
+    badges.appendChild(lockPill);
+  }
+
+  let correctCount = 0;
+  let answeredCount = 0;
+  for (const [idxStr, letter] of Object.entries(answers)) {
+    answeredCount++;
+    if (sessionItems[Number(idxStr)]?.answer === letter) correctCount++;
+  }
+  const scorePill = document.createElement("span");
+  scorePill.className = "mcq-score-pill";
+  scorePill.textContent = `${correctCount} / ${answeredCount}`;
+
+  metaRow.append(badges, scorePill);
+  stage.appendChild(metaRow);
+
+  const qCard = document.createElement("div");
+  qCard.className = "mcq-instant-card";
+
+  const qText = document.createElement("div");
+  qText.className = "mcq-question-text";
+  qText.innerHTML = item.q;
+  qCard.appendChild(qText);
+
+  const media = renderQuestionMedia(item);
+  if (media) qCard.appendChild(media);
+
+  const studyGridClass = item.gridClass === "cols-4" ? "cols-2" : item.gridClass;
+  const optsGrid = document.createElement("div");
+  optsGrid.className = `mcq-options ${studyGridClass}`;
+
+  const chosen = answers[currentIndex];
+  const hasAnswered = chosen !== undefined;
+  const isLocked = hasAnswered || timedOutItems.has(currentIndex);
+
+  item.options.forEach((optText, i) => {
+    const letter = LETTERS[i];
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "mcq-option-btn";
+
+    if (isLocked) {
+      btn.disabled = true;
+      if (hasAnswered) {
+        if (letter === item.answer) btn.classList.add("correct");
+        else if (letter === chosen) btn.classList.add("wrong");
+      }
+    } else {
+      btn.addEventListener("click", () => selectStudyOption(letter));
+    }
+
+    const keyEl = document.createElement("span");
+    keyEl.className = "mcq-option-key";
+    keyEl.textContent = letter;
+
+    const textEl = document.createElement("span");
+    textEl.className = "mcq-option-text";
+    textEl.innerHTML = optText;
+
+    btn.append(keyEl, textEl);
+    optsGrid.appendChild(btn);
+  });
+
+  qCard.appendChild(optsGrid);
+  stage.appendChild(qCard);
+
+  const nav = document.createElement("div");
+  nav.className = "mcq-nav-row";
+
+  const btnPrev = document.createElement("button");
+  btnPrev.type = "button";
+  btnPrev.className = "btn";
+  btnPrev.textContent = "← Previous";
+  btnPrev.disabled = currentIndex === 0;
+  btnPrev.addEventListener("click", () => {
+    if (currentIndex > 0) {
+      currentIndex--;
+      startStudyItemTimer();
+      renderStudyView(stage);
+      updateTimerDisplay();
+    }
+  });
+
+  const isLast = currentIndex === sessionItems.length - 1;
+  const btnNext = document.createElement("button");
+  btnNext.type = "button";
+  btnNext.className = "btn-generate-next";
+  btnNext.textContent = isLast ? "Finish & View Summary →" : "Next →";
+  btnNext.addEventListener("click", () => {
+    if (!isLast) {
+      currentIndex++;
+      startStudyItemTimer();
+      renderStudyView(stage);
+      updateTimerDisplay();
+    } else {
+      finishSession();
+    }
+  });
+
+  nav.append(btnPrev, btnNext);
+  stage.appendChild(nav);
+  typeset(stage);
+}
+
+function selectStudyOption(letter) {
+  if (answers[currentIndex] !== undefined || timedOutItems.has(currentIndex)) return;
+  stopTimer();
+  answers[currentIndex] = letter;
+
+  const item = sessionItems[currentIndex];
+  const isCorrect = letter === item.answer;
+  recordQuestionAttempt(item.setId, item.item.id, isCorrect);
+  document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
+
+  const stage = document.getElementById("mcq-stage");
+  if (stage) renderStudyView(stage);
+}
+
+function buildExamListDom(graded = false) {
+  const list = document.createElement("div");
+  list.className = "mcq-exam-list";
+
+  sessionItems.forEach((item, idx) => {
+    if (idx > 0) {
+      const hr = document.createElement("hr");
+      hr.className = "mcq-divider";
+      list.appendChild(hr);
+    }
+
+    const row = document.createElement("div");
+    row.className = "mcq-exam-item";
+    row.dataset.index = String(idx);
+
+    const qText = document.createElement("div");
+    qText.className = "mcq-question-text";
+    qText.innerHTML = item.q;
+    row.appendChild(qText);
+
+    const media = renderQuestionMedia(item);
+    if (media) row.appendChild(media);
+
+    const optsGrid = document.createElement("div");
+    optsGrid.className = `mcq-options ${item.gridClass}`;
+
+    const chosen = answers[idx];
+
+    item.options.forEach((optText, optIdx) => {
+      const letter = LETTERS[optIdx];
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "mcq-option-btn";
+
+      if (graded) {
+        btn.disabled = true;
+        if (letter === item.answer) btn.classList.add("correct");
+        else if (letter === chosen) btn.classList.add("wrong");
+      } else if (timerLocked) {
+        btn.disabled = true;
+        if (letter === chosen) btn.classList.add("selected");
+      } else {
+        if (letter === chosen) btn.classList.add("selected");
+        btn.addEventListener("click", () => {
+          if (answers[idx] === letter) {
+            delete answers[idx];
+          } else {
+            answers[idx] = letter;
+          }
+          const activeLetter = answers[idx];
+          Array.from(optsGrid.children).forEach((el, k) => {
+            el.classList.toggle("selected", LETTERS[k] === activeLetter);
+          });
+          const progEl = document.getElementById("mcq-toolbar-progress");
+          if (progEl) {
+            progEl.textContent = `${Object.keys(answers).length} / ${sessionItems.length} answered`;
+          }
+          if (unansweredPromptOpen) {
+            unansweredPromptOpen = false;
+            const promptEl = document.getElementById("mcq-unanswered-bar");
+            if (promptEl) promptEl.remove();
+          }
+        });
+      }
+
+      const keyEl = document.createElement("span");
+      keyEl.className = "mcq-option-key";
+      keyEl.textContent = letter;
+
+      const textEl = document.createElement("span");
+      textEl.className = "mcq-option-text";
+      textEl.innerHTML = optText;
+
+      btn.append(keyEl, textEl);
+      optsGrid.appendChild(btn);
+    });
+
+    row.appendChild(optsGrid);
+    list.appendChild(row);
+  });
+
+  return list;
+}
+
+function renderExamView(stage) {
+  stage.innerHTML = "";
+
+  if (timerLocked) {
+    const lockNote = document.createElement("div");
+    lockNote.className = "mcq-lock-banner";
+    lockNote.textContent = "Time's up — answers are locked. Click Check Answers when ready to submit.";
+    stage.appendChild(lockNote);
+  }
+
+  stage.appendChild(buildExamListDom(false));
+
+  const footer = document.createElement("div");
+  footer.className = "mcq-exam-footer";
+
+  if (unansweredPromptOpen) {
+    footer.appendChild(buildUnansweredBar());
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "problem-footer-actions";
+
+  const btnCheck = document.createElement("button");
+  btnCheck.type = "button";
+  btnCheck.className = "btn-generate-next";
+  btnCheck.textContent = "Check Answers";
+  btnCheck.addEventListener("click", () => {
+    const firstMissing = sessionItems.findIndex((_, idx) => answers[idx] === undefined);
+    if (firstMissing !== -1) {
+      unansweredPromptOpen = true;
+      renderExamView(stage);
+      document.getElementById("mcq-unanswered-bar")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      return;
+    }
+    submitExamSheet();
+  });
+
+  actions.appendChild(btnCheck);
+  footer.appendChild(actions);
+  stage.appendChild(footer);
+  typeset(stage);
+}
+
+function buildUnansweredBar() {
+  const missingCount = sessionItems.reduce((acc, _, idx) => acc + (answers[idx] === undefined ? 1 : 0), 0);
+  const bar = document.createElement("div");
+  bar.id = "mcq-unanswered-bar";
+  bar.className = "mcq-unanswered-bar";
+
+  const msg = document.createElement("span");
+  msg.className = "mcq-unanswered-msg";
+  msg.textContent = `You have ${missingCount} unanswered question${missingCount === 1 ? "" : "s"}.`;
+
+  const btns = document.createElement("div");
+  btns.className = "mcq-unanswered-actions";
+
+  const btnScroll = document.createElement("button");
+  btnScroll.type = "button";
+  btnScroll.className = "btn";
+  btnScroll.textContent = "Scroll to Unanswered";
+  btnScroll.addEventListener("click", () => {
+    const firstMissing = sessionItems.findIndex((_, idx) => answers[idx] === undefined);
+    if (firstMissing === -1) return;
+    const row = document.querySelector(`.mcq-exam-item[data-index="${firstMissing}"]`);
+    if (row) {
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      row.classList.remove("mcq-unanswered-flash");
+      void row.offsetWidth;
+      row.classList.add("mcq-unanswered-flash");
+    }
+  });
+
+  const btnSkip = document.createElement("button");
+  btnSkip.type = "button";
+  btnSkip.className = "btn-generate-next";
+  btnSkip.textContent = "Skip & Check Answers";
+  btnSkip.addEventListener("click", submitExamSheet);
+
+  btns.append(btnScroll, btnSkip);
+  bar.append(msg, btns);
+  return bar;
+}
+
+function submitExamSheet() {
+  if (examSubmitted) return;
+  examSubmitted = true;
+
+  sessionItems.forEach((item, idx) => {
+    if (answers[idx] === undefined) return; // unanswered = ignored for mastery
+    const isCorrect = answers[idx] === item.answer;
+    recordQuestionAttempt(item.setId, item.item.id, isCorrect);
+  });
+  document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
+
+  finishSession();
+}
+
+function finishSession() {
+  stopTimer();
+  elapsedSeconds = sessionStartMs > 0 ? Math.round((Date.now() - sessionStartMs) / 1000) : 0;
+  phase = "summary";
+  unansweredPromptOpen = false;
+  renderMcqShell();
+  document.getElementById("mcq-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderSummaryView(stage) {
+  stage.innerHTML = "";
+
+  let correct = 0;
+  let answered = 0;
+  const missed = [];
+
+  sessionItems.forEach((item, idx) => {
+    const chosen = answers[idx];
+    if (chosen !== undefined) answered++;
+    if (chosen === item.answer) correct++;
+    else missed.push(item);
+  });
+
+  const total = sessionItems.length;
+  const unanswered = total - answered;
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const totalAvailable = getTotalAvailableQuestions();
+  let nextCount = clampBatchSize(batchSize, totalAvailable);
+
+  const card = document.createElement("div");
+  card.className = "mcq-summary-card";
+
+  const top = document.createElement("div");
+  top.className = "mcq-summary-top";
+
+  const title = document.createElement("h2");
+  title.className = "mcq-summary-title";
+  title.textContent = mcqMode === "study" ? "Study Session Complete" : "Exam Complete";
+
+  const scoreLine = document.createElement("div");
+  scoreLine.className = "mcq-exam-score";
+  scoreLine.textContent = `Score: ${correct} / ${total} (${pct}%)`;
+
+  const statsLine = document.createElement("div");
+  statsLine.className = "mcq-summary-stats";
+  const parts = [`Answered: ${answered}/${total}`];
+  if (unanswered > 0) parts.push(`Skipped: ${unanswered}`);
+  parts.push(`Time: ${formatClock(elapsedSeconds)}`);
+  statsLine.textContent = parts.join(" · ");
+
+  top.append(title, scoreLine, statsLine);
+  card.appendChild(top);
+
+  const batchRow = document.createElement("div");
+  batchRow.className = "mcq-summary-batch";
+
+  const batchLabel = document.createElement("span");
+  batchLabel.className = "mcq-setup-label";
+  batchLabel.textContent = "Next Batch Size";
+
+  const picker = createCountPicker(totalAvailable, nextCount, val => {
+    nextCount = val;
+    batchSize = val;
+  });
+
+  batchRow.append(batchLabel, picker);
+  card.appendChild(batchRow);
+
+  const actions = document.createElement("div");
+  actions.className = "mcq-exam-banner-actions";
+
+  if (missed.length > 0) {
+    const btnRetry = document.createElement("button");
+    btnRetry.type = "button";
+    btnRetry.className = "btn";
+    btnRetry.textContent = `Retry Missed (${missed.length})`;
+    btnRetry.addEventListener("click", () => {
+      const rebuilt = buildSessionItems(missed);
+      startNewMcqBatch(rebuilt);
+    });
+    actions.appendChild(btnRetry);
+  }
+
+  const btnBack = document.createElement("button");
+  btnBack.type = "button";
+  btnBack.className = "btn";
+  btnBack.textContent = "Back to Setup";
+  btnBack.addEventListener("click", returnToSetup);
+  actions.appendChild(btnBack);
+
+  const btnFresh = document.createElement("button");
+  btnFresh.type = "button";
+  btnFresh.className = "btn-generate-next";
+  btnFresh.textContent = "New Batch";
+  btnFresh.addEventListener("click", () => {
+    batchSize = nextCount;
+    startNewMcqBatch();
+  });
+  actions.appendChild(btnFresh);
+
+  card.appendChild(actions);
+  stage.appendChild(card);
+
+  if (mcqMode === "exam") {
+    stage.appendChild(buildExamListDom(true));
+    typeset(stage);
+  }
+}
+
+function handleKeyDown(e) {
+  const view = document.getElementById("view-mcq");
+  if (!view || !view.classList.contains("active") || phase !== "active" || mcqMode !== "study") return;
+  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+
+  const k = e.key.toUpperCase();
+  const stage = document.getElementById("mcq-stage");
+  if (!stage) return;
+
+  if (LETTERS.includes(k)) {
+    const item = sessionItems[currentIndex];
+    const idx = LETTERS.indexOf(k);
+    if (item && idx < item.options.length) selectStudyOption(k);
+  } else if (["1", "2", "3", "4"].includes(k)) {
+    const letter = LETTERS[Number(k) - 1];
+    const item = sessionItems[currentIndex];
+    if (item && Number(k) <= item.options.length) selectStudyOption(letter);
+  } else if (e.key === "ArrowRight") {
+    if (currentIndex < sessionItems.length - 1) {
+      currentIndex++;
+      startStudyItemTimer();
+      renderStudyView(stage);
+      updateTimerDisplay();
+    }
+  } else if (e.key === "ArrowLeft") {
+    if (currentIndex > 0) {
+      currentIndex--;
+      startStudyItemTimer();
+      renderStudyView(stage);
+      updateTimerDisplay();
+    }
+  }
+}
+````
+
+FILE: styles/mcq.css
 ````diff
 <<<<
-exact old lines
+.mcq-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mcq-batch-pills {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.mcq-batch-pills .menu-mini-btn.active {
+  background: var(--card);
+  border-color: var(--accent-math);
+  color: var(--accent-math);
+}
 ====
-new lines
+.mcq-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mcq-mode-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-math);
+  background: rgba(147, 197, 253, 0.1);
+  border: 1px solid rgba(147, 197, 253, 0.25);
+  border-radius: 4px;
+  padding: 0.2rem 0.55rem;
+}
+
+.mcq-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.mcq-timer-pill {
+  font-family: monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.22rem 0.6rem;
+}
+
+.mcq-timer-pill.is-low {
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.mcq-timer-pill.is-locked {
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.mcq-lock-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 999px;
+  padding: 0.12rem 0.55rem;
+}
+
+.mcq-lock-banner {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fecaca;
+  border-radius: 5px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.84rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Setup Lobby */
+.mcq-setup-card,
+.mcq-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.35rem 1.5rem;
+}
+
+.mcq-setup-header,
+.mcq-summary-top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.mcq-setup-title,
+.mcq-summary-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mcq-setup-subtitle,
+.mcq-summary-stats {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.mcq-setup-sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mcq-setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mcq-setup-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.mcq-mode-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.mcq-mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: left;
+  padding: 0.85rem 0.95rem;
+  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.mcq-mode-card:hover {
+  border-color: var(--border);
+  background: var(--card);
+}
+
+.mcq-mode-card.active {
+  border-color: var(--accent-math);
+  background: rgba(147, 197, 253, 0.08);
+}
+
+.mcq-mode-card-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mcq-mode-card.active .mcq-mode-card-title {
+  color: var(--accent-math);
+}
+
+.mcq-mode-card-desc {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.mcq-count-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mcq-count-slider {
+  flex: 1;
+  accent-color: var(--accent-math);
+  cursor: pointer;
+}
+
+.mcq-count-input {
+  width: 4.5rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: monospace;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.mcq-count-total {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.mcq-timer-config {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.mcq-timer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mcq-timer-toggle input {
+  accent-color: var(--accent-math);
+  cursor: pointer;
+}
+
+.mcq-timer-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mcq-setup-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+.mcq-summary-card {
+  margin-bottom: 1.25rem;
+}
+
+.mcq-summary-batch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+}
+>>>>
+<<<<
+.mcq-exam-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.mcq-exam-score {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mcq-exam-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+#view-mcq.is-empty > *:not(#mcq-selection-prompt) {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mcq-options.cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mcq-options.cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
+====
+/* Borderless options in Exam Mode: keep only the letter box */
+.mcq-exam-list .mcq-option-btn {
+  background: transparent;
+  border-color: transparent;
+  padding: 0.3rem 0.25rem;
+}
+
+.mcq-exam-list .mcq-option-btn:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+}
+
+.mcq-exam-list .mcq-option-btn:hover:not(:disabled) .mcq-option-key {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.mcq-exam-list .mcq-option-btn.selected {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent-math);
+}
+
+.mcq-exam-list .mcq-option-btn.selected .mcq-option-key {
+  background: var(--accent-math);
+  border-color: var(--accent-math);
+  color: #0b0f12;
+}
+
+.mcq-exam-list .mcq-option-btn.correct {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #bbf7d0;
+}
+
+.mcq-exam-list .mcq-option-btn.wrong {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #fecaca;
+}
+
+.mcq-exam-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.mcq-unanswered-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 5px;
+}
+
+.mcq-unanswered-msg {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #fde68a;
+}
+
+.mcq-unanswered-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@keyframes mcqFlash {
+  0% { background: rgba(245, 158, 11, 0.16); }
+  100% { background: transparent; }
+}
+
+.mcq-unanswered-flash {
+  border-radius: 4px;
+  animation: mcqFlash 1.5s ease-out;
+}
+
+.mcq-exam-score {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mcq-exam-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+#view-mcq.is-empty > *:not(#mcq-selection-prompt) {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mcq-mode-cards {
+    grid-template-columns: 1fr;
+  }
+  .mcq-options.cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mcq-options.cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
 >>>>
 ````
-
-**Full-File Replacement (use 4 backticks, or `N+1` if content has `N` backticks):**
-
-FILE: path/to/new_file.js
-````javascript
-// full file content
-````
-
----
-
-## 1. Engineering Philosophy: Infinite Scaling & Root Causes
-
-Software engineering in this repository is governed by physical/mathematical invariants and **zero-coupling horizontal scaling**:
-
-0. **O(1) Architecture (Infinite Scaling):**
-   Adding a new topic or subject must require **zero** edits to central routing, UI, or parent barrel files. Every topic is a self-contained leaf slice discovered automatically into a flat lazy registry (`src/topics/index.js`). Boot cost remains $O(1)$ regardless of curriculum size—only selected topics are fetched on demand.
-
-1. **Fix Root Causes, Never Patch Symptoms (Anti-Whack-a-Mole):**
-   When an unexpected value appears, identify the mathematical breakdown at the foundational layer. Never apply per-variable scalar patches, hardcoded string comparison branches, or localized `if (key === '...')` overrides.
-2. **Design for General Invariants (Branchless Mathematics):**
-   Prefer abstract mathematical representations over nested `if` statements. Units are affine metric spaces $(s, o)$ with 7D dimensional vectors. Scale parity, companion resolutions, and factor-label decompositions must fall out naturally from continuous equations, not system-specific switches.
-3. **Avoid Tunnel Vision:**
-   Never evaluate a formula in isolation. Ask: *How does this change affect the solution DAG? How does it behave in a MIXED unit problem? Does the derivation reflect the actual arithmetic performed? Will ancestor equations receive reinforcement?*
-4. **Anti-Pattern Blacklist:**
-   - **No string comparisons for physical scale:** Never do `if (u === "°F")` or `if (sys === "US")` to decide absolute temperature targets. Use affine space definitions.
-   - **No hardcoded conversion constants or rounded duplicates:** Never hardcode `2.205`, `3,412.14`, or bespoke test scale arrays. `definitions.js` and `scales.js` are the Single Source of Truth.
-   - **No per-variable conversion logic:** All unit conversions route through the semantic unit AST and dimensional registry.
-   - **No regex-based syntax assertions on math strings:** Tests must validate structural ASTs, balance, and KaTeX rendering. Do not write catch-all regexes like `!/,/.test()` that falsely reject valid math subscripts like $c_{p,w}$ or $m_{m,w}$.
-   - **No fragmentation of coupled state points:** Thermodynamic states of the same working fluid must never be split across incompatible units.
-   - **No bespoke solvers:** If an equation cannot be solved by `solveDAG` and `isolateVariable`, fix the algebraic graph, never write a hardcoded solver.
-
----
-
-## 2. Hard Rules (Non-Negotiable)
-
-### Math and Formulas
-- **R1. Formulas are nodes.** Equations are declared as relations; variables are edges. `solveDAG` finds the path dynamically. Never write bespoke "solve for X" functions or hardcoded solution orders.
-- **R2. AST only.** All symbolic operations pass through `src/cas/ast.js` and `src/cas/algebra.js`. No regex rewriting of formulas, no `eval` / `new Function`, no runtime CAS dependencies.
-- **R3. Obey formula language rules (section 5).** Explicit `*`, parenthesised exponents, exactly one `=`, trig arguments must be a bare angle variable.
-- **R4. Case-sensitive canonical keys.** Variable keys match `[A-Za-z][A-Za-z0-9_]*` (`P_d`, `D_P1`, `m_cw`). Never lowercase or normalize keys. LaTeX formatting belongs in `symbol`, never in the canonical key.
-
-### Physical Units & Dimensions
-- **R5. Relations are pure physics.** No unit-conversion constants (`25.4`, `1000`, `60`, `3600`, `12`, `1.341`). Coherent base conversions handle scaling automatically.
-- **R6. Declare empirical exceptions.**
-  - Empirical correlations valid only in specific units: declare `requiredUnits: { token: "unit", targetVar: "unit" }`.
-  - Differing mathematical formulations between SI and US: declare `variants.SI` and `variants.US`.
-- **R7. Register every unit.** Every unit string must exist in `src/cas/units/definitions.js`. Unknown units fail validation.
-- **R8. Thermodynamic Temperature Consistency.**
-  - Ideal-gas and isentropic relations requiring absolute temperatures ($T_2 = T_1 r_k^{k-1}$) strictly evaluate in absolute scales ($\text{K}$ in SI, $^\circ\text{R}$ in US).
-  - All state point temperatures of a cycle share an identical unit when appearing as deliverables.
-  - Affine conversions must use exact offsets ($\pm 273.15$, $\pm 459.67$) and map strictly to their natural absolute companion ($^\circ\text{F} \to ^\circ\text{R}$, $^\circ\text{C} \to \text{K}$).
-
-### Topics and Data Contracts
-- **R9. Ground truth is independent.** `system.js` computes true values by hand with explicit arithmetic. It never calls the solver or unit engine.
-- **R10. `createSystem` contract.** `createSystem({ sys })` accepts `"SI"` or `"US"`, returns `sys`, `_u` (unit map), and `_names`, and provides values for every non-abstract variable in `varsDb`. SI-only topics ignore `sys` but still return `sys: "SI"`.
-- **R11. Globally unique equation IDs** (`eq_<topic>_<name>`).
-- **R12. Share, don't copy.** Equations used across multiple subjects live in a common folder with the `eq_base_` prefix.
-- **R13. Clean schemas.** Zero orphan variables, zero duplicate formulas within a topic, and zero alias collisions across `varsDb`.
-- **R14. Honest engineering data.** Every constant, table value, and coefficient must carry a source comment (textbook, equation/table, page).
-
-### Mastery, Direction-Agnostic Graphs & Cognitive Fading
-- **R15. No magic numbers in learning logic.** Use `phi(n)`, `fib(n)`, `FADING_THRESHOLD`, `snapToFibonacci` from `src/mastery/constants.js`.
-- **R16. Variant-aware planning.** Graph reachability calls must receive the active system context: `canSolveTarget(givens, goal, relations, S)`.
-- **R17. Respect the mastery lookup contract.** `getDecayedMastery(eq, topic)` requires an object with an `id` and `baseFormula`. Steps provide `{ id: step.eqId || step.id, baseFormula: step.baseFormula }`.
-- **R18. Direction-Agnostic Problem Solving.** Topics define only the physical network (`varsDb`, `relations`, `createSystem`). There are zero hardcoded starting points, fixed givens, or static goal lists. An engineer must be able to solve problems forwards, backwards, or diagonally.
-- **R19. Dynamic Per-Problem Deliverables & Cognitive Fading.** Problem goals are determined dynamically at runtime based on topological distance and mastery level. Mastered intermediate steps ($\text{mastery} \ge \text{FADING THRESHOLD}$) are omitted from statement prompts and **literally hidden** from the interactive solution flow, while the active problem's final deliverable always remains active.
-
-### Derivations & Unit Layout (The Visual Invariants)
-- **R20. Textbook derivations.**
-  - **Native Degree Symbol:** Native `°` only, never `\circ`, `^\circ`, or `^{\circ}`.
-  - **Zero Leading Space in `\text{}`:** Use `\text{kW}`, never `\text{ kW}`.
-  - **Strict `\,` Spacing:** Numbers and variables are separated from units by LaTeX thin spacing (`5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}}`), including inside compound fraction bars. Zero commas before physical units.
-  - **Universal Percent Mirroring:** Percentages render strictly as `\text{\%}` (and `\cancel{\text{\%}}` when cancelled), mirroring all other text units. Never write raw `%`.
-  - **Additive Factoring:** Like-unit sums and differences factor outside parentheses: $(a \pm b) \, \text{unit}$ (e.g. $(10 + 20) \, \text{kW}$). Mismatched terms convert in-situ to the target unit before evaluation.
-  - **In-Situ Conversion Default:** Unit conversions are placed immediately adjacent to the token being converted by default.
-  - **The Hard 4-Row Fraction Tower Cap:** A compound fraction tower may not exceed 4 vertical visual rows (2 in numerator, 2 in denominator). Stepping down to the main line ($A/B \cdot E/F$) occurs *only* if in-situ placement would exceed 4 rows, or for single-dimension Option B scaling that preserves an intact compound target unit.
-  - **The "Omit 1" Rule:** Never write a coefficient of $1$ before a unit token ($\cfrac{\text{kg}}{2.20462 \, \cancel{\text{lb}}}$, $\cfrac{\text{kW}}{1{,}000 \, \cancel{\text{W}}}$, $\cfrac{\cancel{\text{h}}}{60 \, \cancel{\text{min}}}$).
-  - **Scalar Multiplier Placement:** Scalar multipliers sit outside the unit fraction: $60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$, never $\cfrac{60 \, \cancel{\text{h}}}{\cancel{\text{min}}}$.
-  - **Cancellation Hierarchy:** Wrap the highest possible AST node with `\cancel{}`. Whole-unit cancellation ($\cancel{\cfrac{\text{kJ}}{\text{s}}}$) is canonical; component-level cancellation ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}}$) is used only as fallback when components cancel in separate places.
-- **R21. Specific Energy Notation.** Quantities per unit mass ($\text{kJ/kg}$, $\text{Btu/lb}$) strictly use lowercase symbols ($q_A, q_R, w_{net}, h$), reserving uppercase ($Q, W, P$) for total energy or power.
-- **R22. Number formatting.** Measured values pass through `fmtSigFig` (up to 6 significant figures, max 3 decimal places). Unit conversion scale factors pass through `fmtScale` (6 significant figures without the 3-decimal-place truncation cap).
-
-### AI Collaboration, Testing & Process
-- **R23. Never make a red test invisible.** No renaming, skipping, narrowing globs, loosening tolerances, or deleting tests. Fix the root cause.
-- **R24. Bug fixes ship with regression tests.** Tests that touch mastery use real mastery functions (`recordAttempt`, `getDecayedMastery`), not constant stubs.
-- **R25. Report honestly.** State files changed, test output, and anything that could not be verified.
-- **R26. Brainstorm mode by default.** Always operate in brainstorm mode first to analyze root causes, establish mathematical invariants, and verify alignment. Never write code or emit diffs until given explicit permission to proceed.
-- **R27. Canonical diff syntax & fence nesting.** When authorized to write code, precede blocks with `FILE: path/to/file.ext` and wrap in 4-backtick fences (````diff using `<<<< ==== >>>>` when shorter than a full-file replacement). Only `diff` fences parse `<<<< ==== >>>>`. When a file's content contains `N`-backtick fences (e.g., `README.md`), wrap the drop-in replacement in `N+1` backticks. `README.md` edits are always returned as full drop-in replacements.
-
----
-
-## 3. Architecture
-
-```text
-app.js                       Application shell, mode switch (Problems | MCQ), dropdown & event wiring
-index.html                   DOM structure, KaTeX CDN loader
-styles/                      base.css, components.css, problem.css, mcq.css, modals.css
-src/
-  cas/
-    ast.js                   Lexer, parser, AST walkers, evalAST
-    algebra.js               isolateVariable (onion peeler + linear-rational factoring)
-    latex.js                 AST to LaTeX serializer with explicit spacing
-    units/
-      definitions.js         AffineScale model, 7D dimensional vectors, BASE_UNITS, unitToCancelledTex
-      scales.js              Single Source of Truth: 6-sig-fig scale computation & factor-label decomposition
-      analysis.js            solveUnitAlgebra: token inspection, 4-row tower enforcement, in-situ cancellations
-      evaluator.js           evaluatePhysicalAST: coherent base evaluation & empirical target scaling
-  core/
-    graph_solver.js          solveDAG, canSolveTarget, pruneSolutionPath (cognitive fading)
-    problem_gen.js           generateProblem: autonomous graph unrolling, neatness pass, statement builder
-    unit_sampler.js          40/40/20 distribution, coupled variable coherence, inverse-token probability
-    derivation.js            buildAlignedDerivation: no-comma spacing, additive unit factoring, factor-labels
-    dimensions.js            DIMENSIONS, fmtSigFig, formatGivenValue, cancelUnit, textUnit
-    topic_mix.js             Tournament targeting over multi-topic review pools
-  mastery/                   constants.js (phi, fib), engine.js, storage.js
-  mcq/
-    index.js                 AUTO-GENERATED flat lazy registry (MCQ_MANIFEST + loadMcqSet)
-    engine.js                Batch selection, 4-choice distractor sampling, adaptive 1x4/2x2/4x1 grid, phi mastery
-    zip_reader.js            Zero-dependency ZIP archive reader (native DecompressionStream)
-    custom_store.js          IndexedDB persistence for user-uploaded .json / .zip MCQ sets
-    <subject>/<set>/         set.json + optional assets/ images
-  ui/
-    problem_view.js          Computational problem renderer & step checker
-    mcq_view.js              Instant Check (1-by-1) & Exam Sheet (scrollable, adaptive grid, in-place grading)
-    sidebar_view.js          Oklab mastery drawer & mastery export/import
-    carousel_view.js         Formula reference & variable isolator
-    tooltip_view.js          Interactive variable tooltips
-  topics/
-    index.js                 AUTO-GENERATED flat lazy registry (TOPIC_MANIFEST + loadTopic)
-    <subject>/<topic>/       index.js, schema.js, relations.js, system.js (strict leaf slices)
-scripts/
-  gen_registry.js            Auto-discovers leaf topics & MCQ sets -> emits src/topics/index.js & src/mcq/index.js
-  repo_skeleton.js           Generates resolved import graph + symbol signatures
-  fulfill_ctx.js             Fulfills READ/GREP context requests into tmp/ctx_res.txt
-test/
-  validator.js               Topic schema, dual-system AST inversion, and numerical fidelity harness
-  run_test.js                Universal property invariants, alien scale detector, derivation rendering
-  run_hygiene_test.js        In-tree dead code, invariants, schema orphans, duplicates, alias collisions
-  mcq_test.js                MCQ registry, image asset existence, grid classifier, and ZIP unpacker tests
-```
-
----
-
-## 4. Data Contracts
-
-### 4.1 Topic Object (`<topic>/index.js`)
-
-| Field | Required | Type | Meaning |
-|---|---|---|---|
-| `id` | Yes | `string` | Unique identifier; must equal its export key in `<SUBJECT>_TOPICS`. |
-| `title` | Yes | `string` | Dropdown label. |
-| `subject` | Yes | `string` | Dropdown level 1 (e.g. `"Powerplant Design"`). |
-| `category` | No | `string|null` | Dropdown level 2 subfolder, or `null` if standalone under subject. |
-| `noun` | No | `string` | Reads: "A/An {noun} operates with the following specifications...". |
-| `varsDb` | Yes | `object` | Variable schema dictionary (section 4.2). |
-| `relations` | Yes | `Array` | Array of relation objects (section 4.3). |
-| `createSystem` | Yes | `Function` | Ground truth generator: `({ sys }) => SystemState` (section 4.4). |
-
-Export the topic frozen: `export const myTopic = Object.freeze({...});`.
-
-### 4.2 `varsDb` Entry
-
-```javascript
-"T_2": {
-  name: "Temperature after Compression",
-  symbol: "T_2",
-  dimension: DIMENSIONS.TEMPERATURE,
-  unit: "K",
-  nameAliases: ["Temperature after Compression", "State 2 Temperature", "Discharge Temp"],
-  symbolAliases: ["T_2", "T_c"],
-  aliases: ["Temperature after Compression", "Discharge Temperature", "T_2"]
-}
-```
-
-- `dimension`: One of `DIMENSIONS.*` (`LENGTH`, `FORCE`, `PRESSURE`, `POWER`, `TEMPERATURE`, etc.).
-- `unit`: Registered unit string from `definitions.js`.
-- `nameAliases` / `symbolAliases`: Pools sampled at runtime for statement variety while derivations maintain canonical notation.
-- `isConstant`: Tags fundamental physical constants (e.g. $c_{pa}$, $c_{pw}$, $g$) for recall-mode omission at high mastery.
-- `isInteger`: Answer checking uses $\pm 0.5$ tolerance and the neatness pass rounds to integer.
-- `isAbstract`: Tags category parents (e.g. `D_P`, `T`); exempt from orphan audits.
-
-### 4.3 Relation Object
-
-```javascript
-{
-  id: "eq_diesel_t2",
-  name: "Isentropic Compression Temp",
-  canonicalTex: "T_2 = T_1 r_k^{k-1}",
-  baseFormula: "T_2 = T_1 * (r_k^(k - 1))",
-  nodes: ["T_2", "T_1", "r_k", "k"],
-  requiredUnits: null              // or { tok: "unit", targetVar: "unit" } for empirical correlations
-}
-```
-
-### 4.4 `createSystem({ sys })` Contract
-
-```javascript
-export function createMySystem({ sys = "SI" } = {}) {
-  // 1. Generate independent ground truth using textbook-friendly inputs
-  // 2. Perform explicit arithmetic by hand (never invoke solveDAG or unit engine)
-  // 3. Return sys, _names, _u, and numerical values for all non-abstract varsDb keys
-  return {
-    sys: "SI",
-    T_1: 300,
-    T_2: 1027,
-    _names: { T_1: "Intake Temperature", ... },
-    _u: { T_1: "K", T_2: "K", ... }
-  };
-}
-```
-
----
-
-## 5. Formula Language (`baseFormula`)
-
-The parser grammar enforces standard infix mathematical notation:
-- Numbers, canonical variable keys, operators `+ - * / ^`, parentheses, unary minus.
-- Functions: `sin cos tan asin acos atan sqrt exp ln log abs`, plus constants `pi` and `e`.
-- Exactly one `=` separating LHS and RHS.
-
-| Allowed | Forbidden | Failure Mode | Rule |
-|---|---|---|---|
-| `2 * a` | `2a` | **Silent Drop** (`2a` parses as `2`) | Always include explicit multiplication `*`. |
-| `P_sat` | `P_{sat}` | **Silent Truncation** (truncates to `P_`) | No LaTeX braces in variable keys or formulas. |
-| `x^(k - 1)` | `x^k-1` | Evaluates as $(x^k) - 1$ | Always parenthesise complex exponents. |
-| `a / (b * c)` | `a / b / c` | Left-associative: $(a/b)/c$ | Always parenthesise compound denominators. |
-| `sin(phi)` | `sin(2 * phi)` | **Silent Radian Corruption** | Trig arguments must be a bare angle variable. |
-
----
-
-## 6. Physical Units & Dimensional Architecture
-
-### 6.1 The AffineScale Invariant Model
-All physical evaluation rests on branchless affine transformations and 7D dimensional vectors:
-$$\phi_u(x) = s_u \cdot (x + o_u)$$
-$$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
-
-- **Coherent Base Magnitudes:** Every physical state has an invariant representation in coherent SI units ($\text{m}, \text{s}, \text{kg}, \text{N}, \text{K}, \text{W}, \text{J}$).
-- **Linear Units ($o_u = 0$):** Multiplicative scale only ($y = s_u \cdot x$).
-- **Affine Units ($o_u \neq 0$):** Exact offsets ($\pm 273.15$, $\pm 459.67$). The absolute companion unit is resolved mathematically by matching scale $s$ in thermal dimension $\Theta$ where $o = 0$:
-  - $^\circ\text{F}$ ($s = 5/9, o = 459.67$) $\implies ^\circ\text{R}$ ($s = 5/9, o = 0$)
-  - $^\circ\text{C}$ ($s = 1.0, o = 273.15$) $\implies \text{K}$ ($s = 1.0, o = 0$)
-- **Scale Parity ($|\Delta| < 10^{-6}$):** If two units in a ratio share 7D dimensions and $|s_A - s_B| < 10^{-6}$ (e.g. $\text{kW}$ vs $\text{kJ/s}$), they are physically equal. No conversion factor is emitted; both cancel directly.
-- **Empirical Target Scaling:** When a relation specifies `requiredUnits`, the formula evaluates in those required units; the result then scales to `targetUnit` via `numericConversionFactor = scale(reqTargetU) / scale(targetUnit)`.
-
-### 6.2 `scales.js`: Single Source of Truth & 6-Sig-Fig Precision
-`src/cas/units/scales.js` computes all conversion scalars directly from `BASE_UNITS` and `PREFIXES` in `definitions.js` using `fmtScale` (6 significant figures without the 3-decimal truncation cap):
-- **Single-Dimension Scaling (Option B):** When an expression evaluates to a single dimension differing from `targetUnit` (e.g. $\text{hp} \to \text{ft}\cdot\text{lb/s}$), `scales.js` preserves the target unit intact on the main line:
-  $$BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}$$
-- **Compound Ratio Decomposition:** Compound unit conversions (e.g. $\frac{\text{lb/min}}{\text{Btu/h}} \to \frac{\text{kg}}{\text{kWh}}$) are never lumped into unfamiliar decimals (like $92{,}863.4$). `scales.js` decomposes them into atomic dimension pairs (`60`, `2.20462`, `3,412.14`) applied in-situ.
-- **AST-Driven Mismatches:** Ratios with differing unit scales (e.g. $\text{Btu/h}$ vs $\text{Btu/min}$) extract the exact differing atomic pair from the unit AST.
-
-### 6.3 Factor-Label Derivations & The 4-Row Cap
-Derivations default to **in-situ conversions** placed directly beside the converted token.
-
-A compound fraction has 4 vertical visual row slots:
-$$\cfrac{\text{Row 1}}{\text{Row 2}} \Bigg/ \cfrac{\text{Row 3}}{\text{Row 4}}$$
-
-Because conversion factors multiply horizontally beside variables in the numerator (Rows 1 & 2) and denominator (Rows 3 & 4), they preserve the 4-row limit:
-$$\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}}{227{,}476 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{min}}}} = \boxed{38 \, \text{\%}}$$
-
-- **Stepping Down:** Stepping down to the main line ($A/B \cdot E/F$) is an overflow valve used *only* if an expression itself already contains nested fractions that would push visual height $\ge 5$ rows, or under Option B single-dimension scaling.
-
-### 6.4 Multi-System Sampling & Coupled State Coherence
-- **Problem Distribution:** 40% Pure SI / 40% Pure US / 20% MIXED.
-- **Coupled Variable Coherence:** State deliverables of the same fluid or cycle share an identical unit when requested as outputs; boundary givens roll freely to test multi-unit fluency.
-- **Significant Figure Retention:** Conversions to alternative units must retain $\ge 3$ significant figures under the 3-decimal-place limit ($|v| \ge 0.100$).
-- **Compound Decomposition:** Decomposed unit options (e.g. $\text{W} \to \text{J/s} \to \text{N}\cdot\text{m/s} \to \text{kg}\cdot\text{m}^2/\text{s}^3$) are sampled with probability inversely proportional to token count: $w_i = 1/t_i$.
-
----
-
-## 7. Direction-Agnostic Synthesis & Natural Cognitive Fading
-
-### 7.1 Direction-Agnostic Graph Unrolling
-Topics have no fixed starting or ending variables. The generator treats every relation network as an undirected bipartite graph:
-- `generateAutonomousProblem` prioritizes the learner's weakest relations and samples any valid variable as the dynamic deliverable (`goalVar`).
-- `determineGraphDistance(mastery)` scales chain length monotonically via Fibonacci hops (`0` $\to$ `1` $\to$ `2` $\to$ `3` $\to$ `5` $\to$ `8` $\to$ `21`) as mastery increases.
-- `solveDAG` resolves paths forwards, backwards, or diagonally from the minimal pruned givens.
-
-### 7.2 Cognitive Fading Step Hiding
-- **Beginner ($< \text{FADING THRESHOLD} \approx 76.4\%$):** Short 0–1 hop problems; every intermediate step is actively prompted.
-- **Advanced ($\ge \text{FADING THRESHOLD}$):** Multi-hop interconnected chains; mastered intermediate steps are **literally hidden** from the solution steps and omitted from statement prompts. The learner calculates intermediate states independently to solve the dynamic active deliverable.
-- **Ancestry Propagation:** Submitting a correct active step reinforces all its faded ancestor equations. Failing or revealing an active step penalizes faded ancestors so scaffolding reappears on future problems.
-
----
-
-## 8. Derivations & UI Typesetting
-
-- **Canonical Cancellation Hierarchy:**
-  - **Whole-Unit (Canonical):** Wrap the entire unit block when cancelling identical scales or whole terms:
-    $$\cfrac{1{,}440 \, \cancel{\text{kW}}}{4{,}000 \, \cancel{\cfrac{\text{kJ}}{\text{s}}}} = \boxed{36 \, \text{\%}}$$
-  - **Component-Level (Fallback):** Cancel individual sub-tokens *only* when components cancel against separate factors ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$).
-- **Omit 1:** Write $\cfrac{\text{kg}}{2.20462 \, \cancel{\text{lb}}}$, never $\cfrac{1 \, \text{kg}}{\dots}$.
-- **Scalars Outside:** Write $60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$, never $\cfrac{60 \, \cancel{\text{h}}}{\cancel{\text{min}}}$.
-- **Percent Symbol:** Always `\text{\%}` (and `\cancel{\text{\%}}`), mirrored across all unit pipelines.
-- **Zero-Comma Spacing:** Units are separated from numbers by LaTeX thin spacing (`\,`), never literal commas.
-- **Additive Unit Grouping:** Like-unit sums and differences factor outside parentheses: $(a \pm b) \, \text{unit}$. Mismatched additive terms convert in-situ to the target unit.
-- **Perceptual Mastery Gradient:** Formula mastery bars interpolate continuously in Oklab color space from danger red (`oklab(0.63 0.22 0.12)`) through warm amber (`oklab(0.75 0.06 0.16)`) to emerald green (`oklab(0.72 -0.17 0.14)`), sorted ascending.
-
----
-
-## 9. Authoring Guide & Blueprint for New Topics & Subjects
-
-Every topic follows a strict **4-File Domain Architecture** under `src/topics/<subject>/<topic_name>/`. New material must be mathematically closed, unit-coherent, and independently verifiable against textbook ground truth.
-
-```text
-src/topics/<subject>/<topic_name>/
-├── index.js       # Topic manifest, categorization, and engine wiring
-├── schema.js      # Scoped variable dictionary (dimensions, units, aliases)
-├── relations.js   # Invertible physics relations (nodes, baseFormula, canonicalTex)
-└── system.js      # Independent ground truth generator ({ sys } => SystemState)
-```
-
-### 9.1 Topic Manifest Blueprint (`index.js`)
-
-```javascript
-/**
- * src/topics/<subject>/<topic>/index.js
- */
-import { MY_TOPIC_VARS_DB } from "./schema.js";
-import { MY_TOPIC_RELATIONS } from "./relations.js";
-import { createMyTopicSystem } from "./system.js";
-
-export const myTopic = Object.freeze({
-  id: "<subject>_<topic_name>",             // Globally unique key, matching TOPICS export
-  title: "Topic Display Title",             // Level 3 dropdown label
-  subject: "Subject Name",                  // Level 1 dropdown category (e.g. "Powerplant Design")
-  category: "Subcategory Name",             // Level 2 folder (or null if standalone under subject)
-  noun: "specific mechanical equipment",    // Reads: "A/An {noun} operates with the following..."
-  varsDb: MY_TOPIC_VARS_DB,                 // Schema dictionary
-  relations: MY_TOPIC_RELATIONS,           // Pure physics relation graph
-  createSystem: createMyTopicSystem         // Independent ground truth generator
-  // Note: Zero hardcoded givens or goal lists. All paths are resolved dynamically at runtime.
-});
-```
-
-### 9.2 Variable Schema Blueprint (`schema.js`)
-
-```javascript
-/**
- * src/topics/<subject>/<topic>/schema.js
- */
-import { DIMENSIONS } from "../../../core/dimensions.js";
-
-export const MY_TOPIC_VARS_DB = Object.freeze({
-  "P_out": {
-    name: "Output Power",
-    symbol: "P_{out}",
-    dimension: DIMENSIONS.POWER,
-    unit: "kW",                             // Registered unit from definitions.js
-    nameAliases: ["Output Power", "Delivered Brake Power", "Power Capacity"],
-    symbolAliases: ["P_{out}", "P_b", "\\text{BHP}"],
-    aliases: ["Output Power", "Delivered Brake Power", "Power Capacity", "P_out", "P_b"]
-  },
-  "N_teeth": {
-    name: "Tooth Count",
-    symbol: "T",
-    dimension: DIMENSIONS.COUNT,
-    unit: "teeth",
-    isInteger: true,                        // Enforces ±0.5 integer tolerance checks
-    aliases: ["Tooth Count", "Number of Teeth"]
-  },
-  "c_p": {
-    name: "Specific Heat",
-    symbol: "c_p",
-    dimension: DIMENSIONS.SPECIFIC_ENERGY,
-    unit: "kJ/kg-K",
-    isConstant: true,                       // Tags physical constants for high-mastery recall mode
-    display: 1.0062,                        // Tabulated textbook academic display
-    aliases: ["Specific Heat at Constant Pressure", "c_p"]
-  }
-});
-```
-
-#### Schema Invariants:
-1. **Registered Units:** The `unit` string must exist in `src/cas/units/definitions.js`.
-2. **Native Degree:** Use native `°` in all symbols and units (`°C`, `°F`, `°R`, `°`). Never use `\circ`.
-3. **No Collision Rule:** No alias may be claimed by two different variables across the subject schema.
-4. **Specific Energy:** Always use lowercase symbols for specific energy ($q_A, q_R, w_{net}, h$). Reserve uppercase ($Q, W, P$) for total power/energy.
-
-### 9.3 Relations Graph Blueprint (`relations.js`)
-
-```javascript
-/**
- * src/topics/<subject>/<topic>/relations.js
- */
-export const MY_TOPIC_RELATIONS = Object.freeze([
-  {
-    id: "eq_<topic>_power_flow",
-    name: "Power from Mass Flow and Work",
-    canonicalTex: "P = \\dot{m} w_{net}",
-    baseFormula: "P = m_flow * w_net",      // Explicit '*', parenthesized exponents
-    nodes: ["P", "m_flow", "w_net"]
-  },
-  {
-    id: "eq_<topic>_bending_stress",
-    name: "Tooth Bending Stress",
-    variants: {
-      SI: {
-        canonicalTex: "s = \\frac{F_t}{b m Y}",
-        baseFormula: "s = W_t / (b * m * Y)",
-        nodes: ["s", "W_t", "b", "m", "Y"]
-      },
-      US: {
-        canonicalTex: "s = \\frac{F_t P_d}{b Y}",
-        baseFormula: "s = (W_t * P_d) / (b * Y)",
-        nodes: ["s", "W_t", "P_d", "b", "Y"]
-      }
-    },
-    canonicalTex: "s = \\frac{F_t}{b m Y}",
-    baseFormula: "s = W_t / (b * m * Y)",
-    nodes: ["s", "W_t", "b", "m", "Y"]
-  },
-  {
-    id: "eq_<topic>_empirical_flow",
-    name: "Empirical Heat Loss Correlation",
-    canonicalTex: "q_{loss} = 0.05 v^{0.8} \\Delta T",
-    baseFormula: "q_loss = 0.05 * (v^0.8) * dT",
-    nodes: ["q_loss", "v", "dT"],
-    requiredUnits: { v: "m/s", dT: "K", q_loss: "kW" }
-  }
-]);
-```
-
-#### Relation Invariants:
-1. **Prefix Convention:** Common equations shared across multiple subjects live in `common/` and use the `eq_base_` prefix. Unique topic equations use `eq_<topic>_<name>`.
-2. **Pure Physics:** Never bake conversion constants into formulas.
-
-### 9.4 Ground Truth Generator Blueprint (`system.js`)
-
-```javascript
-/**
- * src/topics/<subject>/<topic>/system.js
- */
-import { MY_TOPIC_VARS_DB } from "./schema.js";
-
-export function createMyTopicSystem({ sys = "SI" } = {}) {
-  const isUS = sys === "US";
-
-  const m_flow = isUS ? 50.0 : 25.0;        // lb/s vs kg/s
-  const w_net = isUS ? 120.0 : 280.0;       // Btu/lb vs kJ/kg
-  const P = m_flow * w_net;                 // Pure hand arithmetic
-
-  const _names = {};
-  for (const [k, meta] of Object.entries(MY_TOPIC_VARS_DB)) {
-    _names[k] = meta.nameAliases?.[0] || meta.name;
-  }
-
-  const _u = isUS
-    ? { m_flow: "lb/s", w_net: "Btu/lb", P: "Btu/s" }
-    : { m_flow: "kg/s", w_net: "kJ/kg", P: "kW" };
-
-  return { sys, m_flow, w_net, P, _names, _u };
-}
-```
-
-### 9.5 Automatic Discovery & Verification
-
-1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` or `src/mcq/index.js` manually.
-2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` (and `src/mcq/` `.json` sets) and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and zero barrel leaks.
-
----
-
-## 10. Testing & Invariant Verification Suite
-
-Run both test suites:
-
-```bash
-node --test test/run_test.js test/run_hygiene_test.js
-```
-
-| Suite | Invariant Verified |
-|---|---|
-| `test/run_test.js` | **Universal Round-Trip Invariant:** $u \to \text{base} \to u$ identity across all registered units. <br>**100-Problem Stress Invariant:** 100 randomized problems (SI, US, MIXED) verify physical conservation ($< 0.05\%$), valid boxed answers, and error-free KaTeX rendering. <br>**Alien Scale Factor Detector:** Queries `scales.js` (`isCanonicalScaleFactor`) to reject any lumped or unfamiliar conversion scalars without bespoke test lists. <br>**Direction-Agnostic Synthesis:** Dynamic longest-path generation at high mastery, natural step hiding, 4-row tower cap, and encompassing cancellations. |
-| `test/run_hygiene_test.js` | Zero legacy shadows, exact $\phi$/Fibonacci progressions, zero schema orphan variables, zero duplicate formulas within topics, zero alias collisions across `varsDb`, cross-subject commonality rules, and native `°` symbols (no `\circ`). |
-
----
-
-## 11. Definition of Done (Checklist before submitting code)
-
-- [ ] Stayed in brainstorm mode until explicit permission to code was granted.
-- [ ] Addressed the root cause rather than patching a symptom.
-- [ ] No Hard Rules in Section 2 are violated.
-- [ ] Any new unit is registered in `definitions.js` with consistent atomic base scales and 7D dimensional vectors.
-- [ ] New formulas are pure physics; empirical exceptions declare `requiredUnits`.
-- [ ] `system.js` is independent of the solver and honors `{ sys }`.
-- [ ] Unit conversions default to in-situ, respect the 4-row fraction tower cap, omit coefficients of 1, keep scalars outside unit ratios, and use canonical encompassing `\cancel`.
-- [ ] Percentages render as `\text{\%}` and degree symbols use native `°`.
-- [ ] Code changes use `FILE: path/to/file.ext` with 4-backtick `diff` (`<<<< ==== >>>>`) fences unless shorter as a drop-in replacement; `README.md` edits use `N+1`-backtick full drop-in replacements.
-- [ ] `node --test test/run_test.js test/run_hygiene_test.js` was run and passed with 0 failures.
-- [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
-- [ ] No tests were renamed, skipped, loosened, or deleted.
-- [ ] LF line endings, header comment on every new file, no dead code, and no new duplication.
-`````

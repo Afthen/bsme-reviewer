@@ -217,7 +217,7 @@ const outBlocks = [
 const readmePath = path.resolve("README.md");
 if (fs.existsSync(readmePath)) {
   const readmeBody = fs.readFileSync(readmePath, "utf8").replace(/\r\n/g, "\n").trimEnd();
-  outBlocks.push("````readme\n" + readmeBody + "\n````");
+  outBlocks.push("`````README.md\n" + readmeBody + "\n`````");
 }
 
 const outPath = path.resolve("tmp/skeleton.txt");
