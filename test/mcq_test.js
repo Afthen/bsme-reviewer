@@ -83,7 +83,7 @@ export async function runMcqTests() {
         q: "Locked order?",
         options: ["First", "Second", "A and B", "None"],
         answer: "C",
-        referential: true
+        shuffle: []
       }
     },
     {
@@ -98,6 +98,34 @@ export async function runMcqTests() {
         options: ["Correct", "D1", "D2", "D3", "D4", "D5"],
         answer: "A"
       }
+    },
+    {
+      setId: "test",
+      setTitle: "Test",
+      baseUrl: null,
+      seen: 0,
+      mastery: 0,
+      item: {
+        id: 3,
+        q: "Partial shuffle with pinned All of the above",
+        options: ["Opt1", "Opt2", "Opt3", "All of the above"],
+        answer: "All of the above",
+        shuffle: [[0, 1, 2]]
+      }
+    },
+    {
+      setId: "test",
+      setTitle: "Test",
+      baseUrl: null,
+      seen: 0,
+      mastery: 0,
+      item: {
+        id: 4,
+        q: "6-option pool with pinned None of the above",
+        options: ["Correct", "D1", "D2", "D3", "D4", "None of the above"],
+        answer: "Correct",
+        shuffle: [[0, 1, 2, 3, 4]]
+      }
     }
   ]);
 
@@ -105,6 +133,11 @@ export async function runMcqTests() {
   assert.equal(sample[0].answer, "C");
   assert.equal(sample[1].options.length, 4);
   assert.ok(sample[1].options.includes("Correct"));
+  assert.equal(sample[2].options[3], "All of the above");
+  assert.equal(sample[2].answer, "D");
+  assert.equal(sample[3].options.length, 4);
+  assert.equal(sample[3].options[3], "None of the above");
+  assert.ok(sample[3].options.includes("Correct"));
 
   assert.equal(classifyOptionsGrid(["$5°\\text{C}$", "$10°\\text{C}$", "$17°\\text{C}$", "$20°\\text{C}$"]), "cols-4");
   assert.equal(classifyOptionsGrid(["Sensible heating", "Sensible cooling", "Adiabatic saturation", "Chemical dehumidifying"]), "cols-2");

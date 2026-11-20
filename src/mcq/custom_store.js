@@ -55,9 +55,7 @@ function normalizeParsedSet(parsed, fallbackName, imageResolver = null) {
         imageAlt: item.image?.alt || item.imageAlt || "",
         options: Array.isArray(item.options) ? item.options.map(String) : [],
         answer: String(item.answer || item.correctAnswer || "A").trim(),
-        referential: Boolean(
-          item.referential || item.hasReferentialOptions || item.noShuffle || item.shuffle === false || item.fixedOrder || item.lockOptions
-        )
+        ...(Array.isArray(item.shuffle) ? { shuffle: item.shuffle } : {})
       };
     })
     .filter(q => q.q && q.options.length >= 2);

@@ -40,16 +40,129 @@ export function getAnswerText(item) {
   return rawAns;
 }
 
-export function isReferentialQuestion(item) {
-  return Boolean(
-    item &&
-    (item.referential ||
-      item.hasReferentialOptions ||
-      item.noShuffle ||
-      item.shuffle === false ||
-      item.fixedOrder ||
-      item.lockOptions)
-  );
+function resolveCorrectIndex(item, opts) {
+  const rawAns = String(item?.answer || item?.correctAnswer || "").trim();
+  if (!rawAns) return 0;
+
+  const normAns = normalizeText(rawAns);
+  const byText = opts.findIndex(o => normalizeText(o) === normAns);
+  if (byText !== -1) return byText;
+
+  const letterMatch = rawAns.match(/\b([A-Za-z])\b/);
+  if (letterMatch) {
+    const idx = letterMatch[1].toUpperCase().charCodeAt(0) - 65;
+    if (idx >= 0 && idx < opts.length) return idx;
+  }
+
+  const numMatch = rawAns.match(/\b(\d+)\b/);
+  if (numMatch) {
+    const n = parseInt(numMatch[1], 10);
+    if (n >= 0 && n < opts.length) return n;
+    if (n >= 1 && n <= opts.length) return n - 1;
+  }
+
+  return 0;
+}
+
+function applyShufflePartition(entries, shuffleGroups) {
+  const n = entries.length;
+  const groups = Array.isArray(shuffleGroups)
+    ? shuffleGroups.map(g => [...new Set(g)].filter(i => Number.isInteger(i) && i >= 0 && i < n))
+    : [entries.map((_, i) => i)];
+
+  const inAnyGroup = new Set();
+  const groupOf = new Map();
+  groups.forEach((g, gIdx) => {
+    g.forEach(i => {
+      if (!inAnyGroup.has(i)) {
+        inAnyGroup.add(i);
+        groupOf.set(i, gIdx);
+      }
+    });
+  });
+
+  if (n <= 4) {
+    const result = [...entries];
+    for (const g of groups) {
+      if (g.length <= 1) continue;
+      const shuffled = shuffleArray(g.map(i => entries[i]));
+      g.forEach((slotIdx, k) => {
+        result[slotIdx] = shuffled[k];
+      });
+    }
+    return result;
+  }
+
+  // Pool > 4: keep pinned items in relative order, sample remaining slots from groups
+  const targetLen = 4;
+  const pinnedIndices = [];
+  for (let i = 0; i < n; i++) {
+    if (!inAnyGroup.has(i)) pinnedIndices.push(i);
+  }
+
+  const availableSlots = Math.max(0, targetLen - pinnedIndices.length);
+  const groupSamples = groups.map(g => {
+    const pool = g.map(i => entries[i]);
+    const correctEntry = pool.find(e => e.isCorrect);
+    const seen = new Set(correctEntry ? [normalizeText(correctEntry.text)] : []);
+    const distractors = [];
+    for (const e of pool) {
+      const norm = normalizeText(e.text);
+      if (!e.isCorrect && !seen.has(norm)) {
+        seen.add(norm);
+        distractors.push(e);
+      }
+    }
+    return { correctEntry, distractors };
+  });
+
+  // Allocate slots across groups
+  let remaining = availableSlots;
+  const quotas = groups.map(() => 0);
+  groups.forEach((g, idx) => {
+    if (remaining <= 0) return;
+    if (groupSamples[idx].correctEntry) {
+      quotas[idx] = 1;
+      remaining--;
+    }
+  });
+  let gCursor = 0;
+  let guard = 0;
+  while (remaining > 0 && groups.length > 0 && guard < 100) {
+    const idx = gCursor % groups.length;
+    const cap = (groupSamples[idx].correctEntry ? 1 : 0) + groupSamples[idx].distractors.length;
+    if (quotas[idx] < cap) {
+      quotas[idx]++;
+      remaining--;
+    }
+    gCursor++;
+    guard++;
+  }
+
+  const sampledByGroup = groups.map((_, idx) => {
+    const q = quotas[idx];
+    const { correctEntry, distractors } = groupSamples[idx];
+    const chosen = [];
+    if (correctEntry && q > 0) chosen.push(correctEntry);
+    const need = Math.max(0, q - chosen.length);
+    chosen.push(...shuffleArray(distractors).slice(0, need));
+    return shuffleArray(chosen);
+  });
+
+  const groupHeads = groups.map(() => 0);
+  const finalEntries = [];
+  for (let i = 0; i < n && finalEntries.length < targetLen; i++) {
+    if (!inAnyGroup.has(i)) {
+      finalEntries.push(entries[i]);
+    } else {
+      const gIdx = groupOf.get(i);
+      const list = sampledByGroup[gIdx];
+      if (groupHeads[gIdx] < list.length) {
+        finalEntries.push(list[groupHeads[gIdx]++]);
+      }
+    }
+  }
+  return finalEntries;
 }
 
 export function shuffleArray(arr) {
@@ -181,51 +294,16 @@ export function buildSessionItems(packedList = []) {
     const imageSrc = resolveQuestionImage(item, entry.baseUrl);
     const imageAlt = typeof item.image === "object" ? (item.image?.alt || "") : (item.imageAlt || "");
 
-    if (isReferentialQuestion(item)) {
-      const options = [...(item.options || [])];
-      return {
-        ...entry,
-        q: item.q,
-        imageSrc,
-        imageAlt,
-        options,
-        answer: String(item.answer || "A").trim().toUpperCase(),
-        gridClass: classifyOptionsGrid(options)
-      };
-    }
+    const rawOpts = (item.options || []).map(o => String(o).trim());
+    const correctOrigIdx = resolveCorrectIndex(item, rawOpts);
+    const entries = rawOpts.map((text, idx) => ({
+      text,
+      isCorrect: idx === correctOrigIdx
+    }));
 
-    const correctText = getAnswerText(item);
-    const normCorrect = normalizeText(correctText);
-    let correctChoice = null;
-    const distractors = [];
-    const seenDistractors = new Set();
-
-    for (const opt of item.options || []) {
-      const s = String(opt).trim();
-      const norm = normalizeText(s);
-      if (norm === normCorrect && correctChoice === null) {
-        correctChoice = s;
-      } else if (norm !== normCorrect && !seenDistractors.has(norm)) {
-        seenDistractors.add(norm);
-        distractors.push(s);
-      }
-    }
-
-    if (!correctChoice) {
-      correctChoice = correctText || String(item.options?.[0] || "Answer");
-    }
-
-    const chosenDistractors = distractors.length > 3
-      ? shuffleArray(distractors).slice(0, 3)
-      : distractors;
-
-    const shuffled = shuffleArray([
-      { text: correctChoice, isCorrect: true },
-      ...chosenDistractors.map(d => ({ text: d, isCorrect: false }))
-    ]);
-
-    const correctIdx = shuffled.findIndex(c => c.isCorrect);
-    const options = shuffled.map(c => c.text);
+    const finalEntries = applyShufflePartition(entries, item.shuffle);
+    const correctIdx = finalEntries.findIndex(c => c.isCorrect);
+    const options = finalEntries.map(c => c.text);
 
     return {
       ...entry,
@@ -233,7 +311,7 @@ export function buildSessionItems(packedList = []) {
       imageSrc,
       imageAlt,
       options,
-      answer: LETTERS[correctIdx] || "A",
+      answer: LETTERS[correctIdx >= 0 ? correctIdx : 0] || "A",
       gridClass: classifyOptionsGrid(options)
     };
   });
