@@ -1,243 +1,44 @@
-60:     },
-61:     {
-62:       "id": 90,
-63:       "q": "BREWING is to BEER as TANNING is to __________.",
-64:       "options": ["rubber", "cotton", "tea", "glass", "leather"],
-65:       "answer": "leather"
-66:     },
-67:     {
-68:       "id": 91,
-69:       "q": "__________ is to METAMORPHOSIS as CATHARSIS is to __________.",
-70:       "options": ["condition-chapter", "comparison-effect", "state-cause", "process-stage", "change-purification"],
-71:       "answer": "change-purification"
-72:     },
-73:     {
-74:       "id": 92,
-75:       "q": "__________ is to SWORD as HOLSTER is to __________.",
-76:       "options": ["blade-spin", "scabbard-pistol", "duel-bolo", "sheath-shot", "hilt-rifle"],
-77:       "answer": "scabbard-pistol"
-78:     },
-79:     {
-80:       "id": 93,
-81:       "q": "__________ is to SCHOOL as STAR is to __________.",
-82:       "options": ["student-rock", "principal-dancer", "fish-constellation", "bird-tree", "thesis-player"],
-83:       "answer": "fish-constellation"
-84:     },
-85:     {
-86:       "id": 94,
-87:       "q": "__________ is to LATE as AUTHENTIC is to __________.",
-88:       "options": ["punctual-counterfeit", "prompt-genuine", "diligent-original", "absent-false", "early-real"],
-89:       "answer": "punctual-counterfeit"
-90:     },
-91:     {
-92:       "id": 95,
-93:       "q": "__________ is to PAPER as WORM is to __________.",
-94:       "options": ["wrap-wriggle", "tree-silk", "print-bait", "sap-tick", "ink-soil"],
-95:       "answer": "tree-silk"
+{
+  "id": "mcq_cse_analogy_01",
+  "title": "Verbal Analogy",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
+    {
+      "id": 90,
+      "q": "BREWING is to BEER as TANNING is to __________.",
+      "options": ["rubber", "cotton", "tea", "glass", "leather"],
+      "answer": "leather"
     },
     {
-      "id": 392,
-      "q": "__________ : trail :: grain : grail",
-      "options": ["train", "path", "wheat", "holy"],
-      "answer": "train"
+      "id": 91,
+      "q": "__________ is to METAMORPHOSIS as CATHARSIS is to __________.",
+      "options": ["condition-chapter", "comparison-effect", "state-cause", "process-stage", "change-purification"],
+      "answer": "change-purification"
     },
     {
-      "id": 393,
-      "q": "particular : fussy :: __________ : subservient",
-      "options": ["meek", "above", "cranky", "uptight"],
-      "answer": "meek"
+      "id": 92,
+      "q": "__________ is to SWORD as HOLSTER is to __________.",
+      "options": ["blade-spin", "scabbard-pistol", "duel-bolo", "sheath-shot", "hilt-rifle"],
+      "answer": "scabbard-pistol"
     },
     {
-      "id": 394,
-      "q": "__________ : horse :: board : train",
-      "options": ["stable", "shoe", "ride", "mount"],
-      "answer": "mount"
+      "id": 93,
+      "q": "__________ is to SCHOOL as STAR is to __________.",
+      "options": ["student-rock", "principal-dancer", "fish-constellation", "bird-tree", "thesis-player"],
+      "answer": "fish-constellation"
     },
     {
-      "id": 395,
-      "q": "tureen : __________ :: goblet : wine",
-      "options": ["napkin", "soup", "spoon", "pilsner"],
-      "answer": "soup"
+      "id": 94,
+      "q": "__________ is to LATE as AUTHENTIC is to __________.",
+      "options": ["punctual-counterfeit", "prompt-genuine", "diligent-original", "absent-false", "early-real"],
+      "answer": "punctual-counterfeit"
     },
     {
-      "id": 396,
-      "q": "son : nuclear :: __________ : extended",
-      "options": ["father", "mother", "cousin", "daughters"],
-      "answer": "cousin"
-    },
-    {
-      "id": 397,
-      "q": "coif : hair :: __________ : musical",
-      "options": ["shower", "close", "praise", "score"],
-      "answer": "score"
-    },
-    {
-      "id": 398,
-      "q": "feta : Greek :: provolone : __________",
-      "options": ["salad", "Swiss", "blue", "Italian"],
-      "answer": "Italian"
-    },
-    {
-      "id": 399,
-      "q": "moccasin : snake :: __________ : shoe",
-      "options": ["alligator", "waders", "asp", "loafer"],
-      "answer": "loafer"
-    },
-    {
-      "id": 400,
-      "q": "__________ : zenith :: fear : composure",
-      "options": ["apex", "heaven", "heights", "nadir"],
-      "answer": "nadir"
-    },
-    {
-      "id": 401,
-      "q": "pill : bore :: core : __________",
-      "options": ["center", "mug", "bar", "placebo"],
-      "answer": "center"
-    },
-    {
-      "id": 402,
-      "q": "pilfer : steal :: __________ : equip",
-      "options": ["return", "damage", "exercise", "furnish"],
-      "answer": "furnish"
-    },
-    {
-      "id": 403,
-      "q": "native : aboriginal :: naïve : __________",
-      "options": ["learned", "arid", "unsophisticated", "tribe"],
-      "answer": "unsophisticated"
-    },
-    {
-      "id": 404,
-      "q": "junket : __________ :: junk : trash",
-      "options": ["trounce", "trip", "refuse", "trinket"],
-      "answer": "trip"
-    },
-    {
-      "id": 405,
-      "q": "__________ : festive :: funeral : somber",
-      "options": ["tension", "soiree", "eulogy", "sari"],
-      "answer": "soiree"
-    },
-    {
-      "id": 406,
-      "q": "fetish : fixation :: slight : __________",
-      "options": ["flirt", "sloth", "insult", "confuse"],
-      "answer": "insult"
-    },
-    {
-      "id": 407,
-      "q": "hovel : dirty :: hub : __________",
-      "options": ["unseen", "prideful", "busy", "shovel"],
-      "answer": "busy"
-    },
-    {
-      "id": 408,
-      "q": "bog : __________ :: slumber : sleep",
-      "options": ["dream", "foray", "marsh", "night"],
-      "answer": "marsh"
-    },
-    {
-      "id": 409,
-      "q": "__________ : segue :: throng : mass",
-      "options": ["subway", "church", "transition", "line"],
-      "answer": "transition"
-    },
-    {
-      "id": 410,
-      "q": "ragtime : United States :: raga : __________",
-      "options": ["cloth", "country", "piano", "India"],
-      "answer": "India"
-    },
-    {
-      "id": 411,
-      "q": "miserly : cheap :: homogeneous : __________",
-      "options": ["extravagant", "unkind", "alike", "friendly"],
-      "answer": "alike"
-    },
-    {
-      "id": 412,
-      "q": "skew : gloomy :: slant : __________",
-      "options": ["glee", "foible", "desperate", "gloaming"],
-      "answer": "desperate"
-    },
-    {
-      "id": 413,
-      "q": "eider : __________ :: cedar : tree",
-      "options": ["snow", "plant", "duck", "pine"],
-      "answer": "duck"
-    },
-    {
-      "id": 414,
-      "q": "gerrymander : divide :: filibuster : __________",
-      "options": ["bend", "punish", "delay", "rush"],
-      "answer": "delay"
-    },
-    {
-      "id": 415,
-      "q": "vapid : __________ :: rapid : swift",
-      "options": ["inspired", "turgid", "wet", "insipid"],
-      "answer": "insipid"
-    },
-    {
-      "id": 416,
-      "q": "denim : cotton :: __________ : flax",
-      "options": ["sheep", "uniform", "sweater", "linen"],
-      "answer": "linen"
-    },
-    {
-      "id": 417,
-      "q": "obscene : coarse :: obtuse : __________",
-      "options": ["subject", "obstinate", "obscure", "stupid"],
-      "answer": "stupid"
-    },
-    {
-      "id": 418,
-      "q": "diamond : baseball :: court : __________",
-      "options": ["poker", "jury", "grass", "squash"],
-      "answer": "squash"
-    },
-    {
-      "id": 419,
-      "q": "quixotic : pragmatic :: murky : __________",
-      "options": ["rapid", "cloudy", "clear", "friendly"],
-      "answer": "clear"
-    },
-    {
-      "id": 420,
-      "q": "smear : libel :: heed : __________",
-      "options": ["represent", "doubt", "consider", "need"],
-      "answer": "consider"
-    },
-    {
-      "id": 421,
-      "q": "nymph : __________ :: seraphim : angel",
-      "options": ["maiden", "sinner", "candle", "priest"],
-      "answer": "maiden"
-    },
-    {
-      "id": 422,
-      "q": "poetry : rhyme :: philosophy : __________",
-      "options": ["imagery", "music", "bi-law", "theory"],
-      "answer": "theory"
-    },
-    {
-      "id": 423,
-      "q": "jibe : praise :: __________ : enlighten",
-      "options": ["jib", "delude", "worship", "wed"],
-      "answer": "delude"
-    },
-    {
-      "id": 424,
-      "q": "marshal : prisoner :: principal : __________",
-      "options": ["teacher", "president", "doctrine", "student"],
-      "answer": "student"
-    },
-    {
-      "id": 425,
-      "q": "fecund : infertile :: __________ : fleet",
-      "options": ["rapid", "slow", "fertilizer", "dam"],
-      "answer": "slow"
+      "id": 95,
+      "q": "__________ is to PAPER as WORM is to __________.",
+      "options": ["wrap-wriggle", "tree-silk", "print-bait", "sap-tick", "ink-soil"],
+      "answer": "tree-silk"
     },
     {
       "id": 392,
@@ -445,7 +246,3 @@
     }
   ]
 }
-96:     }
-97:   ]
-98: }
-99: 

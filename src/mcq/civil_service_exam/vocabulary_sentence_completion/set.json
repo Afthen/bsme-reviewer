@@ -1,39 +1,44 @@
-60:     },
-61:     {
-62:       "id": 30,
-63:       "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nBusiness, like life, is much too extensive and LEQUESCENT to be wholly contained by any checklist, formula or theory.",
-64:       "options": ["structured", "changeable", "Complicated", "shapeless", "confusing"],
-65:       "answer": "changeable"
-66:     },
-67:     {
-68:       "id": 31,
-69:       "q": "Realizing that we were determined to go, our experienced friends __________ that there might be more difficulties along the way than we expect.",
-70:       "options": ["dismissed", "intimated", "insisted", "projected", "concluded"],
-71:       "answer": "insisted"
-72:     },
-73:     {
-74:       "id": 32,
-75:       "q": "Ang patuloy na pag-angkat ng mga produktong banyaga, na siya namang tinatangkilik ng mga mamamayan, ang dahilan ng __________ ng mga industriyang lokal.",
-76:       "options": ["paghinto", "pagbabago", "pagtitipid", "pagkawala", "pagkalugi"],
-77:       "answer": "pagkalugi"
-78:     },
-79:     {
-80:       "id": 33,
-81:       "q": "A strong government is needed to promote __________, not dependency, and to encourage free enterprise.",
-82:       "options": ["self-alienation", "self-evaluation", "self reliance", "self-awareness", "self-determination"],
-83:       "answer": "self reliance"
-84:     },
-85:     {
-86:       "id": 34,
-87:       "q": "Mass media develop in us a level of consciousness that keeps us __________ current events.",
-88:       "options": ["interested in", "adjusting to", "excited over", "fearful of", "abreast of"],
-89:       "answer": "abreast of"
-90:     },
-91:     {
-92:       "id": 35,
-93:       "q": "Failure is the most tiring experience a person can ever have; there is nothing more __________ than not succeeding, being blocked, not moving ahead.",
-94:       "options": ["Invigorating", "Discouraging", "Exhilarating", "Enervating", "depressing"],
-95:       "answer": "depressing"
+{
+  "id": "mcq_cse_vocab_01",
+  "title": "Vocabulary & Sentence Completion",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
+    {
+      "id": 30,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nBusiness, like life, is much too extensive and LEQUESCENT to be wholly contained by any checklist, formula or theory.",
+      "options": ["structured", "changeable", "Complicated", "shapeless", "confusing"],
+      "answer": "changeable"
+    },
+    {
+      "id": 31,
+      "q": "Realizing that we were determined to go, our experienced friends __________ that there might be more difficulties along the way than we expect.",
+      "options": ["dismissed", "intimated", "insisted", "projected", "concluded"],
+      "answer": "insisted"
+    },
+    {
+      "id": 32,
+      "q": "Ang patuloy na pag-angkat ng mga produktong banyaga, na siya namang tinatangkilik ng mga mamamayan, ang dahilan ng __________ ng mga industriyang lokal.",
+      "options": ["paghinto", "pagbabago", "pagtitipid", "pagkawala", "pagkalugi"],
+      "answer": "pagkalugi"
+    },
+    {
+      "id": 33,
+      "q": "A strong government is needed to promote __________, not dependency, and to encourage free enterprise.",
+      "options": ["self-alienation", "self-evaluation", "self reliance", "self-awareness", "self-determination"],
+      "answer": "self reliance"
+    },
+    {
+      "id": 34,
+      "q": "Mass media develop in us a level of consciousness that keeps us __________ current events.",
+      "options": ["interested in", "adjusting to", "excited over", "fearful of", "abreast of"],
+      "answer": "abreast of"
+    },
+    {
+      "id": 35,
+      "q": "Failure is the most tiring experience a person can ever have; there is nothing more __________ than not succeeding, being blocked, not moving ahead.",
+      "options": ["Invigorating", "Discouraging", "Exhilarating", "Enervating", "depressing"],
+      "answer": "depressing"
     },
     {
       "id": 382,
@@ -167,7 +172,3 @@
     }
   ]
 }
-96:     }
-97:   ]
-98: }
-99: 
