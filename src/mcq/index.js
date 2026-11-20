@@ -4,12 +4,26 @@
  */
 
 export const MCQ_MANIFEST = Object.freeze([
-
+  Object.freeze({"id":"mcq_cse_analogy_01","title":"Verbal Analogy","subject":"Civil Service Exam","category":"Verbal Ability","count":15}),
+  Object.freeze({"id":"mcq_cse_gen_info_01","title":"General Information (Constitution, RA 6713 & Environment)","subject":"Civil Service Exam","category":"General Information","count":20}),
+  Object.freeze({"id":"mcq_cse_grammar_01","title":"Grammar & Correct Usage","subject":"Civil Service Exam","category":"Verbal Ability","count":25}),
+  Object.freeze({"id":"mcq_cse_logic_01","title":"Logic & Analytical Reasoning","subject":"Civil Service Exam","category":"Analytical Ability","count":15}),
+  Object.freeze({"id":"mcq_cse_math_01","title":"Quantitative Reasoning & Word Problems","subject":"Civil Service Exam","category":"Numerical Ability","count":25}),
+  Object.freeze({"id":"mcq_cse_num_series_01","title":"Number Analogy & Series","subject":"Civil Service Exam","category":"Numerical Ability","count":15}),
+  Object.freeze({"id":"mcq_cse_reading_01","title":"Reading Comprehension","subject":"Civil Service Exam","category":"Verbal Ability","count":14}),
+  Object.freeze({"id":"mcq_cse_vocab_01","title":"Vocabulary & Sentence Completion","subject":"Civil Service Exam","category":"Verbal Ability","count":15})
 ]);
 
 const MANIFEST_BY_ID = new Map(MCQ_MANIFEST.map(m => [m.id, m]));
 const PATHS = Object.freeze({
-
+  "mcq_cse_analogy_01": Object.freeze({ relPath: "./civil_service_exam/verbal_analogy/set.json", baseDir: "./civil_service_exam/verbal_analogy/" }),
+  "mcq_cse_gen_info_01": Object.freeze({ relPath: "./civil_service_exam/general_information/set.json", baseDir: "./civil_service_exam/general_information/" }),
+  "mcq_cse_grammar_01": Object.freeze({ relPath: "./civil_service_exam/grammar_correct_usage/set.json", baseDir: "./civil_service_exam/grammar_correct_usage/" }),
+  "mcq_cse_logic_01": Object.freeze({ relPath: "./civil_service_exam/logic_analytical_reasoning/set.json", baseDir: "./civil_service_exam/logic_analytical_reasoning/" }),
+  "mcq_cse_math_01": Object.freeze({ relPath: "./civil_service_exam/quantitative_word_problems/set.json", baseDir: "./civil_service_exam/quantitative_word_problems/" }),
+  "mcq_cse_num_series_01": Object.freeze({ relPath: "./civil_service_exam/number_analogy_series/set.json", baseDir: "./civil_service_exam/number_analogy_series/" }),
+  "mcq_cse_reading_01": Object.freeze({ relPath: "./civil_service_exam/reading_comprehension/set.json", baseDir: "./civil_service_exam/reading_comprehension/" }),
+  "mcq_cse_vocab_01": Object.freeze({ relPath: "./civil_service_exam/vocabulary_sentence_completion/set.json", baseDir: "./civil_service_exam/vocabulary_sentence_completion/" })
 });
 const CACHE = new Map();
 
@@ -25,13 +39,13 @@ export async function loadMcqSet(id) {
 
   const fileUrl = new URL(entry.relPath, import.meta.url);
   let data;
-  if (typeof window !== "undefined" && typeof fetch === "function") {
+  if (typeof process !== "undefined" && process.versions?.node) {
+    const { readFileSync } = await import("node:fs");
+    data = JSON.parse(readFileSync(fileUrl, "utf8"));
+  } else {
     const res = await fetch(fileUrl);
     if (!res.ok) throw new Error(`Failed to load MCQ set ${id}: ${res.status}`);
     data = await res.json();
-  } else {
-    const { readFileSync } = await import("node:fs");
-    data = JSON.parse(readFileSync(fileUrl, "utf8"));
   }
 
   const baseUrl = new URL(entry.baseDir, import.meta.url).href;

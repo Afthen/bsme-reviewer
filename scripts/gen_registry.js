@@ -208,13 +208,13 @@ export async function loadMcqSet(id) {
 
   const fileUrl = new URL(entry.relPath, import.meta.url);
   let data;
-  if (typeof window !== "undefined" && typeof fetch === "function") {
+  if (typeof process !== "undefined" && process.versions?.node) {
+    const { readFileSync } = await import("node:fs");
+    data = JSON.parse(readFileSync(fileUrl, "utf8"));
+  } else {
     const res = await fetch(fileUrl);
     if (!res.ok) throw new Error(\`Failed to load MCQ set \${id}: \${res.status}\`);
     data = await res.json();
-  } else {
-    const { readFileSync } = await import("node:fs");
-    data = JSON.parse(readFileSync(fileUrl, "utf8"));
   }
 
   const baseUrl = new URL(entry.baseDir, import.meta.url).href;
