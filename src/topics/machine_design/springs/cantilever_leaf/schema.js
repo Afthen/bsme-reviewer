@@ -3,7 +3,7 @@
  * Cantilever leaf spring schema (Lecture Video Problem 4).
  */
 
-import { SPRING_BASE_VARS } from "../common/index.js";
+import { SPRING_BASE_VARS } from "../common/schema.js";
 import { DIMENSIONS } from "../../../../core/dimensions.js";
 
 export const CANTILEVER_LEAF_VARS_DB = Object.freeze({

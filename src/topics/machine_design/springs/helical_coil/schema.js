@@ -3,7 +3,7 @@
  * Round-wire helical coil spring schema (Lecture Video sections 1-4).
  */
 
-import { SPRING_BASE_VARS } from "../common/index.js";
+import { SPRING_BASE_VARS } from "../common/schema.js";
 import { DIMENSIONS } from "../../../../core/dimensions.js";
 
 export const HELICAL_COIL_VARS_DB = Object.freeze({

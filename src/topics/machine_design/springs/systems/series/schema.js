@@ -3,7 +3,7 @@
  * Series Spring System Schema.
  */
 
-import { SPRING_SYSTEM_BASE_VARS } from "../common/index.js";
+import { SPRING_SYSTEM_BASE_VARS } from "../common/schema.js";
 import { expandIndexedVarsDb } from "../../../../../core/relation_builder.js";
 
 export function createSeriesVarsDb(count = 3) {

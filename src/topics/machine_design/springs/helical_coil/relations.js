@@ -4,7 +4,7 @@
  */
 
 import { defineRelation, compileRelations } from "../../../../core/relation_builder.js";
-import { SPRING_BASE_RELATIONS } from "../common/index.js";
+import { SPRING_BASE_RELATIONS } from "../common/relations.js";
 
 export const HELICAL_COIL_RELATIONS = compileRelations([
   ...SPRING_BASE_RELATIONS,

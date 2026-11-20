@@ -31,7 +31,10 @@ export function test(name, fn) {
   }
 }
 
-import { ALL_TOPICS, TOPICS } from "../src/topics/index.js";
+import { TOPIC_MANIFEST, loadAllTopics } from "../src/topics/index.js";
+
+const ALL_TOPICS = await loadAllTopics();
+const TOPICS = Object.fromEntries(ALL_TOPICS.map(t => [t.id, t]));
 import { validateTopic } from "./validator.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
@@ -331,7 +334,30 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
     // (3000000 + 409091) W / 1.355818 = ~2,514,416 ft-lb/s
     assert.ok(Math.abs(resPower.value - 2514416.5) / 2514416.5 < 0.002);
 
-    // 2. Heat Balance: m_cw * cp_w * dT_cw -> Q_cw (kW) with mixed inputs
+    // 2. Empirical requiredUnits with affine temperatures: Carrier's eq + Dew Point inversion
+    const carrierNode = parseMathAST("P_wb - (P_t * (t_db - t_wb)) / 1500");
+    const db_psychro = {
+      P_v: { dimension: "Pressure / Stress", unit: "kPa" },
+      P_wb: { dimension: "Pressure / Stress", unit: "kPa" },
+      P_t: { dimension: "Pressure / Stress", unit: "kPa" },
+      t_db: { dimension: "Temperature", unit: "°C" },
+      t_wb: { dimension: "Temperature", unit: "°C" },
+      t_dp: { dimension: "Temperature", unit: "°C" }
+    };
+    const S_carrier = {
+      P_wb: 2.6389, P_t: 101.325, t_db: 311.15, t_wb: 71.6,
+      _u: { P_wb: "kPa", P_t: "kPa", t_db: "K", t_wb: "°F", P_v: "kPa" }
+    };
+    const carrierReq = { P_v: "kPa", P_wb: "kPa", P_t: "kPa", t_db: "°C", t_wb: "°C" };
+    const resPv = evaluatePhysicalAST(carrierNode, S_carrier, "P_v", db_psychro, carrierReq);
+    assert.ok(Math.abs(resPv.value - 1.5581) < 0.01, `Expected P_v ~1.558 kPa, got ${resPv.value}`);
+
+    const dpNode = parseMathAST("(5333.33 / (14.43509 - ln(P_v / 100))) - 273.15");
+    const S_dp = { P_v: resPv.value, _u: { P_v: "kPa", t_dp: "°F" } };
+    const resDp = evaluatePhysicalAST(dpNode, S_dp, "t_dp", db_psychro, { t_dp: "°C", P_v: "kPa" });
+    assert.ok(Math.abs(resDp.value - 56.55) < 0.2, `Expected t_dp ~56.55 °F, got ${resDp.value}`);
+
+    // 3. Heat Balance: m_cw * cp_w * dT_cw -> Q_cw (kW) with mixed inputs
     const heatNode = parseMathAST("m_cw * cp_w * dT_cw");
     const S_heat = {
       m_cw: 600, // kg/min = 10 kg/s
@@ -721,10 +747,13 @@ describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
 
   test("Verify app.js entry point integrity and dynamic topic exports", async () => {
     const mod = await import("../app.js");
-    assert.ok(mod.TOPICS);
+    assert.ok(Array.isArray(mod.TOPIC_MANIFEST));
+    const manifestIds = new Set(mod.TOPIC_MANIFEST.map(m => m.id));
     for (const topic of ALL_TOPICS) {
-      assert.ok(mod.TOPICS[topic.id], `app.js TOPICS export is missing topic '${topic.id}'`);
+      assert.ok(manifestIds.has(topic.id), `app.js TOPIC_MANIFEST is missing topic '${topic.id}'`);
+      assert.equal(await mod.loadTopic(topic.id), topic, `app.js loadTopic('${topic.id}') failed`);
     }
+    assert.equal(mod.TOPIC_MANIFEST.length, TOPIC_MANIFEST.length);
   });
 });
 

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -138,6 +139,10 @@ for (const [relPath, text] of fileMap.entries()) {
     fs.writeFileSync(path.resolve(relPath), text, "utf8");
     console.log(`Updated: ${relPath}`);
   }
+}
+
+if (!dryRun && Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
+  execFileSync(process.execPath, ["scripts/gen_registry.js"], { stdio: "inherit" });
 }
 
 console.log(`\n${dryRun ? "Dry-run successful!" : "All changes applied successfully!"} (${operations.length} blocks across ${fileMap.size} files)`);
