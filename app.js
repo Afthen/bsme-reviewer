@@ -62,6 +62,7 @@ let appMode = loadAppMode();
 let selectedTopicIds = loadSelectedTopicIds();
 let selectedMcqIds = loadSelectedMcqIds();
 let customMcqManifests = [];
+const liveMcqCounts = new Map();
 let currentTopic = null;
 let currentProblem = null;
 let selectionSeq = 0;
@@ -235,6 +236,14 @@ function renderMcqEmptyPrompt() {
 
 async function refreshMcqMode() {
   const sets = await getSelectedMcqSets();
+  for (const s of sets) {
+    const qCount = s.questions?.length ?? s.count ?? 0;
+    liveMcqCounts.set(s.id, qCount);
+    const leaf = document.querySelector(`.topic-leaf[data-mcq-id="${s.id}"] .topic-leaf-title`);
+    if (leaf) {
+      leaf.textContent = `${s.title} (${qCount})`;
+    }
+  }
   const view = document.getElementById("view-mcq");
   if (!view) return;
   if (sets.length === 0) {
@@ -606,9 +615,10 @@ function setupMcqSelector() {
     box.dataset.mcqId = m.id;
     box.checked = selectedMcqIds.includes(m.id);
 
+    const count = liveMcqCounts.get(m.id) ?? m.count;
     const title = document.createElement("span");
     title.className = "topic-leaf-title";
-    title.textContent = `${m.title} (${m.count})`;
+    title.textContent = `${m.title} (${count})`;
 
     leaf.append(box, title);
     if (m.isCustom) {
