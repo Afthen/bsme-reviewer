@@ -166,6 +166,408 @@
       "q": "A dealer sold a certain number of portable TV sets at P6,400 each. The dealer would have taken in as much money had 3 fewer sets been sold at P7,680. How many sets were sold at P6,400?",
       "options": ["9", "12", "14", "16", "18"],
       "answer": "18"
+    },
+    {
+      "id": 201,
+      "q": "If Jonalyn can type a page in $p$ minutes, what piece of the page can she do in $5$ minutes?",
+      "options": ["$5/p$", "$p - 5$", "$p + 5$", "$p/5$", "$1 - p + 5$"],
+      "answer": "$5/p$"
+    },
+    {
+      "id": 202,
+      "q": "If Nonoy can scrub a house in $4$ hours, and Nene can scrub the same house in $6$ hours, how long will it take for both of them to scrub the house together?",
+      "options": [
+        "2 hours and 24 minutes",
+        "3 hours and 12 minutes",
+        "3 hours and 44 minutes",
+        "4 hours and 10 minutes",
+        "4 hours and 33 minutes"
+      ],
+      "answer": "2 hours and 24 minutes"
+    },
+    {
+      "id": 203,
+      "q": "Employees of a Philippine company go to an appliance store and receive an additional $20\\%$ off of the lowest price on an item. If an employee purchases a dishwasher during a $15\\%$ off sale, how much will he pay if the dishwasher originally cost ₱21,841?",
+      "options": ["₱14,851", "₱15,432", "₱16,523", "₱17,899", "₱18,564"],
+      "answer": "₱14,851"
+    },
+    {
+      "id": 204,
+      "q": "The sales price of a car is ₱711,936, which is $20\\%$ off the original price. What is the original price?",
+      "options": ["₱668,756", "₱1M", "₱929,900", "₱889,920", "₱598,456"],
+      "answer": "₱889,920"
+    },
+    {
+      "id": 205,
+      "q": "Solving the following equation for $A$: $2A/3 = 8 + 4A$",
+      "options": ["-2.4", "2.4", "1.3", "-1.3", "0"],
+      "answer": "-2.4"
+    },
+    {
+      "id": 206,
+      "q": "If Cristina is 6 years older than Susan, and Roberto is 5 years older than Cristina, and the total of their ages is 41, then how old is Susan?",
+      "options": ["8", "10", "14", "19", "21"],
+      "answer": "8"
+    },
+    {
+      "id": 207,
+      "q": "Pepito wants to invest ₱300,000 at $6\\%$ simple interest rate for 5 years. How much interest will he receive?",
+      "options": ["₱50,000", "₱60,000", "₱70,000", "₱80,000", "₱90,000"],
+      "answer": "₱90,000"
+    },
+    {
+      "id": 208,
+      "q": "Jose is able to sell a hand-carved statue for ₱27,500 which was a $35\\%$ profit over his cost. How much did the statue originally cost him?",
+      "options": ["₱20,000", "₱30,000", "₱40,000", "₱50,000", "₱60,000"],
+      "answer": "₱20,000"
+    },
+    {
+      "id": 209,
+      "q": "The city council has decided to add a $0.10\\%$ tax on motel and hotel rooms. If a traveler spends the night in a motel room that costs ₱2,500 before taxes, how much will the city receive in taxes from him?",
+      "options": ["₱100", "₱150", "₱200", "₱250", "₱300"],
+      "answer": "₱250"
+    },
+    {
+      "id": 210,
+      "q": "Mang Karl has 16 jellybeans in his pocket. He has 8 red ones, 4 green ones, and 4 blue ones. What is the minimum number of jellybeans he must take out of his pocket to ensure that he has one of each color?",
+      "options": ["4", "8", "12", "13", "16"],
+      "answer": "13"
+    },
+    {
+      "id": 211,
+      "q": "You purchase a car making a down payment of ₱145,239 and 6 monthly payments of ₱10,892. How much have you paid so far for the car?",
+      "options": ["₱212,431", "₱210,596", "₱200,000", "₱340,325", "₱278,065"],
+      "answer": "₱210,596"
+    },
+    {
+      "id": 212,
+      "q": "Bitoy worked 22 hours this week and made ₱6,386. If she works 15 hours next week at the same pay rate, how much will she make?",
+      "options": ["₱2,345", "₱4,355", "₱4,111", "₱5,900", "₱6,000"],
+      "answer": "₱4,355"
+    },
+    {
+      "id": 213,
+      "q": "If $8x + 5x + 2x + 4x = 114$, then $5x + 3 =$",
+      "options": ["12", "25", "33", "47", "86"],
+      "answer": "33"
+    },
+    {
+      "id": 214,
+      "q": "If $y = 3$, then $y^3(y^3 - y) =$",
+      "options": ["300", "459", "648", "999", "1099"],
+      "answer": "648"
+    },
+    {
+      "id": 215,
+      "q": "Your supervisor instructs you to purchase 240 pens and 6 staplers for the nurse's station. Pens are purchased in sets of 6 for ₱113.70 per pack. Staplers are sold in sets of 2 for ₱626.59. How much will purchasing these products cost?",
+      "options": ["₱6,427.95", "₱6,789.55", "₱7,999.99", "₱8,427.95", "₱12,000"],
+      "answer": "₱6,427.95"
+    },
+    {
+      "id": 216,
+      "q": "The average of six numbers is 4. If the average of two of those numbers is 2, what is the average of the other four numbers?",
+      "options": ["5", "6", "7", "8", "9"],
+      "answer": "5"
+    },
+    {
+      "id": 217,
+      "q": "Ana got a 56 on her first math test. On her second math test, she raised her grade by $12\\%$. What was her grade?",
+      "options": ["62.7", "67.2", "68.0", "72.3"],
+      "answer": "62.7"
+    },
+    {
+      "id": 218,
+      "q": "A skyscraper is 548 meters high. The building's owners decide to increase its height by $3\\%$. How high would the skyscraper be after the increase?",
+      "options": ["551 meters", "555 meters", "562 meters", "564 meters"],
+      "answer": "564 meters"
+    },
+    {
+      "id": 219,
+      "q": "Clarissa makes homemade wooden crafts. Currently, she produces 23 crafts per month. If she increased her production by $18\\%$, how many crafts would Clarissa produce each month?",
+      "options": ["27", "32", "38", "40"],
+      "answer": "27"
+    },
+    {
+      "id": 220,
+      "q": "A room contains an equal number of boys and girls. The average height of the boys is 62 inches. The average height of all the students is 60 inches. What is the average height of the girls in the room?",
+      "options": ["57 inches", "58 inches", "59 inches", "60 inches"],
+      "answer": "58 inches"
+    },
+    {
+      "id": 221,
+      "q": "Jimboy drove 45 miles to his job in an hour and ten minutes in the morning. On the way home in the evening, however, traffic was much heavier and the same trip took an hour and a half. What was his average speed in miles per hour for the round trip?",
+      "options": ["$30$", "$45$", "$33\\frac{3}{4}$", "$32\\frac{1}{2}$"],
+      "answer": "$33\\frac{3}{4}$"
+    },
+    {
+      "id": 222,
+      "q": "If Joey and Katrina hike an average of 3 miles per hour, about how long will it take them to hike both the Beaverton Falls trail (7.25 miles) and the Copper Creek trail (4.75 miles)?",
+      "options": ["3 hours", "3.5 hours", "4 hours", "4.5 hours"],
+      "answer": "4 hours"
+    },
+    {
+      "id": 223,
+      "q": "A pasta salad was chilled in the refrigerator at 35°F overnight for 9 hours. The temperature of the pasta dish dropped from 86°F to 38°F. What was the average rate of cooling per hour?",
+      "options": ["$(4.8°)/\\text{hr}$", "$(5.3°)/\\text{hr}$", "$(5.15°)/\\text{hr}$", "$(0.532°)/\\text{hr}$"],
+      "answer": "$(5.3°)/\\text{hr}$"
+    },
+    {
+      "id": 224,
+      "q": "Rachel spent ₱1,162.22 on vegetables. She bought 2 lbs of onions, 3 lbs of carrots, and $1\\frac{1}{2}$ lbs of mushrooms. If the onions cost ₱177.58 per lb, and the carrots cost ₱206.46 per lb, what is the price per lb of mushrooms?",
+      "options": ["₱125.13", "₱128.00", "₱130.16", "₱131.90", "₱200.35"],
+      "answer": "₱125.13"
+    },
+    {
+      "id": 225,
+      "q": "A roast was cooked at 325°F in the oven for 4 hours. The internal temperature rose from 32°F to 145°F. What was the average rise in temperature per hour?",
+      "options": ["20.2°F/hr", "28.25°F/hr", "32.03°F/hr", "37°F/hr"],
+      "answer": "28.25°F/hr"
+    },
+    {
+      "id": 226,
+      "q": "A music instrument store gives a $10\\%$ discount to all students off the original cost of an instrument. During a back to school sale an additional $15\\%$ is taken off the discounted price. Julie, a student at the local high school, purchases a flute for \\$306. How much did it originally cost?",
+      "options": ["325", "375", "400", "408", "425"],
+      "answer": "400"
+    },
+    {
+      "id": 227,
+      "q": "Which of the following values is NOT equal to $34(58 + 9)$?",
+      "options": ["$34 \\times 67$", "$58(34 + 9)$", "$34 \\times 58 + 34 \\times 9$", "$1{,}972 + 306$", "$(9 + 58)34$"],
+      "answer": "$58(34 + 9)$"
+    },
+    {
+      "id": 228,
+      "q": "Two angles of a triangle measure 15° and 85°. What is the measure for the third angle?",
+      "options": ["50°", "55°", "60°", "80°", "90°"],
+      "answer": "80°"
+    },
+    {
+      "id": 229,
+      "q": "If 5 ounces is equal to 140 grams, then 2 pounds of ground meat is equal to how many grams?",
+      "options": ["863", "878", "896", "915", "932"],
+      "answer": "896"
+    },
+    {
+      "id": 230,
+      "q": "Which of the following is equal to $5.93 \\times 10^{-2}$?",
+      "options": ["0.0593", "0.00593", "593", "5930", "59300"],
+      "answer": "0.0593"
+    },
+    {
+      "id": 231,
+      "q": "On a map, 1 inch represents 20 miles. The distance between 2 towns is $6\\frac{1}{5}$ inches. How many miles are actually between the two towns?",
+      "options": ["65 miles", "84 miles", "124 miles", "138 miles", "145 miles"],
+      "answer": "124 miles"
+    },
+    {
+      "id": 232,
+      "q": "How many cubed pieces of fudge that are 3 inches on an edge can be packed into a Christmas tin that is 9 inches deep by 12 inches wide by 9 inches high with the lid still being able to be closed?",
+      "options": ["18", "24", "32", "36", "43"],
+      "answer": "36"
+    },
+    {
+      "id": 233,
+      "q": "Sarah is twice as old as her youngest brother. If the difference between their ages is 15 years, how old is her youngest brother?",
+      "options": ["10", "15", "20", "25", "30"],
+      "answer": "15"
+    },
+    {
+      "id": 234,
+      "q": "Which of the following fractions is equal to $\\frac{5}{6}$?",
+      "options": ["$\\frac{20}{30}$", "$\\frac{15}{24}$", "$\\frac{25}{30}$", "$\\frac{40}{54}$", "$\\frac{2}{7}$"],
+      "answer": "$\\frac{25}{30}$"
+    },
+    {
+      "id": 235,
+      "q": "What will it cost to tile a kitchen floor that is 12 feet wide by 20 feet long if the tile costs ₱428.93 per square yard?",
+      "options": ["11,437.8", "12,987.70", "13,867", "14,798", "15,999.50"],
+      "answer": "11,437.8"
+    },
+    {
+      "id": 236,
+      "q": "In a writing competition, the first place winner receives $\\frac{1}{2}$ of the prize money. The second runner up receives $\\frac{1}{4}$ of what the winner won. What was the total amount of prize money distributed if the winner receives ₱288,240?",
+      "options": ["₱288,240", "₱478,764", "₱576,480", "₱589,000", "₱789,999"],
+      "answer": "₱576,480"
+    },
+    {
+      "id": 237,
+      "q": "You are lying 120 ft away from a tree that is 50 feet tall. You look up at the top of the tree. Approximately how far is your head from the top of the tree in a straight line?",
+      "options": ["50 feet", "75 feet", "120 feet", "130 feet", "150 feet"],
+      "answer": "130 feet"
+    },
+    {
+      "id": 238,
+      "q": "A cyclist bikes $x$ distance at 10 miles per hour and returns over the same path at 8 miles per hour. What is the cyclist's average rate for the round trip in miles per hour?",
+      "options": ["8.1", "8.3", "8.6", "8.9", "9.0"],
+      "answer": "8.9"
+    },
+    {
+      "id": 239,
+      "q": "If edging costs ₱111.51 per 12-inch stone, and you want a double layer of edging around your flower bed that is 6 yards by 1 yard, how much will edging your flower bed cost?",
+      "options": ["₱3,918", "₱4,654.00", "₱5,900.50", "₱8,899.56", "₱9,366.84"],
+      "answer": "₱9,366.84"
+    },
+    {
+      "id": 240,
+      "q": "If $3x = 6x - 15$, then $x + 8 =$",
+      "options": ["5", "10", "11", "12", "13"],
+      "answer": "13"
+    },
+    {
+      "id": 241,
+      "q": "The number of milliliters in 1 liter is",
+      "options": ["10,000", "1,000", "0.1", "0.01", "0.001"],
+      "answer": "1,000"
+    },
+    {
+      "id": 242,
+      "q": "The cost to ride on a ferry is ₱240.33 per vehicle and driver with an additional cost of ₱24.03 per passenger. If the charge to get on the ferry is ₱312.42, how many people were in the vehicle?",
+      "options": ["1", "2", "3", "4", "5"],
+      "answer": "4"
+    },
+    {
+      "id": 243,
+      "q": "What is $\\frac{1}{9}$ of $9$?",
+      "options": ["$\\frac{1}{9}$", "0", "1", "2", "3"],
+      "answer": "1"
+    },
+    {
+      "id": 244,
+      "q": "In his pocket, a boy has 3 red marbles, 4 blue marbles, and 4 green marbles. How many will he have to take out of his pocket to ensure that he has taken out at least one of each color?",
+      "options": ["3", "7", "8", "9", "11"],
+      "answer": "9"
+    },
+    {
+      "id": 245,
+      "q": "Which fraction is equal to $0.20\\%$?",
+      "options": ["$\\frac{1}{20}$", "$\\frac{1}{40}$", "$\\frac{1}{50}$", "$\\frac{1}{400}$", "$\\frac{1}{500}$"],
+      "answer": "$\\frac{1}{500}$"
+    },
+    {
+      "id": 246,
+      "q": "Jonathan can type a 20-page document in 40 minutes, Susan can type it in 30 minutes, and Jack can type it in 24 minutes. Working together, how much time will it take them to type the same document?",
+      "options": ["5 minutes", "10 minutes", "15 minutes", "18 minutes", "20 minutes"],
+      "answer": "10 minutes"
+    },
+    {
+      "id": 247,
+      "q": "Of the following fractions, which is less than $\\frac{2}{3}$?",
+      "options": ["$\\frac{7}{8}$", "$\\frac{5}{6}$", "$\\frac{3}{4}$", "$\\frac{3}{5}$", "$\\frac{5}{7}$"],
+      "answer": "$\\frac{3}{5}$"
+    },
+    {
+      "id": 248,
+      "q": "A hockey team won 6 games and lost 8. What is the ratio of wins to number of games?",
+      "options": ["$\\frac{6}{8}$", "$\\frac{8}{6}$", "$\\frac{3}{7}$", "$\\frac{8}{14}$", "$\\frac{6}{7}$"],
+      "answer": "$\\frac{3}{7}$"
+    },
+    {
+      "id": 249,
+      "q": "Sue receives a base salary of ₱4,325.85 weekly plus a $12\\%$ commission on all sales. Sue had ₱144,195.00 in sales this week. How much did she make total?",
+      "options": ["₱18,629.25", "₱21,629.25", "₱25,832.50", "₱28,098.00", "₱29,865.56"],
+      "answer": "₱21,629.25"
+    },
+    {
+      "id": 250,
+      "q": "If the perimeter of a rectangular house is $25\\frac{1}{3}$ yards, and the length is 22 feet, what is the width?",
+      "options": ["16 feet", "35 feet", "37 feet", "40 feet", "42 feet"],
+      "answer": "16 feet"
+    },
+    {
+      "id": 251,
+      "q": "Jimmy made a $15\\%$ profit on the sale of a custom designed boat, and the original cost of the boat was ₱720,975.00. The boat sold for how much?",
+      "options": ["₱829,121.25", "₱800,456.25", "₱785,312.50", "₱759,987.75", "₱528,815"],
+      "answer": "₱829,121.25"
+    },
+    {
+      "id": 252,
+      "q": "A recent study showed that an increase in body weight by 10 kilograms resulted in a $0.15\\%$ increase in heart disease. What fraction is equal to $0.15\\%$?",
+      "options": ["$\\frac{3}{2000}$", "$\\frac{2}{750}$", "$\\frac{7}{4000}$", "$\\frac{5}{3462}$", "$\\frac{1}{500}$"],
+      "answer": "$\\frac{3}{2000}$"
+    },
+    {
+      "id": 253,
+      "q": "$6.334 \\times 10^4 =$",
+      "options": ["0.0006334", "0.06334", "6334", "63340", "633400"],
+      "answer": "63340"
+    },
+    {
+      "id": 254,
+      "q": "If $3x + 5x = -8$, then $x + 1 =$",
+      "options": ["-2", "-1", "0", "1", "2"],
+      "answer": "0"
+    },
+    {
+      "id": 255,
+      "q": "Two angles in a triangle equal 120°. What is the measure of the third angle?",
+      "options": ["60°", "70°", "80°", "90°", "120°"],
+      "answer": "60°"
+    },
+    {
+      "id": 256,
+      "q": "Which of the following would be an appropriate unit to measure sugar for a cookie recipe?",
+      "options": ["liters", "cups", "quarts", "kilograms", "pounds"],
+      "answer": "cups"
+    },
+    {
+      "id": 257,
+      "q": "Two angles of a triangle each measure 70°. What is the measure of the third angle in degrees?",
+      "options": ["40°", "80°", "100°", "120°", "140°"],
+      "answer": "40°"
+    },
+    {
+      "id": 258,
+      "q": "If Jack needs $2\\frac{1}{2}$ pints of cream to make a dessert, how many pints will he need to make 3 desserts?",
+      "options": ["$2\\frac{1}{2}$", "3", "4", "5", "$7\\frac{1}{2}$"],
+      "answer": "$7\\frac{1}{2}$"
+    },
+    {
+      "id": 259,
+      "q": "If $\\frac{1}{4}$ of a teaspoon is 1 ml, then how many milliliters are in 6 teaspoons?",
+      "options": ["10 ml", "12.5 ml", "15 ml", "20 ml", "24 ml"],
+      "answer": "24 ml"
+    },
+    {
+      "id": 260,
+      "q": "Paul is Ton's father. Paul is 35 years old. Three years ago, Paul was four times as old as his son was then. How old is Ton now?",
+      "options": ["10", "11", "12", "13", "14"],
+      "answer": "11"
+    },
+    {
+      "id": 261,
+      "q": "Lucy is 16 years younger than Kate. If the sum of their ages is 30, how old is Lucy?",
+      "options": ["5", "6", "7", "8", "9"],
+      "answer": "7"
+    },
+    {
+      "id": 262,
+      "q": "Billy can plow a field alone in four hours. It takes Sue five hours to plow the same field alone. If they work together (and each has a plow), how long will it take to plow the field?",
+      "options": ["$1\\frac{1}{2}$ hours", "3 hours", "$5\\frac{2}{3}$ hours", "$2\\frac{2}{9}$ hours", "$4\\frac{2}{5}$ hours"],
+      "answer": "$2\\frac{2}{9}$ hours"
+    },
+    {
+      "id": 263,
+      "q": "How long will it take a bus traveling 72 km/hr to go 36 km?",
+      "options": ["6 hours", "$\\frac{2}{5}$ hour", "$\\frac{1}{2}$ hour", "3 hours", "1 day"],
+      "answer": "$\\frac{1}{2}$ hour"
+    },
+    {
+      "id": 264,
+      "q": "How fast in miles per hour must a car travel to go 600 miles in 15 hours?",
+      "options": ["40 miles per hour", "45 miles per hour", "41 miles per hour", "67 miles per hour", "50 miles per hour"],
+      "answer": "40 miles per hour"
+    },
+    {
+      "id": 265,
+      "q": "Solution A is $50\\%$ hydrochloric acid, while solution B is $75\\%$ hydrochloric acid. How many liters of solution A should be used to make 100 liters of a solution which is $60\\%$ hydrochloric acid?",
+      "options": ["40 liters", "50 liters", "60 liters", "70 liters", "80 liters"],
+      "answer": "60 liters"
+    },
+    {
+      "id": 266,
+      "q": "Tamar has four more quarters than dimes. If he has a total of \\$1.70, how many quarters and dimes does he have?",
+      "options": ["7 dimes and 9 quarters", "3 dimes and 5 quarters", "4 dimes and 11 quarters", "8 dimes and 6 quarters", "2 dimes and 6 quarters"],
+      "answer": "2 dimes and 6 quarters"
     }
   ]
 }

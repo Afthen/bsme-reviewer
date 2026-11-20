@@ -177,6 +177,369 @@
       "q": "For expeditious processing of documents, except otherwise provided by law or regulation, how many initials or signatures must any written action or decision contain?",
       "options": ["6", "5", "4", "3", "2"],
       "answer": "3"
+    },
+    {
+      "id": 429,
+      "q": "What are the 3 main branches of the Government of the Philippines?",
+      "options": [
+        "Senate, Supreme Court, Congress",
+        "Presidential, Unicameral-Parliamentary, Bicameral-Parliamentary",
+        "Legislative, Executive, Judicial",
+        "The Legislature, The Senate, The Supreme Court"
+      ],
+      "answer": "Legislative, Executive, Judicial"
+    },
+    {
+      "id": 430,
+      "q": "The Supreme Court shall be composed of a Chief Justice and how many Associate Justices?",
+      "options": ["12", "13", "14", "15"],
+      "answer": "14"
+    },
+    {
+      "id": 431,
+      "q": "The Commander-in-Chief of all armed forces of the Philippines in 2019 is _________.",
+      "options": [
+        "Air Force Commanding General Jeffrey Delgado",
+        "President Rodrigo Duterte",
+        "Chief Justice Maria Lourdes Sereno",
+        "AFP Chief Lieutenant Gen. Emmanuel Bautista"
+      ],
+      "answer": "President Rodrigo Duterte"
+    },
+    {
+      "id": 432,
+      "q": "The executive power shall be vested in the _________.",
+      "options": [
+        "President of the Philippines",
+        "House of Representatives",
+        "The Supreme Court",
+        "The Congress"
+      ],
+      "answer": "President of the Philippines"
+    },
+    {
+      "id": 433,
+      "q": "The legislative power shall be vested in the _________, which shall consist of a Senate and a House of Representatives.",
+      "options": [
+        "Congress of the Philippines",
+        "House of Ombudsman",
+        "The Supreme Court",
+        "Bureau of Internal Revenue"
+      ],
+      "answer": "Congress of the Philippines"
+    },
+    {
+      "id": 434,
+      "q": "The Senate shall be composed of how many senators elected at large by voters of the Philippines?",
+      "options": ["21", "22", "23", "24"],
+      "answer": "24"
+    },
+    {
+      "id": 435,
+      "q": "How long shall the term of office of the senators be commenced?",
+      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "answer": "6 years"
+    },
+    {
+      "id": 436,
+      "q": "The term of office of the President and Vice-President of the Philippines shall be up to how many years?",
+      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "answer": "6 years"
+    },
+    {
+      "id": 437,
+      "q": "The members of the House of Representatives shall be elected for a term of _______.",
+      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "answer": "3 years"
+    },
+    {
+      "id": 438,
+      "q": "The following shall be exempted from taxation except:",
+      "options": [
+        "Lands and buildings",
+        "Churches and convents",
+        "Charitable institutions",
+        "Non-profit cemeteries"
+      ],
+      "answer": "Lands and buildings"
+    },
+    {
+      "id": 439,
+      "q": "The Congress, by a vote of ____ of both Houses in joint session assembled, voting separately, shall have the sole power to declare a state of war.",
+      "options": ["Two-thirds", "One-half", "Three quarters", "Minority"],
+      "answer": "Two-thirds"
+    },
+    {
+      "id": 440,
+      "q": "It states that \"no person shall be deprived of life, liberty, or property without due process of law, nor any person be denied the equal protection of the laws.\"",
+      "options": ["Article VI", "Bill of Rights", "Republic Act", "Court Order"],
+      "answer": "Bill of Rights"
+    },
+    {
+      "id": 441,
+      "q": "All of the following is TRUE except:",
+      "options": [
+        "No person shall be compelled to be a witness against himself",
+        "No person shall be imprisoned for non-payment of debt or poll tax.",
+        "No ex post facto law or bill of attainder shall not be enacted.",
+        "No person shall be detained solely by reason of his political beliefs and aspirations."
+      ],
+      "answer": "No ex post facto law or bill of attainder shall not be enacted."
+    },
+    {
+      "id": 442,
+      "q": "The following are citizens of the Philippines except:",
+      "options": [
+        "Those whose fathers or mothers are citizens of the Philippines",
+        "Those who are born before January 17, 1973, of Filipino mothers, who elect Philippine citizenship upon reaching the age of majority",
+        "Those who are naturalized citizens of the Philippines in accordance with law.",
+        "All of the above are true."
+      ],
+      "answer": "All of the above are true.",
+      "shuffle": [[0, 1, 2]]
+    },
+    {
+      "id": 443,
+      "q": "It is the right and obligation by all citizens, who are at least 18 years of age, and qualified by law, to vote in the election of national and local officials of the government without literacy, property, or other substantive requirement.",
+      "options": ["Suffrage", "Election", "Voting power", "Civil Right"],
+      "answer": "Suffrage"
+    },
+    {
+      "id": 444,
+      "q": "The three inherent powers of the state are the following except one:",
+      "options": [
+        "Police Power",
+        "Power of Eminent Domain",
+        "Power of Taxation",
+        "Power to Impeach"
+      ],
+      "answer": "Power to Impeach"
+    },
+    {
+      "id": 445,
+      "q": "It is the power of the State to promote public welfare by restraining the use of both liberty and property of all people.",
+      "options": [
+        "Police Power",
+        "Power of Eminent Domain",
+        "Power of Taxation",
+        "Power to Impeach"
+      ],
+      "answer": "Police Power"
+    },
+    {
+      "id": 446,
+      "q": "It is the power of the State to take properties for the purpose of public use upon payment of just compensation.",
+      "options": [
+        "Police Power",
+        "Power of Eminent Domain",
+        "Power of Taxation",
+        "Power to Impeach"
+      ],
+      "answer": "Power of Eminent Domain"
+    },
+    {
+      "id": 447,
+      "q": "It is the power of the State to impose charge or burden to persons and properties, and property rights for the purpose of raising revenues to protect the people and extend public projects and services.",
+      "options": [
+        "Police Power",
+        "Power of Eminent Domain",
+        "Power of Taxation",
+        "Power to Impeach"
+      ],
+      "answer": "Power of Taxation"
+    },
+    {
+      "id": 448,
+      "q": "The following are members of the Constitutional Commission except:",
+      "options": [
+        "Commission on Civil Rights",
+        "Commission on Elections",
+        "Civil Service Commission",
+        "Commission on Audit"
+      ],
+      "answer": "Commission on Civil Rights"
+    },
+    {
+      "id": 449,
+      "q": "It states that public office is public trust and that public officers and employees must, at all times, be accountable to the people, serve them with utmost responsibility, integrity, loyalty and efficiency; act with patriotism and justice and lead modest lives.",
+      "options": ["Public Trust", "Constitutional Rights", "Accountability", "Responsibility"],
+      "answer": "Accountability"
+    },
+    {
+      "id": 450,
+      "q": "Who shall have the exclusive power to initiate all cases of impeachment?",
+      "options": [
+        "House of Blue Ribbon Committee",
+        "House of Representatives",
+        "House of the Senate",
+        "Speaker of the House"
+      ],
+      "answer": "House of Representatives"
+    },
+    {
+      "id": 451,
+      "q": "R.A. 6713 is an act to uphold the time-honored principle of public office being a public trust, granting incentives and rewards for exemplary service, enumerating prohibited acts and providing penalties for violations thereof and for other purposes.",
+      "options": [
+        "Preamble",
+        "Code of Ethics",
+        "Code of Government Officials",
+        "Code of Conduct and Ethical Standards for Public Officials and Employees"
+      ],
+      "answer": "Code of Conduct and Ethical Standards for Public Officials and Employees"
+    },
+    {
+      "id": 452,
+      "q": "The following are duties and responsibilities of Public officials and Employees except:",
+      "options": [
+        "Act promptly on letters, inquiries, calls or any other form of communications sent by the public.",
+        "Submit performance reports of the agency or office regularly.",
+        "Accept gifts from the public upon prioritizing their queries.",
+        "Process documents and papers expeditiously."
+      ],
+      "answer": "Accept gifts from the public upon prioritizing their queries."
+    },
+    {
+      "id": 453,
+      "q": "It is a written instrument containing the proposition and required number of signatories and shall be in a form determined by and submitted to the Commission on Elections.",
+      "options": ["Bill", "Law", "Proposition", "Petition"],
+      "answer": "Petition"
+    },
+    {
+      "id": 454,
+      "q": "It is the electoral process by which an initiative on the Constitution is either approved or rejected by the people.",
+      "options": ["Referendum", "Plebiscite", "Petition", "Initiative"],
+      "answer": "Plebiscite"
+    },
+    {
+      "id": 455,
+      "q": "It is the power of the electorate to approve or reject a legislation through an election called for the purpose.",
+      "options": ["Referendum", "Plebiscite", "Petition", "Initiative"],
+      "answer": "Referendum"
+    },
+    {
+      "id": 456,
+      "q": "This law promotes responsible family planning and proper use of reproductive methods to eliminate over-population growth.",
+      "options": [
+        "RH Bill",
+        "Responsible Parenthood and Reproductive Health Law",
+        "Reproductive Law",
+        "Family Planning"
+      ],
+      "answer": "Responsible Parenthood and Reproductive Health Law"
+    },
+    {
+      "id": 457,
+      "q": "It is a specialized agency of the United Nations that concerns international public health.",
+      "options": [
+        "Department of Health",
+        "World Health Organization",
+        "International Health Organization",
+        "All of the above"
+      ],
+      "answer": "World Health Organization",
+      "shuffle": [[0, 1, 2]]
+    },
+    {
+      "id": 458,
+      "q": "APEC is a summit that promotes free trade and economic cooperation throughout the Asia-Pacific region countries. APEC stands for:",
+      "options": [
+        "Asia Pacific Economic Corporation",
+        "Asia Pacific Economic Cooperation",
+        "Asia Pacific Economic Council",
+        "Asia Pacific Economic Countries"
+      ],
+      "answer": "Asia Pacific Economic Cooperation"
+    },
+    {
+      "id": 459,
+      "q": "The Association of Southeast Asian Nations (ASEAN) aims to accelerate economic growth, stability, social progress and cultural development in the spirit of equality and partnership to strengthen a prosperous and peaceful community along Southeast Asian Nations. Which of the following countries is not a member of ASEAN?",
+      "options": ["Hong Kong", "Philippines", "Singapore", "Thailand"],
+      "answer": "Hong Kong"
+    },
+    {
+      "id": 460,
+      "q": "It is a law in the Philippines that aims to address legal issues concerning online interactions and harmful internet behavior in the Philippines. It aims to prevent and punish cybercrime in the country.",
+      "options": [
+        "Cybersquatting",
+        "Cybercrime Act",
+        "Cybercrime Prevention Act",
+        "Cyber Identity Theft Act"
+      ],
+      "answer": "Cybercrime Prevention Act"
+    },
+    {
+      "id": 461,
+      "q": "__________ waste breaks down into natural components and can be recycled into the life cycle naturally.",
+      "options": ["Bio-chemical", "Recyclable", "Biodegradable", "Non-biodegradable"],
+      "answer": "Biodegradable"
+    },
+    {
+      "id": 462,
+      "q": "The following are examples of non-biodegradable waste except:",
+      "options": ["Plastics", "Metals", "Styrofoam", "Papers"],
+      "answer": "Papers"
+    },
+    {
+      "id": 463,
+      "q": "It is a project of DOST for more accurate, integrated and responsive disaster prevention and mitigation system especially in high-risk calamity areas of the Philippines.",
+      "options": ["PAGASA", "I am Ready", "DOST-Advanced Disaster Program", "Project NOAH"],
+      "answer": "Project NOAH"
+    },
+    {
+      "id": 464,
+      "q": "PAGASA is the official government agency for weather forecasting, flood control, astronomical observations, and time service. PAGASA stands for _______?",
+      "options": [
+        "Philippine Atmospheric Geographical and Astronomical Services Administration",
+        "Philippine Atmospheric Geophysical and Astronomical Services Administration",
+        "Philippine Atmospheric Geological and Astronomical Services Association",
+        "Philippine Atmospheric Geophysical and Astronomical Services Association"
+      ],
+      "answer": "Philippine Atmospheric Geophysical and Astronomical Services Administration"
+    },
+    {
+      "id": 465,
+      "q": "PHIVOLCS is a branch of DOST to moderate disasters that may arise from volcanic eruptions, earthquakes, tsunami and other related geotectonic phenomena in the Philippines. What is PHIVOLCS?",
+      "options": [
+        "Philippine Institute of Volcanology and Seismology",
+        "Philippine Institute of Volcanic and Seismic Services",
+        "Philippine Institute of Volcanic and Seismology Services",
+        "Philippine Institute of Volcano and Seismic System"
+      ],
+      "answer": "Philippine Institute of Volcanology and Seismology"
+    },
+    {
+      "id": 466,
+      "q": "Which of the following is a renewable source of energy?",
+      "options": [
+        "Geothermal energy",
+        "Solar energy",
+        "Wind energy",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [[0, 1, 2]]
+    },
+    {
+      "id": 467,
+      "q": "It is a process by which thermal radiation from the earth's surface is absorbed by atmospheric greenhouse gases and is re-radiated in all directions.",
+      "options": [
+        "Global Warming",
+        "Greenhouse Effect",
+        "Ozone Layer",
+        "Solar Radiation"
+      ],
+      "answer": "Greenhouse Effect"
+    },
+    {
+      "id": 468,
+      "q": "USB is an industry standard that connects computers and electronic devices like keyboards, digicams, portable media devices, disk drivers, smartphones, and network adapters to any computer. USB stands for?",
+      "options": [
+        "Unit Serial Box",
+        "Unit Serial Bolt",
+        "Universal Serial Bin",
+        "Universal Serial Bus"
+      ],
+      "answer": "Universal Serial Bus"
     }
   ]
 }

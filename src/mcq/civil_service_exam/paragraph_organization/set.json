@@ -1,0 +1,26 @@
+{
+  "id": "mcq_cse_paragraph_01",
+  "title": "Paragraph Organization",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
+    {
+      "id": 426,
+      "q": "Arrange the following sentences into a logical paragraph:\n\nA. By trying, man learns to solve his problems through satisfying acts and eliminate actions which are annoying.\nB. He used a hungry cat in a puzzled box where it tried ways to get out in order to get to the food.\nC. Edward C. Thorndike's connectionism theory of learning establishes the trial and error way to learn.\nD. He established the fact that like the cat, man too, learns by trial and error.",
+      "options": ["ACBD", "BACD", "ACDB", "ABCD"],
+      "answer": "ACBD"
+    },
+    {
+      "id": 427,
+      "q": "Arrange the following sentences into a logical paragraph:\n\nA. Before, his religion was basically involved with rituals and ceremonies.\nB. The religion of the teacher helps him in reducing his fears and uncertainties.\nC. His religion responds to his needs for a means to allay fears about the uncertainty of events contrary to natural laws.\nD. Religion is important because it provides spiritual nourishment for his total being.",
+      "options": ["ABCD", "BACD", "DBCA", "CBAD"],
+      "answer": "BACD"
+    },
+    {
+      "id": 428,
+      "q": "Arrange the following sentences into a logical paragraph:\n\nA. Many innovations without proven results and follow up evaluation are educational wastages.\nB. One wonders in the final analysis if these changes have been deeply rooted on basic problems of the people they serve.\nC. Some curriculum changes were mere fads without foreseeable achievements.\nD. What we need are innovations that overcome the miseducation of the young.",
+      "options": ["BACD", "ACDB", "ABCD", "CBAD"],
+      "answer": "ACDB"
+    }
+  ]
+}
