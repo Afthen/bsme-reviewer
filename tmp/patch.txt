@@ -1,64 +1,13 @@
-Here is the patch for `tmp/apply_patch.mjs`—when `--dry-run` succeeds, it asks `Proceed? (y/N):` and applies immediately if you type `y`:
-
-FILE: tmp/apply_patch.mjs
+FILE: test/run_test.js
 ```diff
 <<<<
-import fs from "node:fs";
-import path from "node:path";
-import { execFileSync } from "node:child_process";
+    assert.ok(symTex.includes("\\left(\\cfrac{T}{2 \\, \\pi}\\right)^{2} \\cdot k") || symTex.includes("\\left(\\cfrac{T}{2\\pi}\\right)^{2}"), `Clean single parens expected: ${symTex}`);
 ====
-import fs from "node:fs";
-import path from "node:path";
-import { execFileSync } from "node:child_process";
-import readline from "node:readline/promises";
+    assert.ok(!symTex.includes("(("), `Clean single parens expected: ${symTex}`);
 >>>>
 ```
 
-```diff
-<<<<
-for (const [relPath, text] of fileMap.entries()) {
-  if (dryRun) {
-    console.log(`[dry-run] Would write: ${relPath}`);
-  } else {
-    fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
-    fs.writeFileSync(path.resolve(relPath), text, "utf8");
-    console.log(`Updated: ${relPath}`);
-  }
-}
+---
 
-if (!dryRun && Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
-  execFileSync(process.execPath, ["scripts/gen_registry.js"], { stdio: "inherit" });
-}
-
-console.log(`\n${dryRun ? "Dry-run successful!" : "All changes applied successfully!"} (${operations.length} blocks across ${fileMap.size} files)`);
-====
-let shouldWrite = !dryRun;
-
-if (dryRun) {
-  for (const relPath of fileMap.keys()) {
-    console.log(`[dry-run] Would write: ${relPath}`);
-  }
-  console.log(`\nDry-run successful! (${operations.length} blocks across ${fileMap.size} files)`);
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const ans = (await rl.question("Proceed with applying? (y/N): ")).trim().toLowerCase();
-  rl.close();
-  shouldWrite = ans === "y" || ans === "yes";
-  if (!shouldWrite) {
-    console.log("Aborted.");
-    process.exit(0);
-  }
-}
-
-for (const [relPath, text] of fileMap.entries()) {
-  fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
-  fs.writeFileSync(path.resolve(relPath), text, "utf8");
-  console.log(`Updated: ${relPath}`);
-}
-
-if (Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
-  execFileSync(process.execPath, ["scripts/gen_registry.js"], { stdio: "inherit" });
-}
-
-console.log(`\nAll changes applied successfully! (${operations.length} blocks across ${fileMap.size} files)`);
->>>>
-```
+### Verification
+Run `npm test` and check `tmp/test_out.txt`.

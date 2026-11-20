@@ -53,8 +53,13 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
     let innerNode = node.expr;
     while (innerNode && innerNode.type === "group") innerNode = innerNode.expr;
 
-    // Smart Parens: numbers, variables, and function calls do not need outer parens
-    if (innerNode.type === "num" || innerNode.type === "id" || innerNode.type === "call") {
+    // Smart Parens: numbers, variables, function calls, and power expressions do not need outer parens
+    if (
+      innerNode.type === "num" ||
+      innerNode.type === "id" ||
+      innerNode.type === "call" ||
+      (innerNode.type === "binary" && innerNode.op === "^")
+    ) {
       return astToLatex(innerNode, substituteMap, varsDb);
     }
     return `(${stripOuterParens(astToLatex(innerNode, substituteMap, varsDb))})`;
@@ -136,7 +141,10 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
         return `${uL.fn === "cos" ? "\\cos" : uL.fn === "sin" ? "\\sin" : "\\tan"}^{${expTex}}${wrappedArg}`;
       }
 
-      const leftTex = astToLatex(node.left, substituteMap, varsDb);
+      let leftTex = astToLatex(node.left, substituteMap, varsDb);
+      if (uL.type === "binary" && uL.op === "^") {
+        leftTex = `(${stripOuterParens(leftTex)})`;
+      }
       const expTex = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));
       return `{${leftTex}}^{${expTex}}`;
     }

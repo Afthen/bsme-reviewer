@@ -40,6 +40,7 @@ import { generateProblem, determineGraphDistance } from "../src/core/problem_gen
 import { buildAlignedDerivation } from "../src/core/derivation.js";
 import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor } from "../src/cas/units/index.js";
 import { parseMathAST } from "../src/cas/ast.js";
+import { casToTex } from "../src/cas/latex.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
 import { pruneSolutionPath, solveDAG, canSolveTarget } from "../src/core/graph_solver.js";
@@ -826,6 +827,38 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
         }
       }
     }
+  });
+
+  test("Regression: Mass-Spring Oscillation Period derivation formatting and unit conversions", () => {
+    // 1. Verify single outer parens in symbolic and substituted forms
+    const symTex = casToTex("((T / (2 * pi))^2) * k");
+    assert.ok(!symTex.includes("(("), `Symbolic form must not contain double parens: ${symTex}`);
+    assert.ok(!symTex.includes("(("), `Clean single parens expected: ${symTex}`);
+
+    // 2. Verify complete unit conversion steps when solving T (ms) and k (lb/in) for m (lb)
+    const step = {
+      targetVar: "m",
+      baseFormula: "T_period = 2 * pi * sqrt(m / k)",
+      rhsExpr: "((T_period / (2 * pi))^2) * k",
+      expectedVal: 5.512
+    };
+    const S = {
+      T_period: 314.159,
+      k: 5.71,
+      m: 5.512,
+      _u: { T_period: "ms", k: "lb/in", m: "lb" }
+    };
+    const db = {
+      T_period: { dimension: "Time / Period", unit: "s", symbol: "T" },
+      k: { dimension: "Spring Rate / Stiffness", unit: "lb/in", symbol: "K" },
+      m: { dimension: "Mass", unit: "lb", symbol: "M" }
+    };
+    const deriv = buildAlignedDerivation(step, S, [step], db, []);
+    validateDerivationLatex(deriv);
+
+    assert.ok(!deriv.includes("\\left(\\left("), `Derivation must not contain double parens: ${deriv}`);
+    assert.ok(deriv.includes("386.089"), `Derivation must contain gravitational acceleration factor gc (386.089): ${deriv}`);
+    assert.ok(deriv.includes("1{,}000"), `Derivation must contain millisecond to second conversion factor: ${deriv}`);
   });
 });
 

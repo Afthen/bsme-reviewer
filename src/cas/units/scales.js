@@ -202,7 +202,9 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
   const targetHasEnergy = targetAst.some(a => BASE_UNITS[a.base]?.dim === "E");
   const targetPrefersBtu = targetAst.some(a => a.base === "Btu");
 
-  // Flatten all source atoms, expanding Power units (W, kW, hp) when targeting Energy/Time
+  const targetHasMass = targetAst.some(a => BASE_UNITS[a.base]?.dim === "M");
+
+  // Flatten all source atoms, expanding compound Power and Force units when interacting across dimensions
   const sourceAtoms = [];
   for (const entry of tokenEntries) {
     let workingUnit = entry.uName;
@@ -219,6 +221,19 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
         scalars.push(parseFloat(r.toPrecision(6)));
         workingUnit = rateTarget;
       }
+    } else if (targetHasMass && (workingUnit === "lb/in" || workingUnit === "lb/ft" || workingUnit === "kip/in")) {
+      // Decompose Force in Spring Rate to Mass via standard gravitational equivalence (gc)
+      const isInch = workingUnit === "lb/in" || workingUnit === "kip/in";
+      const gc = isInch ? 386.0886 : 32.174049;
+      const kScale = workingUnit === "kip/in" ? 1000 : 1;
+      const effFactor = gc * kScale;
+      if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+      const convLatex = isInch
+        ? ` \\cdot ${fmtScale(effFactor)} \\, \\cfrac{\\cfrac{\\text{lb}\\cdot\\cancel{\\text{in}}}{\\text{s}^2}}{\\cancel{\\cfrac{\\text{lb}}{\\text{in}}}}`
+        : ` \\cdot ${fmtScale(effFactor)} \\, \\cfrac{\\cfrac{\\text{lb}\\cdot\\cancel{\\text{ft}}}{\\text{s}^2}}{\\cancel{\\cfrac{\\text{lb}}{\\text{ft}}}}`;
+      conversionsByToken[entry.tok].push(convLatex);
+      scalars.push(parseFloat(effFactor.toPrecision(6)));
+      workingUnit = "lb/s^2";
     }
 
     const ast = parseUnitToSemanticAST(workingUnit, entry.dim);
@@ -311,7 +326,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     }
   }
 
-  // 2. Pair remaining unmatched source atoms that cancel each other across tokens (e.g. min vs h)
+  // 2. Pair remaining unmatched source atoms that cancel each other across tokens (e.g. min vs h or ms vs s)
   const unmatched = sourceAtoms.filter(s => !s.matched);
   for (let i = 0; i < unmatched.length; i++) {
     const a = unmatched[i];
@@ -340,11 +355,13 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
             conversionsByToken[a.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(strA)}}}{${fmtScale(ratio)} \\, \\cancel{${unitToTex(strB)}}}`);
           }
         } else {
-          if (ratio > 1) {
-            conversionsByToken[a.tok].push(` \\cdot ${fmtScale(ratio)} \\, \\cfrac{\\cancel{${unitToTex(strB)}}}{\\cancel{${unitToTex(strA)}}}`);
-          } else {
-            conversionsByToken[a.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(strB)}}}{${fmtScale(1 / ratio)} \\, \\cancel{${unitToTex(strA)}}}`);
-          }
+          const targetTok = a.atom.prefix ? a.tok : partner.tok;
+          const prefixedStr = a.atom.prefix ? strA : strB;
+          const baseStr = a.atom.prefix ? strB : strA;
+          const pRatio = getUnitAtomBag(prefixedStr).scale / getUnitAtomBag(baseStr).scale;
+          const invRatio = 1 / pRatio;
+          if (!conversionsByToken[targetTok]) conversionsByToken[targetTok] = [];
+          conversionsByToken[targetTok].push(` \\cdot \\cfrac{${unitToTex(baseStr)}}{${fmtScale(invRatio)} \\, \\cancel{${unitToTex(prefixedStr)}}}`);
         }
       }
     }
@@ -419,10 +436,14 @@ function getRegisteredPairwiseRatios() {
     }
   }
 
-  // Register exact affine temperature offsets
+  // Register exact affine temperature offsets and standard gravitational equivalents (gc)
   for (const meta of Object.values(BASE_UNITS)) {
     if (meta.offset) ratios.add(meta.offset);
   }
+  [32.1740, 386.089, 9.80665, 386.0886, 32.174049].forEach(gc => {
+    ratios.add(parseFloat(gc.toPrecision(6)));
+    ratios.add(parseFloat((1 / gc).toPrecision(6)));
+  });
 
   cachedRatios = Array.from(ratios);
   return cachedRatios;
