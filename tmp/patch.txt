@@ -1,57 +1,64 @@
-FILE: README.md
+Here is the patch for `tmp/apply_patch.mjs`—when `--dry-run` succeeds, it asks `Proceed? (y/N):` and applies immediately if you type `y`:
+
+FILE: tmp/apply_patch.mjs
 ```diff
 <<<<
-- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage`.
-- **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
-- **Test:** `node --test test/run_test.js test/run_hygiene_test.js` (Node 22).
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
 ====
-- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage`.
-- **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
-- **Test:** `npm test` (regenerates `src/topics/index.js` and runs `test/run_test.js` + `test/run_hygiene_test.js` in Node 22).
-- **Repo Map:** `npm run skeleton` (prints resolved import graph + function/object signatures for AI context).
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import readline from "node:readline/promises";
 >>>>
 ```
 
 ```diff
 <<<<
-## 1. Engineering Philosophy: Root Causes over Symptoms
+for (const [relPath, text] of fileMap.entries()) {
+  if (dryRun) {
+    console.log(`[dry-run] Would write: ${relPath}`);
+  } else {
+    fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
+    fs.writeFileSync(path.resolve(relPath), text, "utf8");
+    console.log(`Updated: ${relPath}`);
+  }
+}
 
-Software engineering in this repository is governed by physical and mathematical principles, not ad-hoc heuristics:
+if (!dryRun && Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
+  execFileSync(process.execPath, ["scripts/gen_registry.js"], { stdio: "inherit" });
+}
+
+console.log(`\n${dryRun ? "Dry-run successful!" : "All changes applied successfully!"} (${operations.length} blocks across ${fileMap.size} files)`);
 ====
-## 1. Engineering Philosophy: Infinite Scaling & Root Causes
+let shouldWrite = !dryRun;
 
-Software engineering in this repository is governed by physical/mathematical invariants and **zero-coupling horizontal scaling**:
+if (dryRun) {
+  for (const relPath of fileMap.keys()) {
+    console.log(`[dry-run] Would write: ${relPath}`);
+  }
+  console.log(`\nDry-run successful! (${operations.length} blocks across ${fileMap.size} files)`);
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ans = (await rl.question("Proceed with applying? (y/N): ")).trim().toLowerCase();
+  rl.close();
+  shouldWrite = ans === "y" || ans === "yes";
+  if (!shouldWrite) {
+    console.log("Aborted.");
+    process.exit(0);
+  }
+}
 
-0. **O(1) Architecture (Infinite Scaling):**
-   Adding a new topic or subject must require **zero** edits to central routing, UI, or parent barrel files. Every topic is a self-contained leaf slice discovered automatically into a flat lazy registry (`src/topics/index.js`). Boot cost remains $O(1)$ regardless of curriculum size—only selected topics are fetched on demand.
->>>>
-```
+for (const [relPath, text] of fileMap.entries()) {
+  fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
+  fs.writeFileSync(path.resolve(relPath), text, "utf8");
+  console.log(`Updated: ${relPath}`);
+}
 
-```diff
-<<<<
-  topics/
-    <subject>/<topic>/       index.js, schema.js, relations.js, system.js
-====
-  topics/
-    index.js                 AUTO-GENERATED flat lazy registry (TOPIC_MANIFEST + loadTopic)
-    <subject>/<topic>/       index.js, schema.js, relations.js, system.js (strict leaf slices)
-scripts/
-  gen_registry.js            Auto-discovers leaf topics -> emits src/topics/index.js
-  repo_skeleton.js           Generates resolved import graph + symbol signatures
->>>>
-```
+if (Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
+  execFileSync(process.execPath, ["scripts/gen_registry.js"], { stdio: "inherit" });
+}
 
-```diff
-<<<<
-### 9.5 Subject Export Registration
-
-1. Export the topic in `src/topics/<subject>/index.js`.
-2. Confirm the topic `id` matches its dictionary key in `TOPICS`.
-3. Run `node --test test/run_test.js test/run_hygiene_test.js` and verify 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and canonical scale verification.
-====
-### 9.5 Automatic Discovery & Verification
-
-1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` manually.
-2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and zero barrel leaks.
+console.log(`\nAll changes applied successfully! (${operations.length} blocks across ${fileMap.size} files)`);
 >>>>
 ```

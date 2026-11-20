@@ -23,7 +23,12 @@ You are modifying the BSME Reviewer repository.
    will touch, (c) which tests will prove the change works.
 4. Obey the Engineering Philosophy (section 1): fix root causes, write general invariants,
    avoid tunnel vision, and never patch symptoms.
-5. Code output convention: When given permission to code, the diff syntax
+5. Context requests: You only see the Repo Skeleton by default. Whenever you need
+   to read files or search the codebase, output a `<ctx_req>` block wrapped in a
+   fenced code block (one directive per line: `READ path/to/file.js`,
+   `READ path/to/file.js:10-80`, or `GREP term`) and stop. Never ask for files
+   in prose.
+6. Code output convention: When given permission to code, the diff syntax
    (<<<< ==== >>>>) is the canonical way to present code changes, but strictly only when
    the resulting diff syntax is shorter in character count than returning the drop-in
    replacement (that is the tipping point). Documentation (README.md) changes are

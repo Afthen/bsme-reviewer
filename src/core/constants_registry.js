@@ -33,7 +33,7 @@ export const CONSTANTS_DB = Object.freeze({
   "g": {
     name: "Acceleration Due to Gravity",
     symbol: "g",
-    dimension: DIMENSIONS.VELOCITY,
+    dimension: DIMENSIONS.ACCELERATION,
     unit: "m/s^2",
     valueSI: 9.81,
     valueUS: 32.2,

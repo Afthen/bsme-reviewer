@@ -86,11 +86,15 @@ export function fmt(n) {
  * @param {number} value
  * @param {object} meta varsDb / CONSTANTS_DB entry for the variable
  */
-export function formatGivenValue(value, meta = {}, isLatex = true) {
+export function formatGivenValue(value, meta = {}, isLatex = true, activeUnit = null) {
   if (meta.isConstant) {
-    if (typeof meta.display === "number") return addSeparators(String(meta.display), isLatex);
-    if (typeof meta.display === "string") return meta.display;
-    return addSeparators(String(value), isLatex);
+    const unitMatches = !activeUnit || !meta.unit || activeUnit === meta.unit;
+    if (unitMatches) {
+      if (typeof meta.display === "number") return addSeparators(String(meta.display), isLatex);
+      if (typeof meta.display === "string") return meta.display;
+      return addSeparators(String(value), isLatex);
+    }
+    return fmtSigFig(value, 6, isLatex);
   }
   return fmtSigFig(value, 6, isLatex);
 }

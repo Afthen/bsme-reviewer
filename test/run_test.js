@@ -42,10 +42,11 @@ import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor } from ".
 import { parseMathAST } from "../src/cas/ast.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
-import { pruneSolutionPath, solveDAG } from "../src/core/graph_solver.js";
+import { pruneSolutionPath, solveDAG, canSolveTarget } from "../src/core/graph_solver.js";
+import { formatGivenValue } from "../src/core/dimensions.js";
 import {
   sampleSystemMode, sampleByInverseTokens, retainsSufficientSigFigs,
-  DIMENSION_TOKEN_PALETTES
+  applyProblemUnitSampling, DIMENSION_TOKEN_PALETTES
 } from "../src/core/unit_sampler.js";
 import {
   getUnitAtomBag,
@@ -754,6 +755,77 @@ describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
       assert.equal(await mod.loadTopic(topic.id), topic, `app.js loadTopic('${topic.id}') failed`);
     }
     assert.equal(mod.TOPIC_MANIFEST.length, TOPIC_MANIFEST.length);
+  });
+});
+
+describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
+  test("True-Distractor Invariant: equivalent/alternative givens are never flagged as distractors", () => {
+    const seriesTopic = ALL_TOPICS.find(t => t.id.includes("series"));
+    assert.ok(seriesTopic, "Series springs topic must exist");
+
+    for (let i = 0; i < 40; i++) {
+      const prob = generateProblem(seriesTopic, () => 0);
+      if (!prob.distractors || prob.distractors.length === 0) continue;
+
+      const distractorSet = new Set(prob.distractors);
+      const minimalGivens = prob.givens.filter(g => !distractorSet.has(g));
+      const goalVar = prob.solution[prob.solution.length - 1]?.targetVar;
+      assert.ok(goalVar, "Problem must have a goalVar");
+
+      for (const d of prob.distractors) {
+        const canSubstitute = minimalGivens.length === 0
+          ? canSolveTarget([d], goalVar, prob.relations, prob.system)
+          : minimalGivens.some(g => canSolveTarget(
+              minimalGivens.filter(v => v !== g).concat(d),
+              goalVar,
+              prob.relations,
+              prob.system
+            ));
+        assert.strictEqual(
+          canSubstitute,
+          false,
+          `Variable ${d} can substitute for a minimal given (${minimalGivens.join(",")}) to solve ${goalVar} and must not be a distractor`
+        );
+      }
+    }
+  });
+
+  test("Value-Unit Coupling Invariant: constants never display SI numbers with US units", () => {
+    const gMeta = { isConstant: true, unit: "m/s^2", display: 9.81 };
+    assert.strictEqual(formatGivenValue(9.81, gMeta, true, "m/s^2"), "9.81");
+    assert.strictEqual(formatGivenValue(32.2, gMeta, true, "ft/s^2"), "32.2");
+
+    const pfTopic = ALL_TOPICS.find(t => t.id.includes("period_frequency"));
+    assert.ok(pfTopic, "Period & frequency topic must exist");
+
+    for (const mode of ["SI", "US", "MIXED"]) {
+      for (let i = 0; i < 10; i++) {
+        const S = applyProblemUnitSampling(
+          pfTopic.createSystem({ sys: mode === "MIXED" ? "SI" : mode }),
+          pfTopic.varsDb,
+          mode
+        );
+        if (S._u.g === "ft/s^2") {
+          assert.strictEqual(S.g, 32.2, "g in ft/s^2 must be 32.2");
+        } else if (S._u.g === "m/s^2") {
+          assert.strictEqual(S.g, 9.81, "g in m/s^2 must be 9.81");
+        }
+      }
+    }
+
+    for (let i = 0; i < 30; i++) {
+      const prob = generateProblem(pfTopic, () => 0);
+      if (prob.givens.includes("g") && prob.system._u.g === "ft/s^2") {
+        assert.ok(!prob.statement.includes("9.81"), `Statement must not display 9.81 when g is in ft/s^2: ${prob.statement}`);
+        assert.ok(prob.statement.includes("32.2"), `Statement must display 32.2 when g is in ft/s^2: ${prob.statement}`);
+        for (const step of prob.solution) {
+          if ((step.nodes || []).includes("g")) {
+            const deriv = buildAlignedDerivation(step, prob.system, prob.allSteps, prob.varsDb, prob.relations, new Set(), prob.givens);
+            assert.ok(!deriv.includes("9.81"), `Derivation must not display 9.81 when g is in ft/s^2: ${deriv}`);
+          }
+        }
+      }
+    }
   });
 });
 
