@@ -1,77 +1,37 @@
-FILE: README.md
-````diff
-<<<<
-5. Context requests: You only see the Repo Skeleton by default. Whenever you need
-   to read files or search the codebase, output a `<ctx_req>` block wrapped in a
-   fenced code block (one directive per line: `READ path/to/file.js`,
-   `READ path/to/file.js:10-80`, or `GREP term`) and stop. Never ask for files
-   in prose.
-6. Code output convention: When given permission to code, the diff syntax
-   (<<<< ==== >>>>) is the canonical way to present code changes, but strictly only when
-   the resulting diff syntax is shorter in character count than returning the drop-in
-   replacement (that is the tipping point). Documentation (README.md) changes are
-   always returned as a full drop-in replacement.
-6. Run: node --test test/runtest.js test/runhygiene_test.js
-7. Reply with: files changed, a summary of test output, and anything you could
-   not verify. Do not claim a test passed unless you ran it.
-=======
-5. Context requests: The Repo Skeleton includes spatial line ranges (`[start-end]`) for functions and classes. Whenever you need to read a function or file section, issue a targeted request using the exact line range (`READ path/to/file.js:start-end`) to fetch it in a single shot. Never ask for files in prose.
-6. Code & documentation output convention (4-Backtick Diffs): When given permission to code, standard diff syntax (`<<<< ==== >>>>`) wrapped in **four backticks** (````diff or ````markdown) is the canonical way to present all changes (including README.md), used whenever the resulting diff is shorter than a full drop-in replacement.
-7. Verification: The user (acting as the execution harness) runs the test suite (`node --test test/run_test.js test/run_hygiene_test.js`) and provides test output. Report files changed and summarize the test results provided by the user. Do not claim a test passed unless the test output confirms it.
->>>>
-<<<<
-### 6.1 The AffineScale Invariant Model
-All physical evaluation rests on branchless affine transformations and 7D dimensional vectors:
-$$\phi_u(x) = s_u \cdot (x + o_u)$$
-$$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
-=======
-### 6.1 The AffineScale Invariant Model
-All physical evaluation rests on branchless affine transformations and 7D dimensional vectors:
-```math
-\phi_u(x) = s_u \cdot (x + o_u)
-```
-```math
-\phi_u^{-1}(y) = \frac{y}{s_u} - o_u
-```
->>>>
-<<<<
-   $$BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}$$
-=======
-   ```math
-   BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}
-   ```
->>>>
-<<<<
-A compound fraction has 4 vertical visual row slots:
-$$\cfrac{\text{Row 1}}{\text{Row 2}} \Bigg/ \cfrac{\text{Row 3}}{\text{Row 4}}$$
+Here is the patch for `test/run_test.js` to wire in `test/mcq_test.js`:
 
-Because conversion factors multiply horizontally beside variables in the numerator (Rows 1 & 2) and denominator (Rows 3 & 4), they preserve the 4-row limit:
-$$\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}}{227{,}476 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{min}}}} = \boxed{38 \, \text{\%}}$$
-=======
-A compound fraction has 4 vertical visual row slots:
-```math
-\cfrac{\text{Row 1}}{\text{Row 2}} \Bigg/ \cfrac{\text{Row 3}}{\text{Row 4}}
+FILE: test/run_test.js
+```diff
+<<<<
+import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
+====
+import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
+import { runMcqTests } from "./mcq_test.js";
+>>>>
 ```
 
-Because conversion factors multiply horizontally beside variables in the numerator (Rows 1 & 2) and denominator (Rows 3 & 4), they preserve the 4-row limit:
-```math
-\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}}{227{,}476 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{min}}}} = \boxed{38 \, \text{\%}}
+FILE: test/run_test.js
+```diff
+<<<<
+nodeTest("Test Suite Summary", () => {
+  assert.equal(totalFailed, 0, `${totalFailed} test(s) failed.`);
+});
+====
+describe("MCQ Mode, Registry, Adaptive Grid & ZIP Unpacker", () => {
+  test("Verify MCQ set registry, option sampling, adaptive grid, and ZIP unpacking", async () => {
+    await runMcqTests();
+  });
+});
+
+nodeTest("Test Suite Summary", () => {
+  assert.equal(totalFailed, 0, `${totalFailed} test(s) failed.`);
+});
+>>>>
 ```
->>>>
-<<<<
-   - **Whole-Unit (Canonical):** Wrap the entire unit block when cancelling identical scales or whole terms:
-     $$\cfrac{1{,}440 \, \cancel{\text{kW}}}{4{,}000 \, \cancel{\cfrac{\text{kJ}}{\text{s}}}} = \boxed{36 \, \text{\%}}$$
-=======
-   - **Whole-Unit (Canonical):** Wrap the entire unit block when cancelling identical scales or whole terms:
-     ```math
-     \cfrac{1{,}440 \, \cancel{\text{kW}}}{4{,}000 \, \cancel{\cfrac{\text{kJ}}{\text{s}}}} = \boxed{36 \, \text{\%}}
-     ```
->>>>
-<<<<
-- [ ] Code changes use canonical diff syntax (`<<<< ==== >>>>`) unless shorter as a drop-in replacement; `README.md` edits use full drop-in replacement.
-- [ ] `node --test test/run_test.js test/run_hygiene_test.js` was run and passed with 0 failures.
-=======
-- [ ] Code and documentation changes use canonical diff syntax (`<<<< ==== >>>>`) wrapped in four backticks.
-- [ ] The test suite (`node --test test/run_test.js test/run_hygiene_test.js`) executed by the user passed with 0 failures.
->>>>
-````
+
+### Verification
+Run:
+```bash
+npm test
+```
+*(Note: I haven't run `npm test` in this environment since I don't have a shell tool here—let me know the output if anything fails!)*

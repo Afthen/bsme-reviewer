@@ -295,7 +295,8 @@ aside.open { transform: translateX(0); }
  *  Topic badge: which subject the current problem came from         *
  * ================================================================== */
 
-#view-problem .topic-badge {
+#view-problem .topic-badge,
+#view-mcq .topic-badge {
   display: inline-block;
   margin: 0.5rem 0 0;
   padding: 0.15rem 0.55rem;

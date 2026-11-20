@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/components.css">
   <link rel="stylesheet" href="styles/problem.css">
+  <link rel="stylesheet" href="styles/mcq.css">
   <link rel="stylesheet" href="styles/modals.css">
 </head>
 <body>
@@ -21,6 +22,11 @@
   <header>
     <div class="header-left">
       <button class="btn" id="btn-hamburger">☰ Mastery</button>
+
+      <div class="mode-switch" id="app-mode-switch" role="tablist" aria-label="Study mode">
+        <button type="button" class="mode-switch-btn active" data-mode="problems">📐 Problems</button>
+        <button type="button" class="mode-switch-btn" data-mode="mcq">☑ Quiz (MCQ)</button>
+      </div>
 
       <!-- Custom 3-Tier Collapsible Dropdown -->
       <div class="custom-dropdown" id="topic-dropdown-container">
@@ -36,6 +42,7 @@
       <button class="btn" id="btn-export">💾 Export</button>
       <button class="btn" id="btn-import">📥 Import</button>
       <input type="file" id="mastery-file-input" style="display: none" accept=".json">
+      <input type="file" id="mcq-file-input" style="display: none" accept=".json,.zip">
     </div>
   </header>
 
@@ -75,6 +82,8 @@
           </div>
         </div>
       </section>
+
+      <section id="view-mcq" class="panel-view"></section>
 
       <section id="view-carousel" class="panel-view">
         <div class="carousel-container">

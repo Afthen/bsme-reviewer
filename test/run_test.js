@@ -55,6 +55,7 @@ import {
   formatValueInUnit
 } from "../src/cas/units/definitions.js";
 import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
+import { runMcqTests } from "./mcq_test.js";
 
 // Enhanced Headless Browser Mock
 if (typeof globalThis.window === "undefined") globalThis.window = globalThis;
@@ -255,28 +256,22 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
   });
 
   test("Property 2: Universal Invariant across 100 randomized problems (SI, US, MIXED)", () => {
-    // Generates 100 autonomous problems across all topics with random unit distribution.
-    // Proves that for ANY problem, every given and every step evaluates to the exact
-    // physical ground truth regardless of which units were sampled.
     const TRIALS = 100;
     for (let i = 0; i < TRIALS; i++) {
       const topic = ALL_TOPICS[i % ALL_TOPICS.length];
       const problem = generateProblem(topic, () => Math.random());
       assert.ok(problem, `generateProblem returned null for topic ${topic.id}`);
 
-      // 1. Verify every given variable has valid physical magnitude and unit
       problem.givens.forEach(gVar => {
         const val = problem.system[gVar];
         const u = problem.system._u?.[gVar] || problem.varsDb[gVar]?.unit;
         assert.ok(typeof val === "number" && !isNaN(val), `Given ${gVar} has NaN value in ${topic.id}`);
         assert.ok(u, `Given ${gVar} missing unit in ${topic.id}`);
 
-        // Converting given to coherent base must be non-NaN and finite
         const baseVal = valueToCoherentBase(val, u);
         assert.ok(isFinite(baseVal), `Coherent base value non-finite for ${gVar} in ${topic.id}`);
       });
 
-      // 2. Verify every active solution step evaluates to exact target unit
       const activeSteps = problem.solution.filter(s => !s.isFaded);
       activeSteps.forEach(step => {
         const expected = step.expectedVal;
@@ -285,17 +280,14 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
         assert.ok(typeof expected === "number" && !isNaN(expected), `Step ${step.targetVar} has NaN expectedVal`);
         assert.ok(isFinite(expected), `Step ${step.targetVar} has non-finite expectedVal: ${expected}`);
 
-        // Coherent base value of the step's answer
         const stepBase = valueToCoherentBase(expected, targetUnit);
         assert.ok(isFinite(stepBase), `Step base non-finite for ${step.targetVar}`);
 
-        // Round-trip projection back to targetUnit must equal expectedVal within float epsilon
         const projected = formatValueInUnit(stepBase, targetUnit);
         const relErr = Math.abs(projected - expected) / (Math.abs(expected) || 1);
         assert.ok(relErr < 0.001, `Target unit projection failed on step ${step.targetVar}: expected ${expected}, got ${projected}`);
       });
 
-      // 3. Verify derivation output syntax, KaTeX rendering, and zero alien conversion scalars
       for (const step of problem.solution) {
         const deriv = buildAlignedDerivation(
           step, problem.system, problem.allSteps, problem.varsDb, topic.relations
@@ -317,14 +309,10 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
   });
 
   test("Property 3: Universal Multi-Unit Algebraic Invariant", () => {
-    // Proves that multi-token additions/products with mixed input and output units
-    // evaluate with exact physical precision without hardcoded formula logic.
-
-    // 1. Power Addition: BP (hp) + FP (W) -> IP (ft-lb/s)
     const powerNode = parseMathAST("BP + FP");
     const S_power = {
-      BP: 4023.07, // ~3000 kW in hp
-      FP: 409091,  // ~409 kW in W
+      BP: 4023.07,
+      FP: 409091,
       _u: { BP: "hp", FP: "W", IP: "ft-lb/s" }
     };
     const db_power = {
@@ -333,10 +321,8 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
       IP: { dimension: "Power", unit: "ft-lb/s" }
     };
     const resPower = evaluatePhysicalAST(powerNode, S_power, "IP", db_power);
-    // (3000000 + 409091) W / 1.355818 = ~2,514,416 ft-lb/s
     assert.ok(Math.abs(resPower.value - 2514416.5) / 2514416.5 < 0.002);
 
-    // 2. Empirical requiredUnits with affine temperatures: Carrier's eq + Dew Point inversion
     const carrierNode = parseMathAST("P_wb - (P_t * (t_db - t_wb)) / 1500");
     const db_psychro = {
       P_v: { dimension: "Pressure / Stress", unit: "kPa" },
@@ -359,12 +345,11 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
     const resDp = evaluatePhysicalAST(dpNode, S_dp, "t_dp", db_psychro, { t_dp: "°C", P_v: "kPa" });
     assert.ok(Math.abs(resDp.value - 56.55) < 0.2, `Expected t_dp ~56.55 °F, got ${resDp.value}`);
 
-    // 3. Heat Balance: m_cw * cp_w * dT_cw -> Q_cw (kW) with mixed inputs
     const heatNode = parseMathAST("m_cw * cp_w * dT_cw");
     const S_heat = {
-      m_cw: 600, // kg/min = 10 kg/s
-      cp_w: 4.187, // kJ/kg-K
-      dT_cw: 10, // K
+      m_cw: 600,
+      cp_w: 4.187,
+      dT_cw: 10,
       _u: { m_cw: "kg/min", cp_w: "kJ/kg-K", dT_cw: "K", Q_cw: "kW" }
     };
     const db_heat = {
@@ -374,19 +359,15 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
       Q_cw: { dimension: "Power", unit: "kW" }
     };
     const resHeat = evaluatePhysicalAST(heatNode, S_heat, "Q_cw", db_heat);
-    // 10 kg/s * 4.187 kJ/kg-K * 10 K = 418.7 kW
     assert.ok(Math.abs(resHeat.value - 418.7) < 0.1);
   });
 
   test("Property 4: Universal KaTeX Syntax Invariant across all statements and derivations", () => {
-    // Proves that EVERY inline math token ($...$) and block ($$...$$) in problem statements
-    // and every derivation step renders cleanly via KaTeX with zero syntax errors.
     const TRIALS = 100;
     for (let i = 0; i < TRIALS; i++) {
       const topic = ALL_TOPICS[i % ALL_TOPICS.length];
       const problem = generateProblem(topic, () => Math.random());
 
-      // 1. Pure character scanner: extract and validate all math blocks from statement
       const str = problem.statement;
       let pos = 0;
       while (pos < str.length) {
@@ -419,7 +400,6 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
         }
       }
 
-      // 2. Validate all derivation steps for the problem
       for (const step of problem.solution) {
         const deriv = buildAlignedDerivation(
           step, problem.system, problem.allSteps, problem.varsDb, topic.relations
@@ -469,12 +449,10 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
 
     assert.ok(problem.solution.length >= 5, "Master learner (100% mastery) on Diesel cycle must receive multi-hop chain");
 
-    // Dynamic sink deliverable is protected from fading
     const activeSteps = problem.solution.filter(s => !s.isFaded);
     assert.ok(activeSteps.length >= 1, "Terminal deliverable must remain active");
     assert.equal(activeSteps[activeSteps.length - 1].targetVar, problem.solution[problem.solution.length - 1].targetVar);
 
-    // Intermediate state points must be faded at 100% mastery
     const intermediateSteps = problem.solution.slice(0, -1);
     intermediateSteps.forEach(step => {
       assert.equal(step.isFaded, true, `Intermediate step ${step.targetVar} must be faded at 100% mastery`);
@@ -485,7 +463,6 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     const topic = TOPICS.powerplant_design_diesel_cycle;
     const problem = generateProblem(topic, () => 1.0);
 
-    // Verify that variables produced along the solution path are never included in givens
     const producedVars = new Set(problem.solution.map(s => s.targetVar));
     problem.givens.forEach(g => {
       assert.ok(!producedVars.has(g), `Variable ${g} is produced in solution and must be pruned from givens`);
@@ -576,7 +553,6 @@ describe("Derivation Fidelity & LaTeX Rendering", () => {
       W_net: { symbol: "w_{net}", unit: "kJ/kg" }
     };
 
-    // 1. Verify semantic AST parsing and physical evaluation
     const rhsAst = parseMathAST("Q_A - Q_R");
     assert.equal(rhsAst.type, "binary");
     assert.equal(rhsAst.op, "-");
@@ -586,11 +562,9 @@ describe("Derivation Fidelity & LaTeX Rendering", () => {
     const physicalEval = evaluatePhysicalAST(rhsAst, S, "W_net", varsDb);
     assert.equal(physicalEval.value, 450);
 
-    // 2. Generate derivation and validate through KaTeX AST
     const deriv = buildAlignedDerivation(step, S, [step], varsDb, []);
     validateDerivationLatex(deriv);
 
-    // 3. Structural invariant: terms combined without per-variable units, common unit outside
     assert.ok(
       deriv.includes("(1{,}200 - 750)") || deriv.includes("(1200 - 750)"),
       `Expected factored additive group (1{,}200 - 750), got: ${deriv}`
@@ -830,12 +804,9 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
   });
 
   test("Regression: Mass-Spring Oscillation Period derivation formatting and unit conversions", () => {
-    // 1. Verify single outer parens in symbolic and substituted forms
     const symTex = casToTex("((T / (2 * pi))^2) * k");
     assert.ok(!symTex.includes("(("), `Symbolic form must not contain double parens: ${symTex}`);
-    assert.ok(!symTex.includes("(("), `Clean single parens expected: ${symTex}`);
 
-    // 2. Verify complete unit conversion steps when solving T (ms) and k (lb/in) for m (lb)
     const step = {
       targetVar: "m",
       baseFormula: "T_period = 2 * pi * sqrt(m / k)",
@@ -859,6 +830,12 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
     assert.ok(!deriv.includes("\\left(\\left("), `Derivation must not contain double parens: ${deriv}`);
     assert.ok(deriv.includes("386.089"), `Derivation must contain gravitational acceleration factor gc (386.089): ${deriv}`);
     assert.ok(deriv.includes("1{,}000"), `Derivation must contain millisecond to second conversion factor: ${deriv}`);
+  });
+});
+
+describe("MCQ Mode, Registry, Adaptive Grid & ZIP Unpacker", () => {
+  test("Verify MCQ set registry, option sampling, adaptive grid, and ZIP unpacking", async () => {
+    await runMcqTests();
   });
 });
 

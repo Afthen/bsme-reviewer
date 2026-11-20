@@ -5,6 +5,24 @@
 
 export const STORAGE_KEY_TOPIC_TICKS = "me_topic_ticks";
 export const STORAGE_KEY_MASTERY = "me_mastery_global";
+export const STORAGE_KEY_MCQ_MASTERY = "me_mcq_mastery";
+
+export function readMcqMasteryStore() {
+  const raw = localStorage.getItem(STORAGE_KEY_MCQ_MASTERY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+export function writeMcqMasteryStore(mcqMastery) {
+  localStorage.setItem(STORAGE_KEY_MCQ_MASTERY, JSON.stringify(mcqMastery));
+}
 
 export function getTopicTicksMap() {
   const raw = localStorage.getItem(STORAGE_KEY_TOPIC_TICKS);
@@ -56,7 +74,8 @@ export function serializeMasteryPayload(masteryState) {
     version: 2,
     exportedAt: new Date().toISOString(),
     topicTicks: getTopicTicksMap(),
-    masteryState
+    masteryState,
+    mcqMastery: readMcqMasteryStore()
   };
   return JSON.stringify(payload, null, 2);
 }
@@ -80,12 +99,16 @@ export function parseMasteryPayload(jsonStr) {
       }
     }
 
-    if (validRecords === 0) {
+    const hasMcq = data.mcqMastery && typeof data.mcqMastery === "object" && !Array.isArray(data.mcqMastery);
+    if (validRecords === 0 && !hasMcq) {
       return { success: false, reason: "No valid mastery records found in file" };
     }
 
     if (data.topicTicks && typeof data.topicTicks === "object") {
       localStorage.setItem(STORAGE_KEY_TOPIC_TICKS, JSON.stringify(data.topicTicks));
+    }
+    if (hasMcq) {
+      writeMcqMasteryStore(data.mcqMastery);
     }
 
     return { success: true, newState };
