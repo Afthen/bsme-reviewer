@@ -38,12 +38,8 @@
       </div>
     </div>
     
-    <div class="header-actions">
-      <button class="btn" id="btn-export">💾 Export</button>
-      <button class="btn" id="btn-import">📥 Import</button>
-      <input type="file" id="mastery-file-input" style="display: none" accept=".json">
-      <input type="file" id="mcq-file-input" style="display: none" accept=".json,.zip">
-    </div>
+    <input type="file" id="mastery-file-input" style="display: none" accept=".json">
+    <input type="file" id="mcq-file-input" style="display: none" accept=".json,.zip">
   </header>
 
   <div id="sidebar-overlay"></div>
@@ -54,8 +50,12 @@
         <span class="sidebar-title">Formula Mastery (Harmonic)</span>
         <button class="btn" id="btn-close-sidebar" style="padding: 0.2rem 0.5rem;">✕</button>
       </div>
-      <div class="sidebar-section">
+      <div class="sidebar-section" style="flex: 1;">
         <div class="weight-bars" id="weight-bars-el"></div>
+      </div>
+      <div class="sidebar-footer-actions">
+        <button class="btn" id="btn-export">💾 Export Mastery</button>
+        <button class="btn" id="btn-import">📥 Import Mastery</button>
       </div>
     </aside>
 

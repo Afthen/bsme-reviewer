@@ -153,7 +153,10 @@ function renderSelectionPrompt() {
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose topics";
-  btn.addEventListener("click", openDropdown);
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openDropdown();
+  });
 
   wrap.append(heading, body, btn);
   view.classList.add("is-empty");
@@ -196,7 +199,10 @@ function renderMcqEmptyPrompt() {
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose quiz sets";
-  btn.addEventListener("click", openDropdown);
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openDropdown();
+  });
 
   wrap.append(heading, body, btn);
   view.classList.add("is-empty");

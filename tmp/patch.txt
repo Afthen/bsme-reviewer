@@ -1,37 +1,109 @@
-Here is the patch for `test/run_test.js` to wire in `test/mcq_test.js`:
+Two great catches:
+1. **Why `Choose quiz sets` didn't work:** Clicking it opened the dropdown, then the click bubbled up to `document`'s outside-click listener, which immediately closed it again! Adding `e.stopPropagation()` fixes both `Choose quiz sets` and `Choose topics`.
+2. **Tucking `Export / Import` into `☰ Mastery`:** Moving `💾 Export` and `📥 Import` into the bottom of `#sidebar-drawer` cleans up the header and makes it 100% clear those buttons are for your **Mastery Profile** (not quiz uploads).
 
-FILE: test/run_test.js
+FILE: index.html
 ```diff
 <<<<
-import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
+    <div class="header-actions">
+      <button class="btn" id="btn-export">💾 Export</button>
+      <button class="btn" id="btn-import">📥 Import</button>
+      <input type="file" id="mastery-file-input" style="display: none" accept=".json">
+      <input type="file" id="mcq-file-input" style="display: none" accept=".json,.zip">
+    </div>
+  </header>
+
+  <div id="sidebar-overlay"></div>
+
+  <div class="workspace">
+    <aside id="sidebar-drawer">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="sidebar-title">Formula Mastery (Harmonic)</span>
+        <button class="btn" id="btn-close-sidebar" style="padding: 0.2rem 0.5rem;">✕</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="weight-bars" id="weight-bars-el"></div>
+      </div>
+    </aside>
 ====
-import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
-import { runMcqTests } from "./mcq_test.js";
+    <input type="file" id="mastery-file-input" style="display: none" accept=".json">
+    <input type="file" id="mcq-file-input" style="display: none" accept=".json,.zip">
+  </header>
+
+  <div id="sidebar-overlay"></div>
+
+  <div class="workspace">
+    <aside id="sidebar-drawer">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="sidebar-title">Formula Mastery (Harmonic)</span>
+        <button class="btn" id="btn-close-sidebar" style="padding: 0.2rem 0.5rem;">✕</button>
+      </div>
+      <div class="sidebar-section" style="flex: 1;">
+        <div class="weight-bars" id="weight-bars-el"></div>
+      </div>
+      <div class="sidebar-footer-actions">
+        <button class="btn" id="btn-export">💾 Export Mastery</button>
+        <button class="btn" id="btn-import">📥 Import Mastery</button>
+      </div>
+    </aside>
 >>>>
 ```
 
-FILE: test/run_test.js
+FILE: styles/components.css
 ```diff
 <<<<
-nodeTest("Test Suite Summary", () => {
-  assert.equal(totalFailed, 0, `${totalFailed} test(s) failed.`);
-});
+.sidebar-section { display: flex; flex-direction: column; gap: 0.5rem; }
+.sidebar-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--text-dim); }
 ====
-describe("MCQ Mode, Registry, Adaptive Grid & ZIP Unpacker", () => {
-  test("Verify MCQ set registry, option sampling, adaptive grid, and ZIP unpacking", async () => {
-    await runMcqTests();
+.sidebar-section { display: flex; flex-direction: column; gap: 0.5rem; }
+.sidebar-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--text-dim); }
+.sidebar-footer-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+.sidebar-footer-actions .btn { flex: 1; text-align: center; }
+>>>>
+```
+
+FILE: app.js
+```diff
+<<<<
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn";
+  btn.textContent = "Choose topics";
+  btn.addEventListener("click", openDropdown);
+====
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn";
+  btn.textContent = "Choose topics";
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openDropdown();
   });
-});
-
-nodeTest("Test Suite Summary", () => {
-  assert.equal(totalFailed, 0, `${totalFailed} test(s) failed.`);
-});
 >>>>
 ```
 
-### Verification
-Run:
-```bash
-npm test
+FILE: app.js
+```diff
+<<<<
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn";
+  btn.textContent = "Choose quiz sets";
+  btn.addEventListener("click", openDropdown);
+====
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn";
+  btn.textContent = "Choose quiz sets";
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openDropdown();
+  });
+>>>>
 ```
-*(Note: I haven't run `npm test` in this environment since I don't have a shell tool here—let me know the output if anything fails!)*
