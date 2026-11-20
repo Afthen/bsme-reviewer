@@ -23,19 +23,9 @@ You are modifying the BSME Reviewer repository.
    will touch, (c) which tests will prove the change works.
 4. Obey the Engineering Philosophy (section 1): fix root causes, write general invariants,
    avoid tunnel vision, and never patch symptoms.
-5. Context requests: You only see the Repo Skeleton by default. Whenever you need
-   to read files or search the codebase, output a `<ctx_req>` block wrapped in a
-   fenced code block (one directive per line: `READ path/to/file.js`,
-   `READ path/to/file.js:10-80`, or `GREP term`) and stop. Never ask for files
-   in prose.
-6. Code output convention: When given permission to code, the diff syntax
-   (<<<< ==== >>>>) is the canonical way to present code changes, but strictly only when
-   the resulting diff syntax is shorter in character count than returning the drop-in
-   replacement (that is the tipping point). Documentation (README.md) changes are
-   always returned as a full drop-in replacement.
-6. Run: node --test test/runtest.js test/runhygiene_test.js
-7. Reply with: files changed, a summary of test output, and anything you could
-   not verify. Do not claim a test passed unless you ran it.
+5. Context requests: The Repo Skeleton includes spatial line ranges ([start-end]) for functions and classes. Whenever you need to read a function or file section, issue a targeted request using the exact line range (READ path/to/file.js:start-end) to fetch it in a single shot. Never ask for files in prose.
+6. Code & documentation output convention (4-Backtick Diffs): When given permission to code, standard diff syntax (<<<< ==== >>>>) wrapped in four backticks (````diff or ````markdown) is the canonical way to present all changes (including README.md), used whenever the resulting diff is shorter than a full drop-in replacement.
+7. Verification: The user (acting as the execution harness) runs the test suite (node --test test/run_test.js test/run_hygiene_test.js) and provides test output. Report files changed and summarize the test results provided by the user. Do not claim a test passed unless the test output confirms it.
 ```
 
 ---
@@ -117,7 +107,7 @@ Software engineering in this repository is governed by physical/mathematical inv
 - **R24. Bug fixes ship with regression tests.** Tests that touch mastery use real mastery functions (`recordAttempt`, `getDecayedMastery`), not constant stubs.
 - **R25. Report honestly.** State files changed, test output, and anything that could not be verified.
 - **R26. Brainstorm mode by default.** Always operate in brainstorm mode first to analyze root causes, establish mathematical invariants, and verify alignment. Never write code or emit diffs until given explicit permission to proceed.
-- **R27. Canonical diff syntax & tipping point.** When authorized to write code, the diff syntax (`<<<< ==== >>>>`) is the canonical method, strictly when the resulting diff is shorter in character count than returning the drop-in replacement. Documentation (`README.md`) edits are always returned as full drop-in replacements.
+- **R27. Canonical diff syntax & tipping point.** When authorized to write code, the diff syntax (`<<<< ==== >>>>`) wrapped in four backticks is the canonical method for all changes (including README.md) when shorter than a full drop-in replacement.
 
 ---
 
@@ -250,8 +240,12 @@ The parser grammar enforces standard infix mathematical notation:
 
 ### 6.1 The AffineScale Invariant Model
 All physical evaluation rests on branchless affine transformations and 7D dimensional vectors:
-$$\phi_u(x) = s_u \cdot (x + o_u)$$
-$$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
+```math
+\phi_u(x) = s_u \cdot (x + o_u)
+```
+```math
+\phi_u^{-1}(y) = \frac{y}{s_u} - o_u
+```
 
 - **Coherent Base Magnitudes:** Every physical state has an invariant representation in coherent SI units ($\text{m}, \text{s}, \text{kg}, \text{N}, \text{K}, \text{W}, \text{J}$).
 - **Linear Units ($o_u = 0$):** Multiplicative scale only ($y = s_u \cdot x$).
@@ -264,7 +258,9 @@ $$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
 ### 6.2 `scales.js`: Single Source of Truth & 6-Sig-Fig Precision
 `src/cas/units/scales.js` computes all conversion scalars directly from `BASE_UNITS` and `PREFIXES` in `definitions.js` using `fmtScale` (6 significant figures without the 3-decimal truncation cap):
 - **Single-Dimension Scaling (Option B):** When an expression evaluates to a single dimension differing from `targetUnit` (e.g. $\text{hp} \to \text{ft}\cdot\text{lb/s}$), `scales.js` preserves the target unit intact on the main line:
-  $$BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}$$
+  ```math
+  BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}
+  ```
 - **Compound Ratio Decomposition:** Compound unit conversions (e.g. $\frac{\text{lb/min}}{\text{Btu/h}} \to \frac{\text{kg}}{\text{kWh}}$) are never lumped into unfamiliar decimals (like $92{,}863.4$). `scales.js` decomposes them into atomic dimension pairs (`60`, `2.20462`, `3,412.14`) applied in-situ.
 - **AST-Driven Mismatches:** Ratios with differing unit scales (e.g. $\text{Btu/h}$ vs $\text{Btu/min}$) extract the exact differing atomic pair from the unit AST.
 
@@ -272,10 +268,14 @@ $$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
 Derivations default to **in-situ conversions** placed directly beside the converted token.
 
 A compound fraction has 4 vertical visual row slots:
-$$\cfrac{\text{Row 1}}{\text{Row 2}} \Bigg/ \cfrac{\text{Row 3}}{\text{Row 4}}$$
+```math
+\cfrac{\text{Row 1}}{\text{Row 2}} \Bigg/ \cfrac{\text{Row 3}}{\text{Row 4}}
+```
 
 Because conversion factors multiply horizontally beside variables in the numerator (Rows 1 & 2) and denominator (Rows 3 & 4), they preserve the 4-row limit:
-$$\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}}{227{,}476 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{min}}}} = \boxed{38 \, \text{\%}}$$
+```math
+\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}}{227{,}476 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{min}}}} = \boxed{38 \, \text{\%}}
+```
 
 - **Stepping Down:** Stepping down to the main line ($A/B \cdot E/F$) is an overflow valve used *only* if an expression itself already contains nested fractions that would push visual height $\ge 5$ rows, or under Option B single-dimension scaling.
 
@@ -306,7 +306,9 @@ Topics have no fixed starting or ending variables. The generator treats every re
 
 - **Canonical Cancellation Hierarchy:**
   - **Whole-Unit (Canonical):** Wrap the entire unit block when cancelling identical scales or whole terms:
-    $$\cfrac{1{,}440 \, \cancel{\text{kW}}}{4{,}000 \, \cancel{\cfrac{\text{kJ}}{\text{s}}}} = \boxed{36 \, \text{\%}}$$
+    ```math
+    \cfrac{1{,}440 \, \cancel{\text{kW}}}{4{,}000 \, \cancel{\cfrac{\text{kJ}}{\text{s}}}} = \boxed{36 \, \text{\%}}
+    ```
   - **Component-Level (Fallback):** Cancel individual sub-tokens *only* when components cancel against separate factors ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$).
 - **Omit 1:** Write $\cfrac{\text{kg}}{2.20462 \, \cancel{\text{lb}}}$, never $\cfrac{1 \, \text{kg}}{\dots}$.
 - **Scalars Outside:** Write $60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$, never $\cfrac{60 \, \cancel{\text{h}}}{\cancel{\text{min}}}$.
@@ -504,8 +506,9 @@ node --test test/run_test.js test/run_hygiene_test.js
 - [ ] `system.js` is independent of the solver and honors `{ sys }`.
 - [ ] Unit conversions default to in-situ, respect the 4-row fraction tower cap, omit coefficients of 1, keep scalars outside unit ratios, and use canonical encompassing `\cancel`.
 - [ ] Percentages render as `\text{\%}` and degree symbols use native `°`.
-- [ ] Code changes use canonical diff syntax (`<<<< ==== >>>>`) unless shorter as a drop-in replacement; `README.md` edits use full drop-in replacement.
-- [ ] `node --test test/run_test.js test/run_hygiene_test.js` was run and passed with 0 failures.
+- [ ] Code and documentation changes use canonical diff syntax (`<<<< ==== >>>>`) wrapped in four backticks.
+- [ ] The test suite (`node --test test/run_test.js test/run_hygiene_test.js`) executed by the user passed with 0 failures.
 - [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
 - [ ] No tests were renamed, skipped, loosened, or deleted.
 - [ ] LF line endings, header comment on every new file, no dead code, and no new duplication.
+```
