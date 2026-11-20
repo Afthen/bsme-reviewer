@@ -203,8 +203,24 @@ const files = ROOTS.flatMap(r => collectJsFiles(r))
   .map(analyzeFile)
   .filter(f => !FILTER || f.rel.includes(FILTER));
 
+const skelLines = [];
 for (const f of files) {
-  console.log(`FILE: ${f.rel}`);
-  if (f.imports.length) console.log(`  imports: ${f.imports.join(", ")}`);
-  for (const s of f.symbols) console.log(`  ${s}`);
+  skelLines.push(`FILE: ${f.rel}`);
+  if (f.imports.length) skelLines.push(`  imports: ${f.imports.join(", ")}`);
+  for (const s of f.symbols) skelLines.push(`  ${s}`);
 }
+
+const outBlocks = [
+  "```repo-skeleton\n" + skelLines.join("\n") + "\n```"
+];
+
+const readmePath = path.resolve("README.md");
+if (fs.existsSync(readmePath)) {
+  const readmeBody = fs.readFileSync(readmePath, "utf8").replace(/\r\n/g, "\n").trimEnd();
+  outBlocks.push("````readme\n" + readmeBody + "\n````");
+}
+
+const outPath = path.resolve("tmp/skeleton.txt");
+fs.mkdirSync(path.dirname(outPath), { recursive: true });
+fs.writeFileSync(outPath, outBlocks.join("\n\n") + "\n", "utf8");
+console.log(`Wrote tmp/skeleton.txt (${files.length} files, ${skelLines.length} skeleton lines).`);

@@ -6,6 +6,7 @@
   "scripts": {
     "gen:registry": "node scripts/gen_registry.js",
     "skeleton": "node scripts/repo_skeleton.js",
+    "ctx": "node scripts/fulfill_ctx.js",
     "test": "npm run gen:registry && node --test test/run_test.js test/run_hygiene_test.js",
     "audit:duplicates": "npx jscpd src/ styles/",
     "audit:dead-code": "npx knip",

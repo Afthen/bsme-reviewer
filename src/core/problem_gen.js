@@ -189,13 +189,28 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
   const finalUsedVars = new Set(finalRequired.flatMap(s => s.nodes || [s.targetVar]));
   minimalGivens.forEach(g => finalUsedVars.add(g));
 
-  const candidateDistractors = Object.keys(S).filter(k =>
-    !k.startsWith("_") && !finalUsedVars.has(k) && typeof S[k] === "number" && !isNaN(S[k])
-  );
+  let distractors = [];
+  if (Math.random() < phi(-4)) {
+    const candidateDistractors = Object.keys(S).filter(k => {
+      if (k.startsWith("_") || finalUsedVars.has(k) || typeof S[k] !== "number" || isNaN(S[k])) {
+        return false;
+      }
+      // True-Distractor Invariant: exclude variables that can substitute for any minimal given
+      const isAlternative = minimalGivens.length === 0
+        ? canSolveTarget([k], goalVar, relations, S)
+        : minimalGivens.some(g => canSolveTarget(
+            minimalGivens.filter(v => v !== g).concat(k),
+            goalVar,
+            relations,
+            S
+          ));
+      return !isAlternative;
+    });
 
-  const distractors = candidateDistractors.length > 0 && Math.random() < phi(-4)
-    ? [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]]
-    : [];
+    if (candidateDistractors.length > 0) {
+      distractors = [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]];
+    }
+  }
 
   return {
     goalVar,
@@ -252,7 +267,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const u = S._u?.[v] || meta.unit || "";
     const poly = getPolymorphicMeta(v);
 
-    const formattedVal = formatGivenValue(val, meta);
+    const formattedVal = formatGivenValue(val, meta, true, u);
     let valWithUnit = `$${formattedVal}$`;
 
     if (u && u !== "dimless" && u !== "ratio") {

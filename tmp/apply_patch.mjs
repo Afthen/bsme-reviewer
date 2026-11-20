@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import readline from "node:readline/promises";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -18,7 +19,7 @@ function findFilePath(line) {
   const filePrefix = t.match(/^FILE:\s*(\S+)/);
   if (filePrefix) return filePrefix[1].replace(/[`*:]/g, "");
 
-  if (t.startsWith("#") || t.startsWith("**")) {
+  if (t.startsWith("#") || t.startsWith("**") || /^`[^`]+\.[a-zA-Z0-9]+`$/.test(t)) {
     const match = t.match(/`([^`]+\.[a-zA-Z0-9]+)`/);
     if (match) return match[1];
     const match2 = t.match(/(?:^|[\s*#])((?:src|test|styles|app|README|migrate)[^\s*:`]+\.[a-zA-Z0-9]+)/);
@@ -131,18 +132,31 @@ for (const op of operations) {
   }
 }
 
-for (const [relPath, text] of fileMap.entries()) {
-  if (dryRun) {
+let shouldWrite = !dryRun;
+
+if (dryRun) {
+  for (const relPath of fileMap.keys()) {
     console.log(`[dry-run] Would write: ${relPath}`);
-  } else {
-    fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
-    fs.writeFileSync(path.resolve(relPath), text, "utf8");
-    console.log(`Updated: ${relPath}`);
+  }
+  console.log(`\nDry-run successful! (${operations.length} blocks across ${fileMap.size} files)`);
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ans = (await rl.question("Proceed with applying? (y/N): ")).trim().toLowerCase();
+  rl.close();
+  shouldWrite = ans === "y" || ans === "yes";
+  if (!shouldWrite) {
+    console.log("Aborted.");
+    process.exit(0);
   }
 }
 
-if (!dryRun && Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
+for (const [relPath, text] of fileMap.entries()) {
+  fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
+  fs.writeFileSync(path.resolve(relPath), text, "utf8");
+  console.log(`Updated: ${relPath}`);
+}
+
+if (Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
   execFileSync(process.execPath, ["scripts/gen_registry.js"], { stdio: "inherit" });
 }
 
-console.log(`\n${dryRun ? "Dry-run successful!" : "All changes applied successfully!"} (${operations.length} blocks across ${fileMap.size} files)`);
+console.log(`\nAll changes applied successfully! (${operations.length} blocks across ${fileMap.size} files)`);

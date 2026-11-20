@@ -35,10 +35,14 @@ export function buildAlignedDerivation(
   const unitAnalysis = solveUnitAlgebra(formulaRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
 
   const evalState = { ...S };
+  const activeUnitMap = { ...(S._u || {}) };
   if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
     unitAnalysis.preConversions.forEach(pc => {
       evalState[pc.token] = pc.convertedVal;
       evalState[pc.canonicalKey] = pc.convertedVal;
+      const convUnit = pc.toUnit || pc.targetUnit || "__PRE_CONVERTED__";
+      activeUnitMap[pc.token] = convUnit;
+      activeUnitMap[pc.canonicalKey] = convUnit;
     });
   }
 
@@ -47,7 +51,8 @@ export function buildAlignedDerivation(
   for (const [k, v] of Object.entries(evalState)) {
     if (typeof v === "number") {
       const meta = varsDb[k] || {};
-      const formattedNum = formatGivenValue(v, meta);
+      const activeUnit = activeUnitMap[k] || meta.unit || "";
+      const formattedNum = formatGivenValue(v, meta, true, activeUnit);
       const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
       const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
 
@@ -101,7 +106,9 @@ export function buildAlignedDerivation(
         const inner = leaves
           .map((l, i) => {
             const signStr = i === 0 ? (l.sign < 0 ? "-" : "") : (l.sign < 0 ? " - " : " + ");
-            return `${signStr}${formatGivenValue(evalState[l.key], varsDb[l.key] || meta0)}`;
+            const lMeta = varsDb[l.key] || meta0;
+            const lUnit = activeUnitMap[l.key] || lMeta.unit || "";
+            return `${signStr}${formatGivenValue(evalState[l.key], lMeta, true, lUnit)}`;
           })
           .join("");
 
