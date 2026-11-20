@@ -1,215 +1,57 @@
-FILE: src/cas/units/analysis.js
+FILE: README.md
 ```diff
 <<<<
-import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
-import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
-import { fmtSigFig } from "../../core/dimensions.js";
-import {
-  parseUnitToSemanticAST,
-  BASE_UNITS,
-  getUnitAtomBag,
-  isDimEqual,
-  unitToTex,
-  unitToCancelledTex,
-  getAbsoluteCompanionUnit
-} from "./definitions.js";
+- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage`.
+- **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
+- **Test:** `node --test test/run_test.js test/run_hygiene_test.js` (Node 22).
 ====
-import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
-import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
-import { fmtSigFig, DIMENSIONS } from "../../core/dimensions.js";
-import {
-  parseUnitToSemanticAST,
-  BASE_UNITS,
-  getUnitAtomBag,
-  isDimEqual,
-  unitToTex,
-  unitToCancelledTex,
-  getAbsoluteCompanionUnit,
-  valueToCoherentBase,
-  formatValueInUnit
-} from "./definitions.js";
+- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage`.
+- **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
+- **Test:** `npm test` (regenerates `src/topics/index.js` and runs `test/run_test.js` + `test/run_hygiene_test.js` in Node 22).
+- **Repo Map:** `npm run skeleton` (prints resolved import graph + function/object signatures for AI context).
 >>>>
 ```
 
 ```diff
 <<<<
-  // 1. Empirical relations with requiredUnits contracts
-  if (requiredUnits && typeof requiredUnits === "object") {
-    const varTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
-    varTokens.forEach(tok => {
-      const cKey = resolveCanonicalKey(tok, varsDb);
-      const reqU = requiredUnits[cKey] || requiredUnits[tok];
-      if (!reqU) return;
-      const currU = S._u?.[cKey] || S._u?.[tok] || varsDb[cKey]?.unit || varsDb[tok]?.unit || "";
+## 1. Engineering Philosophy: Root Causes over Symptoms
 
-      if (currU === "°C" && (reqU === "K" || reqU === "degK")) {
-        const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-        preConversions.push({
-          token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-          conv: { factor: 1.0, latex: `(${fmtSigFig(rawVal)} + 273.15)\\,\\text{K}` },
-          rawVal, convertedVal: rawVal + 273.15
-        });
-        return;
-      }
-      if (currU && reqU && currU !== reqU && currU !== "deg" && currU !== "°") {
-        const currScale = getUnitAtomBag(currU).scale;
-        const reqScale = getUnitAtomBag(reqU).scale;
-        if (currScale && reqScale) {
-          const ratio = currScale / reqScale;
-          const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-          preConversions.push({
-            token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-            conv: { factor: ratio, latex: `\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}` },
-            rawVal, convertedVal: rawVal * ratio
-          });
-        }
-      }
-    });
-
-    const cTarget = resolveCanonicalKey(targetVar, varsDb);
-    const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
-    if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
-      const reqScale = getUnitAtomBag(reqTargetU).scale;
-      const targetScale = getUnitAtomBag(targetUnit).scale;
-      if (reqScale && targetScale) {
-        numericConversionFactor = reqScale / targetScale;
-        if (Math.abs(numericConversionFactor - 1) > 1e-12) {
-          const ratio = numericConversionFactor;
-          if (ratio < 1) {
-            globalConversionTex = ` \\cdot \\left[\\cfrac{${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)}\\,${unitToTex(reqTargetU)}}\\right]`;
-          } else {
-            globalConversionTex = ` \\cdot \\left[\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(targetUnit)}}{${unitToTex(reqTargetU)}}\\right]`;
-          }
-        }
-      }
-    }
-    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions, conversionScalars };
-  }
+Software engineering in this repository is governed by physical and mathematical principles, not ad-hoc heuristics:
 ====
-  // 1. Empirical relations with requiredUnits contracts
-  if (requiredUnits && typeof requiredUnits === "object") {
-    const varTokens = Array.from(new Set(getAstIdentifiers(ast).filter(t => !isReservedMathToken(t))));
-    varTokens.forEach(tok => {
-      const cKey = resolveCanonicalKey(tok, varsDb);
-      const reqU = requiredUnits[cKey] || requiredUnits[tok];
-      if (!reqU) return;
-      const meta = varsDb[cKey] || varsDb[tok] || {};
-      const currU = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
+## 1. Engineering Philosophy: Infinite Scaling & Root Causes
 
-      if (currU && reqU && currU !== reqU && currU !== "deg" && currU !== "°") {
-        const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-        const currBag = getUnitAtomBag(currU, meta.dimension);
-        const reqBag = getUnitAtomBag(reqU, meta.dimension);
-        if (currBag.scale && reqBag.scale) {
-          const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-          const convertedVal = formatValueInUnit(
-            valueToCoherentBase(rawVal, currU, isDiff, meta.dimension),
-            reqU,
-            isDiff,
-            meta.dimension
-          );
-          const ratio = currBag.scale / reqBag.scale;
-          const isAffine = !isDiff && (currBag.dimMap.Th !== undefined || reqBag.dimMap.Th !== undefined);
-          preConversions.push({
-            token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-            conv: {
-              factor: isAffine ? 1.0 : ratio,
-              latex: isAffine
-                ? `${fmtSigFig(convertedVal)}\\,${unitToTex(reqU)}`
-                : `\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}`
-            },
-            rawVal, convertedVal
-          });
-        }
-      }
-    });
+Software engineering in this repository is governed by physical/mathematical invariants and **zero-coupling horizontal scaling**:
 
-    const cTarget = resolveCanonicalKey(targetVar, varsDb);
-    const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
-    if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
-      const targetMeta = varsDb[cTarget] || varsDb[targetVar] || {};
-      const targetIsDiff = targetMeta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!targetMeta.isDifference;
-      const reqBag = getUnitAtomBag(reqTargetU, targetMeta.dimension);
-      const targetBag = getUnitAtomBag(targetUnit, targetMeta.dimension);
-      const isTargetAffine = !targetIsDiff && (reqBag.dimMap.Th !== undefined || targetBag.dimMap.Th !== undefined);
-
-      if (reqBag.scale && targetBag.scale && !isTargetAffine) {
-        numericConversionFactor = reqBag.scale / targetBag.scale;
-        if (Math.abs(numericConversionFactor - 1) > 1e-12) {
-          const ratio = numericConversionFactor;
-          if (ratio < 1) {
-            globalConversionTex = ` \\cdot \\left[\\cfrac{${unitToTex(targetUnit)}}{${fmtSigFig(1 / ratio)}\\,${unitToTex(reqTargetU)}}\\right]`;
-          } else {
-            globalConversionTex = ` \\cdot \\left[\\cfrac{${fmtSigFig(ratio)}\\,${unitToTex(targetUnit)}}{${unitToTex(reqTargetU)}}\\right]`;
-          }
-        }
-      }
-    }
-    return { tokenMarkup: {}, conversionFactors: [], conversionFactorTex: "", numericConversionFactor, globalConversionTex, preConversions, tokenConversions, conversionScalars };
-  }
+0. **O(1) Architecture (Infinite Scaling):**
+   Adding a new topic or subject must require **zero** edits to central routing, UI, or parent barrel files. Every topic is a self-contained leaf slice discovered automatically into a flat lazy registry (`src/topics/index.js`). Boot cost remains $O(1)$ regardless of curriculum size—only selected topics are fetched on demand.
 >>>>
 ```
 
-FILE: src/cas/units/evaluator.js
 ```diff
 <<<<
-    const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
-    const rawNum = evalAST(node, evalState, unitResolver);
-    if (isNaN(rawNum)) return { value: NaN, unitAnalysis };
-
-    const finalValue = rawNum * (unitAnalysis.numericConversionFactor || 1.0);
-    return { value: finalValue, unitAnalysis };
+  topics/
+    <subject>/<topic>/       index.js, schema.js, relations.js, system.js
 ====
-    const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
-    const rawNum = evalAST(node, evalState, unitResolver);
-    if (isNaN(rawNum)) return { value: NaN, unitAnalysis };
-
-    const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
-    let finalValue = rawNum;
-    if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
-      const targetMeta = varsDb[cTarget] || varsDb[targetVar] || {};
-      const targetIsDiff = isDifferenceVariable(cTarget, varsDb) || isDifferenceVariable(targetVar, varsDb);
-      finalValue = formatValueInUnit(
-        valueToCoherentBase(rawNum, reqTargetU, targetIsDiff, targetMeta.dimension),
-        targetUnit,
-        targetIsDiff,
-        targetMeta.dimension
-      );
-    }
-    return { value: finalValue, unitAnalysis };
+  topics/
+    index.js                 AUTO-GENERATED flat lazy registry (TOPIC_MANIFEST + loadTopic)
+    <subject>/<topic>/       index.js, schema.js, relations.js, system.js (strict leaf slices)
+scripts/
+  gen_registry.js            Auto-discovers leaf topics -> emits src/topics/index.js
+  repo_skeleton.js           Generates resolved import graph + symbol signatures
 >>>>
 ```
 
-FILE: test/run_test.js
 ```diff
 <<<<
-    // 2. Heat Balance: m_cw * cp_w * dT_cw -> Q_cw (kW) with mixed inputs
-    const heatNode = parseMathAST("m_cw * cp_w * dT_cw");
+### 9.5 Subject Export Registration
+
+1. Export the topic in `src/topics/<subject>/index.js`.
+2. Confirm the topic `id` matches its dictionary key in `TOPICS`.
+3. Run `node --test test/run_test.js test/run_hygiene_test.js` and verify 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and canonical scale verification.
 ====
-    // 2. Empirical requiredUnits with affine temperatures: Carrier's eq + Dew Point inversion
-    const carrierNode = parseMathAST("P_wb - (P_t * (t_db - t_wb)) / 1500");
-    const db_psychro = {
-      P_v: { dimension: "Pressure / Stress", unit: "kPa" },
-      P_wb: { dimension: "Pressure / Stress", unit: "kPa" },
-      P_t: { dimension: "Pressure / Stress", unit: "kPa" },
-      t_db: { dimension: "Temperature", unit: "°C" },
-      t_wb: { dimension: "Temperature", unit: "°C" },
-      t_dp: { dimension: "Temperature", unit: "°C" }
-    };
-    const S_carrier = {
-      P_wb: 2.6389, P_t: 101.325, t_db: 311.15, t_wb: 71.6,
-      _u: { P_wb: "kPa", P_t: "kPa", t_db: "K", t_wb: "°F", P_v: "kPa" }
-    };
-    const carrierReq = { P_v: "kPa", P_wb: "kPa", P_t: "kPa", t_db: "°C", t_wb: "°C" };
-    const resPv = evaluatePhysicalAST(carrierNode, S_carrier, "P_v", db_psychro, carrierReq);
-    assert.ok(Math.abs(resPv.value - 1.5581) < 0.01, `Expected P_v ~1.558 kPa, got ${resPv.value}`);
+### 9.5 Automatic Discovery & Verification
 
-    const dpNode = parseMathAST("(5333.33 / (14.43509 - ln(P_v / 100))) - 273.15");
-    const S_dp = { P_v: resPv.value, _u: { P_v: "kPa", t_dp: "°F" } };
-    const resDp = evaluatePhysicalAST(dpNode, S_dp, "t_dp", db_psychro, { t_dp: "°C", P_v: "kPa" });
-    assert.ok(Math.abs(resDp.value - 56.55) < 0.2, `Expected t_dp ~56.55 °F, got ${resDp.value}`);
-
-    // 3. Heat Balance: m_cw * cp_w * dT_cw -> Q_cw (kW) with mixed inputs
-    const heatNode = parseMathAST("m_cw * cp_w * dT_cw");
+1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` manually.
+2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and zero barrel leaks.
 >>>>
 ```

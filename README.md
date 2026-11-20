@@ -4,7 +4,8 @@ A graph-based engineering problem generator, symbolic solver, and spaced-repetit
 
 - **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage`.
 - **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
-- **Test:** `node --test test/run_test.js test/run_hygiene_test.js` (Node 22).
+- **Test:** `npm test` (regenerates `src/topics/index.js` and runs `test/run_test.js` + `test/run_hygiene_test.js` in Node 22).
+- **Repo Map:** `npm run skeleton` (prints resolved import graph + function/object signatures for AI context).
 
 ---
 
@@ -34,9 +35,12 @@ You are modifying the BSME Reviewer repository.
 
 ---
 
-## 1. Engineering Philosophy: Root Causes over Symptoms
+## 1. Engineering Philosophy: Infinite Scaling & Root Causes
 
-Software engineering in this repository is governed by physical and mathematical principles, not ad-hoc heuristics:
+Software engineering in this repository is governed by physical/mathematical invariants and **zero-coupling horizontal scaling**:
+
+0. **O(1) Architecture (Infinite Scaling):**
+   Adding a new topic or subject must require **zero** edits to central routing, UI, or parent barrel files. Every topic is a self-contained leaf slice discovered automatically into a flat lazy registry (`src/topics/index.js`). Boot cost remains $O(1)$ regardless of curriculum size—only selected topics are fetched on demand.
 
 1. **Fix Root Causes, Never Patch Symptoms (Anti-Whack-a-Mole):**
    When an unexpected value appears, identify the mathematical breakdown at the foundational layer. Never apply per-variable scalar patches, hardcoded string comparison branches, or localized `if (key === '...')` overrides.
@@ -137,7 +141,11 @@ src/
     topic_mix.js             Tournament targeting over multi-topic review pools
   mastery/                   constants.js (phi, fib), engine.js, storage.js
   topics/
-    <subject>/<topic>/       index.js, schema.js, relations.js, system.js
+    index.js                 AUTO-GENERATED flat lazy registry (TOPIC_MANIFEST + loadTopic)
+    <subject>/<topic>/       index.js, schema.js, relations.js, system.js (strict leaf slices)
+scripts/
+  gen_registry.js            Auto-discovers leaf topics -> emits src/topics/index.js
+  repo_skeleton.js           Generates resolved import graph + symbol signatures
 test/
   validator.js               Topic schema, dual-system AST inversion, and numerical fidelity harness
   run_test.js                Universal property invariants, alien scale detector, derivation rendering
@@ -459,11 +467,10 @@ export function createMyTopicSystem({ sys = "SI" } = {}) {
 }
 ```
 
-### 9.5 Subject Export Registration
+### 9.5 Automatic Discovery & Verification
 
-1. Export the topic in `src/topics/<subject>/index.js`.
-2. Confirm the topic `id` matches its dictionary key in `TOPICS`.
-3. Run `node --test test/run_test.js test/run_hygiene_test.js` and verify 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and canonical scale verification.
+1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` manually.
+2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and zero barrel leaks.
 
 ---
 
