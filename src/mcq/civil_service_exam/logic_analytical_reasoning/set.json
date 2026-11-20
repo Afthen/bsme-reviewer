@@ -1,0 +1,163 @@
+{
+  "id": "mcq_cse_logic_01",
+  "title": "Logic & Analytical Reasoning",
+  "subject": "Civil Service Exam",
+  "category": "Analytical Ability",
+  "questions": [
+    {
+      "id": 96,
+      "q": "A to H are persons compared according to their age and the speed at which they finish a certain job. A is older than B and faster than C. D is younger than E, older than H, and slower than F. G is older than H, younger than C, slower than H, and faster than F. H is older than A and slower than C. Based on the preceding statements, which of the following is true?",
+      "options": [
+        "A is the second oldest and the third fastest.",
+        "G is older than E and slower than A.",
+        "C is younger than D and faster than H.",
+        "D is the eldest and slowest.",
+        "H is older than B and slower than D."
+      ],
+      "answer": "C is younger than D and faster than H."
+    },
+    {
+      "id": 97,
+      "q": "Points E, F, G, I are arranged in a line in such a way that F is between G and I, and E is between F and I. If E precedes G, in what order are they arranged?",
+      "options": ["E F G I", "E I G F", "F I G E", "I E F G", "I G F E"],
+      "answer": "I E F G"
+    },
+    {
+      "id": 98,
+      "q": "In a certain examination, 300 competitors passed the first part and 500 passed the second part. The number of competitors who passed both parts of the examination will most likely be __________.",
+      "options": ["800", "between 500 and 600", "between 400 and 500", "between 300 and 400", "not more than 300"],
+      "answer": "not more than 300"
+    },
+    {
+      "id": 99,
+      "q": "Anna, Karen and Nina take turns in getting the midnight shift at Ward 143 such that no one is assigned two nights in a row. Anna was assigned two nights ago and is assigned again tomorrow evening. If Karen is assigned the night immediately following Anna's duty, who can take tonight's midnight shift?",
+      "options": ["Only Anna", "Only Karen", "Only Nina", "Either Anna or Karen", "Either Anna or Nina"],
+      "answer": "Only Nina"
+    },
+    {
+      "id": 100,
+      "q": "Mina, Bing, Amy, and Cel have surnames Flores, Mendez, Perez, and Reyes, but not respectively. Mina is taller than Amy and Cel. Ms. Mendez is tallest of the four. Ms. Flores is taller than Ms. Reyes but shorter than Ms. Perez. Also, Cel is taller than Amy and Bing. What is the full name of the second tallest person?",
+      "options": ["Amy Mendez", "Cel Perez", "Cel Flores", "Bing Reyes", "Mina Perez"],
+      "answer": "Cel Perez"
+    },
+    {
+      "id": 101,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nGigi is probably a pianist. She can really stretch her hands and fingers.",
+      "options": [
+        "Only people with big hands and long fingers can be pianists.",
+        "Playing the piano helps Gigi stretch her hands and fingers.",
+        "Stretching helps pianists perform better.",
+        "A long stretch enables pianists to reach more keys on the piano.",
+        "Pianists can really stretch their hands and fingers."
+      ],
+      "answer": "Pianists can really stretch their hands and fingers."
+    },
+    {
+      "id": 102,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nArlene should not be part of the basketball team because she does not trust her teammates.",
+      "options": [
+        "The basketball team needs Arlene even if she has no faith in them.",
+        "Teammates should have faith in each other.",
+        "Arlene's teammates are not trustworthy.",
+        "Arlene's teammates do not have faith in the team.",
+        "Arlene is better than her teammates."
+      ],
+      "answer": "Teammates should have faith in each other."
+    },
+    {
+      "id": 103,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nIf you are so smart, then why aren't you rich?",
+      "options": [
+        "To become rich is difficult",
+        "Only the rich are smart",
+        "Only the smart are rich",
+        "All rich people are smart",
+        "All smart people are rich"
+      ],
+      "answer": "To become rich is difficult"
+    },
+    {
+      "id": 104,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nIn order to improve our admission process and get better students, we have decided to include an interview of the applicants as a criterion.",
+      "options": [
+        "Current admission procedures are greatly inadequate",
+        "Current admission criteria need to be updated",
+        "An interview of the applicants will help draw better students",
+        "An interview of the applicants will be too time consuming",
+        "An interview of the applicants will ensure the students' success in school"
+      ],
+      "answer": "An interview of the applicants will help draw better students"
+    },
+    {
+      "id": 105,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nThe present administration helps poor people acquire basic necessities for living; that is why it helps squatter dwellers like Aling Rosie.",
+      "options": [
+        "The present administration hates rich people",
+        "Aling Rosie asked the present administration to help her",
+        "Squatter dwellers pretended to be poor",
+        "Squatter dwellers compete with poor people for the present administration's attention",
+        "Squatter dwellers are considered poor people"
+      ],
+      "answer": "Squatter dwellers are considered poor people"
+    },
+    {
+      "id": 106,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nArtists are never ham-handed. All artists are inquisitive. Peter is not ham-handed. Florence is not inquisitive.",
+      "options": [
+        "Peter is an artist",
+        "Peter is not an artist",
+        "Florence is not an artist",
+        "Inquisitive people are not ham-handed"
+      ],
+      "answer": "Florence is not an artist"
+    },
+    {
+      "id": 107,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nSubscribing to Cable T.V. is a luxury. All luxuries are needless expenditures. Having a cellular phone is not a luxury. Dining in a Five-Star hotel is a needless expenditure.",
+      "options": [
+        "Having a cellular phone is not a needless expenditure",
+        "Subscribing to Cable TV is a needless expenditure",
+        "Subscribing to cable TV is not a needless expenditure",
+        "Dining in a Five-Star hotel is not a luxury",
+        "Dining in a Five-Star hotel is a luxury"
+      ],
+      "answer": "Subscribing to Cable TV is a needless expenditure"
+    },
+    {
+      "id": 108,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nSome managers are not analytical. All managers are ruthless. Vicente is ruthless.",
+      "options": [
+        "Vicente is a manager but is not analytical",
+        "Vicente is analytical but is not a manager",
+        "Some ruthless managers are not analytical",
+        "Not all analytical managers are ruthless",
+        "All ruthless people are analytical"
+      ],
+      "answer": "Some ruthless managers are not analytical"
+    },
+    {
+      "id": 109,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nAll of my friends believe in marriage. Geraldine is a new friend. She lives with an officemate in an apartment downtown.",
+      "options": [
+        "Her housemate is most likely a good friend",
+        "She is living-in with her boyfriend",
+        "She needs a companion in the city",
+        "Geraldine believes in marriage",
+        "Geraldine is not married yet"
+      ],
+      "answer": "Geraldine believes in marriage"
+    },
+    {
+      "id": 110,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nThere are fewer juvenile delinquents in communities where the youth participate actively in different socio-civic and religious clubs. Barangay X has a number of youth clubs.",
+      "options": [
+        "Barangay X has fewer juvenile delinquents than other barangays",
+        "Parents in Barangay X exert great efforts to prevent juvenile delinquency",
+        "Municipal officials encourage the organization of youth clubs",
+        "Community development workers in Barangay X give training in organizing youth clubs",
+        "All young people in Barangay X are members of at least two youth clubs."
+      ],
+      "answer": "Barangay X has fewer juvenile delinquents than other barangays"
+    }
+  ]
+}

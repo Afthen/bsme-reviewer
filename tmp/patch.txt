@@ -1,1419 +1,1366 @@
-FILE: src/ui/mcq_view.js
-````javascript
-/**
- * src/ui/mcq_view.js
- * Multiple-Choice Quiz View:
- * - Setup Lobby: infinite-step pill rows (pooled in Study, per-set in Exam), calculator-style timer (0 = off)
- * - Study Mode: 1-question-at-a-time, 2x2 or 1x4 layout, per-item timer, pause, keyboard shortcuts
- * - Exam Mode: scrollable borderless-option sheet, click-to-unselect, unanswered guard, total timer, pause
- * - Summary View: score, time, Retry Missed, New Batch with pill picker, graded review
- */
-
-import {
-  selectBatch,
-  buildSessionItems,
-  recordQuestionAttempt,
-  getQuestionMastery,
-  getSetStats,
-  getSetMastery,
-  shuffleArray
-} from "../mcq/engine.js";
-import { MASTERY_CHANGED_EVENT } from "./sidebar_view.js";
-
-const LETTERS = ["A", "B", "C", "D", "E", "F"];
-const DECADE_1_MULTS = [1, 1.5, 2, 2.5, 5, 7.5];
-const DECADE_N_MULTS = [1, 1.25, 1.5, 2, 2.5, 5, 7.5];
-
-let activeSets = [];
-let sessionItems = [];
-let phase = "setup"; // "setup" | "active" | "summary"
-let mcqMode = "study"; // "study" | "exam"
-
-// Batch counts
-let studyBatchSize = 25;
-let setCounts = {}; // setId -> number (for Exam Mode)
-
-// Timer config (0 = disabled)
-let studyTimerSeconds = 0;
-let examTimerSeconds = 0;
-
-// Active session timer state
-let remainingSeconds = 0;
-let timerLocked = false;
-let isPaused = false;
-let timerId = null;
-let sessionStartMs = 0;
-let elapsedSeconds = 0;
-
-let currentIndex = 0;
-let answers = {}; // idx -> letter
-let timedOutItems = new Set();
-let examSubmitted = false;
-let unansweredPromptOpen = false;
-let keyHandlerBound = false;
-
-function typeset(el) {
-  if (typeof window !== "undefined" && typeof window.renderMathInElement === "function" && el) {
-    window.renderMathInElement(el, {
-      delimiters: [
-        { left: "$$", right: "$$", display: true },
-        { left: "$", right: "$", display: false }
-      ],
-      throwOnError: false,
-      ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"]
-    });
-  }
-}
-
-function getSetMax(setObj) {
-  return setObj?.questions?.length || 0;
-}
-
-function getTotalAvailableQuestions() {
-  return activeSets.reduce((sum, s) => sum + getSetMax(s), 0);
-}
-
-/**
- * Generates infinite clean step counts < max, plus max ("All"):
- * 5, 10, 15, 20, 25, 50, 75, 100, 125, 150, 200, 250, 500, 750, 1000, ...
- */
-function getBatchSteps(max) {
-  if (max <= 0) return [];
-  const steps = [];
-  if (5 < max) steps.push(5);
-
-  let power = 10;
-  let decade = 1;
-  while (power < max) {
-    const mults = decade === 1 ? DECADE_1_MULTS : DECADE_N_MULTS;
-    for (const m of mults) {
-      const val = Math.round(m * power);
-      if (val < max && !steps.includes(val)) {
-        steps.push(val);
-      }
-    }
-    power *= 10;
-    decade++;
-  }
-  steps.push(max);
-  return steps;
-}
-
-function snapToStep(val, max) {
-  const steps = getBatchSteps(max);
-  if (steps.length === 0) return 0;
-  if (steps.includes(val)) return val;
-  let best = steps[0];
-  let bestDist = Math.abs(val - best);
-  for (const s of steps) {
-    const d = Math.abs(val - s);
-    if (d < bestDist) {
-      best = s;
-      bestDist = d;
-    }
-  }
-  return best;
-}
-
-function syncBatchCounts() {
-  const totalAvail = getTotalAvailableQuestions();
-  if (totalAvail > 0) {
-    const target = studyBatchSize > 0 ? Math.min(studyBatchSize, totalAvail) : Math.min(25, totalAvail);
-    studyBatchSize = snapToStep(target, totalAvail);
-  } else {
-    studyBatchSize = 0;
-  }
-
-  const next = {};
-  for (const s of activeSets) {
-    const max = getSetMax(s);
-    if (max <= 0) {
-      next[s.id] = 0;
-      continue;
-    }
-    const prev = setCounts[s.id];
-    const target = prev !== undefined ? Math.min(prev, max) : Math.min(25, max);
-    next[s.id] = snapToStep(target, max);
-  }
-  setCounts = next;
-}
-
-function getSelectedQuestionCount() {
-  if (mcqMode === "study") return studyBatchSize;
-  return activeSets.reduce((sum, s) => sum + (setCounts[s.id] || 0), 0);
-}
-
-function formatClock(sec) {
-  const s = Math.max(0, Math.floor(sec));
-  const hrs = Math.floor(s / 3600);
-  const mins = Math.floor((s % 3600) / 60);
-  const rem = s % 60;
-  const pad = n => String(n).padStart(2, "0");
-  return hrs > 0 ? `${hrs}:${pad(mins)}:${pad(rem)}` : `${pad(mins)}:${pad(rem)}`;
-}
-
-function secondsToDigitBuffer(sec, mode) {
-  const s = Math.max(0, Math.floor(sec));
-  const pad = n => String(n).padStart(2, "0");
-  if (mode === "study") {
-    const mins = Math.min(99, Math.floor(s / 60));
-    const rem = s % 60;
-    return `${pad(mins)}${pad(rem)}`;
-  }
-  const hrs = Math.min(99, Math.floor(s / 3600));
-  const mins = Math.floor((s % 3600) / 60);
-  const rem = s % 60;
-  return `${pad(hrs)}${pad(mins)}${pad(rem)}`;
-}
-
-function formatDigitBuffer(buf, mode) {
-  if (mode === "study") {
-    return `${buf.slice(0, 2)}:${buf.slice(2, 4)}`;
-  }
-  return `${buf.slice(0, 2)}:${buf.slice(2, 4)}:${buf.slice(4, 6)}`;
-}
-
-function digitBufferToSeconds(buf, mode) {
-  if (mode === "study") {
-    const mins = parseInt(buf.slice(0, 2), 10) || 0;
-    const secs = parseInt(buf.slice(2, 4), 10) || 0;
-    return mins * 60 + secs;
-  }
-  const hrs = parseInt(buf.slice(0, 2), 10) || 0;
-  const mins = parseInt(buf.slice(2, 4), 10) || 0;
-  const secs = parseInt(buf.slice(4, 6), 10) || 0;
-  return hrs * 3600 + mins * 60 + secs;
-}
-
-function formatTimeTrimmed(sec) {
-  const s = Math.max(0, Math.floor(sec));
-  if (s === 0) return "0";
-  const hrs = Math.floor(s / 3600);
-  const mins = Math.floor((s % 3600) / 60);
-  const rem = s % 60;
-  const pad = n => String(n).padStart(2, "0");
-  if (hrs > 0) return `${hrs}:${pad(mins)}:${pad(rem)}`;
-  if (mins > 0) return `${mins}:${pad(rem)}`;
-  return `0:${pad(rem)}`;
-}
-
-function isTimerEnabled() {
-  return (mcqMode === "study" ? studyTimerSeconds : examTimerSeconds) > 0;
-}
-
-function stopTimer() {
-  if (timerId !== null) {
-    clearInterval(timerId);
-    timerId = null;
-  }
-}
-
-function runTimerInterval(onExpire) {
-  stopTimer();
-  if (remainingSeconds <= 0) {
-    timerLocked = true;
-    updateTimerDisplay();
-    onExpire();
-    return;
-  }
-
-  timerId = setInterval(() => {
-    const view = document.getElementById("view-mcq");
-    if (!view || !view.classList.contains("active") || phase !== "active") {
-      stopTimer();
-      return;
-    }
-    if (isPaused) return;
-
-    remainingSeconds = Math.max(0, remainingSeconds - 1);
-    updateTimerDisplay();
-    if (remainingSeconds <= 0) {
-      stopTimer();
-      timerLocked = true;
-      updateTimerDisplay();
-      onExpire();
-    }
-  }, 1000);
-}
-
-function startCountdown(seconds, onExpire) {
-  stopTimer();
-  remainingSeconds = Math.max(1, Math.floor(seconds));
-  timerLocked = false;
-  runTimerInterval(onExpire);
-}
-
-function updateTimerDisplay() {
-  const el = document.getElementById("mcq-timer-pill");
-  if (!el) return;
-  el.textContent = formatClock(remainingSeconds);
-  el.classList.toggle("is-low", !timerLocked && remainingSeconds > 0 && remainingSeconds <= 10);
-  el.classList.toggle("is-locked", timerLocked);
-}
-
-function togglePause() {
-  if (phase !== "active") return;
-  isPaused = !isPaused;
-  const stage = document.getElementById("mcq-stage");
-  const btnPause = document.getElementById("mcq-pause-btn");
-  if (btnPause) {
-    btnPause.textContent = isPaused ? "▶ Resume" : "⏸ Pause";
-    btnPause.classList.toggle("active", isPaused);
-  }
-  if (stage) {
-    stage.classList.toggle("is-paused", isPaused);
-  }
-}
-
-export function renderMcqSets(sets = []) {
-  activeSets = sets;
-  const view = document.getElementById("view-mcq");
-  if (!view) return;
-
-  if (!keyHandlerBound) {
-    document.addEventListener("keydown", handleKeyDown);
-    keyHandlerBound = true;
-  }
-
-  stopTimer();
-  syncBatchCounts();
-  phase = "setup";
-  sessionItems = [];
-  answers = {};
-  timedOutItems = new Set();
-  examSubmitted = false;
-  timerLocked = false;
-  isPaused = false;
-  unansweredPromptOpen = false;
-  renderMcqShell();
-}
-
-export function startNewMcqBatch(customItems = null) {
-  const view = document.getElementById("view-mcq");
-  if (!view) return;
-
-  stopTimer();
-
-  if (Array.isArray(customItems)) {
-    sessionItems = customItems;
-  } else {
-    syncBatchCounts();
-    let packed = [];
-    if (mcqMode === "study") {
-      packed = selectBatch(activeSets, studyBatchSize);
-    } else {
-      for (const s of activeSets) {
-        const count = setCounts[s.id] || 0;
-        if (count > 0) {
-          packed.push(...selectBatch([s], count));
-        }
-      }
-    }
-    sessionItems = buildSessionItems(activeSets.length > 1 ? shuffleArray(packed) : packed);
-  }
-
-  phase = "active";
-  currentIndex = 0;
-  answers = {};
-  timedOutItems = new Set();
-  examSubmitted = false;
-  timerLocked = false;
-  isPaused = false;
-  unansweredPromptOpen = false;
-  sessionStartMs = Date.now();
-  elapsedSeconds = 0;
-
-  if (isTimerEnabled() && sessionItems.length > 0) {
-    if (mcqMode === "study") {
-      startStudyItemTimer();
-    } else {
-      startCountdown(examTimerSeconds, handleExamTimerExpire);
-    }
-  }
-
-  renderMcqShell();
-}
-
-function handleStudyTimerExpire() {
-  timedOutItems.add(currentIndex);
-  const stage = document.getElementById("mcq-stage");
-  if (stage && phase === "active" && mcqMode === "study") {
-    renderStudyView(stage);
-  }
-}
-
-function startStudyItemTimer() {
-  if (!isTimerEnabled()) {
-    stopTimer();
-    timerLocked = false;
-    return;
-  }
-  if (answers[currentIndex] !== undefined || timedOutItems.has(currentIndex)) {
-    stopTimer();
-    timerLocked = timedOutItems.has(currentIndex) && answers[currentIndex] === undefined;
-    if (timerLocked) remainingSeconds = 0;
-    return;
-  }
-  startCountdown(studyTimerSeconds, handleStudyTimerExpire);
-}
-
-function handleExamTimerExpire() {
-  const stage = document.getElementById("mcq-stage");
-  if (stage && phase === "active" && mcqMode === "exam") {
-    renderExamView(stage);
-  }
-}
-
-function returnToSetup() {
-  stopTimer();
-  phase = "setup";
-  timerLocked = false;
-  isPaused = false;
-  unansweredPromptOpen = false;
-  renderMcqShell();
-}
-
-function buildPillGroup(max, currentVal, onSelect) {
-  const group = document.createElement("div");
-  group.className = "mcq-pill-group";
-  const steps = getBatchSteps(max);
-
-  steps.forEach(step => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `mcq-count-pill ${currentVal === step ? "active" : ""}`;
-    btn.textContent = step === max ? "All" : String(step);
-    btn.addEventListener("click", () => {
-      Array.from(group.children).forEach(el => el.classList.remove("active"));
-      btn.classList.add("active");
-      onSelect(step);
-    });
-    group.appendChild(btn);
-  });
-
-  return group;
-}
-
-function buildBatchCountSection(onAnyChange) {
-  const wrap = document.createElement("div");
-  wrap.className = "mcq-pill-rows";
-
-  if (mcqMode === "study") {
-    const totalAvail = getTotalAvailableQuestions();
-    const row = document.createElement("div");
-    row.className = "mcq-set-pill-row";
-
-    const label = document.createElement("span");
-    label.className = "mcq-set-row-name";
-    label.textContent = activeSets.length === 1 ? activeSets[0].title : "All Selected Sets";
-
-    const group = buildPillGroup(totalAvail, studyBatchSize, val => {
-      studyBatchSize = val;
-      onAnyChange();
-    });
-
-    row.append(label, group);
-    wrap.appendChild(row);
-    return wrap;
-  }
-
-  // Exam Mode: per-set aligned pill rows
-  activeSets.forEach(s => {
-    const max = getSetMax(s);
-    const row = document.createElement("div");
-    row.className = "mcq-set-pill-row";
-
-    const nameEl = document.createElement("span");
-    nameEl.className = "mcq-set-row-name";
-    nameEl.textContent = s.title;
-    nameEl.title = s.title;
-
-    const group = buildPillGroup(max, setCounts[s.id], val => {
-      setCounts[s.id] = val;
-      onAnyChange();
-    });
-
-    row.append(nameEl, group);
-    wrap.appendChild(row);
-  });
-
-  return wrap;
-}
-
-function createTimerInputBlock(mode) {
-  const wrap = document.createElement("div");
-  wrap.className = "mcq-timer-field-wrap";
-
-  const getSec = () => (mode === "study" ? studyTimerSeconds : examTimerSeconds);
-  const setSec = v => {
-    const clamped = Math.max(0, Math.min(mode === "study" ? 5999 : 359999, v));
-    if (mode === "study") studyTimerSeconds = clamped;
-    else examTimerSeconds = clamped;
-  };
-
-  let digitBuf = secondsToDigitBuffer(getSec(), mode);
-  let isFocused = false;
-
-  const input = document.createElement("input");
-  input.type = "text";
-  input.inputMode = "numeric";
-  input.className = `mcq-timer-input ${getSec() === 0 ? "is-off" : ""}`;
-  input.value = formatTimeTrimmed(getSec());
-  input.setAttribute("aria-label", mode === "study" ? "Timer per question" : "Total exam timer");
-
-  const sub = document.createElement("span");
-  sub.className = "mcq-timer-sublabel";
-  sub.textContent = mode === "study" ? "per question" : "total";
-
-  input.addEventListener("focus", () => {
-    isFocused = true;
-    digitBuf = secondsToDigitBuffer(getSec(), mode);
-    input.classList.remove("is-off");
-    input.value = formatDigitBuffer(digitBuf, mode);
-    queueMicrotask(() => {
-      const len = input.value.length;
-      input.setSelectionRange(len, len);
-    });
-  });
-
-  input.addEventListener("keydown", e => {
-    if (!isFocused) return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-
-    if (/^[0-9]$/.test(e.key)) {
-      e.preventDefault();
-      digitBuf = digitBuf.slice(1) + e.key;
-      input.value = formatDigitBuffer(digitBuf, mode);
-    } else if (e.key === "Backspace" || e.key === "Delete") {
-      e.preventDefault();
-      digitBuf = "0" + digitBuf.slice(0, -1);
-      input.value = formatDigitBuffer(digitBuf, mode);
-    } else if (e.key === "Enter" || e.key === "Escape") {
-      e.preventDefault();
-      input.blur();
-    } else if (e.key !== "Tab") {
-      e.preventDefault();
-    }
-  });
-
-  input.addEventListener("blur", () => {
-    isFocused = false;
-    const totalSec = digitBufferToSeconds(digitBuf, mode);
-    setSec(totalSec);
-    const saved = getSec();
-    input.value = formatTimeTrimmed(saved);
-    input.classList.toggle("is-off", saved === 0);
-  });
-
-  wrap.append(input, sub);
-  return wrap;
-}
-
-function renderMcqShell() {
-  const view = document.getElementById("view-mcq");
-  if (!view) return;
-  view.innerHTML = "";
-
-  if (activeSets.length === 0) return;
-
-  const container = document.createElement("div");
-  container.className = "article-container mcq-container";
-
-  if (phase === "active") {
-    container.appendChild(renderActiveToolbar());
-  }
-
-  const stage = document.createElement("div");
-  stage.id = "mcq-stage";
-  if (phase === "active" && isPaused) {
-    stage.classList.add("is-paused");
-  }
-  container.appendChild(stage);
-  view.appendChild(container);
-
-  if (phase === "setup") {
-    renderSetupView(stage);
-  } else if (phase === "active") {
-    if (mcqMode === "study") {
-      renderStudyView(stage);
-    } else {
-      renderExamView(stage);
-    }
-  } else {
-    renderSummaryView(stage);
-  }
-}
-
-function renderActiveToolbar() {
-  const bar = document.createElement("div");
-  bar.className = "mcq-toolbar";
-
-  const left = document.createElement("div");
-  left.className = "mcq-toolbar-left";
-
-  const modeBadge = document.createElement("span");
-  modeBadge.className = "mcq-mode-badge";
-  modeBadge.textContent = mcqMode === "study" ? "Study Mode" : "Exam Mode";
-
-  const progress = document.createElement("span");
-  progress.id = "mcq-toolbar-progress";
-  progress.className = "mcq-progress-label";
-  if (mcqMode === "study") {
-    progress.textContent = `${currentIndex + 1} / ${sessionItems.length}`;
-  } else {
-    const answeredCount = Object.keys(answers).length;
-    progress.textContent = `${answeredCount} / ${sessionItems.length} answered`;
-  }
-
-  left.append(modeBadge, progress);
-
-  const right = document.createElement("div");
-  right.className = "mcq-toolbar-right";
-
-  if (isTimerEnabled()) {
-    const timerEl = document.createElement("span");
-    timerEl.id = "mcq-timer-pill";
-    timerEl.className = "mcq-timer-pill";
-    right.appendChild(timerEl);
-  }
-
-  const btnPause = document.createElement("button");
-  btnPause.id = "mcq-pause-btn";
-  btnPause.type = "button";
-  btnPause.className = `btn ${isPaused ? "active" : ""}`;
-  btnPause.textContent = isPaused ? "▶ Resume" : "⏸ Pause";
-  btnPause.addEventListener("click", togglePause);
-
-  const btnQuit = document.createElement("button");
-  btnQuit.type = "button";
-  btnQuit.className = "btn";
-  btnQuit.textContent = "Quit";
-  btnQuit.addEventListener("click", returnToSetup);
-
-  right.append(btnPause, btnQuit);
-  bar.append(left, right);
-
-  queueMicrotask(updateTimerDisplay);
-  return bar;
-}
-
-function renderSetupView(stage) {
-  stage.innerHTML = "";
-
-  const totalAvail = getTotalAvailableQuestions();
-  let totalSeen = 0;
-  let weightedMastery = 0;
-  for (const s of activeSets) {
-    const stats = getSetStats(s);
-    totalSeen += stats.seen;
-    weightedMastery += getSetMastery(s) * getSetMax(s);
-  }
-  const avgMasteryPct = totalAvail > 0 ? Math.round((weightedMastery / totalAvail) * 100) : 0;
-  const unseen = Math.max(0, totalAvail - totalSeen);
-
-  const card = document.createElement("div");
-  card.className = "mcq-setup-card";
-
-  const header = document.createElement("div");
-  header.className = "mcq-setup-header";
-
-  const title = document.createElement("h2");
-  title.className = "mcq-setup-title";
-  title.textContent = "Quiz Setup";
-
-  const sub = document.createElement("p");
-  sub.className = "mcq-setup-subtitle";
-  sub.textContent = `${activeSets.length} set${activeSets.length === 1 ? "" : "s"} selected · ${totalAvail} questions (${unseen} unseen · ${avgMasteryPct}% mastery)`;
-
-  header.append(title, sub);
-  card.appendChild(header);
-
-  const modeSection = document.createElement("div");
-  modeSection.className = "mcq-setup-section";
-
-  const modeLabel = document.createElement("div");
-  modeLabel.className = "mcq-setup-label";
-  modeLabel.textContent = "Mode";
-
-  const modeGrid = document.createElement("div");
-  modeGrid.className = "mcq-mode-cards";
-
-  const modes = [
+Here are the test items from the PDF separated into **8 logical sets** (excluding items 1–20, which are the Examinee's Descriptive Questionnaire, and noting that items 61–66 are omitted in the source PDF). All answers follow the answer key on page 12, duplicate options (e.g., Q106) are deduplicated, and order-dependent items use `"shuffle"`.
+
+---
+
+### 1. Vocabulary & Sentence Completion (Items 21–35)
+FILE: `src/mcq/civil_service_exam/vocabulary_sentence_completion/set.json`
+```json
+{
+  "id": "mcq_cse_vocab_01",
+  "title": "Vocabulary & Sentence Completion",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
     {
-      id: "study",
-      title: "Study Mode",
-      desc: "One question at a time with instant feedback, mastery status, and keyboard shortcuts."
+      "id": 21,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nAng PAGAL na guro ay sandaling tumigil bago muling nagpatuloy sa pagsasalita.",
+      "options": ["pagod", "galit", "pihikan", "mabagal", "mahinahon"],
+      "answer": "pagod"
     },
     {
-      id: "exam",
-      title: "Exam Mode",
-      desc: "Scrollable full sheet with clean letter choices. Grade all answers at the end."
+      "id": 22,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nA special group in the police force is believed to be engaged in FURTIVE activities.",
+      "options": ["illegal", "suspicious", "unusual", "worthy", "secret"],
+      "answer": "secret"
+    },
+    {
+      "id": 23,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nThe Defense presented its case to the jury in a TRENCHANT manner.",
+      "options": ["Legalistic", "dignified", "vague", "Emphatic", "Cautious"],
+      "answer": "Emphatic"
+    },
+    {
+      "id": 24,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nAng mga magbubukid ay NABIHASA sa paggamit ng kalabaw bilang katulong nila sa pagsasaka.",
+      "options": ["nagsawa", "nagtiwala", "nasanay", "natuto", "nahirapan"],
+      "answer": "nasanay"
+    },
+    {
+      "id": 25,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nPilo's insensitivity has created ANIMOSITY to the worker's demands.",
+      "options": ["distrust", "hostility", "fear", "distance", "dependence"],
+      "answer": "hostility"
+    },
+    {
+      "id": 26,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nThe baffled owner ACQUIESCED to the worker's demands.",
+      "options": ["opposed", "reacted", "agreed", "resisted", "listened"],
+      "answer": "agreed"
+    },
+    {
+      "id": 27,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nThe recommendation of the wage council is REPUGNANT to the employers.",
+      "options": ["acceptable", "objectionable", "beneficial", "degrading", "embarrassing"],
+      "answer": "objectionable"
+    },
+    {
+      "id": 28,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nSanctuaries for wildlife have DWINDLED alarmingly in the last decade.",
+      "options": ["disappeared", "changed", "decreased", "multiplied", "deteriorated"],
+      "answer": "decreased"
+    },
+    {
+      "id": 29,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nRecklessness always entails JEOPARDY.",
+      "options": ["danger", "crisis", "apprehension", "control", "aggression"],
+      "answer": "danger"
+    },
+    {
+      "id": 30,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nBusiness, like life, is much too extensive and LEQUESCENT to be wholly contained by any checklist, formula or theory.",
+      "options": ["structured", "changeable", "Complicated", "shapeless", "confusing"],
+      "answer": "changeable"
+    },
+    {
+      "id": 31,
+      "q": "Realizing that we were determined to go, our experienced friends __________ that there might be more difficulties along the way than we expect.",
+      "options": ["dismissed", "intimated", "insisted", "projected", "concluded"],
+      "answer": "insisted"
+    },
+    {
+      "id": 32,
+      "q": "Ang patuloy na pag-angkat ng mga produktong banyaga, na siya namang tinatangkilik ng mga mamamayan, ang dahilan ng __________ ng mga industriyang lokal.",
+      "options": ["paghinto", "pagbabago", "pagtitipid", "pagkawala", "pagkalugi"],
+      "answer": "pagkalugi"
+    },
+    {
+      "id": 33,
+      "q": "A strong government is needed to promote __________, not dependency, and to encourage free enterprise.",
+      "options": ["self-alienation", "self-evaluation", "self reliance", "self-awareness", "self-determination"],
+      "answer": "self reliance"
+    },
+    {
+      "id": 34,
+      "q": "Mass media develop in us a level of consciousness that keeps us __________ current events.",
+      "options": ["interested in", "adjusting to", "excited over", "fearful of", "abreast of"],
+      "answer": "abreast of"
+    },
+    {
+      "id": 35,
+      "q": "Failure is the most tiring experience a person can ever have; there is nothing more __________ than not succeeding, being blocked, not moving ahead.",
+      "options": ["Invigorating", "Discouraging", "Exhilarating", "Enervating", "depressing"],
+      "answer": "depressing"
     }
-  ];
-
-  modes.forEach(m => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `mcq-mode-card ${mcqMode === m.id ? "active" : ""}`;
-    btn.innerHTML = `<span class="mcq-mode-card-title">${m.title}</span><span class="mcq-mode-card-desc">${m.desc}</span>`;
-    btn.addEventListener("click", () => {
-      if (mcqMode === m.id) return;
-      mcqMode = m.id;
-      renderSetupView(stage);
-    });
-    modeGrid.appendChild(btn);
-  });
-
-  modeSection.append(modeLabel, modeGrid);
-  card.appendChild(modeSection);
-
-  const countSection = document.createElement("div");
-  countSection.className = "mcq-setup-section";
-
-  const countHeader = document.createElement("div");
-  countHeader.className = "mcq-setup-section-head";
-
-  const countLabel = document.createElement("span");
-  countLabel.className = "mcq-setup-label";
-  countLabel.textContent = mcqMode === "study" ? "Questions" : "Questions per Set";
-
-  const totalBadge = document.createElement("span");
-  totalBadge.className = "mcq-count-total-badge";
-  totalBadge.textContent = `Total: ${getSelectedQuestionCount()}`;
-
-  countHeader.append(countLabel, totalBadge);
-  countSection.appendChild(countHeader);
-  countSection.appendChild(buildBatchCountSection(() => {
-    totalBadge.textContent = `Total: ${getSelectedQuestionCount()}`;
-  }));
-  card.appendChild(countSection);
-
-  const bottomRow = document.createElement("div");
-  bottomRow.className = "mcq-setup-bottom";
-
-  const timerWrap = document.createElement("div");
-  timerWrap.className = "mcq-setup-timer-group";
-  timerWrap.appendChild(createTimerInputBlock(mcqMode));
-
-  const btnStart = document.createElement("button");
-  btnStart.type = "button";
-  btnStart.className = "btn-generate-next";
-  btnStart.disabled = getSelectedQuestionCount() === 0;
-  btnStart.textContent = mcqMode === "study" ? "Start Study Session" : "Start Exam";
-  btnStart.addEventListener("click", () => startNewMcqBatch());
-
-  bottomRow.append(timerWrap, btnStart);
-  card.appendChild(bottomRow);
-  stage.appendChild(card);
+  ]
 }
+```
 
-function renderQuestionMedia(item) {
-  if (!item.imageSrc) return null;
-  const wrap = document.createElement("div");
-  wrap.className = "mcq-image-wrap";
-  const img = document.createElement("img");
-  img.src = item.imageSrc;
-  img.alt = item.imageAlt || "Question diagram";
-  img.loading = "lazy";
-  wrap.appendChild(img);
-  return wrap;
-}
+---
 
-function renderStudyView(stage) {
-  stage.innerHTML = "";
-  const item = sessionItems[currentIndex];
-  if (!item) return;
-
-  const progEl = document.getElementById("mcq-toolbar-progress");
-  if (progEl) progEl.textContent = `${currentIndex + 1} / ${sessionItems.length}`;
-
-  const metaRow = document.createElement("div");
-  metaRow.className = "mcq-meta-row";
-
-  const badges = document.createElement("div");
-  badges.className = "mcq-badges";
-
-  const statusPill = document.createElement("span");
-  statusPill.className = "topic-badge mcq-status-pill";
-  if (item.seen === 0) {
-    statusPill.textContent = "Fresh";
-  } else {
-    const pct = Math.round(getQuestionMastery(item.setId, item.item.id) * 100);
-    statusPill.textContent = `Seen ${item.seen}× · ${pct}%`;
-  }
-  badges.appendChild(statusPill);
-
-  let correctCount = 0;
-  let answeredCount = 0;
-  for (const [idxStr, letter] of Object.entries(answers)) {
-    answeredCount++;
-    if (sessionItems[Number(idxStr)]?.answer === letter) correctCount++;
-  }
-  const scorePill = document.createElement("span");
-  scorePill.className = "mcq-score-pill";
-  scorePill.textContent = `${correctCount} / ${answeredCount}`;
-
-  metaRow.append(badges, scorePill);
-  stage.appendChild(metaRow);
-
-  const qCard = document.createElement("div");
-  qCard.className = "mcq-instant-card mcq-pausable";
-
-  const qText = document.createElement("div");
-  qText.className = "mcq-question-text";
-  qText.innerHTML = item.q;
-  qCard.appendChild(qText);
-
-  const media = renderQuestionMedia(item);
-  if (media) qCard.appendChild(media);
-
-  const studyGridClass = item.gridClass === "cols-4" ? "cols-2" : item.gridClass;
-  const optsGrid = document.createElement("div");
-  optsGrid.className = `mcq-options ${studyGridClass}`;
-
-  const chosen = answers[currentIndex];
-  const hasAnswered = chosen !== undefined;
-  const isTimedOut = timedOutItems.has(currentIndex) && !hasAnswered;
-  const isLocked = hasAnswered || isTimedOut;
-
-  if (isTimedOut) {
-    optsGrid.classList.add("is-timed-out");
-  }
-
-  item.options.forEach((optText, i) => {
-    const letter = LETTERS[i];
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "mcq-option-btn";
-
-    if (isLocked) {
-      btn.disabled = true;
-      if (hasAnswered) {
-        if (letter === item.answer) btn.classList.add("correct");
-        else if (letter === chosen) btn.classList.add("wrong");
-      }
-    } else {
-      btn.addEventListener("click", () => selectStudyOption(letter));
+### 2. Grammar & Correct Usage (Items 36–60)
+FILE: `src/mcq/civil_service_exam/grammar_correct_usage/set.json`
+```json
+{
+  "id": "mcq_cse_grammar_01",
+  "title": "Grammar & Correct Usage",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
+    {
+      "id": 36,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nA three-act play or a novel are to be read; a total of two hundred pages of poetry—lyric, dramatic, or narrative—is also required of everyone.",
+      "options": [
+        "A three-act play or a novel are to be read;",
+        "a total of two hundred pages",
+        "of poetry—lyric, dramatic, or narrative—is",
+        "also required of everyone.",
+        "NO ERROR"
+      ],
+      "answer": "A three-act play or a novel are to be read;",
+      "shuffle": []
+    },
+    {
+      "id": 37,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nAccuracy of movement, like accuracy of words, are essential to the success of magical rites.",
+      "options": [
+        "Accuracy of movement,",
+        "like accuracy of words,",
+        "are essential to",
+        "the success of magical rites.",
+        "NO ERROR"
+      ],
+      "answer": "are essential to",
+      "shuffle": []
+    },
+    {
+      "id": 38,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nIf anybody objects, let them think of a better scheme rather than make fun of the proposed plan.",
+      "options": [
+        "If anybody objects,",
+        "let them think of a better scheme",
+        "rather than make fun",
+        "of the proposed plan.",
+        "NO ERROR"
+      ],
+      "answer": "let them think of a better scheme",
+      "shuffle": []
+    },
+    {
+      "id": 39,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nIn this modern age of today, most people are too highly educated to believe in superstitions.",
+      "options": [
+        "In this modern age of today,",
+        "most people are",
+        "too highly educated",
+        "to believe in superstitions.",
+        "NO ERROR"
+      ],
+      "answer": "In this modern age of today,",
+      "shuffle": []
+    },
+    {
+      "id": 40,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nCollege teaches us to form opinions by the result of careful thought.",
+      "options": [
+        "College teaches us",
+        "to form opinions",
+        "by the result",
+        "of careful thought",
+        "NO ERROR"
+      ],
+      "answer": "by the result",
+      "shuffle": []
+    },
+    {
+      "id": 41,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nLearners set goals as motivation for learning, and their successes or failures in achieving these goals determine how he sets his future goals.",
+      "options": [
+        "Learners set goals",
+        "as motivation for learning, and their successes or failures in",
+        "achieving these goals determine",
+        "how he sets his future goals.",
+        "NO ERROR"
+      ],
+      "answer": "how he sets his future goals.",
+      "shuffle": []
+    },
+    {
+      "id": 42,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nThe Labor Secretary will met representatives of the entertainment industry tomorrow to discuss problems affecting the working conditions of Filipino workers abroad.",
+      "options": [
+        "The Labor Secretary will met representatives",
+        "of the entertainment industry tomorrow",
+        "to discuss problems affecting the working conditions",
+        "of Filipino workers abroad.",
+        "NO ERROR"
+      ],
+      "answer": "The Labor Secretary will met representatives",
+      "shuffle": []
+    },
+    {
+      "id": 43,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nSome people are simply too opportunities to take a stand on controversial issues.",
+      "options": [
+        "Some people are",
+        "simply too opportunities",
+        "to take a stand",
+        "on controversial issues.",
+        "NO ERROR"
+      ],
+      "answer": "simply too opportunities",
+      "shuffle": []
+    },
+    {
+      "id": 44,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nWe were discussing about political issues so her remarks about clothes and fashion were completely beside the point.",
+      "options": [
+        "We were discussing about political issues",
+        "so her remarks",
+        "about clothes and fashion",
+        "were completely beside the point.",
+        "NO ERROR"
+      ],
+      "answer": "We were discussing about political issues",
+      "shuffle": []
+    },
+    {
+      "id": 45,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nThe best consultants are those who can suggest or apply an array of methods aim at helping their clients understand a situation, diagnose it, and act accordingly under a given situation.",
+      "options": [
+        "The best consultants are those who can suggest",
+        "or apply an array of methods aim at helping their clients",
+        "understand a situation, diagnose it, and",
+        "act accordingly under a given situation.",
+        "NO ERROR"
+      ],
+      "answer": "or apply an array of methods aim at helping their clients",
+      "shuffle": []
+    },
+    {
+      "id": 46,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nWe were touch by his generosity when he obviously could ill afford to be so generous.",
+      "options": [
+        "We were touch",
+        "by his generosity",
+        "when he obviously could ill afford",
+        "to be so generous.",
+        "NO ERROR"
+      ],
+      "answer": "We were touch",
+      "shuffle": []
+    },
+    {
+      "id": 47,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nThis is just one approach to a selection system and there are many from whom to choose.",
+      "options": [
+        "This is just one approach",
+        "to a selection system",
+        "and there are many",
+        "from whom to choose",
+        "NO ERROR"
+      ],
+      "answer": "from whom to choose",
+      "shuffle": []
+    },
+    {
+      "id": 48,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nMaaaring umabot sa sandaang taon ang buhay ng isang tao kung gugustuhin at susundan lamang ang mga positibong saloobin.",
+      "options": [
+        "Maaaring umabot sa sandaang taon",
+        "ang buhay ng isang tao",
+        "kung gugustuhin at susundan lamang",
+        "ang mga positibong saloobin.",
+        "NO ERROR"
+      ],
+      "answer": "kung gugustuhin at susundan lamang",
+      "shuffle": []
+    },
+    {
+      "id": 49,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nI use to take a short siesta every afternoon after lunch.",
+      "options": [
+        "I use",
+        "to take a short siesta",
+        "every afternoon",
+        "after lunch.",
+        "NO ERROR"
+      ],
+      "answer": "I use",
+      "shuffle": []
+    },
+    {
+      "id": 50,
+      "q": "Identify the section of the sentence that contains an error in grammar or correct usage:\n\nThe success of a leader lays not only on the leader's ability to influence people, but also in the sincerity of the purpose that he desires to achieve.",
+      "options": [
+        "The success of a leader lays",
+        "not only on the leader's ability to influence people,",
+        "but also in the sincerity of the purpose",
+        "that he desires to achieve.",
+        "NO ERROR"
+      ],
+      "answer": "The success of a leader lays",
+      "shuffle": []
+    },
+    {
+      "id": 51,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "Plumbers who work efficiently from the point of view of a homemaker are worthy of their wages.",
+        "Plumbers are worthy of their wages who work efficiently from the point of view off a homemaker.",
+        "Plumbers, from the point of view of a homemaker, who work efficiently, are worthy of their wages.",
+        "From the point of view of a homemaker, plumbers who work efficiently are worthy of their wages.",
+        "Worthy of their wages are plumbers who work efficiently from the point of view of a homemaker."
+      ],
+      "answer": "From the point of view of a homemaker, plumbers who work efficiently are worthy of their wages."
+    },
+    {
+      "id": 52,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "The time for most people has come to change their attitudes and lifestyles.",
+        "The time has come when people must change their attitudes and lifestyles.",
+        "The time when the attitudes and lifestyles of the people has come to change.",
+        "The people must change their attitudes and lifestyles and the time had come to change.",
+        "People must change their attitudes and lifestyles, and it is because the time has come to change."
+      ],
+      "answer": "The time for most people has come to change their attitudes and lifestyles."
+    },
+    {
+      "id": 53,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "Her brother, whom I met in the party, is more richer than you think.",
+        "Her brother, I met him in the party, is very much richer than you think.",
+        "Her brother, whom I had met in the party, is richer than you think.",
+        "Her brother, whom I met in the party, is much richer than you think.",
+        "I met her brother in the party and he is richer than you think."
+      ],
+      "answer": "I met her brother in the party and he is richer than you think."
+    },
+    {
+      "id": 54,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "The fisher folks decided to go to the nearby hut finally drenched with rain.",
+        "The fisher folks finally decided to go to the nearby hut drenched with rain.",
+        "Drenched with rain, the fisher folks finally decided to go the nearby hut.",
+        "Finally drenched with rain, the fisher folks decided to go the nearby hut.",
+        "Finally deciding to go to the nearby hut, the fisher folks were drenched with rain."
+      ],
+      "answer": "The fisher folks decided to go to the nearby hut finally drenched with rain."
+    },
+    {
+      "id": 55,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "The Filipino people have regained their respect and trust in their government.",
+        "The Filipino people have regained their respect and trust for their government.",
+        "The Filipino people have regained their respect for their government and even their trust in it.",
+        "The Filipino people have regained their respect for and trust in their government.",
+        "The Filipino people have regained, for their government their respect and trust in it."
+      ],
+      "answer": "The Filipino people have regained their respect and trust in their government."
+    },
+    {
+      "id": 56,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "The education of his children is most paramount in his plans.",
+        "The education of his children is more paramount in his plans.",
+        "The education of his children is paramount in his plans.",
+        "The most paramount of all his plans is how to educate his children.",
+        "Paramount in his plans more than any other things is the education of his children."
+      ],
+      "answer": "The education of his children is paramount in his plans."
+    },
+    {
+      "id": 57,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "As soon as the tabulation of the figures have been completed, someone should check the accuracy.",
+        "As soon as tabulated, someone should check on the accuracy of those figures.",
+        "As soon as the tabulation is finished, someone was to check its accuracy.",
+        "Once the tabulation was completed, the accuracy of the figures should be checked.",
+        "Someone had ought to check the accuracy of those figures when they have been tabulated."
+      ],
+      "answer": "As soon as the tabulation is finished, someone was to check its accuracy."
+    },
+    {
+      "id": 58,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "Sa pamamagitan ng kasaysayan ay natutunghayan muli ang makukulay na lumipas ng magigiting na tao.",
+        "Sa pamamagitan ng kasaysayan, ang lumipas na makukulay ng magigiting na tao ay muling natutunghayan.",
+        "Ang makukulay na lumipas ay natutunghayan muli ng magigiting na tao sa pamamagitan ng kasaysayan.",
+        "Muli ang makukulay na lumipas ng mga taong magigiting ay natutunghayan sa pamamagitan ng kasaysayan.",
+        "Natutunhayan muli ang lumipas ng magigiting na tao na makukulay sa pamamagitan ng kasaysayan."
+      ],
+      "answer": "Sa pamamagitan ng kasaysayan ay natutunghayan muli ang makukulay na lumipas ng magigiting na tao."
+    },
+    {
+      "id": 59,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "One has to be either 65 or blind to claim an extra personal exemption.",
+        "One has either to be 65 or blind to claim an extra personal exemption.",
+        "One either has to be 65 or blind to claim an extra personal exemption.",
+        "Either one has to be 65 or blind to claim an extra personal exemption.",
+        "To claim an extra personal exemption, one either has to be 65 or blind."
+      ],
+      "answer": "One has to be either 65 or blind to claim an extra personal exemption."
+    },
+    {
+      "id": 60,
+      "q": "Choose the sentence that is expressed most satisfactorily in terms of grammar and correct usage:",
+      "options": [
+        "I will never, unless he apologizes first, work with him again.",
+        "I will never, unless he apologized first, work with him again.",
+        "I will never work with him again, unless he asks for an apology.",
+        "I will never work with him again, unless he apologizes first.",
+        "Unless he asks for an apology, I will never work with him again."
+      ],
+      "answer": "I will never work with him again, unless he apologizes first."
     }
+  ]
+}
+```
 
-    const keyEl = document.createElement("span");
-    keyEl.className = "mcq-option-key";
-    keyEl.textContent = letter;
+---
 
-    const textEl = document.createElement("span");
-    textEl.className = "mcq-option-text";
-    textEl.innerHTML = optText;
-
-    btn.append(keyEl, textEl);
-    optsGrid.appendChild(btn);
-  });
-
-  qCard.appendChild(optsGrid);
-  stage.appendChild(qCard);
-
-  const nav = document.createElement("div");
-  nav.className = "mcq-nav-row";
-
-  const btnPrev = document.createElement("button");
-  btnPrev.type = "button";
-  btnPrev.className = "btn";
-  btnPrev.textContent = "← Previous";
-  btnPrev.disabled = currentIndex === 0;
-  btnPrev.addEventListener("click", () => {
-    if (currentIndex > 0 && !isPaused) {
-      currentIndex--;
-      startStudyItemTimer();
-      renderStudyView(stage);
-      updateTimerDisplay();
+### 3. Reading Comprehension (Items 67–80)
+FILE: `src/mcq/civil_service_exam/reading_comprehension/set.json`
+```json
+{
+  "id": "mcq_cse_reading_01",
+  "title": "Reading Comprehension",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
+    {
+      "id": 67,
+      "q": "For a society to develop, its attitude towards life must not be a fatalistic one; rather, it must have strong faith in its capacity to improve.\n\nThe sentence best supports the statement that _________.",
+      "options": [
+        "the attitude of a society towards life is indicative of its socio-economic development",
+        "success in life starts from one's dissatisfaction with the existing state of affairs",
+        "a society cannot progress unless it is actively committed to the pursuit of a better life",
+        "a person develops a healthy attitude towards life through constant efforts to improve oneself",
+        "a person with an optimistic outlook in life is confident of his capacity for advancement"
+      ],
+      "answer": "a person with an optimistic outlook in life is confident of his capacity for advancement"
+    },
+    {
+      "id": 68,
+      "q": "Freedom and human rights without food are like freeing a prisoner and then not giving the prisoner the key to get out of the cell. The 450 million people who today live in the shadow of hunger and death from malnutrition can never be free men and women, however entrenched their freedom may be. These freedoms are only prospects held out and not realized.\n\nThe paragraph best supports the statement that __________.",
+      "options": [
+        "at times people have to work as one nation to address the problem of malnutrition",
+        "most of the poor countries in the world today still depend on \"super\" rich countries for support",
+        "the satisfaction of one's basic needs is a prerequisite to the enjoyment of freedom",
+        "a country which cannot feed its people with its own resources could never be free",
+        "a country could not be free unless it could prove to the world that it could stand on its own feet"
+      ],
+      "answer": "the satisfaction of one's basic needs is a prerequisite to the enjoyment of freedom"
+    },
+    {
+      "id": 69,
+      "q": "The Einstein revolution has produced a paradox; while vastly extending humankind's reach, it has also exposed the essentially finite nature of the human scale.\n\nThe sentence best supports the statement that Einstein's discovery _________.",
+      "options": [
+        "proclaims only the glory of the universe",
+        "devalues humanity and science",
+        "involves a real but not obvious contradiction",
+        "reveals a contradiction between God and his people",
+        "reveals people's limitations"
+      ],
+      "answer": "involves a real but not obvious contradiction"
+    },
+    {
+      "id": 70,
+      "q": "A little ignorance when launching economic development projects may be a fruitful stimulus to ingenious new approaches.\n\nThe sentence best supports the statement that __________.",
+      "options": [
+        "new techniques insure success of development plans",
+        "new approaches bring about change and success",
+        "ignorance sometimes gives birth to new knowledge",
+        "from ingenuity comes successful projects",
+        "lack of knowledge in economic ventures may lead to better and improved results"
+      ],
+      "answer": "new approaches bring about change and success"
+    },
+    {
+      "id": 71,
+      "q": "If legislation is to change social attitudes and values, it must come with adequate enforcement and machinery, which should include efforts to educate people on these laws. Otherwise, legal provisions not only remain dead letters, but actually promote lack of respect for the law.\n\nThe paragraph best supports the statement that __________.",
+      "options": [
+        "people should respect laws because laws protect them",
+        "the effectiveness of laws lies in adequate education of the people about them and their proper enforcement.",
+        "laws lose their effectiveness if people do not respect them",
+        "ignorance of the law does not excuse anyone",
+        "laws could change the social attitudes and values of people if properly enforced"
+      ],
+      "answer": "the effectiveness of laws lies in adequate education of the people about them and their proper enforcement."
+    },
+    {
+      "id": 72,
+      "q": "Two persons look out through the same bars; one sees mud and the other, the stars.\n\nThe sentence best supports the statement that __________.",
+      "options": [
+        "some people are more blind than others",
+        "people see things differently depending on their own perspective",
+        "people have varied ways of looking at different things",
+        "people have different tastes and interests",
+        "people tend to influence one another's views of things"
+      ],
+      "answer": "people see things differently depending on their own perspective"
+    },
+    {
+      "id": 73,
+      "q": "An education really suited to the rural environment can become both acceptable and genuinely functional only when the environment begins to offer real opportunities and to require skills and knowledge on a large scale. As long as opportunities lie only in the urban economy, education will remain in servitude to that small section of society.\n\nThe paragraph best supports the statement that __________.",
+      "options": [
+        "migration to the cities results from the lack of real opportunities in the rural areas",
+        "the rural environment has opportunities that need to be developed",
+        "we have a concentration of educational opportunities in the urban areas",
+        "rural occupational opportunities give meaning to rural education",
+        "our educational system caters mainly to the needs of the urban sector"
+      ],
+      "answer": "rural occupational opportunities give meaning to rural education"
+    },
+    {
+      "id": 74,
+      "q": "No matter how strong and dedicated leaders may be, they must find root and strength among the people. Alone, they cannot save a nation. They may guide, they may set the tone, they may dedicate themselves and risk their lives, but ultimately national survival lies in the people.\n\nThe paragraph best supports the statement that __________.",
+      "options": [
+        "dedication and the right sense of direction enable a leader to guide the people",
+        "good leadership is essential to effective public administration",
+        "it is the leader who determines the fate of a nation",
+        "the people of a nation shape their own destiny with the guidance of a leader",
+        "the strength of the people comes from a dynamic and forceful leader"
+      ],
+      "answer": "the people of a nation shape their own destiny with the guidance of a leader"
+    },
+    {
+      "id": 75,
+      "q": "Ang pagbaba ng halaga ng piso ay lumikha ng krisis sa maraming industriya ng bansa. Kasunod nito ang pagtitipid at problema sa kawalan ng mapasukang trabaho. Lumikha rin ito ng pagtataas ng presyo ng mga bilihin na labis na nakaapekto sa kita ng mga manggagawa.\n\nAyon sa talata __________.",
+      "options": [
+        "ang kasalukuyang krisis ay bunga ng mga mahal na bilihin at kawalan ng mapasukang trabaho",
+        "ang krisis ay nakaapekto sa hangarin ng maraming industriya na makapagbigay ng karagdagang sahod sa kanilang mga manggagawa",
+        "dumarami ang mga walang hanapbuhay at tumataas ang halaga ng mga bilihin dahil sa krisis",
+        "maraming industriya ang nalulugi dahil sa krisis kaya itinataas din nila ang presyo ng kanilang mga produkto.",
+        "dahil sa krisis, maraming industriya ang napilitang magsara"
+      ],
+      "answer": "dumarami ang mga walang hanapbuhay at tumataas ang halaga ng mga bilihin dahil sa krisis"
+    },
+    {
+      "id": 76,
+      "q": "The gregariousness of people is mostly due to a fear of remaining alone. It feels safer to be with a group, talk like a group, act like a group. The ramparts of group solidarity give the members security.\n\nThe paragraph best supports the statement that __________.",
+      "options": [
+        "people who belong to a group react to situations in the same manner",
+        "some people are more gregarious than others",
+        "people who are gregarious are afraid to be alone",
+        "people find safety in numbers",
+        "gregarious people have many fears"
+      ],
+      "answer": "people find safety in numbers"
+    },
+    {
+      "id": 77,
+      "q": "Most researches in needy countries are based on the thinking and approach of the highly developed Western world, and seldom have they been directed toward meeting the countries' own development needs.\n\nThe sentence best supports the statement that _________.",
+      "options": [
+        "highly developed countries offer the best guide for the development of needy countries",
+        "most researches done in needy countries are missing their objectives",
+        "most researches have universal application",
+        "needy countries need researchers to help them reach the status of the western world",
+        "needy countries spend so much time for conducting researches"
+      ],
+      "answer": "most researches done in needy countries are missing their objectives"
+    },
+    {
+      "id": 78,
+      "q": "In a modern economy, the results of long-range planning frequently depend upon the future value of money. The ability then to predict the value of money is a key to economic progress.\n\nThe paragraph best supports the statement that _________.",
+      "options": [
+        "the value of money is unpredictable at times",
+        "the unpredictability of money is an obstacle to a nation's prosperity",
+        "economic progress is facilitated by properly controlling budgetary expenses",
+        "long-range planning is unheard of in traditional economies",
+        "financial planning is indispensable in modern economy"
+      ],
+      "answer": "financial planning is indispensable in modern economy"
+    },
+    {
+      "id": 79,
+      "q": "Sixty years ago I knew everything; now I know nothing; education is a progressive discovery of our own ignorance.\n\nThe sentence best supports the statement that __________.",
+      "options": [
+        "the older we get, the more we forget what we have learned",
+        "the older we get, the more knowledgeable we become",
+        "the more we learn, the more we realize that there's more we need to know",
+        "we learn more as we grow old",
+        "ignorance is a lifelong experience"
+      ],
+      "answer": "the more we learn, the more we realize that there's more we need to know"
+    },
+    {
+      "id": 80,
+      "q": "Nagawang mabago ng mga kasalukuyang awitin ang kamalayan ng Pilipino upang kantahin ang sarili niyang mga awit sa tanging wikang nakapagsasatinig sa kanyang kaluluwa.\n\nIsinasaad ng pangungusap na __________.",
+      "options": [
+        "madamdamin at makabuluhan ang mga awiting isinulat sa wikang Pilipino",
+        "tagumpay ang mga awiting Pilipino na mabago ang kaugalian ng mga taong Pilipino",
+        "madaling matutuhan ang mga awiting Pilipino dahil ang mga ito ay nasusulat sa katutubong wika",
+        "natututuhan nang tangkilikin ng mga Pilipino ang kanilang mga sariling awitin",
+        "nagkakaroon na ng kamalayan ang mga Pilipino tungkol sa lahat ng mga awitin ngayon"
+      ],
+      "answer": "natututuhan nang tangkilikin ng mga Pilipino ang kanilang mga sariling awitin"
     }
-  });
+  ]
+}
+```
 
-  const isLast = currentIndex === sessionItems.length - 1;
-  const btnNext = document.createElement("button");
-  btnNext.type = "button";
-  btnNext.className = "btn-generate-next";
-  btnNext.textContent = isLast ? "Finish & View Summary →" : "Next →";
-  btnNext.addEventListener("click", () => {
-    if (isPaused) return;
-    if (!isLast) {
-      currentIndex++;
-      startStudyItemTimer();
-      renderStudyView(stage);
-      updateTimerDisplay();
-    } else {
-      finishSession();
+---
+
+### 4. Verbal Analogy (Items 81–95)
+FILE: `src/mcq/civil_service_exam/verbal_analogy/set.json`
+```json
+{
+  "id": "mcq_cse_analogy_01",
+  "title": "Verbal Analogy",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
+    {
+      "id": 81,
+      "q": "KAINGIN is to SOIL EROSION as CONTOUR FARMING is to __________.",
+      "options": ["water distribution", "wind erosion", "crop growing", "over pasturing", "soil preservation"],
+      "answer": "soil preservation"
+    },
+    {
+      "id": 82,
+      "q": "IRREFUTABLE is to DISPROVED as IRREPARABLE is to __________.",
+      "options": ["restored", "irremediable", "possible", "inevitable", "insoluble"],
+      "answer": "restored"
+    },
+    {
+      "id": 83,
+      "q": "FORE is to AFT as BOW is to __________.",
+      "options": ["paddle", "deck", "boat", "arrow", "stern"],
+      "answer": "stern"
+    },
+    {
+      "id": 84,
+      "q": "PHOTOGRAPHER is to PICTURE as CARTOGRAPHER is to __________.",
+      "options": ["plan", "design", "graph", "cartoon", "map"],
+      "answer": "map"
+    },
+    {
+      "id": 85,
+      "q": "TIRADE is to ABUSIVE as EULOGY is to __________.",
+      "options": ["laudatory", "flowery", "necrology", "belittling", "censure"],
+      "answer": "laudatory"
+    },
+    {
+      "id": 86,
+      "q": "PERJURY is to LIE as LARCENY is to __________.",
+      "options": ["conspire", "kill", "steal", "injure", "trespass"],
+      "answer": "steal"
+    },
+    {
+      "id": 87,
+      "q": "OPTICS is to PHYSICS as DIALECTICS is to __________.",
+      "options": ["dialogue", "mathematics", "diction", "grammar", "logic"],
+      "answer": "logic"
+    },
+    {
+      "id": 88,
+      "q": "RUMMAGE is to DISORDER as TENDERFOOT is to __________.",
+      "options": ["rookie", "expert", "student", "veteran", "old-timer"],
+      "answer": "rookie"
+    },
+    {
+      "id": 89,
+      "q": "COMPASS is to DIRECTION as CALIPER is to __________.",
+      "options": ["speed", "pitch", "diameter", "altitude", "volume"],
+      "answer": "diameter"
+    },
+    {
+      "id": 90,
+      "q": "BREWING is to BEER as TANNING is to __________.",
+      "options": ["rubber", "cotton", "tea", "glass", "leather"],
+      "answer": "leather"
+    },
+    {
+      "id": 91,
+      "q": "__________ is to METAMORPHOSIS as CATHARSIS is to __________.",
+      "options": ["condition-chapter", "comparison-effect", "state-cause", "process-stage", "change-purification"],
+      "answer": "change-purification"
+    },
+    {
+      "id": 92,
+      "q": "__________ is to SWORD as HOLSTER is to __________.",
+      "options": ["blade-spin", "scabbard-pistol", "duel-bolo", "sheath-shot", "hilt-rifle"],
+      "answer": "scabbard-pistol"
+    },
+    {
+      "id": 93,
+      "q": "__________ is to SCHOOL as STAR is to __________.",
+      "options": ["student-rock", "principal-dancer", "fish-constellation", "bird-tree", "thesis-player"],
+      "answer": "fish-constellation"
+    },
+    {
+      "id": 94,
+      "q": "__________ is to LATE as AUTHENTIC is to __________.",
+      "options": ["punctual-counterfeit", "prompt-genuine", "diligent-original", "absent-false", "early-real"],
+      "answer": "punctual-counterfeit"
+    },
+    {
+      "id": 95,
+      "q": "__________ is to PAPER as WORM is to __________.",
+      "options": ["wrap-wriggle", "tree-silk", "print-bait", "sap-tick", "ink-soil"],
+      "answer": "tree-silk"
     }
-  });
-
-  nav.append(btnPrev, btnNext);
-  stage.appendChild(nav);
-  typeset(stage);
+  ]
 }
+```
 
-function selectStudyOption(letter) {
-  if (isPaused || answers[currentIndex] !== undefined || timedOutItems.has(currentIndex)) return;
-  stopTimer();
-  answers[currentIndex] = letter;
+---
 
-  const item = sessionItems[currentIndex];
-  const isCorrect = letter === item.answer;
-  recordQuestionAttempt(item.setId, item.item.id, isCorrect);
-  document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
-
-  const stage = document.getElementById("mcq-stage");
-  if (stage) renderStudyView(stage);
-}
-
-function buildExamListDom(graded = false) {
-  const list = document.createElement("div");
-  list.className = "mcq-exam-list mcq-pausable";
-
-  sessionItems.forEach((item, idx) => {
-    if (idx > 0) {
-      const hr = document.createElement("hr");
-      hr.className = "mcq-divider";
-      list.appendChild(hr);
+### 5. Logic & Analytical Reasoning (Items 96–110)
+FILE: `src/mcq/civil_service_exam/logic_analytical_reasoning/set.json`
+```json
+{
+  "id": "mcq_cse_logic_01",
+  "title": "Logic & Analytical Reasoning",
+  "subject": "Civil Service Exam",
+  "category": "Analytical Ability",
+  "questions": [
+    {
+      "id": 96,
+      "q": "A to H are persons compared according to their age and the speed at which they finish a certain job. A is older than B and faster than C. D is younger than E, older than H, and slower than F. G is older than H, younger than C, slower than H, and faster than F. H is older than A and slower than C. Based on the preceding statements, which of the following is true?",
+      "options": [
+        "A is the second oldest and the third fastest.",
+        "G is older than E and slower than A.",
+        "C is younger than D and faster than H.",
+        "D is the eldest and slowest.",
+        "H is older than B and slower than D."
+      ],
+      "answer": "C is younger than D and faster than H."
+    },
+    {
+      "id": 97,
+      "q": "Points E, F, G, I are arranged in a line in such a way that F is between G and I, and E is between F and I. If E precedes G, in what order are they arranged?",
+      "options": ["E F G I", "E I G F", "F I G E", "I E F G", "I G F E"],
+      "answer": "I E F G"
+    },
+    {
+      "id": 98,
+      "q": "In a certain examination, 300 competitors passed the first part and 500 passed the second part. The number of competitors who passed both parts of the examination will most likely be __________.",
+      "options": ["800", "between 500 and 600", "between 400 and 500", "between 300 and 400", "not more than 300"],
+      "answer": "not more than 300"
+    },
+    {
+      "id": 99,
+      "q": "Anna, Karen and Nina take turns in getting the midnight shift at Ward 143 such that no one is assigned two nights in a row. Anna was assigned two nights ago and is assigned again tomorrow evening. If Karen is assigned the night immediately following Anna's duty, who can take tonight's midnight shift?",
+      "options": ["Only Anna", "Only Karen", "Only Nina", "Either Anna or Karen", "Either Anna or Nina"],
+      "answer": "Only Nina"
+    },
+    {
+      "id": 100,
+      "q": "Mina, Bing, Amy, and Cel have surnames Flores, Mendez, Perez, and Reyes, but not respectively. Mina is taller than Amy and Cel. Ms. Mendez is tallest of the four. Ms. Flores is taller than Ms. Reyes but shorter than Ms. Perez. Also, Cel is taller than Amy and Bing. What is the full name of the second tallest person?",
+      "options": ["Amy Mendez", "Cel Perez", "Cel Flores", "Bing Reyes", "Mina Perez"],
+      "answer": "Cel Perez"
+    },
+    {
+      "id": 101,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nGigi is probably a pianist. She can really stretch her hands and fingers.",
+      "options": [
+        "Only people with big hands and long fingers can be pianists.",
+        "Playing the piano helps Gigi stretch her hands and fingers.",
+        "Stretching helps pianists perform better.",
+        "A long stretch enables pianists to reach more keys on the piano.",
+        "Pianists can really stretch their hands and fingers."
+      ],
+      "answer": "Pianists can really stretch their hands and fingers."
+    },
+    {
+      "id": 102,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nArlene should not be part of the basketball team because she does not trust her teammates.",
+      "options": [
+        "The basketball team needs Arlene even if she has no faith in them.",
+        "Teammates should have faith in each other.",
+        "Arlene's teammates are not trustworthy.",
+        "Arlene's teammates do not have faith in the team.",
+        "Arlene is better than her teammates."
+      ],
+      "answer": "Teammates should have faith in each other."
+    },
+    {
+      "id": 103,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nIf you are so smart, then why aren't you rich?",
+      "options": [
+        "To become rich is difficult",
+        "Only the rich are smart",
+        "Only the smart are rich",
+        "All rich people are smart",
+        "All smart people are rich"
+      ],
+      "answer": "To become rich is difficult"
+    },
+    {
+      "id": 104,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nIn order to improve our admission process and get better students, we have decided to include an interview of the applicants as a criterion.",
+      "options": [
+        "Current admission procedures are greatly inadequate",
+        "Current admission criteria need to be updated",
+        "An interview of the applicants will help draw better students",
+        "An interview of the applicants will be too time consuming",
+        "An interview of the applicants will ensure the students' success in school"
+      ],
+      "answer": "An interview of the applicants will help draw better students"
+    },
+    {
+      "id": 105,
+      "q": "Determine the best assumption that can be logically made from the given statement:\n\nThe present administration helps poor people acquire basic necessities for living; that is why it helps squatter dwellers like Aling Rosie.",
+      "options": [
+        "The present administration hates rich people",
+        "Aling Rosie asked the present administration to help her",
+        "Squatter dwellers pretended to be poor",
+        "Squatter dwellers compete with poor people for the present administration's attention",
+        "Squatter dwellers are considered poor people"
+      ],
+      "answer": "Squatter dwellers are considered poor people"
+    },
+    {
+      "id": 106,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nArtists are never ham-handed. All artists are inquisitive. Peter is not ham-handed. Florence is not inquisitive.",
+      "options": [
+        "Peter is an artist",
+        "Peter is not an artist",
+        "Florence is not an artist",
+        "Inquisitive people are not ham-handed"
+      ],
+      "answer": "Florence is not an artist"
+    },
+    {
+      "id": 107,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nSubscribing to Cable T.V. is a luxury. All luxuries are needless expenditures. Having a cellular phone is not a luxury. Dining in a Five-Star hotel is a needless expenditure.",
+      "options": [
+        "Having a cellular phone is not a needless expenditure",
+        "Subscribing to Cable TV is a needless expenditure",
+        "Subscribing to cable TV is not a needless expenditure",
+        "Dining in a Five-Star hotel is not a luxury",
+        "Dining in a Five-Star hotel is a luxury"
+      ],
+      "answer": "Subscribing to Cable TV is a needless expenditure"
+    },
+    {
+      "id": 108,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nSome managers are not analytical. All managers are ruthless. Vicente is ruthless.",
+      "options": [
+        "Vicente is a manager but is not analytical",
+        "Vicente is analytical but is not a manager",
+        "Some ruthless managers are not analytical",
+        "Not all analytical managers are ruthless",
+        "All ruthless people are analytical"
+      ],
+      "answer": "Some ruthless managers are not analytical"
+    },
+    {
+      "id": 109,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nAll of my friends believe in marriage. Geraldine is a new friend. She lives with an officemate in an apartment downtown.",
+      "options": [
+        "Her housemate is most likely a good friend",
+        "She is living-in with her boyfriend",
+        "She needs a companion in the city",
+        "Geraldine believes in marriage",
+        "Geraldine is not married yet"
+      ],
+      "answer": "Geraldine believes in marriage"
+    },
+    {
+      "id": 110,
+      "q": "Determine the best conclusion that can be logically made from the given statements:\n\nThere are fewer juvenile delinquents in communities where the youth participate actively in different socio-civic and religious clubs. Barangay X has a number of youth clubs.",
+      "options": [
+        "Barangay X has fewer juvenile delinquents than other barangays",
+        "Parents in Barangay X exert great efforts to prevent juvenile delinquency",
+        "Municipal officials encourage the organization of youth clubs",
+        "Community development workers in Barangay X give training in organizing youth clubs",
+        "All young people in Barangay X are members of at least two youth clubs."
+      ],
+      "answer": "Barangay X has fewer juvenile delinquents than other barangays"
     }
+  ]
+}
+```
 
-    const row = document.createElement("div");
-    row.className = "mcq-exam-item";
-    row.dataset.index = String(idx);
+---
 
-    const qText = document.createElement("div");
-    qText.className = "mcq-question-text";
-    qText.innerHTML = item.q;
-    row.appendChild(qText);
-
-    const media = renderQuestionMedia(item);
-    if (media) row.appendChild(media);
-
-    const optsGrid = document.createElement("div");
-    optsGrid.className = `mcq-options ${item.gridClass}`;
-    if (!graded && timerLocked) {
-      optsGrid.classList.add("is-timed-out");
+### 6. Number Analogy & Series (Items 111–125)
+FILE: `src/mcq/civil_service_exam/number_analogy_series/set.json`
+```json
+{
+  "id": "mcq_cse_num_series_01",
+  "title": "Number Analogy & Series",
+  "subject": "Civil Service Exam",
+  "category": "Numerical Ability",
+  "questions": [
+    {
+      "id": 111,
+      "q": "$3^2$ is to $9$ as $9^2$ is to __________",
+      "options": ["18", "27", "72", "81", "90"],
+      "answer": "27"
+    },
+    {
+      "id": 112,
+      "q": "$30\\%$ is to $\\frac{3}{5}$ as $60\\%$ is to __________",
+      "options": ["$1\\frac{1}{5}$", "$1\\frac{1}{4}$", "$3\\frac{1}{2}$", "$2\\frac{1}{3}$", "$2\\frac{3}{4}$"],
+      "answer": "$2\\frac{3}{4}$"
+    },
+    {
+      "id": 113,
+      "q": "$0.25$ is to $0.125$ as $1.25$ is to __________",
+      "options": ["6.250", "2.125", "1.625", "1.125", "0.625"],
+      "answer": "0.625"
+    },
+    {
+      "id": 114,
+      "q": "$12.5$ is to $\\frac{1}{8}$ as $20$ is to __________",
+      "options": ["$\\frac{1}{6}$", "$\\frac{1}{5}$", "$\\frac{1}{4}$", "$\\frac{1}{3}$", "$\\frac{1}{2}$"],
+      "answer": "$\\frac{1}{4}$"
+    },
+    {
+      "id": 115,
+      "q": "$6$ is to $15$ as $36$ is to __________",
+      "options": ["90", "82", "75", "72", "60"],
+      "answer": "60"
+    },
+    {
+      "id": 116,
+      "q": "Determine the next number in the series:\n\n$9.12,\\ 18.13,\\ 16.15,\\ 13.18,\\ 9.22,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["3.25", "4.27", "5.23", "6.29", "5.26"],
+      "answer": "4.27"
+    },
+    {
+      "id": 117,
+      "q": "Determine the next number in the series:\n\n$1,\\ 4,\\ 13,\\ 40,\\ 121,\\ 364,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["623", "719", "865", "997", "1093"],
+      "answer": "1093"
+    },
+    {
+      "id": 118,
+      "q": "Determine the next number in the series:\n\n$5,\\ 17,\\ 19,\\ 6,\\ 14,\\ 16,\\ 7,\\ 10,\\ 12,\\ 8,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["17", "15", "11", "9", "5"],
+      "answer": "5"
+    },
+    {
+      "id": 119,
+      "q": "Determine the next number in the series:\n\n$795,\\ 2611,\\ 684,\\ 2722,\\ 573,\\ 2833,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["543", "484", "462", "446", "-426"],
+      "answer": "462"
+    },
+    {
+      "id": 120,
+      "q": "Determine the next number in the series:\n\n$-6,\\ 30,\\ -150,\\ 750,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["3750", "2250", "-1500", "-2250", "-3750"],
+      "answer": "-3750"
+    },
+    {
+      "id": 121,
+      "q": "Determine the next number in the series:\n\n$\\frac{1}{3},\\ \\frac{3}{9},\\ \\frac{5}{15},\\ \\frac{7}{21},\\ \\frac{9}{27},\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["$\\frac{11}{35}$", "$\\frac{11}{33}$", "$\\frac{9}{29}$", "$\\frac{8}{25}$", "$\\frac{4}{13}$"],
+      "answer": "$\\frac{11}{33}$"
+    },
+    {
+      "id": 122,
+      "q": "Determine the next number in the series:\n\n$4,\\ 16,\\ 8,\\ 40,\\ 20,\\ 120,\\ 60,\\ 420,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["480", "360", "240", "210", "140"],
+      "answer": "210"
+    },
+    {
+      "id": 123,
+      "q": "Determine the next number in the series:\n\n$2,\\ 5,\\ 8,\\ 10,\\ 4,\\ 17,\\ 5,\\ 26,\\ 6,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["40", "38", "37", "35", "33"],
+      "answer": "38"
+    },
+    {
+      "id": 124,
+      "q": "Determine the next number in the series:\n\n$.02,\\ .06,\\ .12,\\ .20,\\ .30,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["0.36", ".40", ".42", ".46", ".48"],
+      "answer": ".40"
+    },
+    {
+      "id": 125,
+      "q": "Determine the next number in the series:\n\n$2,\\ 5,\\ 12.5,\\ 31.25,\\ \\text{\\_\\_\\_\\_\\_}$",
+      "options": ["33.75", "43.25", "50.75", "78.125", "82.125"],
+      "answer": "78.125"
     }
-
-    const chosen = answers[idx];
-
-    item.options.forEach((optText, optIdx) => {
-      const letter = LETTERS[optIdx];
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "mcq-option-btn";
-
-      if (graded) {
-        btn.disabled = true;
-        if (letter === item.answer) btn.classList.add("correct");
-        else if (letter === chosen) btn.classList.add("wrong");
-      } else if (timerLocked) {
-        btn.disabled = true;
-        if (letter === chosen) btn.classList.add("selected");
-      } else {
-        if (letter === chosen) btn.classList.add("selected");
-        btn.addEventListener("click", () => {
-          if (isPaused) return;
-          if (answers[idx] === letter) {
-            delete answers[idx];
-          } else {
-            answers[idx] = letter;
-          }
-          const activeLetter = answers[idx];
-          Array.from(optsGrid.children).forEach((el, k) => {
-            el.classList.toggle("selected", LETTERS[k] === activeLetter);
-          });
-          const progEl = document.getElementById("mcq-toolbar-progress");
-          if (progEl) {
-            progEl.textContent = `${Object.keys(answers).length} / ${sessionItems.length} answered`;
-          }
-          if (unansweredPromptOpen) {
-            unansweredPromptOpen = false;
-            const promptEl = document.getElementById("mcq-unanswered-bar");
-            if (promptEl) promptEl.remove();
-          }
-        });
-      }
-
-      const keyEl = document.createElement("span");
-      keyEl.className = "mcq-option-key";
-      keyEl.textContent = letter;
-
-      const textEl = document.createElement("span");
-      textEl.className = "mcq-option-text";
-      textEl.innerHTML = optText;
-
-      btn.append(keyEl, textEl);
-      optsGrid.appendChild(btn);
-    });
-
-    row.appendChild(optsGrid);
-    list.appendChild(row);
-  });
-
-  return list;
+  ]
 }
+```
 
-function renderExamView(stage) {
-  stage.innerHTML = "";
-  stage.appendChild(buildExamListDom(false));
+---
 
-  const footer = document.createElement("div");
-  footer.className = "mcq-exam-footer";
-
-  if (unansweredPromptOpen) {
-    footer.appendChild(buildUnansweredBar());
-  }
-
-  const actions = document.createElement("div");
-  actions.className = "problem-footer-actions";
-
-  const btnCheck = document.createElement("button");
-  btnCheck.type = "button";
-  btnCheck.className = "btn-generate-next";
-  btnCheck.textContent = "Check Answers";
-  btnCheck.addEventListener("click", () => {
-    if (isPaused) return;
-    const firstMissing = sessionItems.findIndex((_, idx) => answers[idx] === undefined);
-    if (firstMissing !== -1) {
-      unansweredPromptOpen = true;
-      renderExamView(stage);
-      document.getElementById("mcq-unanswered-bar")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      return;
+### 7. Quantitative Reasoning & Word Problems (Items 126–150)
+FILE: `src/mcq/civil_service_exam/quantitative_word_problems/set.json`
+```json
+{
+  "id": "mcq_cse_math_01",
+  "title": "Quantitative Reasoning & Word Problems",
+  "subject": "Civil Service Exam",
+  "category": "Numerical Ability",
+  "questions": [
+    {
+      "id": 126,
+      "q": "If the following quantities were arranged from the least to the greatest, which one would have the second greatest value?",
+      "options": ["$\\frac{6}{12}$", "$\\frac{5}{12}$", "$\\frac{4}{10}$", "$\\frac{3}{4}$", "$\\frac{2}{6}$"],
+      "answer": "$\\frac{6}{12}$"
+    },
+    {
+      "id": 127,
+      "q": "The ratio of males to females in an organization is $M$ is to $F$. How many males are there if there are $T$ females?",
+      "options": [
+        "$(M \\times T) + F$",
+        "$(F \\times T) + M$",
+        "$T + (F + M)$",
+        "$(M \\times T) / F$",
+        "$[M / (M + F)] \\times T$"
+      ],
+      "answer": "$(M \\times T) / F$"
+    },
+    {
+      "id": 128,
+      "q": "Suppose that the time now is 9:30 a.m. What will be the time 16 hours from now?",
+      "options": ["12:30 a.m.", "1:30 am", "2:30 am", "11:30 pm", "12:30 pm"],
+      "answer": "1:30 am"
+    },
+    {
+      "id": 129,
+      "q": "What number when increased by $90\\%$ of itself equals $133$?",
+      "options": ["30", "43", "70", "119", "120"],
+      "answer": "70"
+    },
+    {
+      "id": 130,
+      "q": "If $y = -3$, which of the following has the greatest value?",
+      "options": ["$y^2$", "$y^3$", "$1/y^2$", "$1 + y$", "$1 - y$"],
+      "answer": "$y^2$"
+    },
+    {
+      "id": 131,
+      "q": "Which of the following has the least numerical value?",
+      "options": ["$6 + 3 \\times 4$", "$4 + 3 \\times 6$", "$4 \\times 6 + 3$", "$3 \\times 6 + 4$", "$3 + 6 \\times 4$"],
+      "answer": "$6 + 3 \\times 4$"
+    },
+    {
+      "id": 132,
+      "q": "A trader bought a watch and sold it at $30\\%$ more than its original cost. How much did the trader earn if the original cost of the watch was $P$?",
+      "options": ["$P + 30\\%$", "$P - 30\\%$", "$30\\% \\times P$", "$30\\% / P$", "$P + (P \\times 30\\%)$"],
+      "answer": "$30\\% \\times P$"
+    },
+    {
+      "id": 133,
+      "q": "What is the standard numerical value for $3.54 \\times 10^5$?",
+      "options": ["0.000354", "0.00354", "3,3540", "35,400", "354,000"],
+      "answer": "354,000"
+    },
+    {
+      "id": 134,
+      "q": "Of set $S = \\{\\frac{4}{5},\\ \\frac{41}{50},\\ \\frac{17}{20},\\ 75\\%\\}$, the element with the largest value is __________.",
+      "options": ["$75\\%$", "$\\frac{4}{5}$", "$\\frac{41}{50}$", "$\\frac{17}{20}$", "None, they are all equal"],
+      "answer": "$\\frac{17}{20}$",
+      "shuffle": [[0, 1, 2, 3]]
+    },
+    {
+      "id": 135,
+      "q": "What is the smallest positive number that will give a remainder of 3 when it is divided by 4, 5, or 10?",
+      "options": ["63", "53", "43", "33", "23"],
+      "answer": "43"
+    },
+    {
+      "id": 136,
+      "q": "There are 36 reams of bond paper in a drawer. If $1\\frac{1}{4}$ dozens of reams of paper were to be used in printing, how many reams should be left in the drawer?",
+      "options": ["15", "20", "21", "22", "23"],
+      "answer": "21"
+    },
+    {
+      "id": 137,
+      "q": "If a poster, which is 3 inches wide and 5 inches long, is enlarged such that the ratio of the width to the length is maintained, how many inches long will it be if the new width is 9 inches?",
+      "options": ["11", "13", "15", "25", "27"],
+      "answer": "15"
+    },
+    {
+      "id": 138,
+      "q": "If a worker can wash all the glass windows of a building in 9 days, what part of the job can said worker finish in 6 days?",
+      "options": ["$\\frac{1}{4}$", "$\\frac{1}{3}$", "$\\frac{2}{3}$", "$\\frac{3}{5}$", "$\\frac{3}{4}$"],
+      "answer": "$\\frac{2}{3}$"
+    },
+    {
+      "id": 139,
+      "q": "Ms. Cortez bought 20 blouses for P2,400 and marked them to sell at P145 each. After selling 16 pieces at this rate, she decided to sell the remaining blouses at a lower price. At what price may she sell each remaining blouse and still realize a profit of P480 on the 20 blouses?",
+      "options": ["P143", "P140", "P138", "P135", "P133"],
+      "answer": "P140"
+    },
+    {
+      "id": 140,
+      "q": "In a room of ten people, how many handshakes will there be if every person shakes hands with everyone else exactly once?",
+      "options": ["10", "45", "54", "60", "81"],
+      "answer": "45"
+    },
+    {
+      "id": 141,
+      "q": "The numerator of a fraction is 4 less than its denominator. If 3 is added to both the numerator and the denominator, the resulting number is $\\frac{3}{4}$. What is the original fraction?",
+      "options": ["$\\frac{8}{14}$", "$\\frac{9}{12}$", "$\\frac{10}{12}$", "$\\frac{9}{13}$", "$\\frac{10}{13}$"],
+      "answer": "$\\frac{9}{13}$"
+    },
+    {
+      "id": 142,
+      "q": "Mang Gustin can climb a coconut tree at the rate of 10 ft. per minute and return at 20 ft. per minute. If it took him 3 minutes to climb and return, what is the height of the coconut tree?",
+      "options": ["20 ft.", "18 ft.", "15 ft.", "13 ft.", "10 ft."],
+      "answer": "20 ft."
+    },
+    {
+      "id": 143,
+      "q": "A fence is to be placed on posts 8 meters apart around a rectangular lot that measures 40 meters long and 16 meters wide. How many posts are needed, including the ones placed at each corner, to fence the entire lot?",
+      "options": ["20", "18", "16", "14", "12"],
+      "answer": "14"
+    },
+    {
+      "id": 144,
+      "q": "How many degrees are there in the angle made by the hands of a clock at 4 o'clock?",
+      "options": ["150°", "120°", "95°", "80°", "20°"],
+      "answer": "120°"
+    },
+    {
+      "id": 145,
+      "q": "The co-operative trust fund is P500,000. Part of the fund is invested at an annual interest rate of $6\\%$ and the rest is invested at an annual interest rate of $8\\%$. If the income from both investments is P39,000, how much is invested at each rate?",
+      "options": [
+        "P100,000 at 6%; P400,000 at 8%",
+        "P80,000 at 6%; P420,000 at 8%",
+        "P75,000 at 6%; P425,000 at 8%",
+        "P50,000 at 6%; P450,000 at 8%",
+        "P25,000 at 6%; P475,000 at 8%"
+      ],
+      "answer": "P50,000 at 6%; P450,000 at 8%"
+    },
+    {
+      "id": 146,
+      "q": "The entrance fee in a carnival is P50 for an adult and P25 for a child. Ferdie pays P225 for the entrance fee of his family. If his family has an equal number of adults and children, how many are they in the family?",
+      "options": ["12", "10", "8", "6", "4"],
+      "answer": "6"
+    },
+    {
+      "id": 147,
+      "q": "The area of a rectangular field is 9,000 square meters. If the ratio of the width to the length is 5 is to 8, what is the length of the rectangular field in meters?",
+      "options": ["112", "120", "150", "225", "346"],
+      "answer": "120"
+    },
+    {
+      "id": 148,
+      "q": "If a patient weighs 105 kg and is $12.5\\%$ underweight, how many more kilograms should the patient weigh?",
+      "options": ["5", "10", "12", "13", "15"],
+      "answer": "15"
+    },
+    {
+      "id": 149,
+      "q": "A tenant gets 4 sacks of palay for every 7 sacks harvested. Following this ratio, how many sacks of palay would the tenant get if 560 sacks were harvested?",
+      "options": ["140", "280", "300", "320", "350"],
+      "answer": "320"
+    },
+    {
+      "id": 150,
+      "q": "A dealer sold a certain number of portable TV sets at P6,400 each. The dealer would have taken in as much money had 3 fewer sets been sold at P7,680. How many sets were sold at P6,400?",
+      "options": ["9", "12", "14", "16", "18"],
+      "answer": "18"
     }
-    submitExamSheet();
-  });
-
-  actions.appendChild(btnCheck);
-  footer.appendChild(actions);
-  stage.appendChild(footer);
-  typeset(stage);
+  ]
 }
+```
 
-function buildUnansweredBar() {
-  const missingCount = sessionItems.reduce((acc, _, idx) => acc + (answers[idx] === undefined ? 1 : 0), 0);
-  const bar = document.createElement("div");
-  bar.id = "mcq-unanswered-bar";
-  bar.className = "mcq-unanswered-bar";
+---
 
-  const msg = document.createElement("span");
-  msg.className = "mcq-unanswered-msg";
-  msg.textContent = `You have ${missingCount} unanswered question${missingCount === 1 ? "" : "s"}.`;
-
-  const btns = document.createElement("div");
-  btns.className = "mcq-unanswered-actions";
-
-  const btnScroll = document.createElement("button");
-  btnScroll.type = "button";
-  btnScroll.className = "btn";
-  btnScroll.textContent = "Scroll to Unanswered";
-  btnScroll.addEventListener("click", () => {
-    const firstMissing = sessionItems.findIndex((_, idx) => answers[idx] === undefined);
-    if (firstMissing === -1) return;
-    const row = document.querySelector(`.mcq-exam-item[data-index="${firstMissing}"]`);
-    if (row) {
-      row.scrollIntoView({ behavior: "smooth", block: "center" });
-      row.classList.remove("mcq-unanswered-flash");
-      void row.offsetWidth;
-      row.classList.add("mcq-unanswered-flash");
+### 8. General Information: Constitution, RA 6713 & Environment (Items 151–170)
+FILE: `src/mcq/civil_service_exam/general_information/set.json`
+```json
+{
+  "id": "mcq_cse_gen_info_01",
+  "title": "General Information (Constitution, RA 6713 & Environment)",
+  "subject": "Civil Service Exam",
+  "category": "General Information",
+  "questions": [
+    {
+      "id": 151,
+      "q": "Elective or appointive public officials or employees cannot accept any present, compensation, office or title of any kind from any foreign government without the consent of:",
+      "options": ["The President", "The Ombudsman", "The Chief Justice", "The Agency Head", "Congress"],
+      "answer": "Congress"
+    },
+    {
+      "id": 152,
+      "q": "Which of the following rights ensure the well-being of the individual and foster preservation, enrichment and dynamic evolution of national culture based on the principle of unity in diversity in a climate of free artistic and intellectual expression?",
+      "options": ["Political rights", "Civil rights", "Inherent rights", "Cultural rights", "Economic and Social rights"],
+      "answer": "Cultural rights"
+    },
+    {
+      "id": 153,
+      "q": "Right that guarantees similar treatment to all persons similarly situated and precludes arbitrary or unjust discrimination to secure and safeguard such right is called the _________.",
+      "options": [
+        "right against double jeopardy",
+        "right to just compensation",
+        "right to equal protection of the law",
+        "right to due process of law",
+        "right to profess one's faith or religion"
+      ],
+      "answer": "right to equal protection of the law"
+    },
+    {
+      "id": 154,
+      "q": "The right to privacy of a person is defined as one's right to __________.",
+      "options": [
+        "go where one pleases",
+        "believe whatever one wishes",
+        "build a home wherever one chooses",
+        "be a member of any group",
+        "be free from unwarranted publicity"
+      ],
+      "answer": "be free from unwarranted publicity"
+    },
+    {
+      "id": 155,
+      "q": "A voter is disqualified from exercising the right to suffrage if said voter __________.",
+      "options": [
+        "is illiterate",
+        "is poor",
+        "is a naturalized Filipino citizen",
+        "turned 20 years old just before the election",
+        "has been a resident of the Philippines for less than six months"
+      ],
+      "answer": "has been a resident of the Philippines for less than six months"
+    },
+    {
+      "id": 156,
+      "q": "Who may be appointed as member of the Cabinet without needing confirmation from the Commission on Appointments?",
+      "options": ["Senate President", "Any Senator", "Vice-President", "Speaker of the House", "Any Congress Representative"],
+      "answer": "Vice-President"
+    },
+    {
+      "id": 157,
+      "q": "The right of private individuals to secure for themselves the enjoyment of their means of happiness such as the right to a name, the right to form a family, and the right to security of personal papers and effects are called ___________.",
+      "options": ["Economic and Social rights", "Cultural Rights", "Civil Rights", "Inherent rights", "Political rights"],
+      "answer": "Civil Rights"
+    },
+    {
+      "id": 158,
+      "q": "At least how many years after the Constitution has been ratified may the people propose amendments through initiative?",
+      "options": ["Ten", "Seven", "Six", "Five", "Three"],
+      "answer": "Five"
+    },
+    {
+      "id": 159,
+      "q": "Which of the following sectors is NOT represented in the House of Representatives through the party-list system?",
+      "options": ["Religious", "Youth", "Women", "Peasant", "Labor"],
+      "answer": "Religious"
+    },
+    {
+      "id": 160,
+      "q": "Which of the following government agencies exercises original and exclusive jurisdiction over all contests relating to the election returns and the qualifications of the President and the Vice President?",
+      "options": [
+        "Supreme Court",
+        "Senate Electoral Tribunal",
+        "Judicial Bar Council",
+        "Commission on Elections",
+        "Commission on Appointments"
+      ],
+      "answer": "Supreme Court"
+    },
+    {
+      "id": 161,
+      "q": "Who among the following is responsible for determining the existence of probable cause for the issuance of a warrant of arrest or search warrant?",
+      "options": ["Lawyer", "Prosecutor", "Plaintiff", "Judge", "Police Investigator"],
+      "answer": "Judge"
+    },
+    {
+      "id": 162,
+      "q": "Which of the following statements BEST describes the relationship between global warming and ozone depletion?",
+      "options": [
+        "Global warming contributes to ozone depletion.",
+        "Global warming and ozone depletion have nothing to do with each other",
+        "Excessive build-up of carbon dioxide causes both global warming and ozone depletion",
+        "Ozone depletion contributes to global warming",
+        "Ozone depletion and global warming are synonyms"
+      ],
+      "answer": "Excessive build-up of carbon dioxide causes both global warming and ozone depletion"
+    },
+    {
+      "id": 163,
+      "q": "Monoculture cropping or planting a single crop in a large area is not advisable because it:",
+      "options": ["requires more water", "requires less fertilizers", "causes drought", "lowers the water table", "promotes pest infestation"],
+      "answer": "promotes pest infestation"
+    },
+    {
+      "id": 164,
+      "q": "Which of the following is the major cause of coral reef destruction?",
+      "options": ["Dynamite fishing", "Muro-Ami", "Oil Spill", "Sewage pollution", "Siltation"],
+      "answer": "Sewage pollution"
+    },
+    {
+      "id": 165,
+      "q": "The lasting environmental impact of a large-scale mining operation comes from:",
+      "options": ["air pollution", "noise pollution", "deforestation", "mine tailings", "unrestored mined out areas"],
+      "answer": "noise pollution"
+    },
+    {
+      "id": 166,
+      "q": "Jaywalking, throwing garbage anywhere, vandalism, not waiting in line, and tardiness are manifestations of __________.",
+      "options": [
+        "disorderliness",
+        "lack of discipline",
+        "lack of sense of property",
+        "lack of punctuality",
+        "disregard for other people's property"
+      ],
+      "answer": "lack of discipline"
+    },
+    {
+      "id": 167,
+      "q": "Fishery resources in marine and coastal waters may be considered as \"open access resources\" because of the __________.",
+      "options": [
+        "mobile nature of fish and water",
+        "difficulty in marking sea boundaries",
+        "proliferation of fish pens",
+        "overfishing in municipal waters",
+        "increasing demand for fish, which is rich in protein"
+      ],
+      "answer": "difficulty in marking sea boundaries"
+    },
+    {
+      "id": 168,
+      "q": "Every government agency is required to develop, update regularly, and make available to the transacting public __________.",
+      "options": [
+        "the names of action officers",
+        "the performance targets",
+        "the rates of service fees",
+        "a service guide",
+        "a directory of officials"
+      ],
+      "answer": "the rates of service fees"
+    },
+    {
+      "id": 169,
+      "q": "Within the provided periods of time, public officials and employees are required to file their statement of assets and liabilities and financial disclosure in the following instances EXCEPT __________.",
+      "options": [
+        "compulsory retirement",
+        "voluntary resignation",
+        "acceptance of foreign scholarship",
+        "assumption to office",
+        "expiration of the term of office"
+      ],
+      "answer": "acceptance of foreign scholarship"
+    },
+    {
+      "id": 170,
+      "q": "For expeditious processing of documents, except otherwise provided by law or regulation, how many initials or signatures must any written action or decision contain?",
+      "options": ["6", "5", "4", "3", "2"],
+      "answer": "3"
     }
-  });
-
-  const btnSkip = document.createElement("button");
-  btnSkip.type = "button";
-  btnSkip.className = "btn-generate-next";
-  btnSkip.textContent = "Skip & Check Answers";
-  btnSkip.addEventListener("click", submitExamSheet);
-
-  btns.append(btnScroll, btnSkip);
-  bar.append(msg, btns);
-  return bar;
+  ]
 }
-
-function submitExamSheet() {
-  if (examSubmitted) return;
-  examSubmitted = true;
-
-  sessionItems.forEach((item, idx) => {
-    if (answers[idx] === undefined) return; // unanswered = ignored for mastery
-    const isCorrect = answers[idx] === item.answer;
-    recordQuestionAttempt(item.setId, item.item.id, isCorrect);
-  });
-  document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
-
-  finishSession();
-}
-
-function finishSession() {
-  stopTimer();
-  isPaused = false;
-  elapsedSeconds = sessionStartMs > 0 ? Math.round((Date.now() - sessionStartMs) / 1000) : 0;
-  phase = "summary";
-  unansweredPromptOpen = false;
-  renderMcqShell();
-  document.getElementById("mcq-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function renderSummaryView(stage) {
-  stage.innerHTML = "";
-
-  let correct = 0;
-  let answered = 0;
-  const missed = [];
-
-  sessionItems.forEach((item, idx) => {
-    const chosen = answers[idx];
-    if (chosen !== undefined) answered++;
-    if (chosen === item.answer) correct++;
-    else missed.push(item);
-  });
-
-  const total = sessionItems.length;
-  const unanswered = total - answered;
-  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-
-  const card = document.createElement("div");
-  card.className = "mcq-summary-card";
-
-  const top = document.createElement("div");
-  top.className = "mcq-summary-top";
-
-  const title = document.createElement("h2");
-  title.className = "mcq-summary-title";
-  title.textContent = mcqMode === "study" ? "Study Session Complete" : "Exam Complete";
-
-  const scoreLine = document.createElement("div");
-  scoreLine.className = "mcq-exam-score";
-  scoreLine.textContent = `Score: ${correct} / ${total} (${pct}%)`;
-
-  const statsLine = document.createElement("div");
-  statsLine.className = "mcq-summary-stats";
-  const parts = [`Answered: ${answered}/${total}`];
-  if (unanswered > 0) parts.push(`Skipped: ${unanswered}`);
-  parts.push(`Time: ${formatClock(elapsedSeconds)}`);
-  statsLine.textContent = parts.join(" · ");
-
-  top.append(title, scoreLine, statsLine);
-  card.appendChild(top);
-
-  const batchWrap = document.createElement("div");
-  batchWrap.className = "mcq-summary-batch";
-
-  const batchHeader = document.createElement("div");
-  batchHeader.className = "mcq-setup-section-head";
-
-  const batchLabel = document.createElement("span");
-  batchLabel.className = "mcq-setup-label";
-  batchLabel.textContent = "Next Batch Questions";
-
-  const totalBadge = document.createElement("span");
-  totalBadge.className = "mcq-count-total-badge";
-  totalBadge.textContent = `Total: ${getSelectedQuestionCount()}`;
-
-  batchHeader.append(batchLabel, totalBadge);
-  batchWrap.appendChild(batchHeader);
-  batchWrap.appendChild(buildBatchCountSection(() => {
-    totalBadge.textContent = `Total: ${getSelectedQuestionCount()}`;
-  }));
-  card.appendChild(batchWrap);
-
-  const actions = document.createElement("div");
-  actions.className = "mcq-exam-banner-actions";
-
-  if (missed.length > 0) {
-    const btnRetry = document.createElement("button");
-    btnRetry.type = "button";
-    btnRetry.className = "btn";
-    btnRetry.textContent = `Retry Missed (${missed.length})`;
-    btnRetry.addEventListener("click", () => {
-      const rebuilt = buildSessionItems(missed);
-      startNewMcqBatch(rebuilt);
-    });
-    actions.appendChild(btnRetry);
-  }
-
-  const btnBack = document.createElement("button");
-  btnBack.type = "button";
-  btnBack.className = "btn";
-  btnBack.textContent = "Back to Setup";
-  btnBack.addEventListener("click", returnToSetup);
-  actions.appendChild(btnBack);
-
-  const btnFresh = document.createElement("button");
-  btnFresh.type = "button";
-  btnFresh.className = "btn-generate-next";
-  btnFresh.textContent = "New Batch";
-  btnFresh.addEventListener("click", () => startNewMcqBatch());
-  actions.appendChild(btnFresh);
-
-  card.appendChild(actions);
-  stage.appendChild(card);
-
-  if (mcqMode === "exam") {
-    stage.appendChild(buildExamListDom(true));
-    typeset(stage);
-  }
-}
-
-function handleKeyDown(e) {
-  const view = document.getElementById("view-mcq");
-  if (!view || !view.classList.contains("active") || phase !== "active" || mcqMode !== "study") return;
-  if (isPaused) return;
-  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
-
-  const k = e.key.toUpperCase();
-  const stage = document.getElementById("mcq-stage");
-  if (!stage) return;
-
-  if (LETTERS.includes(k)) {
-    const item = sessionItems[currentIndex];
-    const idx = LETTERS.indexOf(k);
-    if (item && idx < item.options.length) selectStudyOption(k);
-  } else if (["1", "2", "3", "4"].includes(k)) {
-    const letter = LETTERS[Number(k) - 1];
-    const item = sessionItems[currentIndex];
-    if (item && Number(k) <= item.options.length) selectStudyOption(letter);
-  } else if (e.key === "ArrowRight") {
-    if (currentIndex < sessionItems.length - 1) {
-      currentIndex++;
-      startStudyItemTimer();
-      renderStudyView(stage);
-      updateTimerDisplay();
-    }
-  } else if (e.key === "ArrowLeft") {
-    if (currentIndex > 0) {
-      currentIndex--;
-      startStudyItemTimer();
-      renderStudyView(stage);
-      updateTimerDisplay();
-    }
-  }
-}
-````
-
-FILE: styles/mcq.css
-````diff
-<<<<
-.mcq-sets-config {
-  display: flex;
-  align-items: stretch;
-  gap: 0.55rem;
-}
-
-.mcq-link-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  width: 1.75rem;
-  flex-shrink: 0;
-}
-
-.mcq-link-col::before {
-  content: "";
-  position: absolute;
-  top: 0.65rem;
-  bottom: 0.65rem;
-  left: 50%;
-  width: 7px;
-  border-left: 1px solid var(--border);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  border-radius: 3px 0 0 3px;
-  pointer-events: none;
-}
-
-.mcq-link-btn {
-  position: relative;
-  z-index: 1;
-  width: 1.5rem;
-  height: 1.5rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-dim);
-  cursor: pointer;
-  padding: 0;
-}
-
-.mcq-link-btn.is-linked {
-  color: var(--accent-math);
-  border-color: rgba(147, 197, 253, 0.45);
-  background: var(--card);
-}
-
-.mcq-sets-rows {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  min-width: 0;
-}
-
-.mcq-set-slider-row {
-  display: grid;
-  grid-template-columns: minmax(90px, 145px) 1fr auto auto;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.mcq-set-row-name {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mcq-slider-wrap {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.mcq-count-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  outline: none;
-  cursor: pointer;
-}
-
-.mcq-count-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent-math);
-  border: 2px solid var(--panel);
-  cursor: pointer;
-}
-
-.mcq-count-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent-math);
-  border: 2px solid var(--panel);
-  cursor: pointer;
-}
-
-.mcq-count-input {
-  width: 3.4rem;
-  padding: 0.28rem 0.4rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-  font-family: monospace;
-  font-size: 0.85rem;
-  text-align: center;
-  -moz-appearance: textfield;
-}
-
-.mcq-count-input::-webkit-inner-spin-button,
-.mcq-count-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.mcq-count-total {
-  font-size: 0.8rem;
-  font-family: monospace;
-  color: var(--text-dim);
-  white-space: nowrap;
-  min-width: 3.2rem;
-}
-====
-.mcq-pill-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.mcq-set-pill-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.85rem;
-  flex-wrap: wrap;
-}
-
-.mcq-set-row-name {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 90px;
-}
-
-.mcq-pill-group {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.3rem;
-  margin-left: auto;
-}
-
-.mcq-count-pill {
-  background: var(--bg);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  color: var(--text-muted);
-  font-family: monospace;
-  font-size: 0.78rem;
-  padding: 0.22rem 0.5rem;
-  cursor: pointer;
-  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
-}
-
-.mcq-count-pill:hover {
-  border-color: var(--border);
-  color: var(--text);
-}
-
-.mcq-count-pill.active {
-  background: var(--card);
-  border-color: var(--accent-math);
-  color: var(--accent-math);
-  font-weight: 700;
-}
->>>>
-<<<<
-.mcq-timer-input {
-  width: 6.2rem;
-  padding: 0.32rem 0.5rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-  font-family: monospace;
-  font-size: 0.88rem;
-  text-align: center;
-}
-====
-.mcq-timer-input {
-  width: 6.2rem;
-  padding: 0.32rem 0.5rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-  font-family: monospace;
-  font-size: 0.88rem;
-  text-align: center;
-}
-
-.mcq-timer-input.is-off {
-  color: var(--text-dim);
-}
->>>>
-````
+```

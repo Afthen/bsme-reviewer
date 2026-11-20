@@ -1,0 +1,98 @@
+{
+  "id": "mcq_cse_vocab_01",
+  "title": "Vocabulary & Sentence Completion",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
+    {
+      "id": 21,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nAng PAGAL na guro ay sandaling tumigil bago muling nagpatuloy sa pagsasalita.",
+      "options": ["pagod", "galit", "pihikan", "mabagal", "mahinahon"],
+      "answer": "pagod"
+    },
+    {
+      "id": 22,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nA special group in the police force is believed to be engaged in FURTIVE activities.",
+      "options": ["illegal", "suspicious", "unusual", "worthy", "secret"],
+      "answer": "secret"
+    },
+    {
+      "id": 23,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nThe Defense presented its case to the jury in a TRENCHANT manner.",
+      "options": ["Legalistic", "dignified", "vague", "Emphatic", "Cautious"],
+      "answer": "Emphatic"
+    },
+    {
+      "id": 24,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nAng mga magbubukid ay NABIHASA sa paggamit ng kalabaw bilang katulong nila sa pagsasaka.",
+      "options": ["nagsawa", "nagtiwala", "nasanay", "natuto", "nahirapan"],
+      "answer": "nasanay"
+    },
+    {
+      "id": 25,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nPilo's insensitivity has created ANIMOSITY to the worker's demands.",
+      "options": ["distrust", "hostility", "fear", "distance", "dependence"],
+      "answer": "hostility"
+    },
+    {
+      "id": 26,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nThe baffled owner ACQUIESCED to the worker's demands.",
+      "options": ["opposed", "reacted", "agreed", "resisted", "listened"],
+      "answer": "agreed"
+    },
+    {
+      "id": 27,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nThe recommendation of the wage council is REPUGNANT to the employers.",
+      "options": ["acceptable", "objectionable", "beneficial", "degrading", "embarrassing"],
+      "answer": "objectionable"
+    },
+    {
+      "id": 28,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nSanctuaries for wildlife have DWINDLED alarmingly in the last decade.",
+      "options": ["disappeared", "changed", "decreased", "multiplied", "deteriorated"],
+      "answer": "decreased"
+    },
+    {
+      "id": 29,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nRecklessness always entails JEOPARDY.",
+      "options": ["danger", "crisis", "apprehension", "control", "aggression"],
+      "answer": "danger"
+    },
+    {
+      "id": 30,
+      "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nBusiness, like life, is much too extensive and LEQUESCENT to be wholly contained by any checklist, formula or theory.",
+      "options": ["structured", "changeable", "Complicated", "shapeless", "confusing"],
+      "answer": "changeable"
+    },
+    {
+      "id": 31,
+      "q": "Realizing that we were determined to go, our experienced friends __________ that there might be more difficulties along the way than we expect.",
+      "options": ["dismissed", "intimated", "insisted", "projected", "concluded"],
+      "answer": "insisted"
+    },
+    {
+      "id": 32,
+      "q": "Ang patuloy na pag-angkat ng mga produktong banyaga, na siya namang tinatangkilik ng mga mamamayan, ang dahilan ng __________ ng mga industriyang lokal.",
+      "options": ["paghinto", "pagbabago", "pagtitipid", "pagkawala", "pagkalugi"],
+      "answer": "pagkalugi"
+    },
+    {
+      "id": 33,
+      "q": "A strong government is needed to promote __________, not dependency, and to encourage free enterprise.",
+      "options": ["self-alienation", "self-evaluation", "self reliance", "self-awareness", "self-determination"],
+      "answer": "self reliance"
+    },
+    {
+      "id": 34,
+      "q": "Mass media develop in us a level of consciousness that keeps us __________ current events.",
+      "options": ["interested in", "adjusting to", "excited over", "fearful of", "abreast of"],
+      "answer": "abreast of"
+    },
+    {
+      "id": 35,
+      "q": "Failure is the most tiring experience a person can ever have; there is nothing more __________ than not succeeding, being blocked, not moving ahead.",
+      "options": ["Invigorating", "Discouraging", "Exhilarating", "Enervating", "depressing"],
+      "answer": "depressing"
+    }
+  ]
+}

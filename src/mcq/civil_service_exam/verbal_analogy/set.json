@@ -1,0 +1,98 @@
+{
+  "id": "mcq_cse_analogy_01",
+  "title": "Verbal Analogy",
+  "subject": "Civil Service Exam",
+  "category": "Verbal Ability",
+  "questions": [
+    {
+      "id": 81,
+      "q": "KAINGIN is to SOIL EROSION as CONTOUR FARMING is to __________.",
+      "options": ["water distribution", "wind erosion", "crop growing", "over pasturing", "soil preservation"],
+      "answer": "soil preservation"
+    },
+    {
+      "id": 82,
+      "q": "IRREFUTABLE is to DISPROVED as IRREPARABLE is to __________.",
+      "options": ["restored", "irremediable", "possible", "inevitable", "insoluble"],
+      "answer": "restored"
+    },
+    {
+      "id": 83,
+      "q": "FORE is to AFT as BOW is to __________.",
+      "options": ["paddle", "deck", "boat", "arrow", "stern"],
+      "answer": "stern"
+    },
+    {
+      "id": 84,
+      "q": "PHOTOGRAPHER is to PICTURE as CARTOGRAPHER is to __________.",
+      "options": ["plan", "design", "graph", "cartoon", "map"],
+      "answer": "map"
+    },
+    {
+      "id": 85,
+      "q": "TIRADE is to ABUSIVE as EULOGY is to __________.",
+      "options": ["laudatory", "flowery", "necrology", "belittling", "censure"],
+      "answer": "laudatory"
+    },
+    {
+      "id": 86,
+      "q": "PERJURY is to LIE as LARCENY is to __________.",
+      "options": ["conspire", "kill", "steal", "injure", "trespass"],
+      "answer": "steal"
+    },
+    {
+      "id": 87,
+      "q": "OPTICS is to PHYSICS as DIALECTICS is to __________.",
+      "options": ["dialogue", "mathematics", "diction", "grammar", "logic"],
+      "answer": "logic"
+    },
+    {
+      "id": 88,
+      "q": "RUMMAGE is to DISORDER as TENDERFOOT is to __________.",
+      "options": ["rookie", "expert", "student", "veteran", "old-timer"],
+      "answer": "rookie"
+    },
+    {
+      "id": 89,
+      "q": "COMPASS is to DIRECTION as CALIPER is to __________.",
+      "options": ["speed", "pitch", "diameter", "altitude", "volume"],
+      "answer": "diameter"
+    },
+    {
+      "id": 90,
+      "q": "BREWING is to BEER as TANNING is to __________.",
+      "options": ["rubber", "cotton", "tea", "glass", "leather"],
+      "answer": "leather"
+    },
+    {
+      "id": 91,
+      "q": "__________ is to METAMORPHOSIS as CATHARSIS is to __________.",
+      "options": ["condition-chapter", "comparison-effect", "state-cause", "process-stage", "change-purification"],
+      "answer": "change-purification"
+    },
+    {
+      "id": 92,
+      "q": "__________ is to SWORD as HOLSTER is to __________.",
+      "options": ["blade-spin", "scabbard-pistol", "duel-bolo", "sheath-shot", "hilt-rifle"],
+      "answer": "scabbard-pistol"
+    },
+    {
+      "id": 93,
+      "q": "__________ is to SCHOOL as STAR is to __________.",
+      "options": ["student-rock", "principal-dancer", "fish-constellation", "bird-tree", "thesis-player"],
+      "answer": "fish-constellation"
+    },
+    {
+      "id": 94,
+      "q": "__________ is to LATE as AUTHENTIC is to __________.",
+      "options": ["punctual-counterfeit", "prompt-genuine", "diligent-original", "absent-false", "early-real"],
+      "answer": "punctual-counterfeit"
+    },
+    {
+      "id": 95,
+      "q": "__________ is to PAPER as WORM is to __________.",
+      "options": ["wrap-wriggle", "tree-silk", "print-bait", "sap-tick", "ink-soil"],
+      "answer": "tree-silk"
+    }
+  ]
+}

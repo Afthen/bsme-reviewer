@@ -1,0 +1,182 @@
+{
+  "id": "mcq_cse_gen_info_01",
+  "title": "General Information (Constitution, RA 6713 & Environment)",
+  "subject": "Civil Service Exam",
+  "category": "General Information",
+  "questions": [
+    {
+      "id": 151,
+      "q": "Elective or appointive public officials or employees cannot accept any present, compensation, office or title of any kind from any foreign government without the consent of:",
+      "options": ["The President", "The Ombudsman", "The Chief Justice", "The Agency Head", "Congress"],
+      "answer": "Congress"
+    },
+    {
+      "id": 152,
+      "q": "Which of the following rights ensure the well-being of the individual and foster preservation, enrichment and dynamic evolution of national culture based on the principle of unity in diversity in a climate of free artistic and intellectual expression?",
+      "options": ["Political rights", "Civil rights", "Inherent rights", "Cultural rights", "Economic and Social rights"],
+      "answer": "Cultural rights"
+    },
+    {
+      "id": 153,
+      "q": "Right that guarantees similar treatment to all persons similarly situated and precludes arbitrary or unjust discrimination to secure and safeguard such right is called the _________.",
+      "options": [
+        "right against double jeopardy",
+        "right to just compensation",
+        "right to equal protection of the law",
+        "right to due process of law",
+        "right to profess one's faith or religion"
+      ],
+      "answer": "right to equal protection of the law"
+    },
+    {
+      "id": 154,
+      "q": "The right to privacy of a person is defined as one's right to __________.",
+      "options": [
+        "go where one pleases",
+        "believe whatever one wishes",
+        "build a home wherever one chooses",
+        "be a member of any group",
+        "be free from unwarranted publicity"
+      ],
+      "answer": "be free from unwarranted publicity"
+    },
+    {
+      "id": 155,
+      "q": "A voter is disqualified from exercising the right to suffrage if said voter __________.",
+      "options": [
+        "is illiterate",
+        "is poor",
+        "is a naturalized Filipino citizen",
+        "turned 20 years old just before the election",
+        "has been a resident of the Philippines for less than six months"
+      ],
+      "answer": "has been a resident of the Philippines for less than six months"
+    },
+    {
+      "id": 156,
+      "q": "Who may be appointed as member of the Cabinet without needing confirmation from the Commission on Appointments?",
+      "options": ["Senate President", "Any Senator", "Vice-President", "Speaker of the House", "Any Congress Representative"],
+      "answer": "Vice-President"
+    },
+    {
+      "id": 157,
+      "q": "The right of private individuals to secure for themselves the enjoyment of their means of happiness such as the right to a name, the right to form a family, and the right to security of personal papers and effects are called ___________.",
+      "options": ["Economic and Social rights", "Cultural Rights", "Civil Rights", "Inherent rights", "Political rights"],
+      "answer": "Civil Rights"
+    },
+    {
+      "id": 158,
+      "q": "At least how many years after the Constitution has been ratified may the people propose amendments through initiative?",
+      "options": ["Ten", "Seven", "Six", "Five", "Three"],
+      "answer": "Five"
+    },
+    {
+      "id": 159,
+      "q": "Which of the following sectors is NOT represented in the House of Representatives through the party-list system?",
+      "options": ["Religious", "Youth", "Women", "Peasant", "Labor"],
+      "answer": "Religious"
+    },
+    {
+      "id": 160,
+      "q": "Which of the following government agencies exercises original and exclusive jurisdiction over all contests relating to the election returns and the qualifications of the President and the Vice President?",
+      "options": [
+        "Supreme Court",
+        "Senate Electoral Tribunal",
+        "Judicial Bar Council",
+        "Commission on Elections",
+        "Commission on Appointments"
+      ],
+      "answer": "Supreme Court"
+    },
+    {
+      "id": 161,
+      "q": "Who among the following is responsible for determining the existence of probable cause for the issuance of a warrant of arrest or search warrant?",
+      "options": ["Lawyer", "Prosecutor", "Plaintiff", "Judge", "Police Investigator"],
+      "answer": "Judge"
+    },
+    {
+      "id": 162,
+      "q": "Which of the following statements BEST describes the relationship between global warming and ozone depletion?",
+      "options": [
+        "Global warming contributes to ozone depletion.",
+        "Global warming and ozone depletion have nothing to do with each other",
+        "Excessive build-up of carbon dioxide causes both global warming and ozone depletion",
+        "Ozone depletion contributes to global warming",
+        "Ozone depletion and global warming are synonyms"
+      ],
+      "answer": "Excessive build-up of carbon dioxide causes both global warming and ozone depletion"
+    },
+    {
+      "id": 163,
+      "q": "Monoculture cropping or planting a single crop in a large area is not advisable because it:",
+      "options": ["requires more water", "requires less fertilizers", "causes drought", "lowers the water table", "promotes pest infestation"],
+      "answer": "promotes pest infestation"
+    },
+    {
+      "id": 164,
+      "q": "Which of the following is the major cause of coral reef destruction?",
+      "options": ["Dynamite fishing", "Muro-Ami", "Oil Spill", "Sewage pollution", "Siltation"],
+      "answer": "Sewage pollution"
+    },
+    {
+      "id": 165,
+      "q": "The lasting environmental impact of a large-scale mining operation comes from:",
+      "options": ["air pollution", "noise pollution", "deforestation", "mine tailings", "unrestored mined out areas"],
+      "answer": "noise pollution"
+    },
+    {
+      "id": 166,
+      "q": "Jaywalking, throwing garbage anywhere, vandalism, not waiting in line, and tardiness are manifestations of __________.",
+      "options": [
+        "disorderliness",
+        "lack of discipline",
+        "lack of sense of property",
+        "lack of punctuality",
+        "disregard for other people's property"
+      ],
+      "answer": "lack of discipline"
+    },
+    {
+      "id": 167,
+      "q": "Fishery resources in marine and coastal waters may be considered as \"open access resources\" because of the __________.",
+      "options": [
+        "mobile nature of fish and water",
+        "difficulty in marking sea boundaries",
+        "proliferation of fish pens",
+        "overfishing in municipal waters",
+        "increasing demand for fish, which is rich in protein"
+      ],
+      "answer": "difficulty in marking sea boundaries"
+    },
+    {
+      "id": 168,
+      "q": "Every government agency is required to develop, update regularly, and make available to the transacting public __________.",
+      "options": [
+        "the names of action officers",
+        "the performance targets",
+        "the rates of service fees",
+        "a service guide",
+        "a directory of officials"
+      ],
+      "answer": "the rates of service fees"
+    },
+    {
+      "id": 169,
+      "q": "Within the provided periods of time, public officials and employees are required to file their statement of assets and liabilities and financial disclosure in the following instances EXCEPT __________.",
+      "options": [
+        "compulsory retirement",
+        "voluntary resignation",
+        "acceptance of foreign scholarship",
+        "assumption to office",
+        "expiration of the term of office"
+      ],
+      "answer": "acceptance of foreign scholarship"
+    },
+    {
+      "id": 170,
+      "q": "For expeditious processing of documents, except otherwise provided by law or regulation, how many initials or signatures must any written action or decision contain?",
+      "options": ["6", "5", "4", "3", "2"],
+      "answer": "3"
+    }
+  ]
+}
