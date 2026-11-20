@@ -1,13 +1,158 @@
-FILE: test/run_test.js
-```diff
+FILE: scripts/repo_skeleton.js
+````diff
 <<<<
-    assert.ok(symTex.includes("\\left(\\cfrac{T}{2 \\, \\pi}\\right)^{2} \\cdot k") || symTex.includes("\\left(\\cfrac{T}{2\\pi}\\right)^{2}"), `Clean single parens expected: ${symTex}`);
-====
-    assert.ok(!symTex.includes("(("), `Clean single parens expected: ${symTex}`);
+   const symbols = [];
+
+   // Functions (exported and top-level local)
+   const fnRe = /(?:\/\*\*([\s\S]*?)\*\/\s*)?^(export\s+)?(async\s+)?function\s+([A-Za-z0-9_]+)\s*\(([^)]*)\)\s*\{/gm;
+   for (const m of raw.matchAll(fnRe)) {
+     const jsdoc = m[1] || "";
+     const scope = m[2] ? "export fn" : "local fn";
+     const isAsync = Boolean(m[3]);
+     const name = m[4];
+     const params = m[5].replace(/\s+/g, " ").trim();
+     const braceIdx = m.index + m[0].length - 1;
+     const body = extractMatchingBlock(raw, braceIdx);
+     const ret = inferReturnHint(body, isAsync, jsdoc);
+     symbols.push(`${scope} ${name}(${params}) -> ${ret}`);
+   }
+
+   // Exported constants & frozen structures
+   const constRe = /^export\s+const\s+([A-Za-z0-9_]+)\s*=\s*/gm;
+   for (const m of raw.matchAll(constRe)) {
+     const name = m[1];
+     let rest = raw.slice(m.index + m[0].length).trimStart();
+     if (rest.startsWith("Object.freeze(")) rest = rest.slice("Object.freeze(".length).trimStart();
+
+     if (rest.startsWith("{")) {
+       const startIdx = raw.indexOf("{", m.index + m[0].length);
+       const block = extractMatchingBlock(raw, startIdx, "{", "}");
+       const keys = extractTopLevelKeys(block);
+       const preview = keys.length > 8
+         ? `${keys.slice(0, 8).join(", ")}, +${keys.length - 8}`
+         : keys.join(", ");
+       symbols.push(`export const ${name}: { ${preview} }`);
+     } else if (rest.startsWith("[")) {
+       symbols.push(`export const ${name}: Array`);
+     } else if (rest.startsWith("(") || /^[A-Za-z0-9_]+\s*=>/.test(rest)) {
+       symbols.push(`export const ${name}: Function`);
+     } else {
+       const valLine = rest.split("\n")[0].replace(/;$/, "").slice(0, 48);
+       symbols.push(`export const ${name} = ${valLine}`);
+     }
+   }
+
+   for (const m of raw.matchAll(/^export\s+\*\s+from\s+["']([^"']+)["']/gm)) {
+     symbols.push(`reexport * -> ${resolveImportEdge(absPath, m[1])}`);
+   }
+
+   return { rel, imports: Array.from(new Set(imports)), symbols };
+ }
+=======
+   const getLineNum = (str, index) => str.slice(0, index).split("\n").length;
+
+   const symbols = [];
+
+   // Functions (exported and top-level local)
+   const fnRe = /(?:\/\*\*([\s\S]*?)\*\/\s*)?^(export\s+)?(async\s+)?function\s+([A-Za-z0-9_]+)\s*\(([^)]*)\)\s*\{/gm;
+   for (const m of raw.matchAll(fnRe)) {
+     const jsdoc = m[1] || "";
+     const scope = m[2] ? "export fn" : "local fn";
+     const isAsync = Boolean(m[3]);
+     const name = m[4];
+     const params = m[5].replace(/\s+/g, " ").trim();
+     const braceIdx = m.index + m[0].length - 1;
+     const body = extractMatchingBlock(raw, braceIdx);
+     const ret = inferReturnHint(body, isAsync, jsdoc);
+     const startLine = getLineNum(raw, m.index);
+     const endLine = getLineNum(raw, braceIdx + body.length);
+     symbols.push(`${scope} ${name}(${params}) -> ${ret} [${startLine}-${endLine}]`);
+   }
+
+   // Exported constants & frozen structures
+   const constRe = /^export\s+const\s+([A-Za-z0-9_]+)\s*=\s*/gm;
+   for (const m of raw.matchAll(constRe)) {
+     const name = m[1];
+     const startLine = getLineNum(raw, m.index);
+     let rest = raw.slice(m.index + m[0].length).trimStart();
+     if (rest.startsWith("Object.freeze(")) rest = rest.slice("Object.freeze(".length).trimStart();
+
+     if (rest.startsWith("{")) {
+       const startIdx = raw.indexOf("{", m.index + m[0].length);
+       const block = extractMatchingBlock(raw, startIdx, "{", "}");
+       const keys = extractTopLevelKeys(block);
+       const preview = keys.length > 8
+         ? `${keys.slice(0, 8).join(", ")}, +${keys.length - 8}`
+         : keys.join(", ");
+       symbols.push(`export const ${name}: { ${preview} } [${startLine}]`);
+     } else if (rest.startsWith("[")) {
+       symbols.push(`export const ${name}: Array [${startLine}]`);
+     } else if (rest.startsWith("(") || /^[A-Za-z0-9_]+\s*=>/.test(rest)) {
+       symbols.push(`export const ${name}: Function [${startLine}]`);
+     } else {
+       const valLine = rest.split("\n")[0].replace(/;$/, "").slice(0, 48);
+       symbols.push(`export const ${name} = ${valLine} [${startLine}]`);
+     }
+   }
+
+   for (const m of raw.matchAll(/^export\s+\*\s+from\s+["']([^"']+)["']/gm)) {
+     const startLine = getLineNum(raw, m.index);
+     symbols.push(`reexport * -> ${resolveImportEdge(absPath, m[1])} [${startLine}]`);
+   }
+
+   return { rel, imports: Array.from(new Set(imports)), symbols };
+ }
 >>>>
-```
+<<<<
+ const outPath = path.resolve("tmp/skeleton.txt");
+ fs.mkdirSync(path.dirname(outPath), { recursive: true });
+ fs.writeFileSync(outPath, outBlocks.join("\n\n") + "\n", "utf8");
+ console.log(`Wrote tmp/skeleton.txt (${files.length} files, ${skelLines.length} skeleton lines).`);
+=======
+ const outPath = path.resolve("tmp/skeleton.txt");
+ fs.mkdirSync(path.dirname(outPath), { recursive: true });
+ const fullOutput = outBlocks.join("\n\n") + "\n";
+ fs.writeFileSync(outPath, fullOutput, "utf8");
 
----
+ // OSC 52 terminal clipboard integration (works out-of-the-box in GitHub Codespaces / VS Code terminal)
+ try {
+   const base64 = Buffer.from(fullOutput, "utf8").toString("base64");
+   process.stdout.write(`\x1b]52;c;${base64}\x07`);
+ } catch (e) {
+   // ignore if not a supported TTY
+ }
 
-### Verification
-Run `npm test` and check `tmp/test_out.txt`.
+ console.log(`Wrote tmp/skeleton.txt (including README.md, ${files.length} files, ${skelLines.length} skeleton lines) and copied to clipboard via OSC 52.`);
+>>>>
+````
+
+FILE: README.md
+````diff
+<<<<
+5. Context requests: You only see the Repo Skeleton by default. Whenever you need
+   to read files or search the codebase, output a `<ctx_req>` block wrapped in a
+   fenced code block (one directive per line: `READ path/to/file.js`,
+   `READ path/to/file.js:10-80`, or `GREP term`) and stop. Never ask for files
+   in prose.
+6. Code output convention: When given permission to code, the diff syntax
+   (<<<< ==== >>>>) is the canonical way to present code changes, but strictly only when
+   the resulting diff syntax is shorter in character count than returning the drop-in
+   replacement (that is the tipping point). Documentation (README.md) changes are
+   always returned as a full drop-in replacement.
+6. Run: node --test test/runtest.js test/runhygiene_test.js
+=======
+5. Context requests: You only see the Repo Skeleton with line ranges by default. Whenever you need
+   to read specific functions or files, output a `<ctx_req>` block wrapped in a
+   fenced code block (one directive per line: `READ path/to/file.js:start-end`,
+   `READ path/to/file.js`, or `GREP term`) and stop. Never ask for files
+   in prose.
+6. Code output convention & 4-backtick standard: When given permission to code, the diff syntax
+   (<<<< ==== >>>>) wrapped in **four backticks** (````diff or ````markdown) is the canonical way to present all changes (including README.md), strictly when the resulting diff syntax is shorter in character count than returning the drop-in replacement (that is the tipping point).
+7. Run: node --test test/run_test.js test/run_hygiene_test.js
+>>>>
+<<<<
+- [ ] Code changes use canonical diff syntax (`<<<< ==== >>>>`) unless shorter as a drop-in replacement; `README.md` edits use full drop-in replacement.
+=======
+- [ ] Code and documentation changes use canonical diff syntax (`<<<< ==== >>>>`) wrapped in four backticks unless shorter as a drop-in replacement.
+>>>>
+````
