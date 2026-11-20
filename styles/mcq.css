@@ -113,28 +113,22 @@
 
 .mcq-timer-pill.is-locked {
   color: #fecaca;
-  border-color: rgba(239, 68, 68, 0.45);
-  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.15);
 }
 
-.mcq-lock-pill {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #fecaca;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 999px;
-  padding: 0.12rem 0.55rem;
+#mcq-stage.is-paused .mcq-pausable {
+  filter: blur(6px) grayscale(1);
+  opacity: 0.4;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.15s ease, opacity 0.15s ease;
 }
 
-.mcq-lock-banner {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fecaca;
-  border-radius: 5px;
-  padding: 0.6rem 0.85rem;
-  font-size: 0.84rem;
-  margin-bottom: 0.75rem;
+.mcq-options.is-timed-out .mcq-option-btn {
+  opacity: 0.45;
+  filter: grayscale(0.85);
+  cursor: not-allowed;
 }
 
 /* Setup Lobby */
@@ -236,21 +230,184 @@
   color: var(--text-muted);
 }
 
-.mcq-count-picker {
+.mcq-setup-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mcq-count-total-badge {
+  font-size: 0.78rem;
+  font-family: monospace;
+  color: var(--text-muted);
+}
+
+.mcq-sets-config {
+  display: flex;
+  align-items: stretch;
+  gap: 0.55rem;
+}
+
+.mcq-link-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 1.75rem;
+  flex-shrink: 0;
+}
+
+.mcq-link-col::before {
+  content: "";
+  position: absolute;
+  top: 0.65rem;
+  bottom: 0.65rem;
+  left: 50%;
+  width: 7px;
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 3px 0 0 3px;
+  pointer-events: none;
+}
+
+.mcq-link-btn {
+  position: relative;
+  z-index: 1;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0;
+}
+
+.mcq-link-btn.is-linked {
+  color: var(--accent-math);
+  border-color: rgba(147, 197, 253, 0.45);
+  background: var(--card);
+}
+
+.mcq-sets-rows {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.mcq-set-slider-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 145px) 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mcq-set-row-name {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcq-slider-wrap {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  min-width: 0;
 }
 
 .mcq-count-slider {
-  flex: 1;
-  accent-color: var(--accent-math);
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.mcq-count-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-math);
+  border: 2px solid var(--panel);
+  cursor: pointer;
+}
+
+.mcq-count-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-math);
+  border: 2px solid var(--panel);
   cursor: pointer;
 }
 
 .mcq-count-input {
-  width: 4.5rem;
-  padding: 0.35rem 0.5rem;
+  width: 3.4rem;
+  padding: 0.28rem 0.4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: monospace;
+  font-size: 0.85rem;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.mcq-count-input::-webkit-inner-spin-button,
+.mcq-count-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.mcq-count-total {
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: var(--text-dim);
+  white-space: nowrap;
+  min-width: 3.2rem;
+}
+
+.mcq-setup-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.mcq-setup-timer-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mcq-timer-field-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.mcq-timer-input {
+  width: 6.2rem;
+  padding: 0.32rem 0.5rem;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -260,44 +417,9 @@
   text-align: center;
 }
 
-.mcq-count-total {
-  font-size: 0.82rem;
+.mcq-timer-sublabel {
+  font-size: 0.72rem;
   color: var(--text-dim);
-  white-space: nowrap;
-}
-
-.mcq-timer-config {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.mcq-timer-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.86rem;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.mcq-timer-toggle input {
-  accent-color: var(--accent-math);
-  cursor: pointer;
-}
-
-.mcq-timer-duration {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.mcq-setup-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 0.25rem;
 }
 
 .mcq-summary-card {

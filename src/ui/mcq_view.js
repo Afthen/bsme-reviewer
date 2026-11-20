@@ -1,9 +1,9 @@
 /**
  * src/ui/mcq_view.js
  * Multiple-Choice Quiz View:
- * - Setup Lobby: set summary, Study/Exam mode, snapping count slider + editable input, optional timer
- * - Study Mode: 1-question-at-a-time, 2x2 or 1x4 layout, per-item timer, keyboard shortcuts
- * - Exam Mode: scrollable borderless-option sheet, click-to-unselect, unanswered guard, total timer
+ * - Setup Lobby: per-set magnetic-snap sliders with link/unlink, clean time input (0 = off)
+ * - Study Mode: 1-question-at-a-time, 2x2 or 1x4 layout, per-item timer, pause, keyboard shortcuts
+ * - Exam Mode: scrollable borderless-option sheet, click-to-unselect, unanswered guard, total timer, pause
  * - Summary View: score, time, Retry Missed, New Batch with count picker, graded review
  */
 
@@ -13,24 +13,31 @@ import {
   recordQuestionAttempt,
   getQuestionMastery,
   getSetStats,
-  getSetMastery
+  getSetMastery,
+  shuffleArray
 } from "../mcq/engine.js";
 import { MASTERY_CHANGED_EVENT } from "./sidebar_view.js";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
-const SNAP_STEPS = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100];
+const SNAP_STEPS = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200];
 
 let activeSets = [];
 let sessionItems = [];
 let phase = "setup"; // "setup" | "active" | "summary"
 let mcqMode = "study"; // "study" | "exam"
-let batchSize = 25;
 
-let timerEnabled = false;
-let studySeconds = 60;
-let examMinutes = 30;
+// Per-set question counts
+let setCounts = {}; // setId -> number
+let countsLinked = true;
+
+// Timer config (0 = disabled)
+let studyTimerSeconds = 0;
+let examTimerSeconds = 0;
+
+// Active session timer state
 let remainingSeconds = 0;
 let timerLocked = false;
+let isPaused = false;
 let timerId = null;
 let sessionStartMs = 0;
 let elapsedSeconds = 0;
@@ -55,35 +62,58 @@ function typeset(el) {
   }
 }
 
+function getSetMax(setObj) {
+  return setObj?.questions?.length || 0;
+}
+
+function getSetMin(setObj) {
+  const max = getSetMax(setObj);
+  return max < 5 ? max : 5;
+}
+
+function clampSetCount(val, setObj) {
+  const min = getSetMin(setObj);
+  const max = getSetMax(setObj);
+  if (max <= 0) return 0;
+  const n = Math.round(Number(val) || min);
+  return Math.max(min, Math.min(max, n));
+}
+
+function syncSetCounts() {
+  const next = {};
+  for (const s of activeSets) {
+    const existing = setCounts[s.id];
+    const defaultVal = Math.min(25, getSetMax(s));
+    next[s.id] = clampSetCount(existing !== undefined ? existing : defaultVal, s);
+  }
+  setCounts = next;
+}
+
+function getTotalSelectedCount() {
+  return activeSets.reduce((sum, s) => sum + (setCounts[s.id] || 0), 0);
+}
+
 function getTotalAvailableQuestions() {
-  return activeSets.reduce((sum, s) => sum + (s.questions?.length || 0), 0);
+  return activeSets.reduce((sum, s) => sum + getSetMax(s), 0);
 }
 
-function clampBatchSize(val, total) {
-  if (total <= 0) return 0;
-  const n = Math.round(Number(val) || 1);
-  return Math.max(1, Math.min(total, n));
-}
-
-function getSnapPoints(total) {
-  if (total <= 1) return [1];
-  const pts = SNAP_STEPS.filter(s => s < total);
-  if (!pts.includes(total)) pts.push(total);
+function getSnapPoints(min, max) {
+  const pts = [min];
+  for (const s of SNAP_STEPS) {
+    if (s > min && s < max) pts.push(s);
+  }
+  if (max > min) pts.push(max);
   return pts;
 }
 
-function snapValue(val, total) {
-  const pts = getSnapPoints(total);
-  let best = pts[0];
-  let bestDist = Math.abs(val - best);
+function magneticSnap(val, min, max) {
+  const range = Math.max(1, max - min);
+  const threshold = Math.max(1, Math.round(range * 0.025));
+  const pts = getSnapPoints(min, max);
   for (const p of pts) {
-    const d = Math.abs(val - p);
-    if (d < bestDist) {
-      best = p;
-      bestDist = d;
-    }
+    if (Math.abs(val - p) <= threshold) return p;
   }
-  return best;
+  return val;
 }
 
 function formatClock(sec) {
@@ -95,6 +125,58 @@ function formatClock(sec) {
   return hrs > 0 ? `${hrs}:${pad(mins)}:${pad(rem)}` : `${pad(mins)}:${pad(rem)}`;
 }
 
+function formatTimeFull(sec, mode) {
+  const s = Math.max(0, Math.floor(sec));
+  const pad = n => String(n).padStart(2, "0");
+  if (mode === "study") {
+    const mins = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${pad(mins)}:${pad(rem)}`;
+  }
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const rem = s % 60;
+  return `${pad(hrs)}:${pad(mins)}:${pad(rem)}`;
+}
+
+function formatTimeTrimmed(sec) {
+  const s = Math.max(0, Math.floor(sec));
+  if (s === 0) return "0";
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const rem = s % 60;
+  const pad = n => String(n).padStart(2, "0");
+  if (hrs > 0) return `${hrs}:${pad(mins)}:${pad(rem)}`;
+  if (mins > 0) return `${mins}:${pad(rem)}`;
+  return `0:${pad(rem)}`;
+}
+
+function parseTimeInput(raw, mode) {
+  const str = String(raw || "").trim();
+  if (!str || str === "0") return 0;
+
+  if (str.includes(":")) {
+    const parts = str.split(":").map(p => parseInt(p, 10));
+    if (parts.some(n => !Number.isFinite(n) || n < 0)) return 0;
+    if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    }
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    return 0;
+  }
+
+  const num = parseInt(str, 10);
+  if (!Number.isFinite(num) || num <= 0) return 0;
+  // Plain number: seconds in study mode, minutes in exam mode
+  return mode === "study" ? num : num * 60;
+}
+
+function isTimerEnabled() {
+  return (mcqMode === "study" ? studyTimerSeconds : examTimerSeconds) > 0;
+}
+
 function stopTimer() {
   if (timerId !== null) {
     clearInterval(timerId);
@@ -102,10 +184,14 @@ function stopTimer() {
   }
 }
 
-function startCountdown(seconds, onExpire) {
+function runTimerInterval(onExpire) {
   stopTimer();
-  remainingSeconds = Math.max(1, Math.floor(seconds));
-  timerLocked = false;
+  if (remainingSeconds <= 0) {
+    timerLocked = true;
+    updateTimerDisplay();
+    onExpire();
+    return;
+  }
 
   timerId = setInterval(() => {
     const view = document.getElementById("view-mcq");
@@ -113,22 +199,46 @@ function startCountdown(seconds, onExpire) {
       stopTimer();
       return;
     }
+    if (isPaused) return;
+
     remainingSeconds = Math.max(0, remainingSeconds - 1);
     updateTimerDisplay();
     if (remainingSeconds <= 0) {
       stopTimer();
       timerLocked = true;
+      updateTimerDisplay();
       onExpire();
     }
   }, 1000);
 }
 
+function startCountdown(seconds, onExpire) {
+  stopTimer();
+  remainingSeconds = Math.max(1, Math.floor(seconds));
+  timerLocked = false;
+  runTimerInterval(onExpire);
+}
+
 function updateTimerDisplay() {
   const el = document.getElementById("mcq-timer-pill");
   if (!el) return;
-  el.textContent = timerLocked ? "00:00 · Locked" : formatClock(remainingSeconds);
+  el.textContent = formatClock(remainingSeconds);
   el.classList.toggle("is-low", !timerLocked && remainingSeconds > 0 && remainingSeconds <= 10);
   el.classList.toggle("is-locked", timerLocked);
+}
+
+function togglePause() {
+  if (phase !== "active") return;
+  isPaused = !isPaused;
+  const stage = document.getElementById("mcq-stage");
+  const btnPause = document.getElementById("mcq-pause-btn");
+  if (btnPause) {
+    btnPause.textContent = isPaused ? "▶ Resume" : "⏸ Pause";
+    btnPause.classList.toggle("active", isPaused);
+  }
+  if (stage) {
+    stage.classList.toggle("is-paused", isPaused);
+  }
 }
 
 export function renderMcqSets(sets = []) {
@@ -142,16 +252,14 @@ export function renderMcqSets(sets = []) {
   }
 
   stopTimer();
-  const total = getTotalAvailableQuestions();
-  if (total > 0) {
-    batchSize = clampBatchSize(batchSize || 25, total);
-  }
+  syncSetCounts();
   phase = "setup";
   sessionItems = [];
   answers = {};
   timedOutItems = new Set();
   examSubmitted = false;
   timerLocked = false;
+  isPaused = false;
   unansweredPromptOpen = false;
   renderMcqShell();
 }
@@ -161,14 +269,19 @@ export function startNewMcqBatch(customItems = null) {
   if (!view) return;
 
   stopTimer();
-  const total = getTotalAvailableQuestions();
 
   if (Array.isArray(customItems)) {
     sessionItems = customItems;
   } else {
-    batchSize = clampBatchSize(batchSize, total);
-    const packed = selectBatch(activeSets, batchSize);
-    sessionItems = buildSessionItems(packed);
+    syncSetCounts();
+    const packed = [];
+    for (const s of activeSets) {
+      const count = setCounts[s.id] || 0;
+      if (count > 0) {
+        packed.push(...selectBatch([s], count));
+      }
+    }
+    sessionItems = buildSessionItems(activeSets.length > 1 ? shuffleArray(packed) : packed);
   }
 
   phase = "active";
@@ -177,23 +290,32 @@ export function startNewMcqBatch(customItems = null) {
   timedOutItems = new Set();
   examSubmitted = false;
   timerLocked = false;
+  isPaused = false;
   unansweredPromptOpen = false;
   sessionStartMs = Date.now();
   elapsedSeconds = 0;
 
-  if (timerEnabled && sessionItems.length > 0) {
+  if (isTimerEnabled() && sessionItems.length > 0) {
     if (mcqMode === "study") {
       startStudyItemTimer();
     } else {
-      startCountdown(Math.max(1, examMinutes) * 60, handleExamTimerExpire);
+      startCountdown(examTimerSeconds, handleExamTimerExpire);
     }
   }
 
   renderMcqShell();
 }
 
+function handleStudyTimerExpire() {
+  timedOutItems.add(currentIndex);
+  const stage = document.getElementById("mcq-stage");
+  if (stage && phase === "active" && mcqMode === "study") {
+    renderStudyView(stage);
+  }
+}
+
 function startStudyItemTimer() {
-  if (!timerEnabled) {
+  if (!isTimerEnabled()) {
     stopTimer();
     timerLocked = false;
     return;
@@ -201,15 +323,10 @@ function startStudyItemTimer() {
   if (answers[currentIndex] !== undefined || timedOutItems.has(currentIndex)) {
     stopTimer();
     timerLocked = timedOutItems.has(currentIndex) && answers[currentIndex] === undefined;
+    if (timerLocked) remainingSeconds = 0;
     return;
   }
-  startCountdown(Math.max(5, studySeconds), () => {
-    timedOutItems.add(currentIndex);
-    const stage = document.getElementById("mcq-stage");
-    if (stage && phase === "active" && mcqMode === "study") {
-      renderStudyView(stage);
-    }
-  });
+  startCountdown(studyTimerSeconds, handleStudyTimerExpire);
 }
 
 function handleExamTimerExpire() {
@@ -223,62 +340,183 @@ function returnToSetup() {
   stopTimer();
   phase = "setup";
   timerLocked = false;
+  isPaused = false;
   unansweredPromptOpen = false;
   renderMcqShell();
 }
 
-function createCountPicker(total, initialVal, onChange) {
-  let current = clampBatchSize(initialVal, total);
+function createPerSetRows(onAnyChange) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "mcq-sets-config";
 
+  const showLink = activeSets.length > 1;
+  const rowRefs = [];
+
+  if (showLink) {
+    const linkCol = document.createElement("div");
+    linkCol.className = "mcq-link-col";
+
+    const linkBtn = document.createElement("button");
+    linkBtn.type = "button";
+    linkBtn.className = `mcq-link-btn ${countsLinked ? "is-linked" : ""}`;
+    linkBtn.title = countsLinked ? "Linked: sliders move together (click to unlink)" : "Unlinked: independent sliders (click to link)";
+    linkBtn.innerHTML = countsLinked
+      ? `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6.5 9.5a3 3 0 0 0 4.2.3l2-2a3 3 0 0 0-4.2-4.3L7.3 4.7"/><path d="M9.5 6.5a3 3 0 0 0-4.2-.3l-2 2a3 3 0 0 0 4.2 4.3l1.2-1.2"/></svg>`
+      : `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6.5 9.5a3 3 0 0 0 4.2.3l2-2a3 3 0 0 0-4.2-4.3L7.3 4.7"/><path d="M9.5 6.5a3 3 0 0 0-4.2-.3l-2 2a3 3 0 0 0 4.2 4.3l1.2-1.2"/><line x1="2.5" y1="2.5" x2="13.5" y2="13.5"/></svg>`;
+
+    linkBtn.addEventListener("click", () => {
+      countsLinked = !countsLinked;
+      linkBtn.classList.toggle("is-linked", countsLinked);
+      linkBtn.title = countsLinked ? "Linked: sliders move together (click to unlink)" : "Unlinked: independent sliders (click to link)";
+      linkBtn.innerHTML = countsLinked
+        ? `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6.5 9.5a3 3 0 0 0 4.2.3l2-2a3 3 0 0 0-4.2-4.3L7.3 4.7"/><path d="M9.5 6.5a3 3 0 0 0-4.2-.3l-2 2a3 3 0 0 0 4.2 4.3l1.2-1.2"/></svg>`
+        : `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6.5 9.5a3 3 0 0 0 4.2.3l2-2a3 3 0 0 0-4.2-4.3L7.3 4.7"/><path d="M9.5 6.5a3 3 0 0 0-4.2-.3l-2 2a3 3 0 0 0 4.2 4.3l1.2-1.2"/><line x1="2.5" y1="2.5" x2="13.5" y2="13.5"/></svg>`;
+    });
+
+    linkCol.appendChild(linkBtn);
+    wrapper.appendChild(linkCol);
+  }
+
+  const rowsCol = document.createElement("div");
+  rowsCol.className = "mcq-sets-rows";
+
+  activeSets.forEach(s => {
+    const min = getSetMin(s);
+    const max = getSetMax(s);
+    const current = clampSetCount(setCounts[s.id], s);
+    setCounts[s.id] = current;
+
+    const row = document.createElement("div");
+    row.className = "mcq-set-slider-row";
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "mcq-set-row-name";
+    nameEl.textContent = s.title;
+    nameEl.title = s.title;
+
+    const sliderWrap = document.createElement("div");
+    sliderWrap.className = "mcq-slider-wrap";
+
+    const datalistId = `mcq-ticks-${s.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const datalist = document.createElement("datalist");
+    datalist.id = datalistId;
+    getSnapPoints(min, max).forEach(pt => {
+      const opt = document.createElement("option");
+      opt.value = String(pt);
+      datalist.appendChild(opt);
+    });
+
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.className = "mcq-count-slider";
+    slider.min = String(min);
+    slider.max = String(max);
+    slider.step = "1";
+    slider.setAttribute("list", datalistId);
+    slider.value = String(current);
+    slider.disabled = max <= min;
+
+    sliderWrap.append(slider, datalist);
+
+    const numInput = document.createElement("input");
+    numInput.type = "text";
+    numInput.inputMode = "numeric";
+    numInput.className = "mcq-count-input";
+    numInput.value = String(current);
+    numInput.disabled = max <= min;
+    numInput.setAttribute("aria-label", `Questions for ${s.title}`);
+
+    const suffix = document.createElement("span");
+    suffix.className = "mcq-count-total";
+    suffix.textContent = `/ ${max}`;
+
+    const applyUpdate = (targetVal, sourceId) => {
+      if (countsLinked) {
+        for (const ref of rowRefs) {
+          const clamped = clampSetCount(targetVal, ref.setObj);
+          setCounts[ref.setObj.id] = clamped;
+          ref.slider.value = String(clamped);
+          if (ref.setObj.id !== sourceId || document.activeElement !== ref.numInput) {
+            ref.numInput.value = String(clamped);
+          }
+        }
+      } else {
+        const clamped = clampSetCount(targetVal, s);
+        setCounts[s.id] = clamped;
+        slider.value = String(clamped);
+        if (document.activeElement !== numInput) {
+          numInput.value = String(clamped);
+        }
+      }
+      onAnyChange();
+    };
+
+    slider.addEventListener("input", () => {
+      const raw = Number(slider.value);
+      const val = magneticSnap(raw, min, max);
+      slider.value = String(val);
+      numInput.value = String(val);
+      applyUpdate(val, s.id);
+    });
+
+    numInput.addEventListener("input", () => {
+      const digits = numInput.value.replace(/[^\d]/g, "");
+      if (digits !== numInput.value) numInput.value = digits;
+      if (digits === "") return;
+      applyUpdate(Number(digits), s.id);
+    });
+
+    numInput.addEventListener("blur", () => {
+      const clamped = clampSetCount(numInput.value, s);
+      numInput.value = String(clamped);
+      applyUpdate(clamped, s.id);
+    });
+
+    rowRefs.push({ setObj: s, slider, numInput });
+    row.append(nameEl, sliderWrap, numInput, suffix);
+    rowsCol.appendChild(row);
+  });
+
+  wrapper.appendChild(rowsCol);
+  return wrapper;
+}
+
+function createTimerInputBlock(mode) {
   const wrap = document.createElement("div");
-  wrap.className = "mcq-count-picker";
+  wrap.className = "mcq-timer-field-wrap";
 
-  const slider = document.createElement("input");
-  slider.type = "range";
-  slider.className = "mcq-count-slider";
-  slider.min = "1";
-  slider.max = String(Math.max(1, total));
-  slider.value = String(current);
-  slider.disabled = total <= 1;
+  const currentSec = mode === "study" ? studyTimerSeconds : examTimerSeconds;
 
-  const numInput = document.createElement("input");
-  numInput.type = "number";
-  numInput.className = "mcq-count-input";
-  numInput.min = "1";
-  numInput.max = String(Math.max(1, total));
-  numInput.value = String(current);
-  numInput.disabled = total <= 1;
-  numInput.setAttribute("aria-label", "Number of questions");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "mcq-timer-input";
+  input.value = formatTimeTrimmed(currentSec);
+  input.setAttribute("aria-label", mode === "study" ? "Timer per question" : "Total exam timer");
 
-  const suffix = document.createElement("span");
-  suffix.className = "mcq-count-total";
-  suffix.textContent = `/ ${total}`;
+  const sub = document.createElement("span");
+  sub.className = "mcq-timer-sublabel";
+  sub.textContent = mode === "study" ? "per question" : "total";
 
-  slider.addEventListener("input", () => {
-    const snapped = snapValue(Number(slider.value), total);
-    current = snapped;
-    slider.value = String(snapped);
-    numInput.value = String(snapped);
-    onChange(snapped);
+  input.addEventListener("focus", () => {
+    const sec = mode === "study" ? studyTimerSeconds : examTimerSeconds;
+    input.value = formatTimeFull(sec, mode);
+    input.select();
   });
 
-  numInput.addEventListener("input", () => {
-    if (numInput.value === "") return;
-    const clamped = clampBatchSize(numInput.value, total);
-    current = clamped;
-    slider.value = String(clamped);
-    onChange(clamped);
+  input.addEventListener("blur", () => {
+    let parsed = parseTimeInput(input.value, mode);
+    const maxSec = mode === "study" ? 3599 : 36000;
+    parsed = Math.max(0, Math.min(maxSec, parsed));
+    if (mode === "study") studyTimerSeconds = parsed;
+    else examTimerSeconds = parsed;
+    input.value = formatTimeTrimmed(parsed);
   });
 
-  numInput.addEventListener("blur", () => {
-    const clamped = clampBatchSize(numInput.value, total);
-    current = clamped;
-    numInput.value = String(clamped);
-    slider.value = String(clamped);
-    onChange(clamped);
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") input.blur();
   });
 
-  wrap.append(slider, numInput, suffix);
+  wrap.append(input, sub);
   return wrap;
 }
 
@@ -298,6 +536,9 @@ function renderMcqShell() {
 
   const stage = document.createElement("div");
   stage.id = "mcq-stage";
+  if (phase === "active" && isPaused) {
+    stage.classList.add("is-paused");
+  }
   container.appendChild(stage);
   view.appendChild(container);
 
@@ -340,12 +581,19 @@ function renderActiveToolbar() {
   const right = document.createElement("div");
   right.className = "mcq-toolbar-right";
 
-  if (timerEnabled) {
+  if (isTimerEnabled()) {
     const timerEl = document.createElement("span");
     timerEl.id = "mcq-timer-pill";
     timerEl.className = "mcq-timer-pill";
     right.appendChild(timerEl);
   }
+
+  const btnPause = document.createElement("button");
+  btnPause.id = "mcq-pause-btn";
+  btnPause.type = "button";
+  btnPause.className = `btn ${isPaused ? "active" : ""}`;
+  btnPause.textContent = isPaused ? "▶ Resume" : "⏸ Pause";
+  btnPause.addEventListener("click", togglePause);
 
   const btnQuit = document.createElement("button");
   btnQuit.type = "button";
@@ -353,7 +601,7 @@ function renderActiveToolbar() {
   btnQuit.textContent = "Quit";
   btnQuit.addEventListener("click", returnToSetup);
 
-  right.appendChild(btnQuit);
+  right.append(btnPause, btnQuit);
   bar.append(left, right);
 
   queueMicrotask(updateTimerDisplay);
@@ -363,16 +611,16 @@ function renderActiveToolbar() {
 function renderSetupView(stage) {
   stage.innerHTML = "";
 
-  const total = getTotalAvailableQuestions();
+  const totalAvail = getTotalAvailableQuestions();
   let totalSeen = 0;
   let weightedMastery = 0;
   for (const s of activeSets) {
     const stats = getSetStats(s);
     totalSeen += stats.seen;
-    weightedMastery += getSetMastery(s) * (s.questions?.length || 0);
+    weightedMastery += getSetMastery(s) * getSetMax(s);
   }
-  const avgMasteryPct = total > 0 ? Math.round((weightedMastery / total) * 100) : 0;
-  const unseen = Math.max(0, total - totalSeen);
+  const avgMasteryPct = totalAvail > 0 ? Math.round((weightedMastery / totalAvail) * 100) : 0;
+  const unseen = Math.max(0, totalAvail - totalSeen);
 
   const card = document.createElement("div");
   card.className = "mcq-setup-card";
@@ -386,20 +634,10 @@ function renderSetupView(stage) {
 
   const sub = document.createElement("p");
   sub.className = "mcq-setup-subtitle";
-  sub.textContent = `${activeSets.length} set${activeSets.length === 1 ? "" : "s"} selected · ${total} questions (${unseen} unseen · ${avgMasteryPct}% mastery)`;
+  sub.textContent = `${activeSets.length} set${activeSets.length === 1 ? "" : "s"} selected · ${totalAvail} questions (${unseen} unseen · ${avgMasteryPct}% mastery)`;
 
   header.append(title, sub);
   card.appendChild(header);
-
-  const setList = document.createElement("div");
-  setList.className = "mcq-setup-sets";
-  activeSets.forEach(s => {
-    const chip = document.createElement("span");
-    chip.className = "topic-badge";
-    chip.textContent = `${s.title} (${s.questions?.length || 0})`;
-    setList.appendChild(chip);
-  });
-  card.appendChild(setList);
 
   const modeSection = document.createElement("div");
   modeSection.className = "mcq-setup-section";
@@ -443,79 +681,47 @@ function renderSetupView(stage) {
   const countSection = document.createElement("div");
   countSection.className = "mcq-setup-section";
 
-  const countLabel = document.createElement("div");
+  const countHeader = document.createElement("div");
+  countHeader.className = "mcq-setup-section-head";
+
+  const countLabel = document.createElement("span");
   countLabel.className = "mcq-setup-label";
-  countLabel.textContent = "Questions";
+  countLabel.textContent = "Questions per Set";
 
-  const picker = createCountPicker(total, batchSize, val => {
-    batchSize = val;
+  const totalBadge = document.createElement("span");
+  totalBadge.className = "mcq-count-total-badge";
+  totalBadge.textContent = `Total: ${getTotalSelectedCount()}`;
+
+  countHeader.append(countLabel, totalBadge);
+  countSection.appendChild(countHeader);
+
+  const perSetRows = createPerSetRows(() => {
+    totalBadge.textContent = `Total: ${getTotalSelectedCount()}`;
   });
-
-  countSection.append(countLabel, picker);
+  countSection.appendChild(perSetRows);
   card.appendChild(countSection);
 
-  const timerSection = document.createElement("div");
-  timerSection.className = "mcq-setup-section";
+  const bottomRow = document.createElement("div");
+  bottomRow.className = "mcq-setup-bottom";
 
-  const timerRow = document.createElement("div");
-  timerRow.className = "mcq-timer-config";
+  const timerWrap = document.createElement("div");
+  timerWrap.className = "mcq-setup-timer-group";
 
-  const toggleLabel = document.createElement("label");
-  toggleLabel.className = "mcq-timer-toggle";
+  const timerLabel = document.createElement("span");
+  timerLabel.className = "mcq-setup-label";
+  timerLabel.textContent = "Timer (0 = Off)";
 
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.checked = timerEnabled;
-  checkbox.addEventListener("change", () => {
-    timerEnabled = checkbox.checked;
-    renderSetupView(stage);
-  });
-
-  const toggleText = document.createElement("span");
-  toggleText.textContent = mcqMode === "study" ? "Per-question timer" : "Exam timer";
-  toggleLabel.append(checkbox, toggleText);
-  timerRow.appendChild(toggleLabel);
-
-  if (timerEnabled) {
-    const durWrap = document.createElement("div");
-    durWrap.className = "mcq-timer-duration";
-
-    const durInput = document.createElement("input");
-    durInput.type = "number";
-    durInput.className = "mcq-count-input";
-    durInput.min = mcqMode === "study" ? "5" : "1";
-    durInput.max = mcqMode === "study" ? "600" : "300";
-    durInput.value = String(mcqMode === "study" ? studySeconds : examMinutes);
-    durInput.addEventListener("input", () => {
-      const n = parseInt(durInput.value, 10);
-      if (!Number.isFinite(n) || n <= 0) return;
-      if (mcqMode === "study") studySeconds = Math.min(600, Math.max(5, n));
-      else examMinutes = Math.min(300, Math.max(1, n));
-    });
-
-    const unitText = document.createElement("span");
-    unitText.className = "mcq-count-total";
-    unitText.textContent = mcqMode === "study" ? "sec / item" : "min total";
-
-    durWrap.append(durInput, unitText);
-    timerRow.appendChild(durWrap);
-  }
-
-  timerSection.appendChild(timerRow);
-  card.appendChild(timerSection);
-
-  const actions = document.createElement("div");
-  actions.className = "mcq-setup-actions";
+  timerWrap.append(timerLabel, createTimerInputBlock(mcqMode));
 
   const btnStart = document.createElement("button");
   btnStart.type = "button";
   btnStart.className = "btn-generate-next";
-  btnStart.disabled = total === 0;
+  btnStart.disabled = getTotalSelectedCount() === 0;
   btnStart.textContent = mcqMode === "study" ? "Start Study Session" : "Start Exam";
   btnStart.addEventListener("click", () => startNewMcqBatch());
 
-  actions.appendChild(btnStart);
-  card.appendChild(actions);
+  bottomRow.append(timerWrap, btnStart);
+  card.appendChild(bottomRow);
   stage.appendChild(card);
 }
 
@@ -555,13 +761,6 @@ function renderStudyView(stage) {
   }
   badges.appendChild(statusPill);
 
-  if (timedOutItems.has(currentIndex) && answers[currentIndex] === undefined) {
-    const lockPill = document.createElement("span");
-    lockPill.className = "mcq-lock-pill";
-    lockPill.textContent = "Time's up — answers locked";
-    badges.appendChild(lockPill);
-  }
-
   let correctCount = 0;
   let answeredCount = 0;
   for (const [idxStr, letter] of Object.entries(answers)) {
@@ -576,7 +775,7 @@ function renderStudyView(stage) {
   stage.appendChild(metaRow);
 
   const qCard = document.createElement("div");
-  qCard.className = "mcq-instant-card";
+  qCard.className = "mcq-instant-card mcq-pausable";
 
   const qText = document.createElement("div");
   qText.className = "mcq-question-text";
@@ -592,7 +791,12 @@ function renderStudyView(stage) {
 
   const chosen = answers[currentIndex];
   const hasAnswered = chosen !== undefined;
-  const isLocked = hasAnswered || timedOutItems.has(currentIndex);
+  const isTimedOut = timedOutItems.has(currentIndex) && !hasAnswered;
+  const isLocked = hasAnswered || isTimedOut;
+
+  if (isTimedOut) {
+    optsGrid.classList.add("is-timed-out");
+  }
 
   item.options.forEach((optText, i) => {
     const letter = LETTERS[i];
@@ -634,7 +838,7 @@ function renderStudyView(stage) {
   btnPrev.textContent = "← Previous";
   btnPrev.disabled = currentIndex === 0;
   btnPrev.addEventListener("click", () => {
-    if (currentIndex > 0) {
+    if (currentIndex > 0 && !isPaused) {
       currentIndex--;
       startStudyItemTimer();
       renderStudyView(stage);
@@ -648,6 +852,7 @@ function renderStudyView(stage) {
   btnNext.className = "btn-generate-next";
   btnNext.textContent = isLast ? "Finish & View Summary →" : "Next →";
   btnNext.addEventListener("click", () => {
+    if (isPaused) return;
     if (!isLast) {
       currentIndex++;
       startStudyItemTimer();
@@ -664,7 +869,7 @@ function renderStudyView(stage) {
 }
 
 function selectStudyOption(letter) {
-  if (answers[currentIndex] !== undefined || timedOutItems.has(currentIndex)) return;
+  if (isPaused || answers[currentIndex] !== undefined || timedOutItems.has(currentIndex)) return;
   stopTimer();
   answers[currentIndex] = letter;
 
@@ -679,7 +884,7 @@ function selectStudyOption(letter) {
 
 function buildExamListDom(graded = false) {
   const list = document.createElement("div");
-  list.className = "mcq-exam-list";
+  list.className = "mcq-exam-list mcq-pausable";
 
   sessionItems.forEach((item, idx) => {
     if (idx > 0) {
@@ -702,6 +907,9 @@ function buildExamListDom(graded = false) {
 
     const optsGrid = document.createElement("div");
     optsGrid.className = `mcq-options ${item.gridClass}`;
+    if (!graded && timerLocked) {
+      optsGrid.classList.add("is-timed-out");
+    }
 
     const chosen = answers[idx];
 
@@ -721,6 +929,7 @@ function buildExamListDom(graded = false) {
       } else {
         if (letter === chosen) btn.classList.add("selected");
         btn.addEventListener("click", () => {
+          if (isPaused) return;
           if (answers[idx] === letter) {
             delete answers[idx];
           } else {
@@ -764,13 +973,6 @@ function buildExamListDom(graded = false) {
 function renderExamView(stage) {
   stage.innerHTML = "";
 
-  if (timerLocked) {
-    const lockNote = document.createElement("div");
-    lockNote.className = "mcq-lock-banner";
-    lockNote.textContent = "Time's up — answers are locked. Click Check Answers when ready to submit.";
-    stage.appendChild(lockNote);
-  }
-
   stage.appendChild(buildExamListDom(false));
 
   const footer = document.createElement("div");
@@ -788,6 +990,7 @@ function renderExamView(stage) {
   btnCheck.className = "btn-generate-next";
   btnCheck.textContent = "Check Answers";
   btnCheck.addEventListener("click", () => {
+    if (isPaused) return;
     const firstMissing = sessionItems.findIndex((_, idx) => answers[idx] === undefined);
     if (firstMissing !== -1) {
       unansweredPromptOpen = true;
@@ -860,6 +1063,7 @@ function submitExamSheet() {
 
 function finishSession() {
   stopTimer();
+  isPaused = false;
   elapsedSeconds = sessionStartMs > 0 ? Math.round((Date.now() - sessionStartMs) / 1000) : 0;
   phase = "summary";
   unansweredPromptOpen = false;
@@ -884,8 +1088,6 @@ function renderSummaryView(stage) {
   const total = sessionItems.length;
   const unanswered = total - answered;
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const totalAvailable = getTotalAvailableQuestions();
-  let nextCount = clampBatchSize(batchSize, totalAvailable);
 
   const card = document.createElement("div");
   card.className = "mcq-summary-card";
@@ -911,20 +1113,26 @@ function renderSummaryView(stage) {
   top.append(title, scoreLine, statsLine);
   card.appendChild(top);
 
-  const batchRow = document.createElement("div");
-  batchRow.className = "mcq-summary-batch";
+  const batchWrap = document.createElement("div");
+  batchWrap.className = "mcq-summary-batch";
+
+  const batchHeader = document.createElement("div");
+  batchHeader.className = "mcq-setup-section-head";
 
   const batchLabel = document.createElement("span");
   batchLabel.className = "mcq-setup-label";
-  batchLabel.textContent = "Next Batch Size";
+  batchLabel.textContent = "Next Batch Questions";
 
-  const picker = createCountPicker(totalAvailable, nextCount, val => {
-    nextCount = val;
-    batchSize = val;
-  });
+  const totalBadge = document.createElement("span");
+  totalBadge.className = "mcq-count-total-badge";
+  totalBadge.textContent = `Total: ${getTotalSelectedCount()}`;
 
-  batchRow.append(batchLabel, picker);
-  card.appendChild(batchRow);
+  batchHeader.append(batchLabel, totalBadge);
+  batchWrap.appendChild(batchHeader);
+  batchWrap.appendChild(createPerSetRows(() => {
+    totalBadge.textContent = `Total: ${getTotalSelectedCount()}`;
+  }));
+  card.appendChild(batchWrap);
 
   const actions = document.createElement("div");
   actions.className = "mcq-exam-banner-actions";
@@ -952,10 +1160,7 @@ function renderSummaryView(stage) {
   btnFresh.type = "button";
   btnFresh.className = "btn-generate-next";
   btnFresh.textContent = "New Batch";
-  btnFresh.addEventListener("click", () => {
-    batchSize = nextCount;
-    startNewMcqBatch();
-  });
+  btnFresh.addEventListener("click", () => startNewMcqBatch());
   actions.appendChild(btnFresh);
 
   card.appendChild(actions);
@@ -970,6 +1175,7 @@ function renderSummaryView(stage) {
 function handleKeyDown(e) {
   const view = document.getElementById("view-mcq");
   if (!view || !view.classList.contains("active") || phase !== "active" || mcqMode !== "study") return;
+  if (isPaused) return;
   if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
 
   const k = e.key.toUpperCase();
