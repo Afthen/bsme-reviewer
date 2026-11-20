@@ -518,6 +518,64 @@ export function createMyTopicSystem({ sys = "SI" } = {}) {
 1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` or `src/mcq/index.js` manually.
 2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` (and `src/mcq/` `.json` sets) and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and zero barrel leaks.
 
+### 9.6 Authoring MCQ Sets (`src/mcq/`)
+
+MCQ sets can be committed directly to the repository under `src/mcq/` or uploaded at runtime in the browser.
+
+#### Directory Layout (Repository Sets)
+```text
+src/mcq/<subject>/<set_name>/
+├── set.json       # Required question bank
+└── assets/        # Optional local images referenced by questions (e.g. "./assets/fig1.png")
+```
+
+- Folder depth determines grouping if `subject` / `category` are omitted from `set.json`, though declaring them explicitly is recommended.
+- Never edit `src/mcq/index.js` by hand.
+
+#### `set.json` Schema
+
+```json
+{
+  "id": "mcq_cse_math_01",
+  "title": "Quantitative Reasoning & Word Problems",
+  "subject": "Civil Service Exam",
+  "category": "Numerical Ability",
+  "questions": [
+    {
+      "id": 126,
+      "q": "Which fraction has the largest value?",
+      "options": ["$\\frac{4}{5}$", "$\\frac{41}{50}$", "$\\frac{17}{20}$", "$75\\%$", "None, they are all equal"],
+      "answer": "$\\frac{17}{20}$",
+      "shuffle": [[0, 1, 2, 3]]
+    },
+    {
+      "id": 127,
+      "q": "Identify the component shown in the diagram.",
+      "image": { "src": "./assets/fig1.png", "alt": "Pump cross-section" },
+      "options": ["Impeller", "Volute", "Shaft sleeve", "Wear ring"],
+      "answer": "Impeller"
+    }
+  ]
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `id` | Recommended | Globally unique string. Defaults to `mcq_<relDir>` if omitted. |
+| `title` | Recommended | Display name in the quiz selector (falls back to `setName` or folder name). |
+| `subject` | Recommended | Top-level group in the selector (falls back to `<subject>` folder name). |
+| `category` | No | Sub-group under `subject`, or `null` for standalone sets. |
+| `questions` | Yes | Array of question objects. |
+| `questions[].q` | Yes | Prompt text. Supports KaTeX (`$...$` / `$$...$$`). |
+| `questions[].options` | Yes | At least 2 choices. Pools $> 4$ sample the correct answer + 3 distractors at runtime. |
+| `questions[].answer` | Yes | Exact option text (recommended), option letter (`"A"`–`"F"`), or index. |
+| `questions[].shuffle` | No | Omit for full shuffle; `[]` locks option order; index groups (e.g. `[[0, 1, 2]]`) shuffle only those indices while pinning trailing choices like `"All of the above"` / `"NO ERROR"`. |
+| `questions[].image` | No | Path string (`"./assets/fig1.png"`, `https://...`, `data:image/...`) or `{ "src": "...", "alt": "..." }`. |
+
+#### Publishing & Local Uploads
+- **Repository sets (important):** After adding or editing any `set.json`, run `npm test` (or `npm run gen:registry`) and **commit + push the regenerated `src/mcq/index.js`** alongside your `set.json`. Because the app runs as static ES modules over HTTP/S, the browser cannot scan `src/mcq/` at runtime—only sets registered in `src/mcq/index.js` appear in the selector.
+- **Local browser uploads:** Users can also import personal `.json` or `.zip` (containing a `.json` file plus an `assets/` folder) directly via **+ Add Quiz (.json / .zip)** in the quiz dropdown; these persist locally in `IndexedDB`.
+
 ---
 
 ## 10. Testing & Invariant Verification Suite
