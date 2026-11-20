@@ -1,70 +1,53 @@
-Two great catches:
-1. **Why `Choose quiz sets` didn't work:** Clicking it opened the dropdown, then the click bubbled up to `document`'s outside-click listener, which immediately closed it again! Adding `e.stopPropagation()` fixes both `Choose quiz sets` and `Choose topics`.
-2. **Tucking `Export / Import` into `☰ Mastery`:** Moving `💾 Export` and `📥 Import` into the bottom of `#sidebar-drawer` cleans up the header and makes it 100% clear those buttons are for your **Mastery Profile** (not quiz uploads).
+You spotted the exact architectural root cause: **lifecycle event binding was coupled to menu re-rendering.**
 
-FILE: index.html
+1. `toggleBtn` and `document` click listeners lived inside `setupTopicSelector()`.
+2. When the app booted in `mcq` mode (or switched modes), `setupTopicSelector()` either never ran (leaving the dropdown toggle dead—so it could open via `Choose quiz sets` but never close!) or re-ran on mode switches (stacking duplicate `toggle()` listeners so a single click fired twice).
+
+### Root-Cause Fix
+- Extract a single **`initDropdownShell()`** called **once** on `DOMContentLoaded` (just like `initSidebarView()` and `setupHeaderActions()`).
+- Let `initDropdownShell()` own the toggle button, `Escape` key, and outside-click closing (ignoring triggers marked with `data-opens-dropdown`, so no `stopPropagation()` patches are needed).
+- `setupTopicSelector()` and `setupMcqSelector()` become pure menu-content renderers with zero global listeners.
+
+FILE: app.js
 ```diff
 <<<<
-    <div class="header-actions">
-      <button class="btn" id="btn-export">💾 Export</button>
-      <button class="btn" id="btn-import">📥 Import</button>
-      <input type="file" id="mastery-file-input" style="display: none" accept=".json">
-      <input type="file" id="mcq-file-input" style="display: none" accept=".json,.zip">
-    </div>
-  </header>
-
-  <div id="sidebar-overlay"></div>
-
-  <div class="workspace">
-    <aside id="sidebar-drawer">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span class="sidebar-title">Formula Mastery (Harmonic)</span>
-        <button class="btn" id="btn-close-sidebar" style="padding: 0.2rem 0.5rem;">✕</button>
-      </div>
-      <div class="sidebar-section">
-        <div class="weight-bars" id="weight-bars-el"></div>
-      </div>
-    </aside>
-====
-    <input type="file" id="mastery-file-input" style="display: none" accept=".json">
-    <input type="file" id="mcq-file-input" style="display: none" accept=".json,.zip">
-  </header>
-
-  <div id="sidebar-overlay"></div>
-
-  <div class="workspace">
-    <aside id="sidebar-drawer">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span class="sidebar-title">Formula Mastery (Harmonic)</span>
-        <button class="btn" id="btn-close-sidebar" style="padding: 0.2rem 0.5rem;">✕</button>
-      </div>
-      <div class="sidebar-section" style="flex: 1;">
-        <div class="weight-bars" id="weight-bars-el"></div>
-      </div>
-      <div class="sidebar-footer-actions">
-        <button class="btn" id="btn-export">💾 Export Mastery</button>
-        <button class="btn" id="btn-import">📥 Import Mastery</button>
-      </div>
-    </aside>
->>>>
-```
-
-FILE: styles/components.css
-```diff
-<<<<
-.sidebar-section { display: flex; flex-direction: column; gap: 0.5rem; }
-.sidebar-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--text-dim); }
-====
-.sidebar-section { display: flex; flex-direction: column; gap: 0.5rem; }
-.sidebar-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--text-dim); }
-.sidebar-footer-actions {
-  display: flex;
-  gap: 0.5rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--border);
-  margin-top: auto;
+function openDropdown() {
+  document.getElementById("topic-dropdown-menu")?.classList.add("active");
+  document.getElementById("topic-dropdown-toggle")?.classList.add("active");
 }
-.sidebar-footer-actions .btn { flex: 1; text-align: center; }
+====
+function openDropdown() {
+  document.getElementById("topic-dropdown-menu")?.classList.add("active");
+  document.getElementById("topic-dropdown-toggle")?.classList.add("active");
+}
+
+function closeDropdown() {
+  document.getElementById("topic-dropdown-menu")?.classList.remove("active");
+  document.getElementById("topic-dropdown-toggle")?.classList.remove("active");
+}
+
+function initDropdownShell() {
+  const container = document.getElementById("topic-dropdown-container");
+  const toggleBtn = document.getElementById("topic-dropdown-toggle");
+  const menu = document.getElementById("topic-dropdown-menu");
+  if (!container || !toggleBtn || !menu) return;
+
+  toggleBtn.addEventListener("click", () => {
+    const isOpen = menu.classList.toggle("active");
+    toggleBtn.classList.toggle("active", isOpen);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-opens-dropdown]")) return;
+    if (!container.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDropdown();
+  });
+}
 >>>>
 ```
 
@@ -75,16 +58,17 @@ FILE: app.js
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose topics";
-  btn.addEventListener("click", openDropdown);
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openDropdown();
+  });
 ====
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose topics";
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openDropdown();
-  });
+  btn.dataset.opensDropdown = "1";
+  btn.addEventListener("click", openDropdown);
 >>>>
 ```
 
@@ -95,15 +79,63 @@ FILE: app.js
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose quiz sets";
-  btn.addEventListener("click", openDropdown);
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openDropdown();
+  });
 ====
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose quiz sets";
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openDropdown();
-  });
+  btn.dataset.opensDropdown = "1";
+  btn.addEventListener("click", openDropdown);
+>>>>
+```
+
+FILE: app.js
+```diff
+<<<<
+document.addEventListener("DOMContentLoaded", async () => {
+  loadMastery();
+  customMcqManifests = await listCustomManifests();
+  initSidebarView([], () => 0, []);
+  setupHeaderActions();
+====
+document.addEventListener("DOMContentLoaded", async () => {
+  loadMastery();
+  customMcqManifests = await listCustomManifests();
+  initDropdownShell();
+  initSidebarView([], () => 0, []);
+  setupHeaderActions();
+>>>>
+```
+
+FILE: app.js
+```diff
+<<<<
+  syncGroupBoxes();
+  updateDropdownLabel();
+
+  if (!container.dataset.boundDropdown) {
+    container.dataset.boundDropdown = "1";
+    toggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = menu.classList.toggle("active");
+      toggleBtn.classList.toggle("active", isOpen);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!container.contains(e.target)) {
+        menu.classList.remove("active");
+        toggleBtn.classList.remove("active");
+      }
+    });
+  }
+}
+====
+  syncGroupBoxes();
+  updateDropdownLabel();
+}
 >>>>
 ```

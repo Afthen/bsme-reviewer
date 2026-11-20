@@ -126,6 +126,34 @@ function openDropdown() {
   document.getElementById("topic-dropdown-toggle")?.classList.add("active");
 }
 
+function closeDropdown() {
+  document.getElementById("topic-dropdown-menu")?.classList.remove("active");
+  document.getElementById("topic-dropdown-toggle")?.classList.remove("active");
+}
+
+function initDropdownShell() {
+  const container = document.getElementById("topic-dropdown-container");
+  const toggleBtn = document.getElementById("topic-dropdown-toggle");
+  const menu = document.getElementById("topic-dropdown-menu");
+  if (!container || !toggleBtn || !menu) return;
+
+  toggleBtn.addEventListener("click", () => {
+    const isOpen = menu.classList.toggle("active");
+    toggleBtn.classList.toggle("active", isOpen);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-opens-dropdown]")) return;
+    if (!container.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDropdown();
+  });
+}
+
 function clearSelectionPrompt() {
   document.getElementById("selection-prompt")?.remove();
   document.getElementById("view-problem")?.classList.remove("is-empty");
@@ -153,10 +181,8 @@ function renderSelectionPrompt() {
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose topics";
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openDropdown();
-  });
+  btn.dataset.opensDropdown = "1";
+  btn.addEventListener("click", openDropdown);
 
   wrap.append(heading, body, btn);
   view.classList.add("is-empty");
@@ -199,10 +225,8 @@ function renderMcqEmptyPrompt() {
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose quiz sets";
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openDropdown();
-  });
+  btn.dataset.opensDropdown = "1";
+  btn.addEventListener("click", openDropdown);
 
   wrap.append(heading, body, btn);
   view.classList.add("is-empty");
@@ -273,6 +297,7 @@ function applyAppMode(mode) {
 document.addEventListener("DOMContentLoaded", async () => {
   loadMastery();
   customMcqManifests = await listCustomManifests();
+  initDropdownShell();
   initSidebarView([], () => 0, []);
   setupHeaderActions();
 
@@ -539,22 +564,6 @@ function setupTopicSelector() {
 
   syncGroupBoxes();
   updateDropdownLabel();
-
-  if (!container.dataset.boundDropdown) {
-    container.dataset.boundDropdown = "1";
-    toggleBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isOpen = menu.classList.toggle("active");
-      toggleBtn.classList.toggle("active", isOpen);
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!container.contains(e.target)) {
-        menu.classList.remove("active");
-        toggleBtn.classList.remove("active");
-      }
-    });
-  }
 }
 
 function setupMcqSelector() {
