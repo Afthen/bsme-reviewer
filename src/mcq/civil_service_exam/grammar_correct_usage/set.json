@@ -882,7 +882,7 @@
       "shuffle": []
     },
     {
-      "id": "tmp_gr_1",
+      "id": 67,
       "q": "Which sentence uses \"famish\" correctly?",
       "options": [
         "After the straight exam, I felt too exhausted and famished to eat my favourite foods.",
@@ -893,237 +893,432 @@
       "answer": "After the straight exam, I felt too exhausted and famished to eat my favourite foods."
     },
     {
-      "id": "tmp_gr_2",
+      "id": 68,
       "q": "Priscila _________ rather not invest her savings in the stock market.",
-      "options": ["must", "has to", "could", "would"],
+      "options": [
+        "must",
+        "has to",
+        "could",
+        "would"
+      ],
       "answer": "would"
     },
     {
-      "id": "tmp_gr_3",
+      "id": 69,
       "q": "Did you have any problem _________ our house?",
-      "options": ["search", "to search", "searching", "for searching"],
+      "options": [
+        "search",
+        "to search",
+        "searching",
+        "for searching"
+      ],
       "answer": "searching"
     },
     {
-      "id": "tmp_gr_4",
+      "id": 70,
       "q": "I hope you don't mind _________ joining you.",
-      "options": ["to be", "I had been", "that I may", "may"],
+      "options": [
+        "to be",
+        "I had been",
+        "that I may",
+        "may"
+      ],
       "answer": "my"
     },
     {
-      "id": "tmp_gr_5",
+      "id": 71,
       "q": "Most basketball players are 6 ________ tall or more.",
-      "options": ["foot", "feet", "foots", "feets"],
+      "options": [
+        "foot",
+        "feet",
+        "foots",
+        "feets"
+      ],
       "answer": "feet"
     },
     {
-      "id": "tmp_gr_6",
+      "id": 72,
       "q": "These children _________ how to improvise more props for the play.",
-      "options": ["knew", "knows", "know", "known"],
+      "options": [
+        "knew",
+        "knows",
+        "know",
+        "known"
+      ],
       "answer": "know"
     },
     {
-      "id": "tmp_gr_7",
+      "id": 73,
       "q": "The company will upgrade _________ computer systems next week.",
-      "options": ["there", "their", "its", "it's"],
+      "options": [
+        "there",
+        "their",
+        "its",
+        "it's"
+      ],
       "answer": "its"
     },
     {
-      "id": "tmp_gr_8",
+      "id": 74,
       "q": "Clara _________ three thousand words for her essay.",
-      "options": ["have wrote", "has wrote", "have written", "has written"],
+      "options": [
+        "have wrote",
+        "has wrote",
+        "have written",
+        "has written"
+      ],
       "answer": "has written"
     },
     {
-      "id": "tmp_gr_9",
+      "id": 75,
       "q": "You have too many _________ but few time to prove you're right.",
-      "options": ["hypothesis", "hypotheses", "hyphothesises", "hypothesess"],
+      "options": [
+        "hypothesis",
+        "hypotheses",
+        "hyphothesises",
+        "hypothesess"
+      ],
       "answer": "hypotheses"
     },
     {
-      "id": "tmp_gr_10",
+      "id": 76,
       "q": "Neither Sarah nor Tina _________ the crime yesterday.",
-      "options": ["witness", "witnesses", "witnessed", "witnessing"],
+      "options": [
+        "witness",
+        "witnesses",
+        "witnessed",
+        "witnessing"
+      ],
       "answer": "witnessed"
     },
     {
-      "id": "tmp_gr_11",
+      "id": 77,
       "q": "You do like going to the party alone. _________ you?",
-      "options": ["Does", "Doesn't", "Do", "Don't"],
+      "options": [
+        "Does",
+        "Doesn't",
+        "Do",
+        "Don't"
+      ],
       "answer": "Don't"
     },
     {
-      "id": "tmp_gr_12",
+      "id": 78,
       "q": "We had our house _________ in yellow.",
-      "options": ["painting", "painted", "paint", "to paint"],
+      "options": [
+        "painting",
+        "painted",
+        "paint",
+        "to paint"
+      ],
       "answer": "painted"
     },
     {
-      "id": "tmp_gr_13",
+      "id": 79,
       "q": "He has been exercising but his immune system was steadily _________.",
-      "options": ["weak", "weaken", "weakened", "weakining"],
+      "options": [
+        "weak",
+        "weaken",
+        "weakened",
+        "weakining"
+      ],
       "answer": "weakened"
     },
     {
-      "id": "tmp_gr_14",
+      "id": 80,
       "q": "I was _________ that the weather would be sunny and we would be able to enjoy our swimming.",
-      "options": ["hopeless", "hopeful", "hopelike", "hopely"],
+      "options": [
+        "hopeless",
+        "hopeful",
+        "hopelike",
+        "hopely"
+      ],
       "answer": "hopeful"
     },
     {
-      "id": "tmp_gr_15",
+      "id": 81,
       "q": "I think it's not a great idea. I totally _________.",
-      "options": ["misagree", "unagree", "inagree", "disagree"],
+      "options": [
+        "misagree",
+        "unagree",
+        "inagree",
+        "disagree"
+      ],
       "answer": "disagree"
     },
     {
-      "id": "tmp_gr_16",
+      "id": 82,
       "q": "So many _________ I found in the library, now I'm ready to report.",
-      "options": ["information", "informations", "infoes", "infos"],
+      "options": [
+        "information",
+        "informations",
+        "infoes",
+        "infos"
+      ],
       "answer": "information"
     },
     {
-      "id": "tmp_gr_17",
+      "id": 83,
       "q": "My grandpa always feed his flock of _________ early in the morning.",
-      "options": ["sheeps", "sheep", "ships", "ship"],
+      "options": [
+        "sheeps",
+        "sheep",
+        "ships",
+        "ship"
+      ],
       "answer": "sheep"
     },
     {
-      "id": "tmp_gr_18",
+      "id": 84,
       "q": "Happy memories are always remembered, not _________.",
-      "options": ["forget", "forgets", "forgot", "forgotten"],
+      "options": [
+        "forget",
+        "forgets",
+        "forgot",
+        "forgotten"
+      ],
       "answer": "forgotten"
     },
     {
-      "id": "tmp_gr_19",
+      "id": 85,
       "q": "Flight Z735 _________ yesterday. 350 passengers died in that accident.",
-      "options": ["crush", "crushed", "crash", "crashed"],
+      "options": [
+        "crush",
+        "crushed",
+        "crash",
+        "crashed"
+      ],
       "answer": "crashed"
     },
     {
-      "id": "tmp_gr_20",
+      "id": 86,
       "q": "There is a _________ message when you look closely at her painting.",
-      "options": ["hid", "hide", "hided", "hidden"],
+      "options": [
+        "hid",
+        "hide",
+        "hided",
+        "hidden"
+      ],
       "answer": "hidden"
     },
     {
-      "id": "tmp_id_31",
+      "id": 87,
       "q": "If you don't spill the beans now, you might gonna regret it.",
-      "options": ["spread rumors", "let out a secret", "plant some seeds", "none of the above"],
+      "options": [
+        "spread rumors",
+        "let out a secret",
+        "plant some seeds",
+        "none of the above"
+      ],
       "answer": "let out a secret"
     },
     {
-      "id": "tmp_id_32",
+      "id": 88,
       "q": "Hey, man, you are absolutely barking up the wrong tree here because I'm innocent.",
-      "options": ["choosing the wrong dog", "giving up a fight", "accusing the wrong person", "setting up an event in a tree"],
+      "options": [
+        "choosing the wrong dog",
+        "giving up a fight",
+        "accusing the wrong person",
+        "setting up an event in a tree"
+      ],
       "answer": "accusing the wrong person"
     },
     {
-      "id": "tmp_id_33",
+      "id": 89,
       "q": "One proven way to beat an enemy is find his Achilles heel.",
-      "options": ["secret strategy", "amulet", "strong point", "weak spot"],
+      "options": [
+        "secret strategy",
+        "amulet",
+        "strong point",
+        "weak spot"
+      ],
       "answer": "weak spot"
     },
     {
-      "id": "tmp_id_34",
+      "id": 90,
       "q": "His new Ferrari costs an arm and a leg so he is now looking for another job.",
-      "options": ["very expensive", "got fired", "met an accident", "was stolen"],
+      "options": [
+        "very expensive",
+        "got fired",
+        "met an accident",
+        "was stolen"
+      ],
       "answer": "very expensive"
     },
     {
-      "id": "tmp_id_35",
+      "id": 91,
       "q": "He married a woman who was born with a silver spoon in her mouth.",
-      "options": ["born very beautiful", "born very poor", "born into a very rich family", "born very talkative"],
+      "options": [
+        "born very beautiful",
+        "born very poor",
+        "born into a very rich family",
+        "born very talkative"
+      ],
       "answer": "born into a very rich family"
     },
     {
-      "id": "tmp_id_36",
+      "id": 92,
       "q": "They were able to WEATHER the storm.",
-      "options": ["reached home safely", "survived the crisis", "defeated the enemies", "realized their mistakes"],
+      "options": [
+        "reached home safely",
+        "survived the crisis",
+        "defeated the enemies",
+        "realized their mistakes"
+      ],
       "answer": "survived the crisis"
     },
     {
-      "id": "tmp_id_37",
+      "id": 93,
       "q": "TRUST men and they will be true to you.",
-      "options": ["a man is loyal in whom confidence had been placed", "man must trust you to be faithful to you", "a secret is a test of friendship", "destruct the people justifies their deserving"],
+      "options": [
+        "a man is loyal in whom confidence had been placed",
+        "man must trust you to be faithful to you",
+        "a secret is a test of friendship",
+        "destruct the people justifies their deserving"
+      ],
       "answer": "a man is loyal in whom confidence had been placed"
     },
     {
-      "id": "tmp_id_38",
+      "id": 94,
       "q": "CUT your coat to your cloth.",
-      "options": ["walk in accordance with your ability", "desire only what you can afford", "patronize first your own product", "express only relevant ideas"],
+      "options": [
+        "walk in accordance with your ability",
+        "desire only what you can afford",
+        "patronize first your own product",
+        "express only relevant ideas"
+      ],
       "answer": "desire only what you can afford"
     },
     {
-      "id": "tmp_id_39",
+      "id": 95,
       "q": "Paddle your own CANOE.",
-      "options": ["always tries his best", "earn his own money", "have self-respect", "be self-reliant"],
+      "options": [
+        "always tries his best",
+        "earn his own money",
+        "have self-respect",
+        "be self-reliant"
+      ],
       "answer": "be self-reliant"
     },
     {
-      "id": "tmp_id_40",
+      "id": 96,
       "q": "This report leaves much to be DESIRED.",
-      "options": ["satisfactory", "longed", "important", "legible"],
+      "options": [
+        "satisfactory",
+        "longed",
+        "important",
+        "legible"
+      ],
       "answer": "longed"
     },
     {
-      "id": "tmp_sp_41",
+      "id": 97,
       "q": "The journalist made a _________ to finish the article by Friday.",
-      "options": ["commitment", "committent", "comittment", "comitment"],
+      "options": [
+        "commitment",
+        "committent",
+        "comittment",
+        "comitment"
+      ],
       "answer": "commitment"
     },
     {
-      "id": "tmp_sp_42",
+      "id": 98,
       "q": "Dad thinks it is _________ to stay up late on a school night.",
-      "options": ["rediculous", "rediculus", "ridiculous", "ridiculus"],
+      "options": [
+        "rediculous",
+        "rediculus",
+        "ridiculous",
+        "ridiculus"
+      ],
       "answer": "ridiculous"
     },
     {
-      "id": "tmp_sp_43",
+      "id": 99,
       "q": "The large donation came from an _________ source.",
-      "options": ["anynonimous", "anonimous", "anounymous", "anonymous"],
+      "options": [
+        "anynonimous",
+        "anonimous",
+        "anounymous",
+        "anonymous"
+      ],
       "answer": "anonymous"
     },
     {
-      "id": "tmp_sp_44",
+      "id": 100,
       "q": "The scientists had to do an _________ amount of research on the project.",
-      "options": ["extraordinary", "extraordinery", "extroridinary", "ecstraordinary"],
+      "options": [
+        "extraordinary",
+        "extraordinery",
+        "extroridinary",
+        "ecstraordinary"
+      ],
       "answer": "extraordinary"
     },
     {
-      "id": "tmp_sp_45",
+      "id": 101,
       "q": "The customer service representative gave his _________ that the refund would be made within two weeks.",
-      "options": ["asurrance", "assurance", "assurence", "assureance"],
+      "options": [
+        "asurrance",
+        "assurance",
+        "assurence",
+        "assureance"
+      ],
       "answer": "assurance"
     },
     {
-      "id": "tmp_sp_46",
+      "id": 102,
       "q": "The purpose of the new city ordinance was debated _________.",
-      "options": ["frequently", "frequintly", "frequentlly", "frequentley"],
+      "options": [
+        "frequently",
+        "frequintly",
+        "frequentlly",
+        "frequentley"
+      ],
       "answer": "frequently"
     },
     {
-      "id": "tmp_sp_47",
+      "id": 103,
       "q": "Throughout the trial, the _________ was placed on scientific evidence.",
-      "options": ["enphasis", "emphisis", "emphasis", "emfasis"],
+      "options": [
+        "enphasis",
+        "emphisis",
+        "emphasis",
+        "emfasis"
+      ],
       "answer": "emphasis"
     },
     {
-      "id": "tmp_sp_48",
+      "id": 104,
       "q": "The presidential candidate refused to _________ the election until every vote was counted.",
-      "options": ["concede", "conceed", "consede", "conseed"],
+      "options": [
+        "concede",
+        "conceed",
+        "consede",
+        "conseed"
+      ],
       "answer": "concede"
     },
     {
-      "id": "tmp_sp_49",
+      "id": 105,
       "q": "Each of the new employees had similar _________.",
-      "options": ["asspirations", "asparations", "aspirrations", "aspirations"],
+      "options": [
+        "asspirations",
+        "asparations",
+        "aspirrations",
+        "aspirations"
+      ],
       "answer": "aspirations"
     },
     {
-      "id": "tmp_sp_50",
+      "id": 106,
       "q": "The young man wished to _________ his right to speak freely.",
-      "options": ["excercise", "exercise", "exersize", "exercize"],
+      "options": [
+        "excercise",
+        "exercise",
+        "exersize",
+        "exercize"
+      ],
       "answer": "exercise"
     }
   ]

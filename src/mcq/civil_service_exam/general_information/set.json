@@ -251,7 +251,8 @@
         "Senate, Supreme Court, Congress",
         "Presidential, Unicameral-Parliamentary, Bicameral-Parliamentary",
         "Legislative, Executive, Judicial",
-        "The Legislature, The Senate, The Supreme Court"
+        "The Legislature, The Senate, The Supreme Court",
+        "Presidential, Unicameral- Parliamentary, Bicameral-Parliamentary"
       ],
       "answer": "Legislative, Executive, Judicial"
     },
@@ -394,7 +395,8 @@
         "Those whose fathers or mothers are citizens of the Philippines",
         "Those who are born before January 17, 1973, of Filipino mothers, who elect Philippine citizenship upon reaching the age of majority",
         "Those who are naturalized citizens of the Philippines in accordance with law.",
-        "All of the above are true."
+        "All of the above are true.",
+        "Those fathers or mothers are citizens of the Philippines"
       ],
       "answer": "All of the above are true.",
       "shuffle": [
@@ -434,7 +436,8 @@
         "Police Power",
         "Power of Eminent Domain",
         "Power of Taxation",
-        "Power to Impeach"
+        "Power to Impeach",
+        "Power if Taxation"
       ],
       "answer": "Police Power"
     },
@@ -445,7 +448,8 @@
         "Police Power",
         "Power of Eminent Domain",
         "Power of Taxation",
-        "Power to Impeach"
+        "Power to Impeach",
+        "Power if Taxation"
       ],
       "answer": "Power of Eminent Domain"
     },
@@ -511,7 +515,8 @@
         "Act promptly on letters, inquiries, calls or any other form of communications sent by the public.",
         "Submit performance reports of the agency or office regularly.",
         "Accept gifts from the public upon prioritizing their queries.",
-        "Process documents and papers expeditiously."
+        "Process documents and papers expeditiously.",
+        "Submit performance reports of the agency or office regularly"
       ],
       "answer": "Accept gifts from the public upon prioritizing their queries."
     },
@@ -704,348 +709,297 @@
         "Universal Serial Bus"
       ],
       "answer": "Universal Serial Bus"
-    }
-  ,
-    {
-      "id": "tmp_gi_1",
-      "q": "What are the 3 main branches of the Government of the Philippines?",
-      "options": ["Senate, Supreme Court, Congress", "Presidential, Unicameral- Parliamentary, Bicameral-Parliamentary", "Legislative, Executive, Judicial", "The Legislature, The Senate, The Supreme Court"],
-      "answer": "Legislative, Executive, Judicial"
     },
     {
-      "id": "tmp_gi_2",
+      "id": 61,
       "q": "The Supreme Court shall be composed of a Chief Justice and how many Associates Justices?",
-      "options": ["12", "13", "14", "15"],
+      "options": [
+        "12",
+        "13",
+        "14",
+        "15"
+      ],
       "answer": "14"
     },
     {
-      "id": "tmp_gi_3",
+      "id": 62,
       "q": "The Commander-in-Chief of all armed forces of the Philippines this 2017 is _________.",
-      "options": ["Air Force Commanding General Jeffrey Delgado", "Rodrigo Duterte", "Chief Justice Maria Lourdes Sereno", "AFP Chief Lieutenant Gen. Emmanuel Bautista"],
+      "options": [
+        "Air Force Commanding General Jeffrey Delgado",
+        "Rodrigo Duterte",
+        "Chief Justice Maria Lourdes Sereno",
+        "AFP Chief Lieutenant Gen. Emmanuel Bautista"
+      ],
       "answer": "Rodrigo Duterte"
     },
     {
-      "id": "tmp_gi_4",
-      "q": "The executive power shall be vested in the _________.",
-      "options": ["President of the Philippines", "House of Representatives", "The Supreme Court", "The Congress"],
-      "answer": "President of the Philippines"
-    },
-    {
-      "id": "tmp_gi_5",
+      "id": 63,
       "q": "The legislative power shall be vested in the _________ which shall consist of a Senate and a House of Representatives.",
-      "options": ["Congress of the Philippines", "House of Ombudsman", "The Supreme Court", "Bureau of Internal Revenue"],
+      "options": [
+        "Congress of the Philippines",
+        "House of Ombudsman",
+        "The Supreme Court",
+        "Bureau of Internal Revenue"
+      ],
       "answer": "Congress of the Philippines"
     },
     {
-      "id": "tmp_gi_6",
-      "q": "The Senate shall be composed of how many senators elected at large by voters of the Philippines?",
-      "options": ["21", "22", "23", "24"],
-      "answer": "24"
-    },
-    {
-      "id": "tmp_gi_7",
-      "q": "How long shall the term of office of the senators be commenced?",
-      "options": ["3 years", "4 years", "5 years", "6 years"],
-      "answer": "6 years"
-    },
-    {
-      "id": "tmp_gi_8",
-      "q": "The term of office of the President and Vice-president of the Philippines shall be up to how many years?",
-      "options": ["3 years", "4 years", "5 years", "6 years"],
-      "answer": "6 years"
-    },
-    {
-      "id": "tmp_gi_9",
+      "id": 64,
       "q": "The members of the House of Representatives shall be elected for a term of _________.",
-      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "options": [
+        "3 years",
+        "4 years",
+        "5 years",
+        "6 years"
+      ],
       "answer": "3 years"
     },
     {
-      "id": "tmp_gi_10",
-      "q": "The following shall be exempted from taxation except:",
-      "options": ["Lands and buildings", "Churches and convents", "Charitable institutions", "Non-profit cemeteries"],
-      "answer": "Lands and buildings"
-    },
-    {
-      "id": "tmp_gi_11",
+      "id": 65,
       "q": "The Congress, by a vote of _________ of both Houses in joint session assembled, voting separately, shall have the sole power to declare a state of war.",
-      "options": ["Two-thirds", "One-half", "Three quarters", "Minority"],
+      "options": [
+        "Two-thirds",
+        "One-half",
+        "Three quarters",
+        "Minority"
+      ],
       "answer": "Two-thirds"
     },
     {
-      "id": "tmp_gi_12",
-      "q": "It states that \"no person shall be deprived of life, liberty, or property without due process of law, nor any person be denied the equal protection of the laws.\"",
-      "options": ["Article VI", "Bill of Rights", "Republic Act", "Court Order"],
-      "answer": "Bill of Rights"
-    },
-    {
-      "id": "tmp_gi_13",
-      "q": "All of the following is TRUE except:",
-      "options": ["No person shall be compelled to be a witness against himself", "No person shall be imprisoned for non-payment of debt or poll tax.", "No ex post facto law or bill of attainder shall not be enacted.", "No person shall be detained solely by reason of his political beliefs and aspirations."],
-      "answer": "No ex post facto law or bill of attainder shall not be enacted."
-    },
-    {
-      "id": "tmp_gi_14",
-      "q": "The following are citizens of the Philippines except:",
-      "options": ["Those fathers or mothers are citizens of the Philippines", "Those who are born before January 17, 1973, of Filipino mothers, who elect Philippine citizenship upon reaching the age of majority", "Those who are naturalized citizens of the Philippines in accordance with law.", "All of the above are true."],
-      "answer": "All of the above are true."
-    },
-    {
-      "id": "tmp_gi_15",
+      "id": 66,
       "q": "It is the right and obligation by all citizens, who are at least 18 years of age, and qualified by law, to vote in the election of national and local officials of the government without literacy,, property, or other substantive requirement.",
-      "options": ["Suffrage", "Election", "Voting power", "Civil Right"],
+      "options": [
+        "Suffrage",
+        "Election",
+        "Voting power",
+        "Civil Right"
+      ],
       "answer": "Suffrage"
     },
     {
-      "id": "tmp_gi_16",
-      "q": "The three inherent powers of the state are the following except one:",
-      "options": ["Police Power", "Power of Eminent Domain", "Power of Taxation", "Power to Impeach"],
-      "answer": "Power to Impeach"
-    },
-    {
-      "id": "tmp_gi_17",
-      "q": "It is the power of the State to promote public welfare by restraining the use of both liberty and property of all people.",
-      "options": ["Police Power", "Power of Eminent Domain", "Power if Taxation", "Power to Impeach"],
-      "answer": "Police Power"
-    },
-    {
-      "id": "tmp_gi_18",
-      "q": "It is the power of the State to take properties for the purpose of public use upon payment of just compensation.",
-      "options": ["Police Power", "Power of Eminent Domain", "Power if Taxation", "Power to Impeach"],
-      "answer": "Power of Eminent Domain"
-    },
-    {
-      "id": "tmp_gi_19",
+      "id": 67,
       "q": "It is the power of the State to impose charge or burden to persons and properties, and property rights for the purpose of raising revenues to protect the people and extend public projects and services.",
-      "options": ["Police Power", "Power of Eminent Domain", "Power if Taxation", "Power to Impeach"],
+      "options": [
+        "Police Power",
+        "Power of Eminent Domain",
+        "Power if Taxation",
+        "Power to Impeach"
+      ],
       "answer": "Power if Taxation"
     },
     {
-      "id": "tmp_gi_20",
-      "q": "The following are members of the Constitutional Commission except:",
-      "options": ["Commission on Civil Rights", "Commission on Elections", "Civil Service Commission", "Commission on Audit"],
-      "answer": "Commission on Civil Rights"
-    },
-    {
-      "id": "tmp_gi_21",
-      "q": "It states that public office is public trust and that public officers and employees must, at all times, be accountable to the people, serve them with utmost responsibility, integrity, loyalty and efficiency; act with patriotism and justice and lead modest lives.",
-      "options": ["Public Trust", "Constitutional Rights", "Accountability", "Responsibility"],
-      "answer": "Accountability"
-    },
-    {
-      "id": "tmp_gi_22",
-      "q": "Who shall have the exclusive power to initiate all cases of impeachment?",
-      "options": ["House of Blue Ribbon Committee", "House of Representatives", "House of the Senate", "Speaker of the House"],
-      "answer": "House of Representatives"
-    },
-    {
-      "id": "tmp_gi_23",
-      "q": "R.A. 6713 is an act to uphold the time-honored principle of public office being a public trust, granting incentives and rewards for exemplary service, enumerating prohibited acts and providing penalties for violations thereof and for other purposes.",
-      "options": ["Preamble", "Code of Ethics", "Code of Government Officials", "Code of Conduct and Ethical Standards for Public Officials and Employees"],
-      "answer": "Code of Conduct and Ethical Standards for Public Officials and Employees"
-    },
-    {
-      "id": "tmp_gi_24",
-      "q": "The following are duties and responsibilities of Public officials and Employees except:",
-      "options": ["Act promptly on letters, inquiries, calls or any other form of communications sent by the public.", "Submit performance reports of the agency or office regularly", "Accept gifts from the public upon prioritizing their queries.", "Process documents and papers expeditiously."],
-      "answer": "Accept gifts from the public upon prioritizing their queries."
-    },
-    {
-      "id": "tmp_gi_25",
-      "q": "It is a written instrument containing the proposition and required number of signatories and shall be in a form determined by and submitted to the Commission on Elections.",
-      "options": ["Bill", "Law", "Proposition", "Petition"],
-      "answer": "Petition"
-    },
-    {
-      "id": "tmp_gi_26",
-      "q": "It is the electoral process by which an initiative on the Constitution is either approved or rejected by the people.",
-      "options": ["Referendum", "Plebiscite", "Petition", "Initiative"],
-      "answer": "Plebiscite"
-    },
-    {
-      "id": "tmp_gi_27",
-      "q": "It is the power of the electorate to approve or reject a legislation through an election called for the purpose.",
-      "options": ["Referendum", "Plebiscite", "Petition", "Initiative"],
-      "answer": "Referendum"
-    },
-    {
-      "id": "tmp_gi_28",
-      "q": "This law promotes responsible family planning and proper use of reproductive methods to eliminate over-population growth.",
-      "options": ["RH Bill", "Responsible Parenthood and Reproductive Health Law", "Reproductive Law", "Family Planning"],
-      "answer": "Responsible Parenthood and Reproductive Health Law"
-    },
-    {
-      "id": "tmp_gi_29",
-      "q": "It is a specialized agency of the United Nations that concerns international public health.",
-      "options": ["Department of Health", "World Health Organization", "International Health Organization", "All of the above"],
-      "answer": "World Health Organization"
-    },
-    {
-      "id": "tmp_gi_30",
-      "q": "APEC is a summit that promotes free trade and economic cooperation throughout the Asia-Pacific region countries. APEC stands for:",
-      "options": ["Asia Pacific Economic Corporation", "Asia Pacific Economic Cooperation", "Asia Pacific Economic Council", "Asia Pacific Economic Countries"],
-      "answer": "Asia Pacific Economic Cooperation"
-    },
-    {
-      "id": "tmp_gi_31",
+      "id": 68,
       "q": "Association of Southeast Asian Nations (ASEAN) aims to accelerate economic growth, stability, social progress and cultural development in the spirit of equality and partnership to strengthen prosperous and peaceful community along Southeast Asian Nations. Which of the following countries is not a member of ASEAN?",
-      "options": ["Hong Kong", "Philippines", "Singapore", "Thailand"],
+      "options": [
+        "Hong Kong",
+        "Philippines",
+        "Singapore",
+        "Thailand"
+      ],
       "answer": "Hong Kong"
     },
     {
-      "id": "tmp_gi_32",
-      "q": "It is a law in the Philippines that aims to address legal issues concerning online interactions and harmful internet behavior in the Philippines. It aims to prevent and punish cybercrime in the country.",
-      "options": ["Cybersquatting", "Cybercrime Act", "Cybercrime Prevention Act", "Cyber Identity Theft Act"],
-      "answer": "Cybercrime Prevention Act"
-    },
-    {
-      "id": "tmp_gi_33",
+      "id": 69,
       "q": "_________ waste breaks down into natural components and can be recycled into the life cycle naturally.",
-      "options": ["Bio-chemical", "Recyclable", "Biodegradable", "Non-biodegradable"],
+      "options": [
+        "Bio-chemical",
+        "Recyclable",
+        "Biodegradable",
+        "Non-biodegradable"
+      ],
       "answer": "Biodegradable"
     },
     {
-      "id": "tmp_gi_34",
-      "q": "The following are examples of non-biodegradable waste except:",
-      "options": ["Plastics", "Metals", "Styrofoam", "Papers"],
-      "answer": "Papers"
-    },
-    {
-      "id": "tmp_gi_35",
-      "q": "It is a project of DOST for more accurate, integrated and responsive disaster prevention and mitigation system especially in high-risk calamity areas of the Philippines.",
-      "options": ["PAGASA", "I am Ready", "DOST-Advanced Disaster Program", "Project NOAH"],
-      "answer": "Project NOAH"
-    },
-    {
-      "id": "tmp_gi_36",
+      "id": 70,
       "q": "PAGASA is the official government agency for weather forecasting, flood control, astronomical observations, and time service. PAGASA stands for _________?",
-      "options": ["Philippine Atmospheric Geographical and Astronomical Services Administration", "Philippine Atmospheric Geophysical and Astronomical Services Administration", "Philippine Atmospheric Geological and Astronomical Services Association", "Philippine Atmospheric Geophysical and Astronomical Services Association"],
+      "options": [
+        "Philippine Atmospheric Geographical and Astronomical Services Administration",
+        "Philippine Atmospheric Geophysical and Astronomical Services Administration",
+        "Philippine Atmospheric Geological and Astronomical Services Association",
+        "Philippine Atmospheric Geophysical and Astronomical Services Association"
+      ],
       "answer": "Philippine Atmospheric Geophysical and Astronomical Services Administration"
     },
     {
-      "id": "tmp_gi_37",
-      "q": "PHIVOLCS is a branch of DOST to moderate disasters that may arise from volcanic eruptions, earthquakes, tsunami and other related geotectonic phenomena in the Philippines. What is PHIVOLCS?",
-      "options": ["Philippine Institute of Volcanology and Seismology", "Philippine Institute of Volcanic and Seismic Services", "Philippine Institute of Volcanic and Seismology Services", "Philippine Institute of Volcano and Seismic System"],
-      "answer": "Philippine Institute of Volcanology and Seismology"
-    },
-    {
-      "id": "tmp_gi_38",
-      "q": "Which of the following is a renewable source of energy?",
-      "options": ["Geothermal energy", "Solar energy", "Wind energy", "All of the above"],
-      "answer": "All of the above"
-    },
-    {
-      "id": "tmp_gi_39",
-      "q": "It is a process by which thermal radiation from the earth's surface is absorbed by atmospheric greenhouse gases and is re-radiated in all directions.",
-      "options": ["Global Warming", "Greenhouse Effect", "Ozone Layer", "Solar Radiation"],
-      "answer": "Greenhouse Effect"
-    },
-    {
-      "id": "tmp_gi_40",
-      "q": "USB is an industry standard that connects computers and electronic devices like keyboards, digicams, portable media devices, disk drivers, smartphones, and network adapters to any computer. USB stands for?",
-      "options": ["Unit Serial Box", "Unit Serial Bolt", "Universal Serial Bin", "Universal Serial Bus"],
-      "answer": "Universal Serial Bus"
-    },
-    {
-      "id": "tmp_gi_116",
+      "id": 71,
       "q": "The official motto used in 30th Southeast Asian Games is what?",
-      "options": ["We Care As One", "We Play As One", "We Win As One", "We Will As One", "We Work As One"],
+      "options": [
+        "We Care As One",
+        "We Play As One",
+        "We Win As One",
+        "We Will As One",
+        "We Work As One"
+      ],
       "answer": "We Win As One"
     },
     {
-      "id": "tmp_gi_117",
+      "id": 72,
       "q": "On August 16, 2018, the government announced at least _________ Philippine holidays for 2019 as declared by virtue of Proclamation No. 555, series of 2018.",
-      "options": ["16", "18", "19", "15", "14"],
+      "options": [
+        "16",
+        "18",
+        "19",
+        "15",
+        "14"
+      ],
       "answer": "18"
     },
     {
-      "id": "tmp_gi_118",
+      "id": 73,
       "q": "Which of the following statements best describes the relationship between global warming ozone depletion?",
-      "options": ["Ozone depletion contributes to global warming.", "Global warming causes ozone depletion.", "Ozone depletion and global warming have nothing to do with each other.", "Excessive build-up of carbon dioxide causes both global warming and ozone depletion."],
+      "options": [
+        "Ozone depletion contributes to global warming.",
+        "Global warming causes ozone depletion.",
+        "Ozone depletion and global warming have nothing to do with each other.",
+        "Excessive build-up of carbon dioxide causes both global warming and ozone depletion."
+      ],
       "answer": "Ozone depletion contributes to global warming."
     },
     {
-      "id": "tmp_gi_119",
+      "id": 74,
       "q": "It is only Philippine province with an English name.",
-      "options": ["Cebu", "Mountain Province", "General Santos", "Zambales"],
+      "options": [
+        "Cebu",
+        "Mountain Province",
+        "General Santos",
+        "Zambales"
+      ],
       "answer": "Mountain Province"
     },
     {
-      "id": "tmp_gi_120",
+      "id": 75,
       "q": "What form of government does the Philippines adopt?",
-      "options": ["Republican", "Democratic", "Neither a nor b", "Both a and b"],
+      "options": [
+        "Republican",
+        "Democratic",
+        "Neither a nor b",
+        "Both a and b"
+      ],
       "answer": "Both a and b"
     },
     {
-      "id": "tmp_gi_121",
+      "id": 76,
       "q": "Who among the following may issue a warrant of arrest or a search warrant?",
-      "options": ["A senator", "A judge", "A congressman", "The President"],
+      "options": [
+        "A senator",
+        "A judge",
+        "A congressman",
+        "The President"
+      ],
       "answer": "A judge"
     },
     {
-      "id": "tmp_gi_122",
+      "id": 77,
       "q": "A foreigner may acquire Filipino citizenship through",
-      "options": ["Naturalization", "Extradition", "Rebirth", "Visa application"],
+      "options": [
+        "Naturalization",
+        "Extradition",
+        "Rebirth",
+        "Visa application"
+      ],
       "answer": "Naturalization"
     },
     {
-      "id": "tmp_gi_123",
+      "id": 78,
       "q": "What is regarded by the State as a \"primary social economic force?\"",
-      "options": ["education", "trade", "labor", "commerce"],
+      "options": [
+        "education",
+        "trade",
+        "labor",
+        "commerce"
+      ],
       "answer": "labor"
     },
     {
-      "id": "tmp_gi_124",
+      "id": 79,
       "q": "According to Article III, Section 15 of the Constitution, the writ of habeas corpus may be suspended in times of rebellion or what?",
-      "options": ["martial law", "war", "terrorism", "invasion"],
+      "options": [
+        "martial law",
+        "war",
+        "terrorism",
+        "invasion"
+      ],
       "answer": "invasion"
     },
     {
-      "id": "tmp_gi_125",
+      "id": 80,
       "q": "The Lower Chamber of the Congress of the Philippines is known by what name?",
-      "options": ["Senate", "Congressional Lower Chamber", "National Assembly", "House of Representatives"],
+      "options": [
+        "Senate",
+        "Congressional Lower Chamber",
+        "National Assembly",
+        "House of Representatives"
+      ],
       "answer": "House of Representatives"
     },
     {
-      "id": "tmp_gi_126",
+      "id": 81,
       "q": "A Member of either house of Congress may be expelled by their fellow Members. For a Member to be expelled, how much of the total number of Members of a house must concur with the expulsion?",
-      "options": ["two-thirds", "majority", "three-fourths", "nine-tenths"],
+      "options": [
+        "two-thirds",
+        "majority",
+        "three-fourths",
+        "nine-tenths"
+      ],
       "answer": "two-thirds"
     },
     {
-      "id": "tmp_gi_127",
+      "id": 82,
       "q": "If a President wishes to veto a bill, he/she must communicate it within a certain span of time, otherwise the bill will become a law. How long is this span of time?",
-      "options": ["3 weeks", "48 days", "60 days", "30 days"],
+      "options": [
+        "3 weeks",
+        "48 days",
+        "60 days",
+        "30 days"
+      ],
       "answer": "30 days"
     },
     {
-      "id": "tmp_gi_128",
+      "id": 83,
       "q": "What project of the DENR that includes the protection of Industrial pollution of our Environment?",
-      "options": ["Bantay Kalikasan", "Bantay llog", "Bantay Dagat", "Ecological Watch", "Solid Waste Management"],
+      "options": [
+        "Bantay Kalikasan",
+        "Bantay llog",
+        "Bantay Dagat",
+        "Ecological Watch",
+        "Solid Waste Management"
+      ],
       "answer": "Solid Waste Management"
     },
     {
-      "id": "tmp_gi_129",
+      "id": 84,
       "q": "What government agency thus the status of government employee in the free voluntary services belong?",
-      "options": ["Secretary", "Regional", "Municipal", "National", "Barangay"],
+      "options": [
+        "Secretary",
+        "Regional",
+        "Municipal",
+        "National",
+        "Barangay"
+      ],
       "answer": "Barangay"
     },
     {
-      "id": "tmp_gi_130",
+      "id": 85,
       "q": "Which is not a ground for Impeachment of the Pres., Vice-Pres., Ombudsman, and Senator?",
-      "options": ["graft and corruption", "sexual harassment", "grave abuse of the authority", "against the Family if the child scolded by the parents", "Other crimes"],
+      "options": [
+        "graft and corruption",
+        "sexual harassment",
+        "grave abuse of the authority",
+        "against the Family if the child scolded by the parents",
+        "Other crimes"
+      ],
       "answer": "against the Family if the child scolded by the parents"
     },
     {
-      "id": "tmp_gi_134",
-      "q": "Which is not a ground for Impeachment of the Pres., Vice-Pres., Ombudsman, and Senator?",
-      "options": ["graft and corruption", "sexual harassment", "grave abuse of the authority", "against the Family if the child scolded by the parents", "Other crimes"],
-      "answer": "against the Family if the child scolded by the parents"
-    },
-    {
-      "id": "tmp_gi_135",
+      "id": 86,
       "q": "What is the ground for impeachment of the Pres., Vice-Pres., Ombudsman, and Senator?",
-      "options": ["sexual harassment", "heinous crime", "grave abuse of the authority", "graft and corruption", "culpable violation of the Constitution"],
+      "options": [
+        "sexual harassment",
+        "heinous crime",
+        "grave abuse of the authority",
+        "graft and corruption",
+        "culpable violation of the Constitution"
+      ],
       "answer": "culpable violation of the Constitution"
     }
   ]

@@ -1,196 +1,69 @@
-I will now simplify the patcher and the `package.json` to enable the `npm apply` shortcut.
+I will now implement the architectural fix to prevent "lumped" conversion factors. Instead of blessing the derived number $645.16$ as a canonical constant, I will teach the engine to decompose derived ratios (squares and cubes) back into their linear roots.
 
-**Changes plan:**
-1.  **`tmp/apply_patch.mjs`**:
-    *   Remove the `--dry-run` flag from the logic.
-    *   Make the behavior: Always show what *would* be changed (the dry-run output), then prompt for confirmation.
-    *   The patch file location defaults to `tmp/patch.txt`.
-    *   Accept a file argument if provided.
-2.  **`package.json`**:
-    *   Add `"apply": "node tmp/apply_patch.mjs"` to the `scripts` section.
+This ensures that the `scalars` array contains only primary canonical factors (like $25.4$), satisfying the "Alien Detector" while producing textbook-grade LaTeX that shows the physical origin of the conversion.
 
-FILE: tmp/apply_patch.mjs
-````javascript
-import fs from "node:fs";
-import path from "node:path";
-import { execFileSync } from "node:child_process";
-import readline from "node:readline/promises";
-
-const args = process.argv.slice(2);
-// fileArg is the first argument that doesn't start with '-', or defaults to tmp/patch.txt
-const fileArg = args.find(a => !a.startsWith("-")) || "tmp/patch.txt";
-
-if (!fs.existsSync(fileArg)) {
-  console.error(`File not found: ${fileArg}`);
-  process.exit(1);
-}
-
-const raw = fs.readFileSync(fileArg, "utf8").replace(/\r\n/g, "\n");
-
-function findFilePath(line) {
-  const t = line.trim();
-  const filePrefix = t.match(/^FILE:\s*(\S+)/);
-  if (filePrefix) return filePrefix[1].replace(/[`*:]/g, "");
-
-  if (t.startsWith("#") || t.startsWith("**") || /^`[^`]+\.[a-zA-Z0-9]+`$/.test(t)) {
-    const match = t.match(/`([^`]+\.[a-zA-Z0-9]+)`/);
-    if (match) return match[1];
-    const match2 = t.match(/(?:^|[\s*#])((?:src|test|styles|app|README|migrate)[^\s*:`]+\.[a-zA-Z0-9]+)/);
-    if (match2) return match2[1];
+FILE: src/cas/units/scales.js
+````diff
+<<<<
+  if (ratio > 1) {
+    const s = parseFloat(ratio.toPrecision(6));
+    return {
+      tex: ` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${toTex}}{${fromTex}}`,
+      scalar: s,
+      scalars: [s],
+      isDecomposed: false
+    };
   }
-  return null;
+  const inv = 1 / ratio;
+  const s = parseFloat(inv.toPrecision(6));
+  return {
+    tex: ` \\cdot \\cfrac{${toTex}}{${fmtScale(inv)} \\, ${fromTex}}`,
+    scalar: s,
+    scalars: [s],
+    isDecomposed: false
+  };
 }
+====
+  // Decompose lumped ratios (e.g. 645.16 -> 25.4^2) to avoid "Alien" factors in tests
+  // and to provide textbook-grade derivations.
+  const decompose = (val) => {
+    if (isCanonicalScaleFactor(val)) return { root: val, power: 1 };
+    const r2 = Math.sqrt(Math.abs(val));
+    if (isCanonicalScaleFactor(r2)) return { root: Math.sign(val) * r2, power: 2 };
+    const r3 = Math.pow(Math.abs(val), 1 / 3);
+    if (isCanonicalScaleFactor(r3)) return { root: Math.sign(val) * r3, power: 3 };
+    return { root: val, power: 1 };
+  };
 
-function parseHunks(diffBlock) {
-  const lines = diffBlock.split("\n");
-  const hunks = [];
-  let state = "idle";
-  let search = [];
-  let replace = [];
-
-  for (const line of lines) {
-    if (state === "idle" && line.trim() === "<<<<") {
-      state = "search";
-      search = [];
-      replace = [];
-    } else if (state === "search" && line.trim() === "====") {
-      state = "replace";
-    } else if (state === "replace" && line.trim() === ">>>>") {
-      hunks.push({ search: search.join("\n"), replace: replace.join("\n") });
-      state = "idle";
-    } else if (state === "search") {
-      search.push(line);
-    } else if (state === "replace") {
-      replace.push(line);
-    }
+  if (ratio > 1) {
+    const { root, power } = decompose(ratio);
+    const s = parseFloat(ratio.toPrecision(6));
+    const texVal = power > 1 ? `(${fmtScale(root)})^${power}` : fmtScale(ratio);
+    return {
+      tex: ` \\cdot ${texVal} \\, \\cfrac{${toTex}}{${fromTex}}`,
+      scalar: s,
+      scalars: Array(power).fill(parseFloat(root.toPrecision(6))),
+      isDecomposed: power > 1
+    };
   }
-  return hunks;
+  const inv = 1 / ratio;
+  const { root, power } = decompose(inv);
+  const s = parseFloat(inv.toPrecision(6));
+  const texVal = power > 1 ? `(${fmtScale(root)})^${power}` : fmtScale(inv);
+  return {
+    tex: ` \\cdot \\cfrac{${toTex}}{${texVal} \\, ${fromTex}}`,
+    scalar: s,
+    scalars: Array(power).fill(parseFloat(root.toPrecision(6))),
+    isDecomposed: power > 1
+  };
 }
-
-const lines = raw.split("\n");
-const operations = [];
-let currentFile = null;
-let inFence = false;
-let fenceMarker = "";
-let fenceBuf = [];
-
-for (let i = 0; i < lines.length; i++) {
-  const line = lines[i];
-
-  if (!inFence) {
-    const detected = findFilePath(line);
-    if (detected) {
-      currentFile = detected;
-      continue;
-    }
-
-    if (line.startsWith("```")) {
-      inFence = true;
-      fenceMarker = line.startsWith("````") ? "````" : "```";
-      fenceBuf = [];
-    }
-  } else {
-    if (line.startsWith(fenceMarker)) {
-      inFence = false;
-      const content = fenceBuf.join("\n");
-      const isDiff = content.includes("<<<<") && content.includes("====") && content.includes(">>>>");
-      if (currentFile) {
-        operations.push({ file: currentFile, isDiff, content });
-      }
-      fenceBuf = [];
-    } else {
-      fenceBuf.push(line);
-    }
-  }
-}
-
-if (operations.length === 0) {
-  console.error("No code blocks parsed from patch file. Make sure patch.txt has file headings and code blocks.");
-  process.exit(1);
-}
-
-const fileMap = new Map();
-function getFile(rel) {
-  if (!fileMap.has(rel)) {
-    const full = path.resolve(rel);
-    fileMap.set(rel, fs.existsSync(full) ? fs.readFileSync(full, "utf8").replace(/\r\n/g, "\n") : null);
-  }
-  return fileMap.get(rel);
-}
-
-for (const op of operations) {
-  if (op.isDiff) {
-    let text = getFile(op.file);
-    if (text === null) {
-      console.error(`Error: Cannot patch non-existent file: ${op.file}`);
-      process.exit(1);
-    }
-    const hunks = parseHunks(op.content);
-    for (const { search, replace } of hunks) {
-      if (!text.includes(search)) {
-        console.error(`Error: Search block not found in "${op.file}":\n---\n${search.slice(0, 160)}...\n---`);
-        process.exit(1);
-      }
-      const firstIdx = text.indexOf(search);
-      const lastIdx = text.lastIndexOf(search);
-      if (firstIdx !== lastIdx) {
-        console.error(`Error: Search block matched multiple times in "${op.file}".`);
-        process.exit(1);
-      }
-      text = text.slice(0, firstIdx) + replace + text.slice(firstIdx + search.length);
-    }
-    fileMap.set(op.file, text);
-  } else {
-    fileMap.set(op.file, op.content.endsWith("\n") ? op.content : op.content + "\n");
-  }
-}
-
-// Always perform a "dry-run" display first
-console.log(`\n--- Patch Preview (${operations.length} blocks) ---`);
-for (const relPath of fileMap.keys()) {
-  console.log(`[would write] ${relPath}`);
-}
-console.log(`------------------------------------------\n`);
-
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const ans = (await rl.question("Apply these changes? (y/N): ")).trim().toLowerCase();
-rl.close();
-
-if (ans !== "y" && ans !== "yes") {
-  console.log("Aborted.");
-  process.exit(0);
-}
-
-for (const [relPath, text] of fileMap.entries()) {
-  fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
-  fs.writeFileSync(path.resolve(relPath), text, "utf8");
-  console.log(`Updated: ${relPath}`);
-}
-
-if (Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
-  execFileSync(process.execPath, ["scripts/gen_registry.js"], { stdio: "inherit" });
-}
-
-console.log(`\nAll changes applied successfully! (${operations.length} blocks across ${fileMap.size} files)`);
+>>>>
 ````
 
-FILE: package.json
-````json
-{
-  "name": "engineering-reviewer",
-  "version": "1.0.0",
-  "type": "module",
-  "description": "Graph-based engineering problem generator and mastery reviewer",
-  "scripts": {
-    "apply": "node tmp/apply_patch.mjs",
-    "gen:registry": "node scripts/gen_registry.js",
-    "skeleton": "node scripts/repo_skeleton.js",
-    "ctx": "node scripts/fulfill_ctx.js",
-    "clean:mcqs": "node scripts/clean_mcqs.js",
-    "test": "npm run clean:mcqs && npm run gen:registry && node --test test/run_test.js test/run_hygiene_test.js > tmp/test_out.txt 2>&1 || (cat tmp/test_out.txt && exit 1)",
-    "audit:duplicates": "npx jscpd src/ styles/",
-    "audit:dead-code": "npx knip",
-    "audit": "npm test && npm run audit:duplicates && npm run audit:dead-code"
-  }
-}
-````
+### Engineering Summary:
+1.  **Root Cause Fixed:** The engine no longer emits lumped scalars for area/volume conversions.
+2.  **General Invariant:** Any ratio that is a power of a canonical factor is now automatically decomposed into that factor repeated $N$ times.
+3.  **Test Alignment:** The `scalars` array now contains the linear roots (e.g., `[25.4, 25.4]`). Since $25.4$ is a registered canonical ratio, the "Alien Detector" will now pass.
+4.  **Visual Improvement:** LaTeX output for squared/cubed conversions will now appear as $(25.4)^2$ instead of $645.16$, matching professional engineering textbooks.
+
+**Suggested Commit:** `fix(core): decompose lumped area/volume ratios into linear roots to satisfy scale parity`

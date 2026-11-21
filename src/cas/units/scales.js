@@ -115,22 +115,37 @@ export function formatPairConversion(fromUnit, toUnit, fromDim = null, toDim = f
   const fromTex = unitToCancelledTex(fromUnit, false, fromDim, cancelMode);
   const toTex = unitToTex(toUnit, false, toDim);
 
+  // Decompose lumped ratios (e.g. 645.16 -> 25.4^2) to avoid "Alien" factors in tests
+  // and to provide textbook-grade derivations.
+  const decompose = (val) => {
+    if (isCanonicalScaleFactor(val)) return { root: val, power: 1 };
+    const r2 = Math.sqrt(Math.abs(val));
+    if (isCanonicalScaleFactor(r2)) return { root: Math.sign(val) * r2, power: 2 };
+    const r3 = Math.pow(Math.abs(val), 1 / 3);
+    if (isCanonicalScaleFactor(r3)) return { root: Math.sign(val) * r3, power: 3 };
+    return { root: val, power: 1 };
+  };
+
   if (ratio > 1) {
+    const { root, power } = decompose(ratio);
     const s = parseFloat(ratio.toPrecision(6));
+    const texVal = power > 1 ? `(${fmtScale(root)})^${power}` : fmtScale(ratio);
     return {
-      tex: ` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${toTex}}{${fromTex}}`,
+      tex: ` \\cdot ${texVal} \\, \\cfrac{${toTex}}{${fromTex}}`,
       scalar: s,
-      scalars: [s],
-      isDecomposed: false
+      scalars: Array(power).fill(parseFloat(root.toPrecision(6))),
+      isDecomposed: power > 1
     };
   }
   const inv = 1 / ratio;
+  const { root, power } = decompose(inv);
   const s = parseFloat(inv.toPrecision(6));
+  const texVal = power > 1 ? `(${fmtScale(root)})^${power}` : fmtScale(inv);
   return {
-    tex: ` \\cdot \\cfrac{${toTex}}{${fmtScale(inv)} \\, ${fromTex}}`,
+    tex: ` \\cdot \\cfrac{${toTex}}{${texVal} \\, ${fromTex}}`,
     scalar: s,
-    scalars: [s],
-    isDecomposed: false
+    scalars: Array(power).fill(parseFloat(root.toPrecision(6))),
+    isDecomposed: power > 1
   };
 }
 

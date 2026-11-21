@@ -451,303 +451,277 @@
       "answer": "slow"
     },
     {
-      "id": "tmp_an_1",
+      "id": 41,
       "q": "Iron: metal: : granite: _________",
-      "options": ["rock", "sand", "solid"],
+      "options": [
+        "rock",
+        "sand",
+        "solid"
+      ],
       "answer": "rock"
     },
     {
-      "id": "tmp_an_2",
+      "id": 42,
       "q": "Decibel: sound: : volt: _________",
-      "options": ["watts", "fire", "electricity", "lightning"],
+      "options": [
+        "watts",
+        "fire",
+        "electricity",
+        "lightning"
+      ],
       "answer": "electricity"
     },
     {
-      "id": "tmp_an_3",
+      "id": 43,
       "q": "Coward: brave: : philanthropist: _________",
-      "options": ["selfish", "kind", "pessimist", "optimist"],
+      "options": [
+        "selfish",
+        "kind",
+        "pessimist",
+        "optimist"
+      ],
       "answer": "selfish"
     },
     {
-      "id": "tmp_an_4",
+      "id": 44,
       "q": "Logic: reasoning: : ethics: _________",
-      "options": ["character", "behaviour", "subject", "traits"],
+      "options": [
+        "character",
+        "behaviour",
+        "subject",
+        "traits"
+      ],
       "answer": "behaviour"
     },
     {
-      "id": "tmp_an_5",
+      "id": 45,
       "q": "Antenna: signal: : net: _________",
-      "options": ["web", "catch", "gross", "fish"],
+      "options": [
+        "web",
+        "catch",
+        "gross",
+        "fish"
+      ],
       "answer": "fish"
     },
     {
-      "id": "tmp_an_6",
+      "id": 46,
       "q": "Stanza: poem: : act: _________",
-      "options": ["movie", "opera", "song", "lyric"],
+      "options": [
+        "movie",
+        "opera",
+        "song",
+        "lyric"
+      ],
       "answer": "opera"
     },
     {
-      "id": "tmp_an_7",
+      "id": 47,
       "q": "Astrology: Astronomy : Alchemy: _________",
-      "options": ["Chemistry", "Biology", "Physics", "Science"],
+      "options": [
+        "Chemistry",
+        "Biology",
+        "Physics",
+        "Science"
+      ],
       "answer": "Chemistry"
     },
     {
-      "id": "tmp_an_8",
+      "id": 48,
       "q": "Census: population: : inventory: _________",
-      "options": ["accounting", "merchandise", "cost", "list"],
+      "options": [
+        "accounting",
+        "merchandise",
+        "cost",
+        "list"
+      ],
       "answer": "merchandise"
     },
     {
-      "id": "tmp_an_9",
+      "id": 49,
       "q": "Oath: promise: : contract: _________",
-      "options": ["license", "contact", "agreement", "paper"],
+      "options": [
+        "license",
+        "contact",
+        "agreement",
+        "paper"
+      ],
       "answer": "agreement"
     },
     {
-      "id": "tmp_an_10",
+      "id": 50,
       "q": "Glimmer: Flicker: : murmur: _________",
-      "options": ["whisper", "shout", "rumor", "speak"],
+      "options": [
+        "whisper",
+        "shout",
+        "rumor",
+        "speak"
+      ],
       "answer": "whisper"
     },
     {
-      "id": "tmp_an_11",
+      "id": 51,
       "q": "Bouquet: flowers: : flock: _________",
-      "options": ["dogs", "sheep", "ship", "cats"],
+      "options": [
+        "dogs",
+        "sheep",
+        "ship",
+        "cats"
+      ],
       "answer": "sheep"
     },
     {
-      "id": "tmp_an_12",
+      "id": 52,
       "q": "Rescind: law: : withdraw: _________",
-      "options": ["bank", "candidacy", "deposit", "resume"],
+      "options": [
+        "bank",
+        "candidacy",
+        "deposit",
+        "resume"
+      ],
       "answer": "candidacy"
     },
     {
-      "id": "tmp_an_13",
+      "id": 53,
       "q": "Hoax: deceive: : filibuster: _________",
-      "options": ["delay", "refuse", "stop", "none"],
+      "options": [
+        "delay",
+        "refuse",
+        "stop",
+        "none"
+      ],
       "answer": "delay"
     },
     {
-      "id": "tmp_an_14",
+      "id": 54,
       "q": "Syllabus: course: : agenda: _________",
-      "options": ["subject", "platform", "meeting", "lesson"],
+      "options": [
+        "subject",
+        "platform",
+        "meeting",
+        "lesson"
+      ],
       "answer": "meeting"
     },
     {
-      "id": "tmp_an_15",
+      "id": 55,
       "q": "Cat: kitten: : horse: _________",
-      "options": ["cab", "puppy", "stallion", "pony"],
+      "options": [
+        "cab",
+        "puppy",
+        "stallion",
+        "pony"
+      ],
       "answer": "pony"
     },
     {
-      "id": "tmp_an_16",
+      "id": 56,
       "q": "Evaporate: vapor: : petrify: _________",
-      "options": ["liquid", "stone", "magnify", "cold"],
+      "options": [
+        "liquid",
+        "stone",
+        "magnify",
+        "cold"
+      ],
       "answer": "stone"
     },
     {
-      "id": "tmp_an_17",
+      "id": 57,
       "q": "Canvas: painter: : marble: _________",
-      "options": ["sculptor", "rock", "statue", "form"],
+      "options": [
+        "sculptor",
+        "rock",
+        "statue",
+        "form"
+      ],
       "answer": "sculptor"
     },
     {
-      "id": "tmp_an_18",
+      "id": 58,
       "q": "Hammer: anvil: : pestle: _________",
-      "options": ["ground", "grinder", "mortar", "knife"],
+      "options": [
+        "ground",
+        "grinder",
+        "mortar",
+        "knife"
+      ],
       "answer": "mortar"
     },
     {
-      "id": "tmp_an_19",
+      "id": 59,
       "q": "Librarian: books: : curator: _________",
-      "options": ["atlas", "encyclopedia", "room", "paintings"],
+      "options": [
+        "atlas",
+        "encyclopedia",
+        "room",
+        "paintings"
+      ],
       "answer": "paintings"
     },
     {
-      "id": "tmp_an_20",
+      "id": 60,
       "q": "Archive: manuscript: arsenal: _________",
-      "options": ["soldier", "weapon", "castle", "king"],
+      "options": [
+        "soldier",
+        "weapon",
+        "castle",
+        "king"
+      ],
       "answer": "weapon"
     },
     {
-      "id": "tmp_an_21",
+      "id": 61,
       "q": "Bodyguard: protection: : mentor: _________",
-      "options": ["advice", "counsel", "teacher", "leader"],
+      "options": [
+        "advice",
+        "counsel",
+        "teacher",
+        "leader"
+      ],
       "answer": "counsel"
     },
     {
-      "id": "tmp_an_22",
+      "id": 62,
       "q": "Novelist: plot: : Architect: _________",
-      "options": ["building", "design", "blueprint", "house"],
+      "options": [
+        "building",
+        "design",
+        "blueprint",
+        "house"
+      ],
       "answer": "blueprint"
     },
     {
-      "id": "tmp_an_23",
+      "id": 63,
       "q": "Molecule: atoms: : tissue: _________",
-      "options": ["organ", "cells", "body", "neutrons"],
+      "options": [
+        "organ",
+        "cells",
+        "body",
+        "neutrons"
+      ],
       "answer": "cells"
     },
     {
-      "id": "tmp_an_24",
+      "id": 64,
       "q": "Call: telephone: : type: _________",
-      "options": ["cellphone", "ipad", "keyboard", "piano"],
+      "options": [
+        "cellphone",
+        "ipad",
+        "keyboard",
+        "piano"
+      ],
       "answer": "keyboard"
     },
     {
-      "id": "tmp_an_25",
+      "id": 65,
       "q": "Eavesdrop: conversation: : trespass: _________",
-      "options": ["property", "house", "land", "assets"],
-      "answer": "property"
-    },
-    {
-      "id": "tmp_an_1",
-      "q": "Iron: metal: : granite: _________",
-      "options": ["rock", "sand", "solid"],
-      "answer": "rock"
-    },
-    {
-      "id": "tmp_an_2",
-      "q": "Decibel: sound: : volt: _________",
-      "options": ["watts", "fire", "electricity", "lightning"],
-      "answer": "electricity"
-    },
-    {
-      "id": "tmp_an_3",
-      "q": "Coward: brave: : philanthropist: _________",
-      "options": ["selfish", "kind", "pessimist", "optimist"],
-      "answer": "selfish"
-    },
-    {
-      "id": "tmp_an_4",
-      "q": "Logic: reasoning: : ethics: _________",
-      "options": ["character", "behaviour", "subject", "traits"],
-      "answer": "behaviour"
-    },
-    {
-      "id": "tmp_an_5",
-      "q": "Antenna: signal: : net: _________",
-      "options": ["web", "catch", "gross", "fish"],
-      "answer": "fish"
-    },
-    {
-      "id": "tmp_an_6",
-      "q": "Stanza: poem: : act: _________",
-      "options": ["movie", "opera", "song", "lyric"],
-      "answer": "opera"
-    },
-    {
-      "id": "tmp_an_7",
-      "q": "Astrology: Astronomy : Alchemy: _________",
-      "options": ["Chemistry", "Biology", "Physics", "Science"],
-      "answer": "Chemistry"
-    },
-    {
-      "id": "tmp_an_8",
-      "q": "Census: population: : inventory: _________",
-      "options": ["accounting", "merchandise", "cost", "list"],
-      "answer": "merchandise"
-    },
-    {
-      "id": "tmp_an_9",
-      "q": "Oath: promise: : contract: _________",
-      "options": ["license", "contact", "agreement", "paper"],
-      "answer": "agreement"
-    },
-    {
-      "id": "tmp_an_10",
-      "q": "Glimmer: Flicker: : murmur: _________",
-      "options": ["whisper", "shout", "rumor", "speak"],
-      "answer": "whisper"
-    },
-    {
-      "id": "tmp_an_11",
-      "q": "Bouquet: flowers: : flock: _________",
-      "options": ["dogs", "sheep", "ship", "cats"],
-      "answer": "sheep"
-    },
-    {
-      "id": "tmp_an_12",
-      "q": "Rescind: law: : withdraw: _________",
-      "options": ["bank", "candidacy", "deposit", "resume"],
-      "answer": "candidacy"
-    },
-    {
-      "id": "tmp_an_13",
-      "q": "Hoax: deceive: : filibuster: _________",
-      "options": ["delay", "refuse", "stop", "none"],
-      "answer": "delay"
-    },
-    {
-      "id": "tmp_an_14",
-      "q": "Syllabus: course: : agenda: _________",
-      "options": ["subject", "platform", "meeting", "lesson"],
-      "answer": "meeting"
-    },
-    {
-      "id": "tmp_an_15",
-      "q": "Cat: kitten: : horse: _________",
-      "options": ["cab", "puppy", "stallion", "pony"],
-      "answer": "pony"
-    },
-    {
-      "id": "tmp_an_16",
-      "q": "Evaporate: vapor: : petrify: _________",
-      "options": ["liquid", "stone", "magnify", "cold"],
-      "answer": "stone"
-    },
-    {
-      "id": "tmp_an_17",
-      "q": "Canvas: painter: : marble: _________",
-      "options": ["sculptor", "rock", "statue", "form"],
-      "answer": "sculptor"
-    },
-    {
-      "id": "tmp_an_18",
-      "q": "Hammer: anvil: : pestle: _________",
-      "options": ["ground", "grinder", "mortar", "knife"],
-      "answer": "mortar"
-    },
-    {
-      "id": "tmp_an_19",
-      "q": "Librarian: books: : curator: _________",
-      "options": ["atlas", "encyclopedia", "room", "paintings"],
-      "answer": "paintings"
-    },
-    {
-      "id": "tmp_an_20",
-      "q": "Archive: manuscript: arsenal: _________",
-      "options": ["soldier", "weapon", "castle", "king"],
-      "answer": "weapon"
-    },
-    {
-      "id": "tmp_an_21",
-      "q": "Bodyguard: protection: : mentor: _________",
-      "options": ["advice", "counsel", "teacher", "leader"],
-      "answer": "counsel"
-    },
-    {
-      "id": "tmp_an_22",
-      "q": "Novelist: plot: : Architect: _________",
-      "options": ["building", "design", "blueprint", "house"],
-      "answer": "blueprint"
-    },
-    {
-      "id": "tmp_an_23",
-      "q": "Molecule: atoms: : tissue: _________",
-      "options": ["organ", "cells", "body", "neutrons"],
-      "answer": "cells"
-    },
-    {
-      "id": "tmp_an_24",
-      "q": "Call: telephone: : type: _________",
-      "options": ["cellphone", "ipad", "keyboard", "piano"],
-      "answer": "keyboard"
-    },
-    {
-      "id": "tmp_an_25",
-      "q": "Eavesdrop: conversation: : trespass: _________",
-      "options": ["property", "house", "land", "assets"],
+      "options": [
+        "property",
+        "house",
+        "land",
+        "assets"
+      ],
       "answer": "property"
     }
   ]

@@ -4,20 +4,22 @@
  */
 
 export const MCQ_MANIFEST = Object.freeze([
-  Object.freeze({"id":"mcq_cse_analogy_01","title":"Verbal Analogy","subject":"Civil Service Exam","category":"Verbal Ability","count":40}),
-  Object.freeze({"id":"mcq_cse_gen_info_01","title":"General Information (Constitution, RA 6713 & Environment)","subject":"Civil Service Exam","category":"General Information","count":60}),
-  Object.freeze({"id":"mcq_cse_grammar_01","title":"Grammar & Correct Usage","subject":"Civil Service Exam","category":"Verbal Ability","count":66}),
-  Object.freeze({"id":"mcq_cse_logic_01","title":"Logic & Analytical Reasoning","subject":"Civil Service Exam","category":"Analytical Ability","count":15}),
-  Object.freeze({"id":"mcq_cse_math_01","title":"Quantitative Reasoning & Word Problems","subject":"Civil Service Exam","category":"Numerical Ability","count":91}),
-  Object.freeze({"id":"mcq_cse_num_series_01","title":"Number Analogy & Series","subject":"Civil Service Exam","category":"Numerical Ability","count":26}),
-  Object.freeze({"id":"mcq_cse_paragraph_01","title":"Paragraph Organization","subject":"Civil Service Exam","category":"Verbal Ability","count":3}),
-  Object.freeze({"id":"mcq_cse_reading_01","title":"Reading Comprehension","subject":"Civil Service Exam","category":"Verbal Ability","count":68}),
-  Object.freeze({"id":"mcq_cse_vocab_01","title":"Vocabulary & Sentence Completion","subject":"Civil Service Exam","category":"Verbal Ability","count":16})
+  Object.freeze({"id":"mcq_cse_analogy_01","title":"Verbal Analogy","subject":"Civil Service Exam","category":"Verbal Ability","count":65}),
+  Object.freeze({"id":"mcq_cse_clerical_01","title":"Clerical Operations","subject":"Civil Service Exam","category":"Clerical Ability","count":25}),
+  Object.freeze({"id":"mcq_cse_gen_info_01","title":"General Information (Constitution, RA 6713 & Environment)","subject":"Civil Service Exam","category":"General Information","count":86}),
+  Object.freeze({"id":"mcq_cse_grammar_01","title":"Grammar & Correct Usage","subject":"Civil Service Exam","category":"Verbal Ability","count":106}),
+  Object.freeze({"id":"mcq_cse_logic_01","title":"Logic & Analytical Reasoning","subject":"Civil Service Exam","category":"Analytical Ability","count":25}),
+  Object.freeze({"id":"mcq_cse_math_01","title":"Quantitative Reasoning & Word Problems","subject":"Civil Service Exam","category":"Numerical Ability","count":116}),
+  Object.freeze({"id":"mcq_cse_num_series_01","title":"Number Analogy & Series","subject":"Civil Service Exam","category":"Numerical Ability","count":42}),
+  Object.freeze({"id":"mcq_cse_paragraph_01","title":"Paragraph Organization","subject":"Civil Service Exam","category":"Verbal Ability","count":18}),
+  Object.freeze({"id":"mcq_cse_reading_01","title":"Reading Comprehension","subject":"Civil Service Exam","category":"Verbal Ability","count":98}),
+  Object.freeze({"id":"mcq_cse_vocab_01","title":"Vocabulary & Sentence Completion","subject":"Civil Service Exam","category":"Verbal Ability","count":36})
 ]);
 
 const MANIFEST_BY_ID = new Map(MCQ_MANIFEST.map(m => [m.id, m]));
 const PATHS = Object.freeze({
   "mcq_cse_analogy_01": Object.freeze({ relPath: "./civil_service_exam/verbal_analogy/set.json", baseDir: "./civil_service_exam/verbal_analogy/" }),
+  "mcq_cse_clerical_01": Object.freeze({ relPath: "./civil_service_exam/clerical_operations/set.json", baseDir: "./civil_service_exam/clerical_operations/" }),
   "mcq_cse_gen_info_01": Object.freeze({ relPath: "./civil_service_exam/general_information/set.json", baseDir: "./civil_service_exam/general_information/" }),
   "mcq_cse_grammar_01": Object.freeze({ relPath: "./civil_service_exam/grammar_correct_usage/set.json", baseDir: "./civil_service_exam/grammar_correct_usage/" }),
   "mcq_cse_logic_01": Object.freeze({ relPath: "./civil_service_exam/logic_analytical_reasoning/set.json", baseDir: "./civil_service_exam/logic_analytical_reasoning/" }),

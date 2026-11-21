@@ -38,153 +38,168 @@
       "answer": "ACDB"
     },
     {
-      "id": "tmp_po_1",
+      "id": 4,
       "q": "A. One effective way is to diversify his funds to different investments like real estate, stocks and money instruments like bonds and trust funds.\nB. It is always best to expand money to different investment wheels.\nC. A wise investor must not put all his eggs in one basket.\nD. He should always consider the risks involved in investing his money.",
-      "options": ["CBAD", "CBDA", "CDAB", "CDBA"],
+      "options": [
+        "CBAD",
+        "CBDA",
+        "CDAB",
+        "CDBA"
+      ],
       "answer": "CDAB"
     },
     {
-      "id": "tmp_po_2",
+      "id": 5,
       "q": "A. It is very vital to have social media presence however personal blogs serve as web domains.\nB. Most people including celebrities and businessmen have blogs nowadays.\nC. Therefore, building them will help anyone in promoting himself or his business.\nD. Apparently blogs are like our offices only they are in the internet.",
-      "options": ["BDAC", "BADC", "BACD", "BDCA"],
+      "options": [
+        "BDAC",
+        "BADC",
+        "BACD",
+        "BDCA"
+      ],
       "answer": "BADC"
     },
     {
-      "id": "tmp_po_3",
+      "id": 6,
       "q": "A. The basic steps in building a website are easy to remember and registering a domain name is the usual priority.\nB. Designing a layout will come after that.\nC. Finally, adding more content and social media presence are required to keep your site active.\nD. Then you need a hosting provider to host your site's content in the World Wide Web.",
-      "options": ["ABCD", "ADBC", "ACBD", "ADCB"],
+      "options": [
+        "ABCD",
+        "ADBC",
+        "ACBD",
+        "ADCB"
+      ],
       "answer": "ADBC"
     },
     {
-      "id": "tmp_po_4",
+      "id": 7,
       "q": "A. Speaking in English every day is also proven effective.\nB. Another way is watching English movies and TV shows particularly with English subtitles.\nC. Reading articles in books, newspapers, and magazines is just among the helpful ways.\nD. There are many ways to improve and develop English proficiency.",
-      "options": ["DCBA", "DACB", "DABC", "DCAB"],
+      "options": [
+        "DCBA",
+        "DACB",
+        "DABC",
+        "DCAB"
+      ],
       "answer": "DCBA"
     },
     {
-      "id": "tmp_po_5",
+      "id": 8,
       "q": "A. Others don't realize yet what to pursue because they have many dreams.\nB. Finding the right course in college is one of the most challenging decisions anyone can make.\nC. Some people want to pursue their dreams ever since they were just little.\nD. Indeed destiny is a matter of choice.",
-      "options": ["BDAC", "BCDA", "BADC", "BCAD"],
+      "options": [
+        "BDAC",
+        "BCDA",
+        "BADC",
+        "BCAD"
+      ],
       "answer": "BCAD"
     },
     {
-      "id": "tmp_po_6",
+      "id": 9,
       "q": "A. While passport, airline tickets and valid IDs are required, proof of financial capacity may be required for visa application.\nB. Many Filipinos rejoiced hearing that good news.\nC. The Bureau of Immigration announced recently that proof of financial capacity is not a primary requirement at the airport.\nD. Positive points go to the bureau for this.",
-      "options": ["CBAD", "CADB", "CABD", "CBDA"],
+      "options": [
+        "CBAD",
+        "CADB",
+        "CABD",
+        "CBDA"
+      ],
       "answer": "CBDA"
     },
     {
-      "id": "tmp_po_7",
+      "id": 10,
       "q": "A. This will be one of your tickets to land a job in the government.\nB. That is why many people apply to take the Career Service examination.\nC. If you passed the exam, you will get a certificate of eligibility.\nD. Career Service Eligibility is a major requirement to apply for a job position in the government.",
-      "options": ["DCBA", "DBAC", "DBCA", "DCAB"],
+      "options": [
+        "DCBA",
+        "DBAC",
+        "DBCA",
+        "DCAB"
+      ],
       "answer": "DBCA"
     },
     {
-      "id": "tmp_po_8",
+      "id": 11,
       "q": "A. Your passport will arrive in 7 days if you choose the rush processing.\nB. Getting a passport is faster nowadays.\nC. Now, it only takes about 10 working days.\nD. Compared before, it would take about a month for the regular processing.",
-      "options": ["BCAD", "BDCA", "BADC", "BACD"],
+      "options": [
+        "BCAD",
+        "BDCA",
+        "BADC",
+        "BACD"
+      ],
       "answer": "BDCA"
     },
     {
-      "id": "tmp_po_9",
+      "id": 12,
       "q": "A. Facebook has been the number one social network in the web and the world for quite long now.\nB. Mobile instant messaging apps are also dominating social presence in the internet.\nC. After many acquisitions, Facebook bought Instagram, one of the fastest growing photo sharing networks.\nD. Because of that, Facebook acquired WhatsApp, a leading instant chat platform like Kakaotalk.",
-      "options": ["ACBD", "ABCD", "ADCB", "ADBC"],
+      "options": [
+        "ACBD",
+        "ABCD",
+        "ADCB",
+        "ADBC"
+      ],
       "answer": "ACBD"
     },
     {
-      "id": "tmp_po_10",
+      "id": 13,
       "q": "A. They will help you to purchase through zero-interest installment schemes.\nB. Thus, you must be wise and pay in full if you want to avoid never-ending debts.\nC. Credit cards are helpful if you know how and when to use them wisely.\nD. However, they will produce interests from interests if you didn't pay the whole amount at the due date.",
-      "options": ["CDBA", "CABD", "CDAB", "CADB"],
+      "options": [
+        "CDBA",
+        "CABD",
+        "CDAB",
+        "CADB"
+      ],
       "answer": "CADB"
     },
     {
-      "id": "tmp_po_91",
-      "q": "A. One effective way is to diversify his funds to different investments like real estate, stocks and money instruments like bonds and trust funds.\nB. It is always best to expand money to different investment wheels.\nC. A wise investor must not put all his eggs in one basket.\nD. He should always consider the risks involved in investing his money.",
-      "options": ["CBAD", "CBDA", "CDAB", "CDBA"],
-      "answer": "CDAB"
-    },
-    {
-      "id": "tmp_po_92",
-      "q": "A. It is very vital to have social media presence however personal blogs serve as web domains.\nB. Most people including celebrities and businessmen have blogs nowadays.\nC. Therefore, building them will help anyone in promoting himself or his business.\nD. Apparently blogs are like our offices only they are in the internet.",
-      "options": ["BDAC", "BADC", "BACD", "BDCA"],
-      "answer": "BADC"
-    },
-    {
-      "id": "tmp_po_93",
-      "q": "A. The basic steps in building a website are easy to remember and registering a domain name is the usual priority.\nB. Designing a layout will come after that.\nC. Finally, adding more content and social media presence are required to keep your site active.\nD. Then you need a hosting provider to host your site's content in the World Wide Web.",
-      "options": ["ABCD", "ADBC", "ACBD", "ADCB"],
-      "answer": "ADBC"
-    },
-    {
-      "id": "tmp_po_94",
-      "q": "A. Speaking in English every day is also proven effective.\nB. Another way is watching English movies and TV shows particularly with English subtitles.\nC. Reading articles in books, newspapers, and magazines is just among the helpful ways.\nD. There are many ways to improve and develop English proficiency.",
-      "options": ["DCBA", "DACB", "DABC", "DCAB"],
-      "answer": "DCBA"
-    },
-    {
-      "id": "tmp_po_95",
-      "q": "A. Others don't realize yet what to pursue because they have many dreams.\nB. Finding the right course in college is one of the most challenging decisions anyone can make.\nC. Some people want to pursue their dreams ever since they were just little.\nD. Indeed destiny is a matter of choice.",
-      "options": ["BDAC", "BCDA", "BADC", "BCAD"],
-      "answer": "BCAD"
-    },
-    {
-      "id": "tmp_po_96",
+      "id": 14,
       "q": "A. Many innovations without proven results and follow up evaluation are educational wastages\nB. One wonders in the final analysis if these changes have been deeply rooted on basic problems of the people they serve.\nC. Some curriculum changes were mere fads without foreseeable achievements.\nD. What we need are innovations that overcome the mis-education of the young.",
-      "options": ["BACD", "ACDB", "ABCD", "CBAD"],
+      "options": [
+        "BACD",
+        "ACDB",
+        "ABCD",
+        "CBAD"
+      ],
       "answer": "ACDB"
     },
     {
-      "id": "tmp_po_97",
+      "id": 15,
       "q": "A. By trying, man learns to solve his problems through satisfying acts and eliminate actions which are annoying.\nB. He used a hungry cat in a puzzled box where it tried ways to get out in order to get to the food.\nC. Edward C. Thorndike's connectionism theory of learning establishes the trial and error way to learn.\nD. He established the fact that like the cat, man too, learns by trial and error.",
-      "options": ["ACBD", "BACD", "ACDB", "ABCD"],
+      "options": [
+        "ACBD",
+        "BACD",
+        "ACDB",
+        "ABCD"
+      ],
       "answer": "ACBD"
     },
     {
-      "id": "tmp_po_98",
+      "id": 16,
       "q": "A. A responsive educational system should be directed towards regional cooperation.\nB. Commonality of educational objectives should be replaced by better ways of achieving goals that fit the regional needs.\nC. It is necessary to revolutionize the contemporary methodologies in the teaching-learning processes.\nD. The educational goals should seek for a better way of experimentation in the teaching strategies and technologies.",
-      "options": ["ABCD", "ABDC", "BCAD", "DABC"],
+      "options": [
+        "ABCD",
+        "ABDC",
+        "BCAD",
+        "DABC"
+      ],
       "answer": "ABCD"
     },
     {
-      "id": "tmp_po_99",
+      "id": 17,
       "q": "A. Before, his religion was basically involved with rituals and ceremonies.\nB. The religion of the teacher helps him in reducing his fears and uncertainties.\nC. His religion responds to his needs for a means to allay fears about the uncertainty of events contrary to natural laws.\nD. Religion is important because it provides spiritual nourishment for his total being.",
-      "options": ["ABCD", "BACD", "DBCA", "CBAD"],
+      "options": [
+        "ABCD",
+        "BACD",
+        "DBCA",
+        "CBAD"
+      ],
       "answer": "BACD"
     },
     {
-      "id": "tmp_po_100",
-      "q": "A. While passport, airline tickets and valid IDs are required, proof of financial capacity may be required for visa application.\nB. Many Filipinos rejoiced hearing that good news.\nC. The Bureau of Immigration announced recently that proof of financial capacity is not a primary requirement at the airport.\nD. Positive points go to the bureau for this.",
-      "options": ["CBAD", "CADB", "CABD", "CBDA"],
-      "answer": "CBDA"
-    },
-    {
-      "id": "tmp_po_101",
-      "q": "A. This will be one of your tickets to land a job in the government.\nB. That is why many people apply to take the Career Service examination.\nC. If you passed the exam, you will get a certificate of eligibility.\nD. Career Service Eligibility is a major requirement to apply for a job position in the government.",
-      "options": ["DCBA", "DBAC", "DBCA", "DCAB"],
-      "answer": "DBCA"
-    },
-    {
-      "id": "tmp_po_102",
-      "q": "A. Your passport will arrive in 7 days if you choose the rush processing.\nB. Getting a passport is faster nowadays.\nC. Now, it only takes about 10 working days.\nD. Compared before, it would take about a month for the regular processing.",
-      "options": ["BCAD", "BDCA", "BADC", "BACD"],
-      "answer": "BDCA"
-    },
-    {
-      "id": "tmp_po_103",
-      "q": "A. Facebook has been the number one social network in the web and the world for quite long now.\nB. Mobile instant messaging apps are also dominating social presence in the internet.\nC. After many acquisitions, Facebook bought Instagram, one of the fastest growing photo sharing networks.\nD. Because of that, Facebook acquired WhatsApp, a leading instant chat platform like Kakaotalk.",
-      "options": ["ACBD", "ABCD", "ADCB", "ADBC"],
-      "answer": "ACBD"
-    },
-    {
-      "id": "tmp_po_104",
-      "q": "A. They will help you to purchase through zero-interest installment schemes.\nB. Thus, you must be wise and pay in full if you want to avoid never-ending debts.\nC. Credit cards are helpful if you know how and when to use them wisely.\nD. However, they will produce interests from interests if you didn't pay the whole amount at the due date.",
-      "options": ["CDBA", "CABD", "CDAB", "CADB"],
-      "answer": "CADB"
-    },
-    {
-      "id": "tmp_po_105",
+      "id": 18,
       "q": "A. Although the government is willing to put resources to education, alone, it cannot do the job.\nB. Education Act of 1980 provides an all encompassing activity with participation at all educational levels and sectors.\nC. The private schools have to be partners.\nD. The Act not only strengthens but equips the DepEd with its regulatory and developmental tasks as well",
-      "options": ["BACD", "ABCD", "DBCA", "CADB"],
+      "options": [
+        "BACD",
+        "ABCD",
+        "DBCA",
+        "CADB"
+      ],
       "answer": "BACD"
     }
   ]
