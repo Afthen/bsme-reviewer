@@ -182,8 +182,7 @@
         "All young people in Barangay X are members of at least two youth clubs."
       ],
       "answer": "Barangay X has fewer juvenile delinquents than other barangays"
-    }
-  ,
+    },
     {
       "id": "tmp_lg_61",
       "q": "Children are in pursuit of a dog whose leash has broken. James is directly behind the dog. Ruby is behind James. Rachel is behind Ruby. Max is ahead of the dog walking down the street in the opposite direction. As the children and dog pass, Max turns around and joins the pursuit. He runs in behind Ruby. James runs faster and is alongside the dog on the left. Ruby runs faster and is alongside the dog on the right. Which child is directly behind the dog?",
@@ -246,4 +245,3 @@
     }
   ]
 }
-====
