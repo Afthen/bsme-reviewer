@@ -185,8 +185,7 @@
         "Beds of fingernails"
       ],
       "answer": "Beds of fingernails"
-    }
-  ,
+    },
     {
       "id": "tmp_vc_1",
       "q": "If you are ambivalent with the answers, analyze the given problem.",
@@ -306,8 +305,7 @@
       "q": "I am usually haphazard in composing my poetry but they turn out so well anyway.",
       "options": ["disorganized", "blank", "puzzled", "strategic"],
       "answer": "disorganized"
-    }
-  ,
+    },
     {
       "id": "tmp_vc_1",
       "q": "If you are ambivalent with the answers, analyze the given problem.",
@@ -430,5 +428,3 @@
     }
   ]
 }
-====
-====
