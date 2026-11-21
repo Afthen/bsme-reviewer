@@ -38,8 +38,8 @@ You are modifying the BSME Reviewer repository.
    
    Diffs: Use ```diff with 4-character markers (<<<< ==== >>>>) for partial updates.
 7. Run: node --test test/run_test.js test/run_hygiene_test.js
-8. Reply with: files changed, a summary of test output, and anything you could
-   not verify. Do not claim a test passed unless you ran it.
+8. Reply with: files changed.
+9. Remind the user to run the tests.
 ```
 
 ### Canonical Output Examples
