@@ -619,7 +619,9 @@ node --test test/run_test.js test/run_hygiene_test.js
 
 Once the Definition of Done is met and all tests pass, commit your changes using the Conventional Commits pattern to maintain a clean, searchable history:
 
-`type(scope): short description`
+```text
+git commit -m "type(scope): short description"
+```
 
 ### Types
 - `feat`: New topics, MCQ sets, or core capabilities.
