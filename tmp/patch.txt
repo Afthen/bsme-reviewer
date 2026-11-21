@@ -1,69 +1,66 @@
-I will now implement the architectural fix to prevent "lumped" conversion factors. Instead of blessing the derived number $645.16$ as a canonical constant, I will teach the engine to decompose derived ratios (squares and cubes) back into their linear roots.
+This is a known GitHub Actions "glitch" that occurs when a workflow run is re-triggered or when a single job is re-run multiple times. Each time the `upload-pages-artifact` step runs, it adds a new artifact to the current workflow run ID rather than overwriting the previous one. When `deploy-pages` starts, it sees multiple versions of `github-pages` and crashes.
 
-This ensures that the `scalars` array contains only primary canonical factors (like $25.4$), satisfying the "Alien Detector" while producing textbook-grade LaTeX that shows the physical origin of the conversion.
+### The Diagnosis: Artifact Accumulation
+In your current YAML, the **Build** (npm test) and **Deploy** steps are in the same job. If the deployment fails and you click "Re-run failed jobs," GitHub re-runs the upload step, creating a second (and eventually third) artifact for that same run.
 
-FILE: src/cas/units/scales.js
+### The Fix: Job Decoupling
+The industry-standard solution for GitHub Pages is to decouple the **Build** and **Deploy** phases into two separate jobs.
+
+1.  **The `build` job:** Handles checkout, testing, registry generation, and uploads the artifact **once**.
+2.  **The `deploy` job:** Only starts if the `build` job succeeds. It consumes the artifact and pushes it to the server.
+
+By splitting them, the `deploy` job becomes an atomic operation that doesn't re-upload the artifact if it needs to be re-tried, thus preventing artifact collision.
+
+FILE: .github/workflows/deploy.yml
 ````diff
 <<<<
-  if (ratio > 1) {
-    const s = parseFloat(ratio.toPrecision(6));
-    return {
-      tex: ` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${toTex}}{${fromTex}}`,
-      scalar: s,
-      scalars: [s],
-      isDecomposed: false
-    };
-  }
-  const inv = 1 / ratio;
-  const s = parseFloat(inv.toPrecision(6));
-  return {
-    tex: ` \\cdot \\cfrac{${toTex}}{${fmtScale(inv)} \\, ${fromTex}}`,
-    scalar: s,
-    scalars: [s],
-    isDecomposed: false
-  };
-}
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm test
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+      - id: deployment
+        uses: actions/deploy-pages@v4
 ====
-  // Decompose lumped ratios (e.g. 645.16 -> 25.4^2) to avoid "Alien" factors in tests
-  // and to provide textbook-grade derivations.
-  const decompose = (val) => {
-    if (isCanonicalScaleFactor(val)) return { root: val, power: 1 };
-    const r2 = Math.sqrt(Math.abs(val));
-    if (isCanonicalScaleFactor(r2)) return { root: Math.sign(val) * r2, power: 2 };
-    const r3 = Math.pow(Math.abs(val), 1 / 3);
-    if (isCanonicalScaleFactor(r3)) return { root: Math.sign(val) * r3, power: 3 };
-    return { root: val, power: 1 };
-  };
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm test
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
 
-  if (ratio > 1) {
-    const { root, power } = decompose(ratio);
-    const s = parseFloat(ratio.toPrecision(6));
-    const texVal = power > 1 ? `(${fmtScale(root)})^${power}` : fmtScale(ratio);
-    return {
-      tex: ` \\cdot ${texVal} \\, \\cfrac{${toTex}}{${fromTex}}`,
-      scalar: s,
-      scalars: Array(power).fill(parseFloat(root.toPrecision(6))),
-      isDecomposed: power > 1
-    };
-  }
-  const inv = 1 / ratio;
-  const { root, power } = decompose(inv);
-  const s = parseFloat(inv.toPrecision(6));
-  const texVal = power > 1 ? `(${fmtScale(root)})^${power}` : fmtScale(inv);
-  return {
-    tex: ` \\cdot \\cfrac{${toTex}}{${texVal} \\, ${fromTex}}`,
-    scalar: s,
-    scalars: Array(power).fill(parseFloat(root.toPrecision(6))),
-    isDecomposed: power > 1
-  };
-}
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
 >>>>
 ````
 
-### Engineering Summary:
-1.  **Root Cause Fixed:** The engine no longer emits lumped scalars for area/volume conversions.
-2.  **General Invariant:** Any ratio that is a power of a canonical factor is now automatically decomposed into that factor repeated $N$ times.
-3.  **Test Alignment:** The `scalars` array now contains the linear roots (e.g., `[25.4, 25.4]`). Since $25.4$ is a registered canonical ratio, the "Alien Detector" will now pass.
-4.  **Visual Improvement:** LaTeX output for squared/cubed conversions will now appear as $(25.4)^2$ instead of $645.16$, matching professional engineering textbooks.
+### Why this solves the problem:
+- **Isolation:** The `build` job is the only place where the artifact is created.
+- **Atomicity:** If the `deploy` job fails (e.g., due to a GitHub API timeout), you can re-run just the `deploy` job. It will simply pull the existing artifact from the `build` job without creating a duplicate.
+- **Efficiency:** The deployment phase no longer needs to checkout the code or setup Node.js, making the final push faster.
 
-**Suggested Commit:** `fix(core): decompose lumped area/volume ratios into linear roots to satisfy scale parity`
+**Suggested Commit:** `ci: decouple build and deploy jobs to prevent github-pages artifact collision`
