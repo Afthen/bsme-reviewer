@@ -2,9 +2,9 @@
 
 A graph-based engineering problem generator, symbolic solver, and spaced-repetition reviewer for Mechanical Engineering board-exam subjects (Machine Design, Air Conditioning / HVAC, and Powerplant Design). Every equation is a node in a graph. The engine chains equations into multi-step problems, checks numerical answers, renders textbook-grade derivations, and models cognitive memory curves using golden-ratio ($\phi$) and Fibonacci decay functions.
 
-- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage`.
+- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage` (and `IndexedDB` for custom uploaded MCQ sets).
 - **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
-- **Test:** `npm test` (regenerates `src/topics/index.js` and runs `test/run_test.js` + `test/run_hygiene_test.js` in Node 22).
+- **Test:** `npm test` (regenerates `src/topics/index.js` + `src/mcq/index.js` and runs `test/run_test.js` + `test/run_hygiene_test.js` in Node 22).
 - **Repo Map:** `npm run skeleton` (prints resolved import graph + function/object signatures for AI context).
 
 ---
@@ -23,10 +23,47 @@ You are modifying the BSME Reviewer repository.
    will touch, (c) which tests will prove the change works.
 4. Obey the Engineering Philosophy (section 1): fix root causes, write general invariants,
    avoid tunnel vision, and never patch symptoms.
-5. Context requests: The Repo Skeleton includes spatial line ranges ([start-end]) for functions and classes. Whenever you need to read a function or file section, issue a targeted request using the exact line range (READ path/to/file.js:start-end) to fetch it in a single shot. Never ask for files in prose.
-6. Code & documentation output convention (4-Backtick Diffs): When given permission to code, standard diff syntax (<<<< ==== >>>>) wrapped in four backticks (````diff or ````markdown) is the canonical way to present all changes (including README.md), used whenever the resulting diff is shorter than a full drop-in replacement.
-7. Verification: The user (acting as the execution harness) runs the test suite (node --test test/run_test.js test/run_hygiene_test.js) and provides test output. Report files changed and summarize the test results provided by the user. Do not claim a test passed unless the test output confirms it.
+5. Context requests: You only see the Repo Skeleton by default. Whenever you need
+   to read files or search the codebase, output a single fenced `text` block with one
+   directive per line (`READ path/to/file.js`, `READ path/to/file.js:10-80`, or
+   `GREP term`) and stop. No XML tags; never ask for files in prose.
+6. Code output convention: When given permission to code, precede code blocks with
+   `FILE: path/to/file.ext` (one `FILE:` header may be followed by one or more blocks
+   for that file). Use 4-backtick fences (````) by default so triple backticks inside
+   files never break parsing; if a file itself contains N-backtick fences (such as
+   README.md), wrap it in N+1 backticks (e.g. `````markdown). Use ````diff with
+   4-character markers (<<<< ==== >>>>) when shorter than a full-file replacement.
+   Documentation (README.md) changes are always returned as a full drop-in replacement.
+7. Run: node --test test/run_test.js test/run_hygiene_test.js
+8. Reply with: files changed, a summary of test output, and anything you could
+   not verify. Do not claim a test passed unless you ran it.
 ```
+
+### Canonical Output Examples
+
+**Context Request:**
+```text
+READ app.js:1-60
+GREP parseZipArchive
+```
+
+**Code Diffs (4 backticks, one `FILE:` header per file):**
+
+FILE: path/to/file.ext
+````diff
+<<<<
+exact old lines
+====
+new lines
+>>>>
+````
+
+**Full-File Replacement (use 4 backticks, or `N+1` if content has `N` backticks):**
+
+FILE: path/to/new_file.js
+````javascript
+// full file content
+````
 
 ---
 
@@ -107,16 +144,16 @@ Software engineering in this repository is governed by physical/mathematical inv
 - **R24. Bug fixes ship with regression tests.** Tests that touch mastery use real mastery functions (`recordAttempt`, `getDecayedMastery`), not constant stubs.
 - **R25. Report honestly.** State files changed, test output, and anything that could not be verified.
 - **R26. Brainstorm mode by default.** Always operate in brainstorm mode first to analyze root causes, establish mathematical invariants, and verify alignment. Never write code or emit diffs until given explicit permission to proceed.
-- **R27. Canonical diff syntax & tipping point.** When authorized to write code, the diff syntax (`<<<< ==== >>>>`) wrapped in four backticks is the canonical method for all changes (including README.md) when shorter than a full drop-in replacement.
+- **R27. Canonical diff syntax & fence nesting.** When authorized to write code, precede blocks with `FILE: path/to/file.ext` and wrap in 4-backtick fences (````diff using `<<<< ==== >>>>` when shorter than a full-file replacement). Only `diff` fences parse `<<<< ==== >>>>`. When a file's content contains `N`-backtick fences (e.g., `README.md`), wrap the drop-in replacement in `N+1` backticks. `README.md` edits are always returned as full drop-in replacements.
 
 ---
 
 ## 3. Architecture
 
 ```text
-app.js                       Application shell, 3-tier checklist dropdown, storage & event wiring
+app.js                       Application shell, mode switch (Problems | MCQ), dropdown & event wiring
 index.html                   DOM structure, KaTeX CDN loader
-styles/                      base.css, components.css, problem.css, modals.css
+styles/                      base.css, components.css, problem.css, mcq.css, modals.css
 src/
   cas/
     ast.js                   Lexer, parser, AST walkers, evalAST
@@ -135,16 +172,30 @@ src/
     dimensions.js            DIMENSIONS, fmtSigFig, formatGivenValue, cancelUnit, textUnit
     topic_mix.js             Tournament targeting over multi-topic review pools
   mastery/                   constants.js (phi, fib), engine.js, storage.js
+  mcq/
+    index.js                 AUTO-GENERATED flat lazy registry (MCQ_MANIFEST + loadMcqSet)
+    engine.js                Batch selection, 4-choice distractor sampling, adaptive 1x4/2x2/4x1 grid, phi mastery
+    zip_reader.js            Zero-dependency ZIP archive reader (native DecompressionStream)
+    custom_store.js          IndexedDB persistence for user-uploaded .json / .zip MCQ sets
+    <subject>/<set>/         set.json + optional assets/ images
+  ui/
+    problem_view.js          Computational problem renderer & step checker
+    mcq_view.js              Instant Check (1-by-1) & Exam Sheet (scrollable, adaptive grid, in-place grading)
+    sidebar_view.js          Oklab mastery drawer & mastery export/import
+    carousel_view.js         Formula reference & variable isolator
+    tooltip_view.js          Interactive variable tooltips
   topics/
     index.js                 AUTO-GENERATED flat lazy registry (TOPIC_MANIFEST + loadTopic)
     <subject>/<topic>/       index.js, schema.js, relations.js, system.js (strict leaf slices)
 scripts/
-  gen_registry.js            Auto-discovers leaf topics -> emits src/topics/index.js
+  gen_registry.js            Auto-discovers leaf topics & MCQ sets -> emits src/topics/index.js & src/mcq/index.js
   repo_skeleton.js           Generates resolved import graph + symbol signatures
+  fulfill_ctx.js             Fulfills READ/GREP context requests into tmp/ctx_res.txt
 test/
   validator.js               Topic schema, dual-system AST inversion, and numerical fidelity harness
   run_test.js                Universal property invariants, alien scale detector, derivation rendering
   run_hygiene_test.js        In-tree dead code, invariants, schema orphans, duplicates, alias collisions
+  mcq_test.js                MCQ registry, image asset existence, grid classifier, and ZIP unpacker tests
 ```
 
 ---
@@ -240,12 +291,8 @@ The parser grammar enforces standard infix mathematical notation:
 
 ### 6.1 The AffineScale Invariant Model
 All physical evaluation rests on branchless affine transformations and 7D dimensional vectors:
-```math
-\phi_u(x) = s_u \cdot (x + o_u)
-```
-```math
-\phi_u^{-1}(y) = \frac{y}{s_u} - o_u
-```
+$$\phi_u(x) = s_u \cdot (x + o_u)$$
+$$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
 
 - **Coherent Base Magnitudes:** Every physical state has an invariant representation in coherent SI units ($\text{m}, \text{s}, \text{kg}, \text{N}, \text{K}, \text{W}, \text{J}$).
 - **Linear Units ($o_u = 0$):** Multiplicative scale only ($y = s_u \cdot x$).
@@ -258,9 +305,7 @@ All physical evaluation rests on branchless affine transformations and 7D dimens
 ### 6.2 `scales.js`: Single Source of Truth & 6-Sig-Fig Precision
 `src/cas/units/scales.js` computes all conversion scalars directly from `BASE_UNITS` and `PREFIXES` in `definitions.js` using `fmtScale` (6 significant figures without the 3-decimal truncation cap):
 - **Single-Dimension Scaling (Option B):** When an expression evaluates to a single dimension differing from `targetUnit` (e.g. $\text{hp} \to \text{ft}\cdot\text{lb/s}$), `scales.js` preserves the target unit intact on the main line:
-  ```math
-  BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}
-  ```
+  $$BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}$$
 - **Compound Ratio Decomposition:** Compound unit conversions (e.g. $\frac{\text{lb/min}}{\text{Btu/h}} \to \frac{\text{kg}}{\text{kWh}}$) are never lumped into unfamiliar decimals (like $92{,}863.4$). `scales.js` decomposes them into atomic dimension pairs (`60`, `2.20462`, `3,412.14`) applied in-situ.
 - **AST-Driven Mismatches:** Ratios with differing unit scales (e.g. $\text{Btu/h}$ vs $\text{Btu/min}$) extract the exact differing atomic pair from the unit AST.
 
@@ -268,14 +313,10 @@ All physical evaluation rests on branchless affine transformations and 7D dimens
 Derivations default to **in-situ conversions** placed directly beside the converted token.
 
 A compound fraction has 4 vertical visual row slots:
-```math
-\cfrac{\text{Row 1}}{\text{Row 2}} \Bigg/ \cfrac{\text{Row 3}}{\text{Row 4}}
-```
+$$\cfrac{\text{Row 1}}{\text{Row 2}} \Bigg/ \cfrac{\text{Row 3}}{\text{Row 4}}$$
 
 Because conversion factors multiply horizontally beside variables in the numerator (Rows 1 & 2) and denominator (Rows 3 & 4), they preserve the 4-row limit:
-```math
-\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}}{227{,}476 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{min}}}} = \boxed{38 \, \text{\%}}
-```
+$$\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}}{227{,}476 \, \cfrac{\cancel{\text{Btu}}}{\cancel{\text{min}}}} = \boxed{38 \, \text{\%}}$$
 
 - **Stepping Down:** Stepping down to the main line ($A/B \cdot E/F$) is an overflow valve used *only* if an expression itself already contains nested fractions that would push visual height $\ge 5$ rows, or under Option B single-dimension scaling.
 
@@ -306,9 +347,7 @@ Topics have no fixed starting or ending variables. The generator treats every re
 
 - **Canonical Cancellation Hierarchy:**
   - **Whole-Unit (Canonical):** Wrap the entire unit block when cancelling identical scales or whole terms:
-    ```math
-    \cfrac{1{,}440 \, \cancel{\text{kW}}}{4{,}000 \, \cancel{\cfrac{\text{kJ}}{\text{s}}}} = \boxed{36 \, \text{\%}}
-    ```
+    $$\cfrac{1{,}440 \, \cancel{\text{kW}}}{4{,}000 \, \cancel{\cfrac{\text{kJ}}{\text{s}}}} = \boxed{36 \, \text{\%}}$$
   - **Component-Level (Fallback):** Cancel individual sub-tokens *only* when components cancel against separate factors ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}} \cdot 60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$).
 - **Omit 1:** Write $\cfrac{\text{kg}}{2.20462 \, \cancel{\text{lb}}}$, never $\cfrac{1 \, \text{kg}}{\dots}$.
 - **Scalars Outside:** Write $60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$, never $\cfrac{60 \, \cancel{\text{h}}}{\cancel{\text{min}}}$.
@@ -476,8 +515,66 @@ export function createMyTopicSystem({ sys = "SI" } = {}) {
 
 ### 9.5 Automatic Discovery & Verification
 
-1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` manually.
-2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and zero barrel leaks.
+1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` or `src/mcq/index.js` manually.
+2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` (and `src/mcq/` `.json` sets) and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and zero barrel leaks.
+
+### 9.6 Authoring MCQ Sets (`src/mcq/`)
+
+MCQ sets can be committed directly to the repository under `src/mcq/` or uploaded at runtime in the browser.
+
+#### Directory Layout (Repository Sets)
+```text
+src/mcq/<subject>/<set_name>/
+├── set.json       # Required question bank
+└── assets/        # Optional local images referenced by questions (e.g. "./assets/fig1.png")
+```
+
+- Folder depth determines grouping if `subject` / `category` are omitted from `set.json`, though declaring them explicitly is recommended.
+- Never edit `src/mcq/index.js` by hand.
+
+#### `set.json` Schema
+
+```json
+{
+  "id": "mcq_cse_math_01",
+  "title": "Quantitative Reasoning & Word Problems",
+  "subject": "Civil Service Exam",
+  "category": "Numerical Ability",
+  "questions": [
+    {
+      "id": 126,
+      "q": "Which fraction has the largest value?",
+      "options": ["$\\frac{4}{5}$", "$\\frac{41}{50}$", "$\\frac{17}{20}$", "$75\\%$", "None, they are all equal"],
+      "answer": "$\\frac{17}{20}$",
+      "shuffle": [[0, 1, 2, 3]]
+    },
+    {
+      "id": 127,
+      "q": "Identify the component shown in the diagram.",
+      "image": { "src": "./assets/fig1.png", "alt": "Pump cross-section" },
+      "options": ["Impeller", "Volute", "Shaft sleeve", "Wear ring"],
+      "answer": "Impeller"
+    }
+  ]
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `id` | Recommended | Globally unique string. Defaults to `mcq_<relDir>` if omitted. |
+| `title` | Recommended | Display name in the quiz selector (falls back to `setName` or folder name). |
+| `subject` | Recommended | Top-level group in the selector (falls back to `<subject>` folder name). |
+| `category` | No | Sub-group under `subject`, or `null` for standalone sets. |
+| `questions` | Yes | Array of question objects. |
+| `questions[].q` | Yes | Prompt text. Supports KaTeX (`$...$` / `$$...$$`). |
+| `questions[].options` | Yes | At least 2 choices. Pools $> 4$ sample the correct answer + 3 distractors at runtime. |
+| `questions[].answer` | Yes | Exact option text (recommended), option letter (`"A"`–`"F"`), or index. |
+| `questions[].shuffle` | No | Omit for full shuffle; `[]` locks option order; index groups (e.g. `[[0, 1, 2]]`) shuffle only those indices while pinning trailing choices like `"All of the above"` / `"NO ERROR"`. |
+| `questions[].image` | No | Path string (`"./assets/fig1.png"`, `https://...`, `data:image/...`) or `{ "src": "...", "alt": "..." }`. |
+
+#### Publishing & Local Uploads
+- **Repository sets (important):** After adding or editing any `set.json`, run `npm test` (or `npm run gen:registry`) and **commit + push the regenerated `src/mcq/index.js`** alongside your `set.json`. Because the app runs as static ES modules over HTTP/S, the browser cannot scan `src/mcq/` at runtime—only sets registered in `src/mcq/index.js` appear in the selector.
+- **Local browser uploads:** Users can also import personal `.json` or `.zip` (containing a `.json` file plus an `assets/` folder) directly via **+ Add Quiz (.json / .zip)** in the quiz dropdown; these persist locally in `IndexedDB`.
 
 ---
 
@@ -506,9 +603,8 @@ node --test test/run_test.js test/run_hygiene_test.js
 - [ ] `system.js` is independent of the solver and honors `{ sys }`.
 - [ ] Unit conversions default to in-situ, respect the 4-row fraction tower cap, omit coefficients of 1, keep scalars outside unit ratios, and use canonical encompassing `\cancel`.
 - [ ] Percentages render as `\text{\%}` and degree symbols use native `°`.
-- [ ] Code and documentation changes use canonical diff syntax (`<<<< ==== >>>>`) wrapped in four backticks.
-- [ ] The test suite (`node --test test/run_test.js test/run_hygiene_test.js`) executed by the user passed with 0 failures.
+- [ ] Code changes use `FILE: path/to/file.ext` with 4-backtick `diff` (`<<<< ==== >>>>`) fences unless shorter as a drop-in replacement; `README.md` edits use `N+1`-backtick full drop-in replacements.
+- [ ] `node --test test/run_test.js test/run_hygiene_test.js` was run and passed with 0 failures.
 - [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
 - [ ] No tests were renamed, skipped, loosened, or deleted.
 - [ ] LF line endings, header comment on every new file, no dead code, and no new duplication.
-```

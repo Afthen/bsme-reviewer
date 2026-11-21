@@ -4,6 +4,11 @@
  */
 
 import { TOPIC_MANIFEST, hasTopic, loadTopic, loadTopics } from "./src/topics/index.js";
+import { MCQ_MANIFEST, hasMcqSet, loadMcqSets } from "./src/mcq/index.js";
+import {
+  listCustomManifests, loadCustomSet, saveCustomSetFromFile, deleteCustomSet
+} from "./src/mcq/custom_store.js";
+import { getSetMastery, getSetStats } from "./src/mcq/engine.js";
 import { generateProblem } from "./src/core/problem_gen.js";
 import { pickWeakestTopic } from "./src/core/topic_mix.js";
 import {
@@ -11,11 +16,14 @@ import {
   exportMasteryJSON, importMasteryJSON
 } from "./src/mastery/index.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
+import { renderMcqSets } from "./src/ui/mcq_view.js";
 import {
-  initSidebarView, updateSidebarRelations, MASTERY_CHANGED_EVENT
+  initSidebarView, updateSidebarRelations, renderMasteryBars, MASTERY_CHANGED_EVENT
 } from "./src/ui/sidebar_view.js";
 
 const SELECTED_TOPICS_KEY = "bsme.selectedTopicIds";
+const SELECTED_MCQS_KEY = "bsme.selectedMcqIds";
+const APP_MODE_KEY = "bsme.appMode";
 const MANIFEST_BY_ID = new Map(TOPIC_MANIFEST.map(m => [m.id, m]));
 const masteryFor = topic => eq => getDecayedMastery(eq, topic);
 
@@ -31,7 +39,30 @@ function loadSelectedTopicIds() {
   return [];
 }
 
+function loadSelectedMcqIds() {
+  try {
+    const raw = localStorage.getItem(SELECTED_MCQS_KEY);
+    if (raw) {
+      const ids = JSON.parse(raw);
+      if (Array.isArray(ids)) return ids;
+    }
+  } catch (_) {}
+  return [];
+}
+
+function loadAppMode() {
+  try {
+    return localStorage.getItem(APP_MODE_KEY) === "mcq" ? "mcq" : "problems";
+  } catch (_) {
+    return "problems";
+  }
+}
+
+let appMode = loadAppMode();
 let selectedTopicIds = loadSelectedTopicIds();
+let selectedMcqIds = loadSelectedMcqIds();
+let customMcqManifests = [];
+const liveMcqCounts = new Map();
 let currentTopic = null;
 let currentProblem = null;
 let selectionSeq = 0;
@@ -66,9 +97,62 @@ function setTopicSelected(id, on) {
   } catch (_) {}
 }
 
+function setMcqSelected(id, on) {
+  if (on) {
+    if (!selectedMcqIds.includes(id)) selectedMcqIds.push(id);
+  } else {
+    selectedMcqIds = selectedMcqIds.filter(x => x !== id);
+  }
+  try {
+    localStorage.setItem(SELECTED_MCQS_KEY, JSON.stringify(selectedMcqIds));
+  } catch (_) {}
+}
+
+function getAllMcqManifests() {
+  return [...MCQ_MANIFEST, ...customMcqManifests];
+}
+
+async function getSelectedMcqSets() {
+  const repoIds = selectedMcqIds.filter(hasMcqSet);
+  const customIds = selectedMcqIds.filter(id => customMcqManifests.some(m => m.id === id));
+  const [repoSets, customSets] = await Promise.all([
+    loadMcqSets(repoIds),
+    Promise.all(customIds.map(loadCustomSet))
+  ]);
+  return [...repoSets, ...customSets.filter(Boolean)];
+}
+
 function openDropdown() {
   document.getElementById("topic-dropdown-menu")?.classList.add("active");
   document.getElementById("topic-dropdown-toggle")?.classList.add("active");
+}
+
+function closeDropdown() {
+  document.getElementById("topic-dropdown-menu")?.classList.remove("active");
+  document.getElementById("topic-dropdown-toggle")?.classList.remove("active");
+}
+
+function initDropdownShell() {
+  const container = document.getElementById("topic-dropdown-container");
+  const toggleBtn = document.getElementById("topic-dropdown-toggle");
+  const menu = document.getElementById("topic-dropdown-menu");
+  if (!container || !toggleBtn || !menu) return;
+
+  toggleBtn.addEventListener("click", () => {
+    const isOpen = menu.classList.toggle("active");
+    toggleBtn.classList.toggle("active", isOpen);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-opens-dropdown]")) return;
+    if (!container.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDropdown();
+  });
 }
 
 function clearSelectionPrompt() {
@@ -98,6 +182,7 @@ function renderSelectionPrompt() {
   btn.type = "button";
   btn.className = "btn";
   btn.textContent = "Choose topics";
+  btn.dataset.opensDropdown = "1";
   btn.addEventListener("click", openDropdown);
 
   wrap.append(heading, body, btn);
@@ -122,14 +207,122 @@ function renderTopicBadge(topic) {
     : `${topic.subject}: ${topic.title}`;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+function renderMcqEmptyPrompt() {
+  const view = document.getElementById("view-mcq");
+  if (!view) return;
+  view.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.id = "mcq-selection-prompt";
+  wrap.className = "selection-prompt";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "No quiz sets selected";
+
+  const body = document.createElement("p");
+  body.textContent =
+    "Open the set checklist to tick curated quiz banks or upload your own .json / .zip reviewer.";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn";
+  btn.textContent = "Choose quiz sets";
+  btn.dataset.opensDropdown = "1";
+  btn.addEventListener("click", openDropdown);
+
+  wrap.append(heading, body, btn);
+  view.classList.add("is-empty");
+  view.appendChild(wrap);
+}
+
+async function refreshMcqMode() {
+  const sets = await getSelectedMcqSets();
+  for (const s of sets) {
+    const qCount = s.questions?.length ?? s.count ?? 0;
+    liveMcqCounts.set(s.id, qCount);
+    const leaf = document.querySelector(`.topic-leaf[data-mcq-id="${s.id}"] .topic-leaf-title`);
+    if (leaf) {
+      leaf.textContent = `${s.title} (${qCount})`;
+    }
+  }
+  const view = document.getElementById("view-mcq");
+  if (!view) return;
+  if (sets.length === 0) {
+    renderMcqEmptyPrompt();
+  } else {
+    view.classList.remove("is-empty");
+    renderMcqSets(sets);
+  }
+  updateMcqSidebar(sets);
+}
+
+function updateMcqSidebar(sets) {
+  const sidebarTitle = document.querySelector("#sidebar-drawer .sidebar-title");
+  if (sidebarTitle) sidebarTitle.textContent = "Quiz Set Mastery";
+  const el = document.getElementById("weight-bars-el");
+  if (!el) return;
+
+  const entries = sets
+    .map(s => {
+      const stats = getSetStats(s);
+      return {
+        id: s.id,
+        name: `${s.title} (${stats.seen}/${stats.total})`,
+        mastery: getSetMastery(s)
+      };
+    })
+    .sort((a, b) => a.mastery - b.mastery);
+
+  renderMasteryBars(el, entries, e => e.mastery);
+}
+
+function applyAppMode(mode) {
+  appMode = mode;
+  try { localStorage.setItem(APP_MODE_KEY, mode); } catch (_) {}
+
+  document.querySelectorAll("#app-mode-switch .mode-switch-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mode === mode);
+  });
+
+  const viewProblem = document.getElementById("view-problem");
+  const viewMcq = document.getElementById("view-mcq");
+  const viewCarousel = document.getElementById("view-carousel");
+  viewCarousel?.classList.remove("active");
+
+  if (mode === "mcq") {
+    viewProblem?.classList.remove("active");
+    viewMcq?.classList.add("active");
+    setupMcqSelector();
+    refreshMcqMode();
+  } else {
+    viewMcq?.classList.remove("active");
+    viewProblem?.classList.add("active");
+    const sidebarTitle = document.querySelector("#sidebar-drawer .sidebar-title");
+    if (sidebarTitle) sidebarTitle.textContent = "Formula Mastery (Harmonic)";
+    setupTopicSelector();
+    generateNewProblem();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
   loadMastery();
-  setupTopicSelector();
+  customMcqManifests = await listCustomManifests();
+  initDropdownShell();
   initSidebarView([], () => 0, []);
   setupHeaderActions();
 
+  document.querySelectorAll("#app-mode-switch .mode-switch-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.mode && btn.dataset.mode !== appMode) {
+        applyAppMode(btn.dataset.mode);
+      }
+    });
+  });
+
   document.addEventListener(MASTERY_CHANGED_EVENT, async () => {
-    if (currentTopic) {
+    if (appMode === "mcq") {
+      const sets = await getSelectedMcqSets();
+      updateMcqSidebar(sets);
+    } else if (currentTopic) {
       const allRels = await getAllSelectedRelations();
       updateSidebarRelations(
         currentTopic.relations,
@@ -147,7 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  generateNewProblem();
+  applyAppMode(appMode);
 });
 
 function setupTopicSelector() {
@@ -380,19 +573,152 @@ function setupTopicSelector() {
 
   syncGroupBoxes();
   updateDropdownLabel();
+}
 
-  toggleBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isOpen = menu.classList.toggle("active");
-    toggleBtn.classList.toggle("active", isOpen);
-  });
+function setupMcqSelector() {
+  const container = document.getElementById("topic-dropdown-container");
+  if (!container) return;
+  const toggleBtn = document.getElementById("topic-dropdown-toggle");
+  const label = document.getElementById("topic-dropdown-label");
+  const menu = document.getElementById("topic-dropdown-menu");
 
-  document.addEventListener("click", (e) => {
-    if (!container.contains(e.target)) {
-      menu.classList.remove("active");
-      toggleBtn.classList.remove("active");
+  const manifests = getAllMcqManifests();
+  const subjects = {};
+  manifests.forEach(m => {
+    const subj = m.subject || "General";
+    if (!subjects[subj]) subjects[subj] = { categories: {}, standalone: [] };
+    if (m.category) {
+      if (!subjects[subj].categories[m.category]) subjects[subj].categories[m.category] = [];
+      subjects[subj].categories[m.category].push(m);
+    } else {
+      subjects[subj].standalone.push(m);
     }
   });
+
+  menu.innerHTML = "";
+  const leafBoxes = [];
+
+  function updateLabel() {
+    const selected = getAllMcqManifests().filter(m => selectedMcqIds.includes(m.id));
+    if (selected.length === 0) label.textContent = "Select quiz sets…";
+    else if (selected.length === 1) label.textContent = selected[0].title;
+    else label.textContent = `${selected.length} quiz sets selected`;
+    toggleBtn.title = selected.map(s => s.title).join(", ");
+  }
+
+  function createMcqLeaf(m, levelClass) {
+    const leaf = document.createElement("label");
+    leaf.className = `topic-item topic-leaf ${levelClass}`;
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.className = "topic-checkbox";
+    box.dataset.mcqId = m.id;
+    box.checked = selectedMcqIds.includes(m.id);
+
+    const count = liveMcqCounts.get(m.id) ?? m.count;
+    const title = document.createElement("span");
+    title.className = "topic-leaf-title";
+    title.textContent = `${m.title} (${count})`;
+
+    leaf.append(box, title);
+    if (m.isCustom) {
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "menu-mini-btn";
+      del.textContent = "✕";
+      del.style.marginLeft = "auto";
+      del.addEventListener("click", async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        await deleteCustomSet(m.id);
+        setMcqSelected(m.id, false);
+        customMcqManifests = await listCustomManifests();
+        setupMcqSelector();
+        refreshMcqMode();
+      });
+      leaf.appendChild(del);
+    }
+
+    leaf.classList.toggle("checked", box.checked);
+    leafBoxes.push(box);
+
+    box.addEventListener("change", () => {
+      setMcqSelected(m.id, box.checked);
+      leaf.classList.toggle("checked", box.checked);
+      updateLabel();
+      refreshMcqMode();
+    });
+
+    return leaf;
+  }
+
+  for (const [subjName, { categories, standalone }] of Object.entries(subjects)) {
+    const group = document.createElement("div");
+    group.className = "subject-group open";
+    const header = document.createElement("div");
+    header.className = "subject-header";
+    const chev = document.createElement("span");
+    chev.className = "subject-chevron";
+    chev.textContent = "▶";
+    const name = document.createElement("span");
+    name.textContent = subjName;
+    header.append(chev, name);
+    header.addEventListener("click", e => { e.stopPropagation(); group.classList.toggle("open"); });
+
+    const list = document.createElement("div");
+    list.className = "topic-list";
+    for (const [catName, items] of Object.entries(categories)) {
+      const catGroup = document.createElement("div");
+      catGroup.className = "category-group open";
+      const catHeader = document.createElement("div");
+      catHeader.className = "category-header";
+      const catChev = document.createElement("span");
+      catChev.className = "category-chevron";
+      catChev.textContent = "▶";
+      const catSpan = document.createElement("span");
+      catSpan.textContent = catName;
+      catHeader.append(catChev, catSpan);
+      catHeader.addEventListener("click", e => { e.stopPropagation(); catGroup.classList.toggle("open"); });
+      const catList = document.createElement("div");
+      catList.className = "category-list";
+      items.forEach(m => catList.appendChild(createMcqLeaf(m, "level-3")));
+      catGroup.append(catHeader, catList);
+      list.appendChild(catGroup);
+    }
+    standalone.forEach(m => list.appendChild(createMcqLeaf(m, "level-2")));
+    group.append(header, list);
+    menu.appendChild(group);
+  }
+
+  const footer = document.createElement("div");
+  footer.className = "topic-menu-footer";
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "menu-mini-btn";
+  addBtn.textContent = "+ Add Quiz (.json / .zip)";
+  addBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    document.getElementById("mcq-file-input")?.click();
+  });
+
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "menu-mini-btn";
+  clearBtn.textContent = "Deselect all";
+  clearBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    leafBoxes.forEach(b => {
+      b.checked = false;
+      b.closest(".topic-leaf")?.classList.remove("checked");
+      setMcqSelected(b.dataset.mcqId, false);
+    });
+    updateLabel();
+    refreshMcqMode();
+  });
+
+  footer.append(addBtn, clearBtn);
+  menu.appendChild(footer);
+  updateLabel();
 }
 
 function setupHeaderActions() {
@@ -432,6 +758,27 @@ function setupHeaderActions() {
         }
       };
       reader.readAsText(file);
+    });
+  }
+
+  const mcqFileInput = document.getElementById("mcq-file-input");
+  if (mcqFileInput) {
+    mcqFileInput.addEventListener("change", async e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const saved = await saveCustomSetFromFile(file);
+        customMcqManifests = await listCustomManifests();
+        setMcqSelected(saved.id, true);
+        if (appMode === "mcq") {
+          setupMcqSelector();
+          refreshMcqMode();
+        }
+      } catch (err) {
+        alert(`Could not load quiz file: ${err.message}`);
+      } finally {
+        mcqFileInput.value = "";
+      }
     });
   }
 
