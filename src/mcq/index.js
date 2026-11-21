@@ -9,10 +9,10 @@ export const MCQ_MANIFEST = Object.freeze([
   Object.freeze({"id":"mcq_cse_grammar_01","title":"Grammar & Correct Usage","subject":"Civil Service Exam","category":"Verbal Ability","count":66}),
   Object.freeze({"id":"mcq_cse_logic_01","title":"Logic & Analytical Reasoning","subject":"Civil Service Exam","category":"Analytical Ability","count":15}),
   Object.freeze({"id":"mcq_cse_math_01","title":"Quantitative Reasoning & Word Problems","subject":"Civil Service Exam","category":"Numerical Ability","count":91}),
-  Object.freeze({"id":"mcq_cse_num_series_01","title":"Number Analogy & Series","subject":"Civil Service Exam","category":"Numerical Ability","count":46}),
+  Object.freeze({"id":"mcq_cse_num_series_01","title":"Number Analogy & Series","subject":"Civil Service Exam","category":"Numerical Ability","count":26}),
   Object.freeze({"id":"mcq_cse_paragraph_01","title":"Paragraph Organization","subject":"Civil Service Exam","category":"Verbal Ability","count":3}),
   Object.freeze({"id":"mcq_cse_reading_01","title":"Reading Comprehension","subject":"Civil Service Exam","category":"Verbal Ability","count":68}),
-  Object.freeze({"id":"mcq_cse_vocab_01","title":"Vocabulary & Sentence Completion","subject":"Civil Service Exam","category":"Verbal Ability","count":26})
+  Object.freeze({"id":"mcq_cse_vocab_01","title":"Vocabulary & Sentence Completion","subject":"Civil Service Exam","category":"Verbal Ability","count":16})
 ]);
 
 const MANIFEST_BY_ID = new Map(MCQ_MANIFEST.map(m => [m.id, m]));

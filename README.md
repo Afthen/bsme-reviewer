@@ -28,12 +28,15 @@ You are modifying the BSME Reviewer repository.
    directive per line (`READ path/to/file.js`, `READ path/to/file.js:10-80`, or
    `GREP term`) and stop. No XML tags; never ask for files in prose.
 6. Code output convention: When given permission to code, precede code blocks with
-   `FILE: path/to/file.ext` (one `FILE:` header may be followed by one or more blocks
-   for that file). Use 4-backtick fences (````) by default so triple backticks inside
-   files never break parsing; if a file itself contains N-backtick fences (such as
-   README.md), wrap it in N+1 backticks (e.g. `````markdown). Use ````diff with
-   4-character markers (<<<< ==== >>>>) when shorter than a full-file replacement.
-   Documentation (README.md) changes are always returned as a full drop-in replacement.
+   `FILE: path/to/file.ext`. To minimize noise, you do not need to repeat the `FILE:`
+   header for subsequent blocks targeting the same file; the parser assumes all 
+   following diffs belong to the most recent header encountered.
+   
+   Fencing: Use 3-backtick fences (```) by default. If the content within a block 
+   contains code fences of N-backticks, wrap the entire block in N+1 backticks 
+   to prevent parsing breaks.
+   
+   Diffs: Use ```diff with 4-character markers (<<<< ==== >>>>) for partial updates.
 7. Run: node --test test/run_test.js test/run_hygiene_test.js
 8. Reply with: files changed, a summary of test output, and anything you could
    not verify. Do not claim a test passed unless you ran it.
@@ -573,7 +576,7 @@ src/mcq/<subject>/<set_name>/
 | `questions[].image` | No | Path string (`"./assets/fig1.png"`, `https://...`, `data:image/...`) or `{ "src": "...", "alt": "..." }`. |
 
 #### Publishing & Local Uploads
-- **Repository sets (important):** After adding or editing any `set.json`, run `npm test` (or `npm run gen:registry`) and **commit + push the regenerated `src/mcq/index.js`** alongside your `set.json`. Because the app runs as static ES modules over HTTP/S, the browser cannot scan `src/mcq/` at runtime—only sets registered in `src/mcq/index.js` appear in the selector.
+- **Repository sets (important):** When adding new questions, you may simply append them to the `questions` array in `set.json`. You do not need to worry about ID conflicts or duplicates. Running `npm test` (or `npm run clean:mcqs`) will automatically deduplicate questions, merge their option pools, and re-index IDs to a strict $1 \dots N$ sequence before updating the registry. Once sanitized, **commit + push the regenerated `src/mcq/index.js`** alongside your `set.json`.
 - **Local browser uploads:** Users can also import personal `.json` or `.zip` (containing a `.json` file plus an `assets/` folder) directly via **+ Add Quiz (.json / .zip)** in the quiz dropdown; these persist locally in `IndexedDB`.
 
 ---

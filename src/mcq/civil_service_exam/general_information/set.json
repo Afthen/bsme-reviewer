@@ -5,19 +5,31 @@
   "category": "General Information",
   "questions": [
     {
-      "id": 151,
+      "id": 1,
       "q": "Elective or appointive public officials or employees cannot accept any present, compensation, office or title of any kind from any foreign government without the consent of:",
-      "options": ["The President", "The Ombudsman", "The Chief Justice", "The Agency Head", "Congress"],
+      "options": [
+        "The President",
+        "The Ombudsman",
+        "The Chief Justice",
+        "The Agency Head",
+        "Congress"
+      ],
       "answer": "Congress"
     },
     {
-      "id": 152,
+      "id": 2,
       "q": "Which of the following rights ensure the well-being of the individual and foster preservation, enrichment and dynamic evolution of national culture based on the principle of unity in diversity in a climate of free artistic and intellectual expression?",
-      "options": ["Political rights", "Civil rights", "Inherent rights", "Cultural rights", "Economic and Social rights"],
+      "options": [
+        "Political rights",
+        "Civil rights",
+        "Inherent rights",
+        "Cultural rights",
+        "Economic and Social rights"
+      ],
       "answer": "Cultural rights"
     },
     {
-      "id": 153,
+      "id": 3,
       "q": "Right that guarantees similar treatment to all persons similarly situated and precludes arbitrary or unjust discrimination to secure and safeguard such right is called the _________.",
       "options": [
         "right against double jeopardy",
@@ -29,7 +41,7 @@
       "answer": "right to equal protection of the law"
     },
     {
-      "id": 154,
+      "id": 4,
       "q": "The right to privacy of a person is defined as one's right to __________.",
       "options": [
         "go where one pleases",
@@ -41,7 +53,7 @@
       "answer": "be free from unwarranted publicity"
     },
     {
-      "id": 155,
+      "id": 5,
       "q": "A voter is disqualified from exercising the right to suffrage if said voter __________.",
       "options": [
         "is illiterate",
@@ -53,31 +65,55 @@
       "answer": "has been a resident of the Philippines for less than six months"
     },
     {
-      "id": 156,
+      "id": 6,
       "q": "Who may be appointed as member of the Cabinet without needing confirmation from the Commission on Appointments?",
-      "options": ["Senate President", "Any Senator", "Vice-President", "Speaker of the House", "Any Congress Representative"],
+      "options": [
+        "Senate President",
+        "Any Senator",
+        "Vice-President",
+        "Speaker of the House",
+        "Any Congress Representative"
+      ],
       "answer": "Vice-President"
     },
     {
-      "id": 157,
+      "id": 7,
       "q": "The right of private individuals to secure for themselves the enjoyment of their means of happiness such as the right to a name, the right to form a family, and the right to security of personal papers and effects are called ___________.",
-      "options": ["Economic and Social rights", "Cultural Rights", "Civil Rights", "Inherent rights", "Political rights"],
+      "options": [
+        "Economic and Social rights",
+        "Cultural Rights",
+        "Civil Rights",
+        "Inherent rights",
+        "Political rights"
+      ],
       "answer": "Civil Rights"
     },
     {
-      "id": 158,
+      "id": 8,
       "q": "At least how many years after the Constitution has been ratified may the people propose amendments through initiative?",
-      "options": ["Ten", "Seven", "Six", "Five", "Three"],
+      "options": [
+        "Ten",
+        "Seven",
+        "Six",
+        "Five",
+        "Three"
+      ],
       "answer": "Five"
     },
     {
-      "id": 159,
+      "id": 9,
       "q": "Which of the following sectors is NOT represented in the House of Representatives through the party-list system?",
-      "options": ["Religious", "Youth", "Women", "Peasant", "Labor"],
+      "options": [
+        "Religious",
+        "Youth",
+        "Women",
+        "Peasant",
+        "Labor"
+      ],
       "answer": "Religious"
     },
     {
-      "id": 160,
+      "id": 10,
       "q": "Which of the following government agencies exercises original and exclusive jurisdiction over all contests relating to the election returns and the qualifications of the President and the Vice President?",
       "options": [
         "Supreme Court",
@@ -89,13 +125,19 @@
       "answer": "Supreme Court"
     },
     {
-      "id": 161,
+      "id": 11,
       "q": "Who among the following is responsible for determining the existence of probable cause for the issuance of a warrant of arrest or search warrant?",
-      "options": ["Lawyer", "Prosecutor", "Plaintiff", "Judge", "Police Investigator"],
+      "options": [
+        "Lawyer",
+        "Prosecutor",
+        "Plaintiff",
+        "Judge",
+        "Police Investigator"
+      ],
       "answer": "Judge"
     },
     {
-      "id": 162,
+      "id": 12,
       "q": "Which of the following statements BEST describes the relationship between global warming and ozone depletion?",
       "options": [
         "Global warming contributes to ozone depletion.",
@@ -107,25 +149,43 @@
       "answer": "Excessive build-up of carbon dioxide causes both global warming and ozone depletion"
     },
     {
-      "id": 163,
+      "id": 13,
       "q": "Monoculture cropping or planting a single crop in a large area is not advisable because it:",
-      "options": ["requires more water", "requires less fertilizers", "causes drought", "lowers the water table", "promotes pest infestation"],
+      "options": [
+        "requires more water",
+        "requires less fertilizers",
+        "causes drought",
+        "lowers the water table",
+        "promotes pest infestation"
+      ],
       "answer": "promotes pest infestation"
     },
     {
-      "id": 164,
+      "id": 14,
       "q": "Which of the following is the major cause of coral reef destruction?",
-      "options": ["Dynamite fishing", "Muro-Ami", "Oil Spill", "Sewage pollution", "Siltation"],
+      "options": [
+        "Dynamite fishing",
+        "Muro-Ami",
+        "Oil Spill",
+        "Sewage pollution",
+        "Siltation"
+      ],
       "answer": "Sewage pollution"
     },
     {
-      "id": 165,
+      "id": 15,
       "q": "The lasting environmental impact of a large-scale mining operation comes from:",
-      "options": ["air pollution", "noise pollution", "deforestation", "mine tailings", "unrestored mined out areas"],
+      "options": [
+        "air pollution",
+        "noise pollution",
+        "deforestation",
+        "mine tailings",
+        "unrestored mined out areas"
+      ],
       "answer": "noise pollution"
     },
     {
-      "id": 166,
+      "id": 16,
       "q": "Jaywalking, throwing garbage anywhere, vandalism, not waiting in line, and tardiness are manifestations of __________.",
       "options": [
         "disorderliness",
@@ -137,7 +197,7 @@
       "answer": "lack of discipline"
     },
     {
-      "id": 167,
+      "id": 17,
       "q": "Fishery resources in marine and coastal waters may be considered as \"open access resources\" because of the __________.",
       "options": [
         "mobile nature of fish and water",
@@ -149,7 +209,7 @@
       "answer": "difficulty in marking sea boundaries"
     },
     {
-      "id": 168,
+      "id": 18,
       "q": "Every government agency is required to develop, update regularly, and make available to the transacting public __________.",
       "options": [
         "the names of action officers",
@@ -161,7 +221,7 @@
       "answer": "the rates of service fees"
     },
     {
-      "id": 169,
+      "id": 19,
       "q": "Within the provided periods of time, public officials and employees are required to file their statement of assets and liabilities and financial disclosure in the following instances EXCEPT __________.",
       "options": [
         "compulsory retirement",
@@ -173,13 +233,19 @@
       "answer": "acceptance of foreign scholarship"
     },
     {
-      "id": 170,
+      "id": 20,
       "q": "For expeditious processing of documents, except otherwise provided by law or regulation, how many initials or signatures must any written action or decision contain?",
-      "options": ["6", "5", "4", "3", "2"],
+      "options": [
+        "6",
+        "5",
+        "4",
+        "3",
+        "2"
+      ],
       "answer": "3"
     },
     {
-      "id": 429,
+      "id": 21,
       "q": "What are the 3 main branches of the Government of the Philippines?",
       "options": [
         "Senate, Supreme Court, Congress",
@@ -190,13 +256,18 @@
       "answer": "Legislative, Executive, Judicial"
     },
     {
-      "id": 430,
+      "id": 22,
       "q": "The Supreme Court shall be composed of a Chief Justice and how many Associate Justices?",
-      "options": ["12", "13", "14", "15"],
+      "options": [
+        "12",
+        "13",
+        "14",
+        "15"
+      ],
       "answer": "14"
     },
     {
-      "id": 431,
+      "id": 23,
       "q": "The Commander-in-Chief of all armed forces of the Philippines in 2019 is _________.",
       "options": [
         "Air Force Commanding General Jeffrey Delgado",
@@ -207,7 +278,7 @@
       "answer": "President Rodrigo Duterte"
     },
     {
-      "id": 432,
+      "id": 24,
       "q": "The executive power shall be vested in the _________.",
       "options": [
         "President of the Philippines",
@@ -218,7 +289,7 @@
       "answer": "President of the Philippines"
     },
     {
-      "id": 433,
+      "id": 25,
       "q": "The legislative power shall be vested in the _________, which shall consist of a Senate and a House of Representatives.",
       "options": [
         "Congress of the Philippines",
@@ -229,31 +300,51 @@
       "answer": "Congress of the Philippines"
     },
     {
-      "id": 434,
+      "id": 26,
       "q": "The Senate shall be composed of how many senators elected at large by voters of the Philippines?",
-      "options": ["21", "22", "23", "24"],
+      "options": [
+        "21",
+        "22",
+        "23",
+        "24"
+      ],
       "answer": "24"
     },
     {
-      "id": 435,
+      "id": 27,
       "q": "How long shall the term of office of the senators be commenced?",
-      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "options": [
+        "3 years",
+        "4 years",
+        "5 years",
+        "6 years"
+      ],
       "answer": "6 years"
     },
     {
-      "id": 436,
+      "id": 28,
       "q": "The term of office of the President and Vice-President of the Philippines shall be up to how many years?",
-      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "options": [
+        "3 years",
+        "4 years",
+        "5 years",
+        "6 years"
+      ],
       "answer": "6 years"
     },
     {
-      "id": 437,
+      "id": 29,
       "q": "The members of the House of Representatives shall be elected for a term of _______.",
-      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "options": [
+        "3 years",
+        "4 years",
+        "5 years",
+        "6 years"
+      ],
       "answer": "3 years"
     },
     {
-      "id": 438,
+      "id": 30,
       "q": "The following shall be exempted from taxation except:",
       "options": [
         "Lands and buildings",
@@ -264,19 +355,29 @@
       "answer": "Lands and buildings"
     },
     {
-      "id": 439,
+      "id": 31,
       "q": "The Congress, by a vote of ____ of both Houses in joint session assembled, voting separately, shall have the sole power to declare a state of war.",
-      "options": ["Two-thirds", "One-half", "Three quarters", "Minority"],
+      "options": [
+        "Two-thirds",
+        "One-half",
+        "Three quarters",
+        "Minority"
+      ],
       "answer": "Two-thirds"
     },
     {
-      "id": 440,
+      "id": 32,
       "q": "It states that \"no person shall be deprived of life, liberty, or property without due process of law, nor any person be denied the equal protection of the laws.\"",
-      "options": ["Article VI", "Bill of Rights", "Republic Act", "Court Order"],
+      "options": [
+        "Article VI",
+        "Bill of Rights",
+        "Republic Act",
+        "Court Order"
+      ],
       "answer": "Bill of Rights"
     },
     {
-      "id": 441,
+      "id": 33,
       "q": "All of the following is TRUE except:",
       "options": [
         "No person shall be compelled to be a witness against himself",
@@ -287,7 +388,7 @@
       "answer": "No ex post facto law or bill of attainder shall not be enacted."
     },
     {
-      "id": 442,
+      "id": 34,
       "q": "The following are citizens of the Philippines except:",
       "options": [
         "Those whose fathers or mothers are citizens of the Philippines",
@@ -296,16 +397,27 @@
         "All of the above are true."
       ],
       "answer": "All of the above are true.",
-      "shuffle": [[0, 1, 2]]
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
     },
     {
-      "id": 443,
+      "id": 35,
       "q": "It is the right and obligation by all citizens, who are at least 18 years of age, and qualified by law, to vote in the election of national and local officials of the government without literacy, property, or other substantive requirement.",
-      "options": ["Suffrage", "Election", "Voting power", "Civil Right"],
+      "options": [
+        "Suffrage",
+        "Election",
+        "Voting power",
+        "Civil Right"
+      ],
       "answer": "Suffrage"
     },
     {
-      "id": 444,
+      "id": 36,
       "q": "The three inherent powers of the state are the following except one:",
       "options": [
         "Police Power",
@@ -316,7 +428,7 @@
       "answer": "Power to Impeach"
     },
     {
-      "id": 445,
+      "id": 37,
       "q": "It is the power of the State to promote public welfare by restraining the use of both liberty and property of all people.",
       "options": [
         "Police Power",
@@ -327,7 +439,7 @@
       "answer": "Police Power"
     },
     {
-      "id": 446,
+      "id": 38,
       "q": "It is the power of the State to take properties for the purpose of public use upon payment of just compensation.",
       "options": [
         "Police Power",
@@ -338,7 +450,7 @@
       "answer": "Power of Eminent Domain"
     },
     {
-      "id": 447,
+      "id": 39,
       "q": "It is the power of the State to impose charge or burden to persons and properties, and property rights for the purpose of raising revenues to protect the people and extend public projects and services.",
       "options": [
         "Police Power",
@@ -349,7 +461,7 @@
       "answer": "Power of Taxation"
     },
     {
-      "id": 448,
+      "id": 40,
       "q": "The following are members of the Constitutional Commission except:",
       "options": [
         "Commission on Civil Rights",
@@ -360,13 +472,18 @@
       "answer": "Commission on Civil Rights"
     },
     {
-      "id": 449,
+      "id": 41,
       "q": "It states that public office is public trust and that public officers and employees must, at all times, be accountable to the people, serve them with utmost responsibility, integrity, loyalty and efficiency; act with patriotism and justice and lead modest lives.",
-      "options": ["Public Trust", "Constitutional Rights", "Accountability", "Responsibility"],
+      "options": [
+        "Public Trust",
+        "Constitutional Rights",
+        "Accountability",
+        "Responsibility"
+      ],
       "answer": "Accountability"
     },
     {
-      "id": 450,
+      "id": 42,
       "q": "Who shall have the exclusive power to initiate all cases of impeachment?",
       "options": [
         "House of Blue Ribbon Committee",
@@ -377,7 +494,7 @@
       "answer": "House of Representatives"
     },
     {
-      "id": 451,
+      "id": 43,
       "q": "R.A. 6713 is an act to uphold the time-honored principle of public office being a public trust, granting incentives and rewards for exemplary service, enumerating prohibited acts and providing penalties for violations thereof and for other purposes.",
       "options": [
         "Preamble",
@@ -388,7 +505,7 @@
       "answer": "Code of Conduct and Ethical Standards for Public Officials and Employees"
     },
     {
-      "id": 452,
+      "id": 44,
       "q": "The following are duties and responsibilities of Public officials and Employees except:",
       "options": [
         "Act promptly on letters, inquiries, calls or any other form of communications sent by the public.",
@@ -399,25 +516,40 @@
       "answer": "Accept gifts from the public upon prioritizing their queries."
     },
     {
-      "id": 453,
+      "id": 45,
       "q": "It is a written instrument containing the proposition and required number of signatories and shall be in a form determined by and submitted to the Commission on Elections.",
-      "options": ["Bill", "Law", "Proposition", "Petition"],
+      "options": [
+        "Bill",
+        "Law",
+        "Proposition",
+        "Petition"
+      ],
       "answer": "Petition"
     },
     {
-      "id": 454,
+      "id": 46,
       "q": "It is the electoral process by which an initiative on the Constitution is either approved or rejected by the people.",
-      "options": ["Referendum", "Plebiscite", "Petition", "Initiative"],
+      "options": [
+        "Referendum",
+        "Plebiscite",
+        "Petition",
+        "Initiative"
+      ],
       "answer": "Plebiscite"
     },
     {
-      "id": 455,
+      "id": 47,
       "q": "It is the power of the electorate to approve or reject a legislation through an election called for the purpose.",
-      "options": ["Referendum", "Plebiscite", "Petition", "Initiative"],
+      "options": [
+        "Referendum",
+        "Plebiscite",
+        "Petition",
+        "Initiative"
+      ],
       "answer": "Referendum"
     },
     {
-      "id": 456,
+      "id": 48,
       "q": "This law promotes responsible family planning and proper use of reproductive methods to eliminate over-population growth.",
       "options": [
         "RH Bill",
@@ -428,7 +560,7 @@
       "answer": "Responsible Parenthood and Reproductive Health Law"
     },
     {
-      "id": 457,
+      "id": 49,
       "q": "It is a specialized agency of the United Nations that concerns international public health.",
       "options": [
         "Department of Health",
@@ -437,10 +569,16 @@
         "All of the above"
       ],
       "answer": "World Health Organization",
-      "shuffle": [[0, 1, 2]]
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
     },
     {
-      "id": 458,
+      "id": 50,
       "q": "APEC is a summit that promotes free trade and economic cooperation throughout the Asia-Pacific region countries. APEC stands for:",
       "options": [
         "Asia Pacific Economic Corporation",
@@ -451,13 +589,18 @@
       "answer": "Asia Pacific Economic Cooperation"
     },
     {
-      "id": 459,
+      "id": 51,
       "q": "The Association of Southeast Asian Nations (ASEAN) aims to accelerate economic growth, stability, social progress and cultural development in the spirit of equality and partnership to strengthen a prosperous and peaceful community along Southeast Asian Nations. Which of the following countries is not a member of ASEAN?",
-      "options": ["Hong Kong", "Philippines", "Singapore", "Thailand"],
+      "options": [
+        "Hong Kong",
+        "Philippines",
+        "Singapore",
+        "Thailand"
+      ],
       "answer": "Hong Kong"
     },
     {
-      "id": 460,
+      "id": 52,
       "q": "It is a law in the Philippines that aims to address legal issues concerning online interactions and harmful internet behavior in the Philippines. It aims to prevent and punish cybercrime in the country.",
       "options": [
         "Cybersquatting",
@@ -468,25 +611,40 @@
       "answer": "Cybercrime Prevention Act"
     },
     {
-      "id": 461,
+      "id": 53,
       "q": "__________ waste breaks down into natural components and can be recycled into the life cycle naturally.",
-      "options": ["Bio-chemical", "Recyclable", "Biodegradable", "Non-biodegradable"],
+      "options": [
+        "Bio-chemical",
+        "Recyclable",
+        "Biodegradable",
+        "Non-biodegradable"
+      ],
       "answer": "Biodegradable"
     },
     {
-      "id": 462,
+      "id": 54,
       "q": "The following are examples of non-biodegradable waste except:",
-      "options": ["Plastics", "Metals", "Styrofoam", "Papers"],
+      "options": [
+        "Plastics",
+        "Metals",
+        "Styrofoam",
+        "Papers"
+      ],
       "answer": "Papers"
     },
     {
-      "id": 463,
+      "id": 55,
       "q": "It is a project of DOST for more accurate, integrated and responsive disaster prevention and mitigation system especially in high-risk calamity areas of the Philippines.",
-      "options": ["PAGASA", "I am Ready", "DOST-Advanced Disaster Program", "Project NOAH"],
+      "options": [
+        "PAGASA",
+        "I am Ready",
+        "DOST-Advanced Disaster Program",
+        "Project NOAH"
+      ],
       "answer": "Project NOAH"
     },
     {
-      "id": 464,
+      "id": 56,
       "q": "PAGASA is the official government agency for weather forecasting, flood control, astronomical observations, and time service. PAGASA stands for _______?",
       "options": [
         "Philippine Atmospheric Geographical and Astronomical Services Administration",
@@ -497,7 +655,7 @@
       "answer": "Philippine Atmospheric Geophysical and Astronomical Services Administration"
     },
     {
-      "id": 465,
+      "id": 57,
       "q": "PHIVOLCS is a branch of DOST to moderate disasters that may arise from volcanic eruptions, earthquakes, tsunami and other related geotectonic phenomena in the Philippines. What is PHIVOLCS?",
       "options": [
         "Philippine Institute of Volcanology and Seismology",
@@ -508,7 +666,7 @@
       "answer": "Philippine Institute of Volcanology and Seismology"
     },
     {
-      "id": 466,
+      "id": 58,
       "q": "Which of the following is a renewable source of energy?",
       "options": [
         "Geothermal energy",
@@ -517,10 +675,16 @@
         "All of the above"
       ],
       "answer": "All of the above",
-      "shuffle": [[0, 1, 2]]
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
     },
     {
-      "id": 467,
+      "id": 59,
       "q": "It is a process by which thermal radiation from the earth's surface is absorbed by atmospheric greenhouse gases and is re-radiated in all directions.",
       "options": [
         "Global Warming",
@@ -531,7 +695,7 @@
       "answer": "Greenhouse Effect"
     },
     {
-      "id": 468,
+      "id": 60,
       "q": "USB is an industry standard that connects computers and electronic devices like keyboards, digicams, portable media devices, disk drivers, smartphones, and network adapters to any computer. USB stands for?",
       "options": [
         "Unit Serial Box",

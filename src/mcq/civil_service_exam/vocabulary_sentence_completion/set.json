@@ -5,162 +5,178 @@
   "category": "Verbal Ability",
   "questions": [
     {
-      "id": 30,
+      "id": 1,
       "q": "Choose the word that means most nearly the same as the word in capital letters:\n\nBusiness, like life, is much too extensive and LEQUESCENT to be wholly contained by any checklist, formula or theory.",
-      "options": ["structured", "changeable", "Complicated", "shapeless", "confusing"],
+      "options": [
+        "structured",
+        "changeable",
+        "Complicated",
+        "shapeless",
+        "confusing"
+      ],
       "answer": "changeable"
     },
     {
-      "id": 31,
+      "id": 2,
       "q": "Realizing that we were determined to go, our experienced friends __________ that there might be more difficulties along the way than we expect.",
-      "options": ["dismissed", "intimated", "insisted", "projected", "concluded"],
+      "options": [
+        "dismissed",
+        "intimated",
+        "insisted",
+        "projected",
+        "concluded"
+      ],
       "answer": "insisted"
     },
     {
-      "id": 32,
+      "id": 3,
       "q": "Ang patuloy na pag-angkat ng mga produktong banyaga, na siya namang tinatangkilik ng mga mamamayan, ang dahilan ng __________ ng mga industriyang lokal.",
-      "options": ["paghinto", "pagbabago", "pagtitipid", "pagkawala", "pagkalugi"],
+      "options": [
+        "paghinto",
+        "pagbabago",
+        "pagtitipid",
+        "pagkawala",
+        "pagkalugi"
+      ],
       "answer": "pagkalugi"
     },
     {
-      "id": 33,
+      "id": 4,
       "q": "A strong government is needed to promote __________, not dependency, and to encourage free enterprise.",
-      "options": ["self-alienation", "self-evaluation", "self reliance", "self-awareness", "self-determination"],
+      "options": [
+        "self-alienation",
+        "self-evaluation",
+        "self reliance",
+        "self-awareness",
+        "self-determination"
+      ],
       "answer": "self reliance"
     },
     {
-      "id": 34,
+      "id": 5,
       "q": "Mass media develop in us a level of consciousness that keeps us __________ current events.",
-      "options": ["interested in", "adjusting to", "excited over", "fearful of", "abreast of"],
+      "options": [
+        "interested in",
+        "adjusting to",
+        "excited over",
+        "fearful of",
+        "abreast of"
+      ],
       "answer": "abreast of"
     },
     {
-      "id": 35,
+      "id": 6,
       "q": "Failure is the most tiring experience a person can ever have; there is nothing more __________ than not succeeding, being blocked, not moving ahead.",
-      "options": ["Invigorating", "Discouraging", "Exhilarating", "Enervating", "depressing"],
+      "options": [
+        "Invigorating",
+        "Discouraging",
+        "Exhilarating",
+        "Enervating",
+        "depressing"
+      ],
       "answer": "depressing"
     },
     {
-      "id": 382,
+      "id": 7,
       "q": "The leader's profligate behavior was mirrored in the character of his administration.\n\nProfligate means:",
-      "options": ["Immoral", "Generous", "Productive", "Excessive"],
-      "answer": "Immoral"
-    },
-    {
-      "id": 383,
-      "q": "The executive has charged his staff with expediting this matter.\n\nExpediting means:",
-      "options": ["Getting rid of", "Speeding up", "Relieving of", "Making easier"],
-      "answer": "Speeding up"
-    },
-    {
-      "id": 384,
-      "q": "The beautifully dressed woman at the ball was extremely querulous.\n\nQuerulous means:",
-      "options": ["Fashionable", "Questioning", "Complaining", "Flirtatious"],
-      "answer": "Complaining"
-    },
-    {
-      "id": 385,
-      "q": "She acquiesced to the entire process.\n\nAcquiesced to means:",
-      "options": ["Objected to", "Enthused over", "Commented on", "Submitted to"],
-      "answer": "Submitted to"
-    },
-    {
-      "id": 386,
-      "q": "The settlers found the new territory to be fecund.\n\nFecund means:",
-      "options": ["Filthy", "Rotten", "Fertile", "Pretty"],
-      "answer": "Fertile"
-    },
-    {
-      "id": 387,
-      "q": "The researchers had to control their data for participant attrition during the study.\n\nAttrition means:",
-      "options": ["Gain", "Loss", "Attitude", "Variety"],
-      "answer": "Loss"
-    },
-    {
-      "id": 388,
-      "q": "The candidate maintains that he abhors most forms of socialism.\n\nAbhors means:",
-      "options": ["Loves", "Grasps", "Hates", "Uses"],
-      "answer": "Hates"
-    },
-    {
-      "id": 389,
-      "q": "Everybody regarded Rita as frugal in her behavior, with good reason.\n\nFrugal means:",
-      "options": ["Flighty", "Economical", "Old-fashioned", "Generous"],
-      "answer": "Economical"
-    },
-    {
-      "id": 390,
-      "q": "This philosopher's treatises are quite esoteric for the common reader.\n\nEsoteric means:",
-      "options": ["Accessible", "Controversial", "Enigmatic", "Lengthy"],
-      "answer": "Enigmatic"
-    },
-    {
-      "id": 391,
-      "q": "The doctor was concerned that his patient's lunulae were bluish.\n\nLunulae are in the:",
       "options": [
-        "Whites of the eyeballs",
-        "Gums inside the mouth",
-        "Bodily extremities",
-        "Beds of fingernails"
+        "Immoral",
+        "Generous",
+        "Productive",
+        "Excessive"
       ],
-      "answer": "Beds of fingernails"
-    },
-    {
-      "id": 382,
-      "q": "The leader's profligate behavior was mirrored in the character of his administration.\n\nProfligate means:",
-      "options": ["Immoral", "Generous", "Productive", "Excessive"],
       "answer": "Immoral"
     },
     {
-      "id": 383,
+      "id": 8,
       "q": "The executive has charged his staff with expediting this matter.\n\nExpediting means:",
-      "options": ["Getting rid of", "Speeding up", "Relieving of", "Making easier"],
+      "options": [
+        "Getting rid of",
+        "Speeding up",
+        "Relieving of",
+        "Making easier"
+      ],
       "answer": "Speeding up"
     },
     {
-      "id": 384,
+      "id": 9,
       "q": "The beautifully dressed woman at the ball was extremely querulous.\n\nQuerulous means:",
-      "options": ["Fashionable", "Questioning", "Complaining", "Flirtatious"],
+      "options": [
+        "Fashionable",
+        "Questioning",
+        "Complaining",
+        "Flirtatious"
+      ],
       "answer": "Complaining"
     },
     {
-      "id": 385,
+      "id": 10,
       "q": "She acquiesced to the entire process.\n\nAcquiesced to means:",
-      "options": ["Objected to", "Enthused over", "Commented on", "Submitted to"],
+      "options": [
+        "Objected to",
+        "Enthused over",
+        "Commented on",
+        "Submitted to"
+      ],
       "answer": "Submitted to"
     },
     {
-      "id": 386,
+      "id": 11,
       "q": "The settlers found the new territory to be fecund.\n\nFecund means:",
-      "options": ["Filthy", "Rotten", "Fertile", "Pretty"],
+      "options": [
+        "Filthy",
+        "Rotten",
+        "Fertile",
+        "Pretty"
+      ],
       "answer": "Fertile"
     },
     {
-      "id": 387,
+      "id": 12,
       "q": "The researchers had to control their data for participant attrition during the study.\n\nAttrition means:",
-      "options": ["Gain", "Loss", "Attitude", "Variety"],
+      "options": [
+        "Gain",
+        "Loss",
+        "Attitude",
+        "Variety"
+      ],
       "answer": "Loss"
     },
     {
-      "id": 388,
+      "id": 13,
       "q": "The candidate maintains that he abhors most forms of socialism.\n\nAbhors means:",
-      "options": ["Loves", "Grasps", "Hates", "Uses"],
+      "options": [
+        "Loves",
+        "Grasps",
+        "Hates",
+        "Uses"
+      ],
       "answer": "Hates"
     },
     {
-      "id": 389,
+      "id": 14,
       "q": "Everybody regarded Rita as frugal in her behavior, with good reason.\n\nFrugal means:",
-      "options": ["Flighty", "Economical", "Old-fashioned", "Generous"],
+      "options": [
+        "Flighty",
+        "Economical",
+        "Old-fashioned",
+        "Generous"
+      ],
       "answer": "Economical"
     },
     {
-      "id": 390,
+      "id": 15,
       "q": "This philosopher's treatises are quite esoteric for the common reader.\n\nEsoteric means:",
-      "options": ["Accessible", "Controversial", "Enigmatic", "Lengthy"],
+      "options": [
+        "Accessible",
+        "Controversial",
+        "Enigmatic",
+        "Lengthy"
+      ],
       "answer": "Enigmatic"
     },
     {
-      "id": 391,
+      "id": 16,
       "q": "The doctor was concerned that his patient's lunulae were bluish.\n\nLunulae are in the:",
       "options": [
         "Whites of the eyeballs",
