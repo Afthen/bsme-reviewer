@@ -1,36 +1,2075 @@
-Yes, that is perfectly reasonable. It reduces noise in the output and mimics how developers naturally group changes to a single file. The parser's "upward traversal" logic is a standard and efficient way to handle contextual grouping.
+I will now proceed with the implementation. As agreed, I will use the existing hierarchy and append new questions to the corresponding sets. I will create one new set for **Clerical Operations**. 
 
-I will incorporate all of these changes into the README.
+Since I am appending to existing arrays and the built-in script handles deduplication and re-indexing, I will use the `<<<< ==== >>>>` diff format to target the end of the `questions` array in each file.
 
-FILE: README.md
-```diff
+### New Set Creation: Clerical Operations
+First, I will create the new set for Clerical Operations.
+
+FILE: src/mcq/civil_service_exam/clerical_operations/set.json
+````javascript
+{
+  "id": "mcq_cse_clerical_01",
+  "title": "Clerical Operations",
+  "subject": "Civil Service Exam",
+  "category": "Clerical Ability",
+  "questions": [
+    {
+      "id": "tmp_cl_1",
+      "q": "Which department of an office is responsible for hiring new personnel?",
+      "options": ["Office of the President", "Accounting Department", "Logistic and Supply", "Human Resource Department"],
+      "answer": "Human Resource Department"
+    },
+    {
+      "id": "tmp_cl_2",
+      "q": "Which computer program should you go if you want to email a company?",
+      "options": ["Word", "Excel", "Outlook", "Powerpoint"],
+      "answer": "Outlook"
+    },
+    {
+      "id": "tmp_cl_3",
+      "q": "This is a telephonic transmission of scanned documents of texts and images to a telephone number connected to a printer.",
+      "options": ["Photocopying Machine", "Fax Machine", "Typewriter", "Inkjet Printer"],
+      "answer": "Fax Machine"
+    },
+    {
+      "id": "tmp_cl_4",
+      "q": "The chief financial officer is responsible for the financial matters and financial management of a corporation, she is also known as the _________.",
+      "options": ["Auditor", "Treasurer", "Chief Executive Officer", "Manager"],
+      "answer": "Treasurer"
+    },
+    {
+      "id": "tmp_cl_5",
+      "q": "Which department of a company is responsible for cash register operations and payment processing?",
+      "options": ["Cashier", "Billing", "Accounting", "Budget"],
+      "answer": "Cashier"
+    },
+    {
+      "id": "tmp_cl_6",
+      "q": "What is the correct filing arrangement for the following names:\n1. Angeles, Mario P.\n2. Angeles, Maricel P.\n3. Angeles, Marissa P.\n4. Angeles, Maria P.",
+      "options": ["4,2,1,3", "4,1,2,3", "4,3,2,1", "4,1,3,2"],
+      "answer": "4,2,1,3"
+    },
+    {
+      "id": "tmp_cl_7",
+      "q": "All of the following items are found in the Official Receipt form except _________.",
+      "options": ["Name and address of the buyer", "Signature of the recipient", "Quantity of the items paid", "Credit Card Number of the customer"],
+      "answer": "Credit Card Number of the customer"
+    },
+    {
+      "id": "tmp_cl_8",
+      "q": "The method of indexing and filing where names are in alphabetized order.",
+      "options": ["Numeric", "Metric", "Geographic", "Alphabetic"],
+      "answer": "Alphabetic"
+    },
+    {
+      "id": "tmp_cl_9",
+      "q": "Which is the best way to address a correspondence for the President of the Philippines?",
+      "options": ["His Excellency Rodrigo Duterte", "His Excellency President Rodrigo Duterte", "President Rodrigo Duterte", "President Digong"],
+      "answer": "His Excellency President Rodrigo Duterte"
+    },
+    {
+      "id": "tmp_cl_10",
+      "q": "How do you address the Queen of England when you talk about her?",
+      "options": ["Her Highness the Queen", "Her Majesty Queen Elizabeth II", "Queen Elizabeth II her Highness", "Queen Elizabeth II her Majesty"],
+      "answer": "Her Majesty Queen Elizabeth II"
+    },
+    {
+      "id": "tmp_cl_11",
+      "q": "Your boss asked you to send her a soft copy of your latest résumé. An example of a soft copy is:",
+      "options": ["A print out copy usually in a paper", "Original copy written in a paper", "A copy saved in a computer and sent through email", "A copy from a Xerox machine"],
+      "answer": "A copy saved in a computer and sent through email"
+    },
+    {
+      "id": "tmp_cl_12",
+      "q": "When a company asked you to submit your latest CV, what does CV stand for?",
+      "options": ["Curriculum Vitum", "Curriculum Virtue", "Curriculum Vitae", "Curriculum Vital"],
+      "answer": "Curriculum Vitae"
+    },
+    {
+      "id": "tmp_cl_13",
+      "q": "It is the section of Accounting Department in a company that records goods and services that it receives and the payments it owes.",
+      "options": ["Budget", "Payroll", "Accounts Payable and Receivable", "Inventory"],
+      "answer": "Accounts Payable and Receivable"
+    },
+    {
+      "id": "tmp_cl_14",
+      "q": "Which of the following is not a function of Accounting Department in a big corporation?",
+      "options": ["Prepare Interim Financial Statements", "Inventory Management", "Bank Reconciliation", "Internal and External Auditing"],
+      "answer": "Internal and External Auditing"
+    },
+    {
+      "id": "tmp_cl_15",
+      "q": "He is the highest ranking executive manager in a corporation and he is the top person in command in an organization.",
+      "options": ["Chief Financial Executive", "Chief Executive Officer", "Executive Admin. Officer", "Chief Executive Assistant"],
+      "answer": "Chief Executive Officer"
+    },
+    {
+      "id": "tmp_cl_16",
+      "q": "Which of the following is not a responsibility of a clerical worker?",
+      "options": ["Marketing and promotion for customers", "Filing and updating purchase orders", "Updating and billing buyer's account", "Answering business emails"],
+      "answer": "Marketing and promotion for customers"
+    },
+    {
+      "id": "tmp_cl_17",
+      "q": "Arrange the proper filing of the following in alphabetical order:\nA. Lieutenant Colonel Mark David\nB. Atty. Elen Rodriguez\nC. Captain Max Aquino\nD. Dr. Juan Castro",
+      "options": ["CDAB", "CDBA", "BDCA", "BCDA"],
+      "answer": "BCDA"
+    },
+    {
+      "id": "tmp_cl_18",
+      "q": "Arrange the proper filing of the following in alphabetical order:\nA. Sec. Dinky Soliman\nB. Sec. Richard Gordon\nC. Sec. Voltaire Gazmin\nD. Sec. Armin Luistro",
+      "options": ["DABC", "DACB", "CBDA", "CBAD"],
+      "answer": "DABC"
+    },
+    {
+      "id": "tmp_cl_19",
+      "q": "How much is the present Value-Added-Tax in the Philippines?",
+      "options": ["12% of gross profit", "12% of cost of goods sold", "12% of gross sales", "12% of net income"],
+      "answer": "12% of gross sales"
+    },
+    {
+      "id": "tmp_cl_20",
+      "q": "This department of the company is responsible for preparing and updating customers' accounts:",
+      "options": ["Purchasing section", "Cashier section", "Billing Section", "Releasing section"],
+      "answer": "Billing Section"
+    },
+    {
+      "id": "tmp_cl_21",
+      "q": "This is a type of document issued by a seller to a buyer relating to a sale transaction and indicating the products, quantities and prices sold to the buyer.",
+      "options": ["Check voucher", "Purchase order", "Delivery receipt", "Sales invoice"],
+      "answer": "Sales invoice"
+    },
+    {
+      "id": "tmp_cl_22",
+      "q": "Which of the following is not a usual document used in a sales company?",
+      "options": ["Form 137", "Delivery receipt", "Sales invoice", "Purchase order"],
+      "answer": "Form 137"
+    },
+    {
+      "id": "tmp_cl_23",
+      "q": "One of the responsibilities of a clerical job is answering and tending phone calls. Which is the best way to answer a phone call in a company?",
+      "options": ["Say \"Hello,\" and wait for the caller to speak.", "Run and get a pen and notebook then pick up the phone.", "Answer the phone politely and give your department or company name.", "Wait for fellow employees to answer the phone."],
+      "answer": "Answer the phone politely and give your department or company name."
+    },
+    {
+      "id": "tmp_cl_24",
+      "q": "An example of a hard copy document is:",
+      "options": ["PDF file letter", "Company email message", "A business letter saved in USB", "Business letter in a paper"],
+      "answer": "Business letter in a paper"
+    },
+    {
+      "id": "tmp_cl_25",
+      "q": "What does a CC means in an email message?",
+      "options": ["Copy sent", "Copy furnished", "Copy cat", "Client copy"],
+      "answer": "Copy furnished"
+    }
+  ]
+}
+````
+
+### Appending to existing sets
+
+I will now append the questions to the existing sets. To maintain JSON validity without reading the files first, I will replace the closing `]}` of the `questions` array.
+
+FILE: src/mcq/civil_service_exam/grammar_correct_usage/set.json
+````diff
 <<<<
-6. Code output convention: When given permission to code, precede code blocks with
-   `FILE: path/to/file.ext` (one `FILE:` header may be followed by one or more blocks
-   for that file). Use 4-backtick fences (````) by default so triple backticks inside
-   files never break parsing; if a file itself contains N-backtick fences (such as
-   README.md), wrap it in N+1 backticks (e.g. `````markdown). Use ````diff with
-   4-character markers (<<<< ==== >>>>) when shorter than a full-file replacement.
-   Documentation (README.md) changes are always returned as a full drop-in replacement.
+  ]
+}
 ====
-6. Code output convention: When given permission to code, precede code blocks with
-   `FILE: path/to/file.ext`. To minimize noise, you do not need to repeat the `FILE:`
-   header for subsequent blocks targeting the same file; the parser assumes all 
-   following diffs belong to the most recent header encountered.
-   
-   Fencing: Use 3-backtick fences (```) by default. If the content within a block 
-   contains code fences of N-backticks, wrap the entire block in N+1 backticks 
-   to prevent parsing breaks.
-   
-   Diffs: Use ```diff with 4-character markers (<<<< ==== >>>>) for partial updates.
+  ,
+    {
+      "id": "tmp_gr_1",
+      "q": "Which sentence uses \"famish\" correctly?",
+      "options": [
+        "After the straight exam, I felt too exhausted and famished to eat my favourite foods.",
+        "I could eat a horse, I am famish now.",
+        "I famished my stomach next time you treat me to a meal out.",
+        "I will bring lots of pizza, that's a famish."
+      ],
+      "answer": "After the straight exam, I felt too exhausted and famished to eat my favourite foods."
+    },
+    {
+      "id": "tmp_gr_2",
+      "q": "Priscila _________ rather not invest her savings in the stock market.",
+      "options": ["must", "has to", "could", "would"],
+      "answer": "would"
+    },
+    {
+      "id": "tmp_gr_3",
+      "q": "Did you have any problem _________ our house?",
+      "options": ["search", "to search", "searching", "for searching"],
+      "answer": "searching"
+    },
+    {
+      "id": "tmp_gr_4",
+      "q": "I hope you don't mind _________ joining you.",
+      "options": ["to be", "I had been", "that I may", "may"],
+      "answer": "my"
+    },
+    {
+      "id": "tmp_gr_5",
+      "q": "Most basketball players are 6 ________ tall or more.",
+      "options": ["foot", "feet", "foots", "feets"],
+      "answer": "feet"
+    },
+    {
+      "id": "tmp_gr_6",
+      "q": "These children _________ how to improvise more props for the play.",
+      "options": ["knew", "knows", "know", "known"],
+      "answer": "know"
+    },
+    {
+      "id": "tmp_gr_7",
+      "q": "The company will upgrade _________ computer systems next week.",
+      "options": ["there", "their", "its", "it's"],
+      "answer": "its"
+    },
+    {
+      "id": "tmp_gr_8",
+      "q": "Clara _________ three thousand words for her essay.",
+      "options": ["have wrote", "has wrote", "have written", "has written"],
+      "answer": "has written"
+    },
+    {
+      "id": "tmp_gr_9",
+      "q": "You have too many _________ but few time to prove you're right.",
+      "options": ["hypothesis", "hypotheses", "hyphothesises", "hypothesess"],
+      "answer": "hypotheses"
+    },
+    {
+      "id": "tmp_gr_10",
+      "q": "Neither Sarah nor Tina _________ the crime yesterday.",
+      "options": ["witness", "witnesses", "witnessed", "witnessing"],
+      "answer": "witnessed"
+    },
+    {
+      "id": "tmp_gr_11",
+      "q": "You do like going to the party alone. _________ you?",
+      "options": ["Does", "Doesn't", "Do", "Don't"],
+      "answer": "Don't"
+    },
+    {
+      "id": "tmp_gr_12",
+      "q": "We had our house _________ in yellow.",
+      "options": ["painting", "painted", "paint", "to paint"],
+      "answer": "painted"
+    },
+    {
+      "id": "tmp_gr_13",
+      "q": "He has been exercising but his immune system was steadily _________.",
+      "options": ["weak", "weaken", "weakened", "weakining"],
+      "answer": "weakened"
+    },
+    {
+      "id": "tmp_gr_14",
+      "q": "I was _________ that the weather would be sunny and we would be able to enjoy our swimming.",
+      "options": ["hopeless", "hopeful", "hopelike", "hopely"],
+      "answer": "hopeful"
+    },
+    {
+      "id": "tmp_gr_15",
+      "q": "I think it's not a great idea. I totally _________.",
+      "options": ["misagree", "unagree", "inagree", "disagree"],
+      "answer": "disagree"
+    },
+    {
+      "id": "tmp_gr_16",
+      "q": "So many _________ I found in the library, now I'm ready to report.",
+      "options": ["information", "informations", "infoes", "infos"],
+      "answer": "information"
+    },
+    {
+      "id": "tmp_gr_17",
+      "q": "My grandpa always feed his flock of _________ early in the morning.",
+      "options": ["sheeps", "sheep", "ships", "ship"],
+      "answer": "sheep"
+    },
+    {
+      "id": "tmp_gr_18",
+      "q": "Happy memories are always remembered, not _________.",
+      "options": ["forget", "forgets", "forgot", "forgotten"],
+      "answer": "forgotten"
+    },
+    {
+      "id": "tmp_gr_19",
+      "q": "Flight Z735 _________ yesterday. 350 passengers died in that accident.",
+      "options": ["crush", "crushed", "crash", "crashed"],
+      "answer": "crashed"
+    },
+    {
+      "id": "tmp_gr_20",
+      "q": "There is a _________ message when you look closely at her painting.",
+      "options": ["hid", "hide", "hided", "hidden"],
+      "answer": "hidden"
+    },
+    {
+      "id": "tmp_id_31",
+      "q": "If you don't spill the beans now, you might gonna regret it.",
+      "options": ["spread rumors", "let out a secret", "plant some seeds", "none of the above"],
+      "answer": "let out a secret"
+    },
+    {
+      "id": "tmp_id_32",
+      "q": "Hey, man, you are absolutely barking up the wrong tree here because I'm innocent.",
+      "options": ["choosing the wrong dog", "giving up a fight", "accusing the wrong person", "setting up an event in a tree"],
+      "answer": "accusing the wrong person"
+    },
+    {
+      "id": "tmp_id_33",
+      "q": "One proven way to beat an enemy is find his Achilles heel.",
+      "options": ["secret strategy", "amulet", "strong point", "weak spot"],
+      "answer": "weak spot"
+    },
+    {
+      "id": "tmp_id_34",
+      "q": "His new Ferrari costs an arm and a leg so he is now looking for another job.",
+      "options": ["very expensive", "got fired", "met an accident", "was stolen"],
+      "answer": "very expensive"
+    },
+    {
+      "id": "tmp_id_35",
+      "q": "He married a woman who was born with a silver spoon in her mouth.",
+      "options": ["born very beautiful", "born very poor", "born into a very rich family", "born very talkative"],
+      "answer": "born into a very rich family"
+    },
+    {
+      "id": "tmp_id_36",
+      "q": "They were able to WEATHER the storm.",
+      "options": ["reached home safely", "survived the crisis", "defeated the enemies", "realized their mistakes"],
+      "answer": "survived the crisis"
+    },
+    {
+      "id": "tmp_id_37",
+      "q": "TRUST men and they will be true to you.",
+      "options": ["a man is loyal in whom confidence had been placed", "man must trust you to be faithful to you", "a secret is a test of friendship", "destruct the people justifies their deserving"],
+      "answer": "a man is loyal in whom confidence had been placed"
+    },
+    {
+      "id": "tmp_id_38",
+      "q": "CUT your coat to your cloth.",
+      "options": ["walk in accordance with your ability", "desire only what you can afford", "patronize first your own product", "express only relevant ideas"],
+      "answer": "desire only what you can afford"
+    },
+    {
+      "id": "tmp_id_39",
+      "q": "Paddle your own CANOE.",
+      "options": ["always tries his best", "earn his own money", "have self-respect", "be self-reliant"],
+      "answer": "be self-reliant"
+    },
+    {
+      "id": "tmp_id_40",
+      "q": "This report leaves much to be DESIRED.",
+      "options": ["satisfactory", "longed", "important", "legible"],
+      "answer": "longed"
+    },
+    {
+      "id": "tmp_sp_41",
+      "q": "The journalist made a _________ to finish the article by Friday.",
+      "options": ["commitment", "committent", "comittment", "comitment"],
+      "answer": "commitment"
+    },
+    {
+      "id": "tmp_sp_42",
+      "q": "Dad thinks it is _________ to stay up late on a school night.",
+      "options": ["rediculous", "rediculus", "ridiculous", "ridiculus"],
+      "answer": "ridiculous"
+    },
+    {
+      "id": "tmp_sp_43",
+      "q": "The large donation came from an _________ source.",
+      "options": ["anynonimous", "anonimous", "anounymous", "anonymous"],
+      "answer": "anonymous"
+    },
+    {
+      "id": "tmp_sp_44",
+      "q": "The scientists had to do an _________ amount of research on the project.",
+      "options": ["extraordinary", "extraordinery", "extroridinary", "ecstraordinary"],
+      "answer": "extraordinary"
+    },
+    {
+      "id": "tmp_sp_45",
+      "q": "The customer service representative gave his _________ that the refund would be made within two weeks.",
+      "options": ["asurrance", "assurance", "assurence", "assureance"],
+      "answer": "assurance"
+    },
+    {
+      "id": "tmp_sp_46",
+      "q": "The purpose of the new city ordinance was debated _________.",
+      "options": ["frequently", "frequintly", "frequentlly", "frequentley"],
+      "answer": "frequently"
+    },
+    {
+      "id": "tmp_sp_47",
+      "q": "Throughout the trial, the _________ was placed on scientific evidence.",
+      "options": ["enphasis", "emphisis", "emphasis", "emfasis"],
+      "answer": "emphasis"
+    },
+    {
+      "id": "tmp_sp_48",
+      "q": "The presidential candidate refused to _________ the election until every vote was counted.",
+      "options": ["concede", "conceed", "consede", "conseed"],
+      "answer": "concede"
+    },
+    {
+      "id": "tmp_sp_49",
+      "q": "Each of the new employees had similar _________.",
+      "options": ["asspirations", "asparations", "aspirrations", "aspirations"],
+      "answer": "aspirations"
+    },
+    {
+      "id": "tmp_sp_50",
+      "q": "The young man wished to _________ his right to speak freely.",
+      "options": ["excercise", "exercise", "exersize", "exercize"],
+      "answer": "exercise"
+    }
+  ]
+}
+====
 >>>>
-```
+````
 
-FILE: README.md
-```diff
+FILE: src/mcq/civil_service_exam/vocabulary_sentence_completion/set.json
+````diff
 <<<<
-- **Repository sets (important):** After adding or editing any `set.json`, run `npm test` (or `npm run gen:registry`) and **commit + push the regenerated `src/mcq/index.js`** alongside your `set.json`. Because the app runs as static ES modules over HTTP/S, the browser cannot scan `src/mcq/` at runtime—only sets registered in `src/mcq/index.js` appear in the selector.
+  ]
+}
 ====
-- **Repository sets (important):** When adding new questions, you may simply append them to the `questions` array in `set.json`. You do not need to worry about ID conflicts or duplicates. Running `npm test` (or `npm run clean:mcqs`) will automatically deduplicate questions, merge their option pools, and re-index IDs to a strict $1 \dots N$ sequence before updating the registry. Once sanitized, **commit + push the regenerated `src/mcq/index.js`** alongside your `set.json`.
+  ,
+    {
+      "id": "tmp_vc_1",
+      "q": "If you are ambivalent with the answers, analyze the given problem.",
+      "options": ["confusion", "innocent", "uncertain", "unaware"],
+      "answer": "uncertain"
+    },
+    {
+      "id": "tmp_vc_2",
+      "q": "He left the country because of the ominous experiences he had in the past.",
+      "options": ["unforgettable", "threatening", "ugly", "remarkable"],
+      "answer": "threatening"
+    },
+    {
+      "id": "tmp_vc_3",
+      "q": "Teenagers are easily susceptible to peer influence.",
+      "options": ["flexible", "inspired", "dependable", "inclined"],
+      "answer": "inclined"
+    },
+    {
+      "id": "tmp_vc_4",
+      "q": "My mother is always adamant in eating breakfast before leaving the house.",
+      "options": ["resolute", "uncertain", "forgetful", "clueless"],
+      "answer": "resolute"
+    },
+    {
+      "id": "tmp_vc_5",
+      "q": "Reading words without understanding their meaning is futile.",
+      "options": ["helpless", "useless", "unnecessary", "avoidable"],
+      "answer": "useless"
+    },
+    {
+      "id": "tmp_vc_6",
+      "q": "She wears gold but people knows how ostentatious she can be.",
+      "options": ["pretentious", "ambitious", "gorgeous", "rebellious"],
+      "answer": "pretentious"
+    },
+    {
+      "id": "tmp_vc_7",
+      "q": "He submitted a grotesque artwork that nobody in the class could relate to.",
+      "options": ["different", "weird", "beautiful", "colorful"],
+      "answer": "weird"
+    },
+    {
+      "id": "tmp_vc_8",
+      "q": "Their clandestine affair remained unknown for three years.",
+      "options": ["forbidden", "surprise", "secret", "unacceptable"],
+      "answer": "secret"
+    },
+    {
+      "id": "tmp_vc_9",
+      "q": "They say love is like a firework, a fleeting moment.",
+      "options": ["brief", "unforgettable", "shinny", "remarkable"],
+      "answer": "brief"
+    },
+    {
+      "id": "tmp_vc_10",
+      "q": "Cara is repulsive and rebellious. She always speaks sordid words.",
+      "options": ["dirty", "vulgar", "weird", "bizarre"],
+      "answer": "vulgar"
+    },
+    {
+      "id": "tmp_vc_11",
+      "q": "Every time I see Cathy looking at me, I feel Euphoria in my bones.",
+      "options": ["gravity", "ecstasy", "erotic", "numb"],
+      "answer": "ecstasy"
+    },
+    {
+      "id": "tmp_vc_12",
+      "q": "I bought this book because when I read the blurb at the back, I fell in love with it.",
+      "options": ["summary", "teaser", "blog", "plot"],
+      "answer": "teaser"
+    },
+    {
+      "id": "tmp_vc_13",
+      "q": "Finding a way out of the labyrinth is the last challenge of the competition.",
+      "options": ["castle", "forest", "maze", "box"],
+      "answer": "maze"
+    },
+    {
+      "id": "tmp_vc_14",
+      "q": "There is still love in our hearts amidst our seemingly mundane existence.",
+      "options": ["complicated", "modern", "worldly", "wealthy"],
+      "answer": "worldly"
+    },
+    {
+      "id": "tmp_vc_15",
+      "q": "Cassy has a strong penchant in collecting cars.",
+      "options": ["belief", "fondness", "hobby", "route"],
+      "answer": "fondness"
+    },
+    {
+      "id": "tmp_vc_16",
+      "q": "Diskettes and CDs are going obsolete.",
+      "options": ["recycled", "refurbished", "updated", "outdated"],
+      "answer": "outdated"
+    },
+    {
+      "id": "tmp_vc_17",
+      "q": "The Queen of the Night dances vivaciously.",
+      "options": ["lively", "awkward", "kindly", "sweetly"],
+      "answer": "lively"
+    },
+    {
+      "id": "tmp_vc_18",
+      "q": "The court released a dogmatic statement that made people more hopeful.",
+      "options": ["naive", "unbelievable", "assertive", "unclear"],
+      "answer": "assertive"
+    },
+    {
+      "id": "tmp_vc_19",
+      "q": "This generation is prone to plethoric use of mobile gadgets.",
+      "options": ["essential", "crucial", "important", "excessive"],
+      "answer": "excessive"
+    },
+    {
+      "id": "tmp_vc_20",
+      "q": "I am usually haphazard in composing my poetry but they turn out so well anyway.",
+      "options": ["disorganized", "blank", "puzzled", "strategic"],
+      "answer": "disorganized"
+    }
+  ]
+}
+====
 >>>>
-```
+````
+
+FILE: src/mcq/civil_service_exam/verbal_analogy/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_an_1",
+      "q": "Iron: metal: : granite: _________",
+      "options": ["rock", "sand", "solid"],
+      "answer": "rock"
+    },
+    {
+      "id": "tmp_an_2",
+      "q": "Decibel: sound: : volt: _________",
+      "options": ["watts", "fire", "electricity", "lightning"],
+      "answer": "electricity"
+    },
+    {
+      "id": "tmp_an_3",
+      "q": "Coward: brave: : philanthropist: _________",
+      "options": ["selfish", "kind", "pessimist", "optimist"],
+      "answer": "selfish"
+    },
+    {
+      "id": "tmp_an_4",
+      "q": "Logic: reasoning: : ethics: _________",
+      "options": ["character", "behaviour", "subject", "traits"],
+      "answer": "behaviour"
+    },
+    {
+      "id": "tmp_an_5",
+      "q": "Antenna: signal: : net: _________",
+      "options": ["web", "catch", "gross", "fish"],
+      "answer": "fish"
+    },
+    {
+      "id": "tmp_an_6",
+      "q": "Stanza: poem: : act: _________",
+      "options": ["movie", "opera", "song", "lyric"],
+      "answer": "opera"
+    },
+    {
+      "id": "tmp_an_7",
+      "q": "Astrology: Astronomy : Alchemy: _________",
+      "options": ["Chemistry", "Biology", "Physics", "Science"],
+      "answer": "Chemistry"
+    },
+    {
+      "id": "tmp_an_8",
+      "q": "Census: population: : inventory: _________",
+      "options": ["accounting", "merchandise", "cost", "list"],
+      "answer": "merchandise"
+    },
+    {
+      "id": "tmp_an_9",
+      "q": "Oath: promise: : contract: _________",
+      "options": ["license", "contact", "agreement", "paper"],
+      "answer": "agreement"
+    },
+    {
+      "id": "tmp_an_10",
+      "q": "Glimmer: Flicker: : murmur: _________",
+      "options": ["whisper", "shout", "rumor", "speak"],
+      "answer": "whisper"
+    },
+    {
+      "id": "tmp_an_11",
+      "q": "Bouquet: flowers: : flock: _________",
+      "options": ["dogs", "sheep", "ship", "cats"],
+      "answer": "sheep"
+    },
+    {
+      "id": "tmp_an_12",
+      "q": "Rescind: law: : withdraw: _________",
+      "options": ["bank", "candidacy", "deposit", "resume"],
+      "answer": "candidacy"
+    },
+    {
+      "id": "tmp_an_13",
+      "q": "Hoax: deceive: : filibuster: _________",
+      "options": ["delay", "refuse", "stop", "none"],
+      "answer": "delay"
+    },
+    {
+      "id": "tmp_an_14",
+      "q": "Syllabus: course: : agenda: _________",
+      "options": ["subject", "platform", "meeting", "lesson"],
+      "answer": "meeting"
+    },
+    {
+      "id": "tmp_an_15",
+      "q": "Cat: kitten: : horse: _________",
+      "options": ["cab", "puppy", "stallion", "pony"],
+      "answer": "pony"
+    },
+    {
+      "id": "tmp_an_16",
+      "q": "Evaporate: vapor: : petrify: _________",
+      "options": ["liquid", "stone", "magnify", "cold"],
+      "answer": "stone"
+    },
+    {
+      "id": "tmp_an_17",
+      "q": "Canvas: painter: : marble: _________",
+      "options": ["sculptor", "rock", "statue", "form"],
+      "answer": "sculptor"
+    },
+    {
+      "id": "tmp_an_18",
+      "q": "Hammer: anvil: : pestle: _________",
+      "options": ["ground", "grinder", "mortar", "knife"],
+      "answer": "mortar"
+    },
+    {
+      "id": "tmp_an_19",
+      "q": "Librarian: books: : curator: _________",
+      "options": ["atlas", "encyclopedia", "room", "paintings"],
+      "answer": "paintings"
+    },
+    {
+      "id": "tmp_an_20",
+      "q": "Archive: manuscript: arsenal: _________",
+      "options": ["soldier", "weapon", "castle", "king"],
+      "answer": "weapon"
+    },
+    {
+      "id": "tmp_an_21",
+      "q": "Bodyguard: protection: : mentor: _________",
+      "options": ["advice", "counsel", "teacher", "leader"],
+      "answer": "counsel"
+    },
+    {
+      "id": "tmp_an_22",
+      "q": "Novelist: plot: : Architect: _________",
+      "options": ["building", "design", "blueprint", "house"],
+      "answer": "blueprint"
+    },
+    {
+      "id": "tmp_an_23",
+      "q": "Molecule: atoms: : tissue: _________",
+      "options": ["organ", "cells", "body", "neutrons"],
+      "answer": "cells"
+    },
+    {
+      "id": "tmp_an_24",
+      "q": "Call: telephone: : type: _________",
+      "options": ["cellphone", "ipad", "keyboard", "piano"],
+      "answer": "keyboard"
+    },
+    {
+      "id": "tmp_an_25",
+      "q": "Eavesdrop: conversation: : trespass: _________",
+      "options": ["property", "house", "land", "assets"],
+      "answer": "property"
+    }
+  ]
+}
+====
+>>>>
+````
+
+FILE: src/mcq/civil_service_exam/logic_analytical_reasoning/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_lg_61",
+      "q": "Children are in pursuit of a dog whose leash has broken. James is directly behind the dog. Ruby is behind James. Rachel is behind Ruby. Max is ahead of the dog walking down the street in the opposite direction. As the children and dog pass, Max turns around and joins the pursuit. He runs in behind Ruby. James runs faster and is alongside the dog on the left. Ruby runs faster and is alongside the dog on the right. Which child is directly behind the dog?",
+      "options": ["James", "Ruby", "Rachel", "Max"],
+      "answer": "Rachel"
+    },
+    {
+      "id": "tmp_lg_62",
+      "q": "Tom puts on his socks before he puts on his shoes.\nHe puts on his shirt before he puts on his jacket.\nTom puts on his shoes before he puts on his shirt.\nIf the first two statements are true, the third statement is",
+      "options": ["true", "false", "uncertain"],
+      "answer": "uncertain"
+    },
+    {
+      "id": "tmp_lg_63",
+      "q": "Tanya is older than Eric.\nCliff is older than Tanya.\nEric is older than Cliff.\nIf the first two statements are true, the third statement is",
+      "options": ["true", "false", "uncertain"],
+      "answer": "false"
+    },
+    {
+      "id": "tmp_lg_64",
+      "q": "Statement: In the recently held all Philippine Nursing conference, the session on 'Vacination Campaign' surprisingly attracted a large number of participants and also received very good media coverage.\n\nAssumptions:\nI. Media is always very positive towards the Service sector.\nII. The service sector is managed properly in Philippines.\nIII. People weren't expecting such an encouraging response to the service sector conference.",
+      "options": ["I, II, and III", "I and III", "I and II", "II and III", "III only"],
+      "answer": "III only"
+    },
+    {
+      "id": "tmp_lg_65",
+      "q": "Subscribing to Cable T.V. is a luxury. All luxuries are needless expenditures. Having a cellular phone is not a luxury. Dining in a Five-Star hotel is a needless expenditure\n\nCONCLUSION:",
+      "options": ["Having a cellular phone is not a needless expenditure", "Subscribing to Cable TV is a needless expenditure", "Subscribing to cable TV is not a needless expenditure", "Dining in a Five-Star hotel is not a luxury", "Dining in a Five-Star hotel is a luxury"],
+      "answer": "Subscribing to Cable TV is a needless expenditure"
+    },
+    {
+      "id": "tmp_lg_66",
+      "q": "A factory worker has five children. No one else in the factory has five children.",
+      "options": ["All workers in the factory have five children each.", "Everybody in the factory has children.", "Some of the factory workers have more than five children.", "Only one worker in the factory has exactly five children."],
+      "answer": "Only one worker in the factory has exactly five children."
+    },
+    {
+      "id": "tmp_lg_67",
+      "q": "Television convinces viewers that the likelihood of their becoming the victim of a violent crime is extremely high; at the same time by its very nature, TV persuades viewers to passively accept whatever happens to them.",
+      "options": ["TV viewing promotes criminal behaviour.", "TV viewers are most likely to be victimized than others.", "People should not watch TV.", "TV promotes a feeling of helpless vulnerability in viewers."],
+      "answer": "TV promotes a feeling of helpless vulnerability in viewers."
+    },
+    {
+      "id": "tmp_lg_68",
+      "q": "The government is soon going to introduce a bill which would permit the instituting of private universities under very strict directions.",
+      "options": ["We have some private universities in our country even now.", "The demand for more universities is being stepped up.", "Such directions can also be issued without informing the Parliament.", "The government gives directions to establish anything in private sector.", "Unless and until the directions are given, the private universities can charge exorbitant fees."],
+      "answer": "The demand for more universities is being stepped up."
+    },
+    {
+      "id": "tmp_lg_69",
+      "q": "All the tulips in Zoe's garden are white.\nAll the pansies in Zoe's garden are yellow.\nAll the flowers in Zoe's garden are either white or yellow.\nIf the first two statements are true, the third statement is",
+      "options": ["true", "false", "uncertain"],
+      "answer": "uncertain"
+    },
+    {
+      "id": "tmp_lg_70",
+      "q": "Three pencils cost the same as two erasers.\nFour erasers cost the same as one ruler.\nPencils are more expensive than rulers.\nIf the first two statements are true, the third statement is",
+      "options": ["true", "false", "uncertain"],
+      "answer": "false"
+    }
+  ]
+}
+====
+>>>>
+````
+
+FILE: src/mcq/civil_service_exam/reading_comprehension/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_rc_1",
+      "q": "[Passage: Boracay, the most famous beach in the Philippines, is also known as a blessed island. I have never met anyone who has not been enthralled and fascinated when they visited Boracay. The first time you set foot on its powder-like sand, you'll surely feel lucky to be in a paradise island. The moment you see its crystal pristine water, you'll be so thankful you're alive. Many locals and foreigners go there again and again not only because of the breathtaking view but also because to celebrate life and its blessings.]\n\nThe best title for the above article is:",
+      "options": ["Famous Beach in the Philippines", "The Beach of Boracay", "Boracay, a Blessed Island", "Why People Go to Boracay"],
+      "answer": "Boracay, a Blessed Island"
+    },
+    {
+      "id": "tmp_rc_2",
+      "q": "[Passage: Malaysia Airline Flight MH370's disappearance is still under investigation. Many countries joined in the search for what really happened and where the aircraft is now. The flight lost contact with air traffic controllers about an hour after its take off. The weather was fine when the aircraft was flying so it adds more theories about other possible reasons of the aircraft's fate. The oil slick spotted off Vietnam's coast turned out to be fuel oil used in cargo ships so it has nothing to do with the aircraft. Interpol also says the disappearance of the jet plane has nothing to do with terrorist attack. More questions are adding to this quest and no specific answer is given and proven yet.]\n\nThe above selection supports the idea:",
+      "options": ["That Flight MH370 is somewhere under the sea", "That Flight MH370's disappearance is still a mystery", "That Flight MH370 must have crashed after loss contact", "That Flight MH370 is in Bermuda Triangle"],
+      "answer": "That Flight MH370's disappearance is still a mystery"
+    },
+    {
+      "id": "tmp_rc_3",
+      "q": "[Passage: Flappy Bird, a mobile game created in 2013 by Dong Nguyen from Vietnam became a hit at the start of 2014. At the end of January 2014, it was the most downloaded game in the iOS App Store. The game is extremely addictive and difficult so users strive harder to score higher. Due to its intense popularity, the creator decided to remove it from the App Store. Because of its millions of downloads, Nguyen claimed he was making $50,000 per day from it. The demand of Flappy Bird made some gadgets owners to sell their devices with Flappy Bird installed for twice or thrice their original price.]\n\nWhat is the best title for the above article?",
+      "options": ["Most Downloaded Game", "The Demand of Flappy Bird Game", "Flappy Bird App", "The Rise of Game Apps"],
+      "answer": "The Demand of Flappy Bird Game"
+    },
+    {
+      "id": "tmp_rc_4",
+      "q": "[Passage: According to NASA, effects that scientists had predicted in the past would result from global climate change are now occurring like loss of sea ice, accelerated sea level rise and longer, more intense heat waves. Even our Earth's average temperature has increased about 1 degree in Fahrenheit in the 20th century. Many experts and scientists believe that global temperature will continue to rise from 2.5 to degrees Fahrenheit over the next century.]\n\nWhich of the following conclusions best summarizes the selection above?",
+      "options": ["Climate change will continue to get worse until humanity takes serious actions to stop it.", "Global climate change is happening on earth now.", "The effects of climate change are getting extremely dangerous.", "Global climate change and its effects are occurring and are likely to increase over time."],
+      "answer": "Global climate change and its effects are occurring and are likely to increase over time."
+    },
+    {
+      "id": "tmp_rc_5",
+      "q": "[Passage: Mark Zuckerberg, Co-Founder and CEO of Facebook spoke with President Barack Obama to discuss about internet privacy impositions by the U.S. government. Zuckerberg said, \"The Internet works because most people and companies do the same. We work together to create this secure environment and make our shared space even better for the world. This is why I've been so confused and frustrated by the repeated reports of the behavior of the U.S. government. When our engineers work tirelessly to improve security, we imagine we're protecting you against criminals, not our own government. The U.S. government should be the champion for the Internet, not a threat. It needs to be much more transparent about what it's doing, or people will believe the worst. I've called President Obama to express my frustration over the damage the government is creating for all of our future. Unfortunately, it seems like it will take a very long time for true full reform. So it's up to us — all of us — to build the Internet we want. Together, we can build a space that is greater and a more important part of the world than anything we have today, but is also safe and secure. I'm committed to seeing this happen, and you can count on Facebook to do our part.\"]\n\nWhy is Internet Privacy very important to all of us?",
+      "options": ["Because it is not safe to trust anyone with our online accounts.", "Because nobody really owns the internet. It is a free space.", "Because it protects and secures not only our online accounts but also our online activities.", "Because the government's protection is not enough."],
+      "answer": "Because it protects and secures not only our online accounts but also our online activities."
+    },
+    {
+      "id": "tmp_rc_6",
+      "q": "[Passage: Search Engine Optimization a.k.a. SEO is vital for a website to stay successful for a long time. The world of internet continues to evolve so website owners must stay in the game by making updates while practicing effective SEO. Great content and correct SEO are the blood of a website because without them, a site could die.]\n\nThe paragraph is mainly about what?",
+      "options": ["The importance of Search Engine Optimization", "The life of a successful website", "The secrets of making a website successful", "How to apply Search Engine Optimization"],
+      "answer": "The importance of Search Engine Optimization"
+    },
+    {
+      "id": "tmp_rc_7",
+      "q": "[Passage: There are around 2 million Filipinos without jobs today. That includes graduates and undergraduates. According to survey, there will be another halfmillion to graduate this year without possible job placements. Unemployed people complain about job shortage. Many go to the cities to apply to some companies but end up going home with nothing. Unemployment rate increases each year even though there are many job fairs.]\n\nThe paragraph states that...",
+      "options": ["Unemployment in the Philippines is common", "Unemployment rate in the Philippines is seriously increasing", "Unemployment in the Philippines must be solved", "Unemployment solutions for Filipinos"],
+      "answer": "Unemployment rate in the Philippines is seriously increasing"
+    },
+    {
+      "id": "tmp_rc_8",
+      "q": "[Passage: \"In the Olympic Peninsula of northwest Washington State, a small town named Forks exists under a near-constant cover of clouds. It rains on this inconsequential town more than any other place in the United States of America. It was from this town and its gloomy, omnipresent shade that my mother escaped with me when I was only a few months old. It was in this town that I'd been compelled to spend a month every summer until I was fourteen. That was the year I finally put my foot down; these past three summers, my dad, Charlie, vacationed with me in California for two weeks instead. It was to Forks that I now exiled myself – an action that I took with great horror. I detested Forks. I loved Phoenix. I loved the sun and the blistering heat. I loved the vigorous, sprawling city.\" -Stephenie Meyer, \"The Twilight Saga\"]\n\nProvide the specific setting of the story",
+      "options": ["Phoenix", "Rainy day", "Forks, Washington", "Twilight"],
+      "answer": "Forks, Washington"
+    },
+    {
+      "id": "tmp_rc_9",
+      "q": "[Passage: \"It's twenty-five after six and the sky still has some shades of purple and orange...oh well just like me, I am standing here, in this secretive rooftop, overjoyed...yet there are still some fragments of fear and haze... I wonder if the sky is glad and excited about the night or if it is crying over the bright day that passed.\" - Fehl Dungo - \"Higher than the Rooftop\"]\n\nWhat is the mood of the story?",
+      "options": ["Happiness", "Sorrow", "Confusion", "Grief"],
+      "answer": "Confusion"
+    },
+    {
+      "id": "tmp_rc_10",
+      "q": "[Passage: Investing has been a hot topic for quite a while. Many people especially employees and entrepreneurs don't rely on time deposits and regular savings account to save and earn interests. The most common investments in the Philippines are through real estates, mutual funds and trust funds. Although few people also join trading in the stock market, more and more Filipinos are not reluctant to invest their money and diversify them to different money making wheels.]\n\nWhat does the article try to convey?",
+      "options": ["Filipinos are now willing to open different investments.", "Filipinos are wise in saving their money.", "Filipinos rely mainly on savings and deposit accounts.", "Filipinos invest in real estates, mutual funds and trust funds."],
+      "answer": "Filipinos are now willing to open different investments."
+    },
+    {
+      "id": "tmp_rc_71",
+      "q": "[Passage: There are no effective boundaries when it comes to pollutants. Studies have shown that toxic insecticides that have been banned in many countries are riding the wind from countries where they remain legal. Compounds such as DDT and toxaphene have been found in remote places like the Yukon and other Arctic regions.]\n\nThis paragraph best supports the statement that",
+      "options": ["toxic insecticides such as DDT have not been banned throughout the world.", "more pollutants find their way into polar climates than they do into warmer areas.", "studies have proven that many countries have ignored their own anti-pollution laws.", "DDT and toxaphene are the two most toxic insecticides in the world."],
+      "answer": "toxic insecticides such as DDT have not been banned throughout the world."
+    },
+    {
+      "id": "tmp_rc_72",
+      "q": "[Passage: Most researchers in needy countries are based on the thinking and approach of the highly developed Western world, and seldom have they been directed toward meeting the countries; own development needs.]\n\nThe sentence best supports the statement that _________.",
+      "options": ["highly developed countries offer the best guide for the development of needy countries", "most researchers done in needy countries are missing their objectives", "most researchers have universal application", "needy countries need researchers to help them reach the status of the western world", "needy countries spend so much time for conducting researchers"],
+      "answer": "needy countries need researchers to help them reach the status of the western world"
+    },
+    {
+      "id": "tmp_rc_73",
+      "q": "[Passage: Critical reading is a demanding process. To read critically, you must slow down your reading and, with pencil in hand, perform specific operations on the text. Mark up the text with your reactions, conclusions, and questions. When you read, become an active participant.]\n\nThis paragraph best supports the statement that",
+      "options": ["critical reading is a slow, dull, but essential process.", "the best critical reading happens at critical times in a person's life.", "readers should get in the habit of questioning the truth of what they read.", "critical reading requires thoughtful and careful attention.", "critical reading should take place at the same time each day."],
+      "answer": "critical reading requires thoughtful and careful attention."
+    },
+    {
+      "id": "tmp_rc_74",
+      "q": "[Passage: Two person look out through the same bars; one sees mud and the other, the stars.]\n\nThe sentence best supports the statement that _________.",
+      "options": ["some people are more blind than others", "people see things differently depending on their own perspective", "people have varied ways of looking at different things", "people have different tastes and interests", "people tend to influence one another's views of things"],
+      "answer": "people see things differently depending on their own perspective"
+    },
+    {
+      "id": "tmp_rc_75",
+      "q": "[Passage: Nagawang mabago ng mga kasalukuyang awitin ang kamalayan ng Pilipino upang kantahin ang sarili niyang mga awit sa tanging wikang nakapagsasatinig sa kanyang kaluluwa.]\n\nIsinasaad ng pangungusap na _________.",
+      "options": ["madamdamin at makabuluhan ang mga awiting isinulat sa wikang Pilipino", "tagumpay ang mga awiting Pilipino na mabago ang kaugalian ng mga tao Pilipino", "madaling matutuhan ang mga awiting Pilipino dahil ang mga ito ay nasusulat sa katutubong wika", "natututuhan nang tangkilikin ng mga Pilipino ang kanilang mga sariling awitin", "nagkakaroon na ng kamalayan ang mga Pilipino tungkol sa lahat ng mga awitin ngayon"],
+      "answer": "natututuhan nang tangkilikin ng mga Pilipino ang kanilang mga sariling awitin"
+    },
+    {
+      "id": "tmp_rc_76",
+      "q": "[Passage: Sixty years ago I know everything ; now I know nothing ; education is a progressive discovery of our own ignorance.]\n\nThe sentence best supports the statement that _________.",
+      "options": ["the older we get, the more we forget what we have learned", "the older we get, the more knowledgeable we become", "the more we learn, the more we realize that there's more we need to know", "we learn more as we grow old", "ignorance is a lifelong experience"],
+      "answer": "the more we learn, the more we realize that there's more we need to know"
+    },
+    {
+      "id": "tmp_rc_77",
+      "q": "[Passage: In a modern economy, the results of long-range planning frequently depend upon the future value of money. The ability then to predict the value of money is a key to economic progress.]\n\nThe paragraph best supports the statement that _________.",
+      "options": ["the value of money is unpredictable at times", "the unpredictability of money is an obstacle to a nation's prosperity", "economic progress is facilitated by properly controlling budgetary expenses", "long-range planning is unheard of in traditional economies", "financial planning is indispensable in modern economy"],
+      "answer": "the unpredictability of money is an obstacle to a nation's prosperity"
+    },
+    {
+      "id": "tmp_rc_78",
+      "q": "[Passage: Ang pagbaba ng halaga ng piso lumikha ng krisis sa maraming industriya ng bansa. Kasunod nito ang pagtitipid at problema sa kawalan ng mapasukang trabaho. Lumikha rin ito ng pagtataas ng presyo ng mga bilihin na labis nakaapekto sa kita ng mga manggagawa.]\n\nAyon sa talata _________.",
+      "options": ["ang kasalukuyang krisis ay bunga ng mga mahal na bilihin at kawalan ng mapasukang trabaho.", "ang krisis ay nakaapekto sa hangarin ng maraming industriya na makapagbigay ng karagdagang sahod sa kanilang mga manggagawa", "dumarami ang mga walang hanapbuhay at tumataas ang halaga ng mga bilihin dahil sa krisis", "maraming industriya ang nalulugi dahil sa krisis kaya itinataas din nila ang presyo ng kanilang mga produkto", "dahil sa krisis, maraming industriya ang napilitang magsara"],
+      "answer": "dumarami ang mga walang hanapbuhay at tumataas ang halaga ng mga bilihin dahil sa krisis"
+    },
+    {
+      "id": "tmp_rc_79",
+      "q": "[Passage: When another old cave is discovered in the south of France, it is not usually news. Rather, it is an ordinary event. Such discoveries are so frequent these days that hardly anybody pays heed to them. However, when the Lascaux cave complex was discovered in 1940, the world was amazed. Painted directly on its walls were hundreds of scenes showing how people lived thousands of years ago. The scenes show people hunting animals, such as bison or wild cats. Other images depict birds and, most noticeably, horses, which appear in more than 300 wall images, by far outnumbering all other animals. Early artists drawing these animals accomplished a monumental and difficult task. THEY did not limit themselves to the easily accessible walls but carried their painting materials to spaces that required climbing steep walls or crawling into narrow passages in the Lascaux complex. Unfortunately, the paintings have been exposed to the destructive action of water and temperature changes, which easily wear the images away. Because the Lascaux caves have many entrances, air movement has also damaged the images inside. Although they are not out in the open air, where natural light would have destroyed them long ago, many of the images have deteriorated and are barely recognizable. To prevent further damage, the site was closed to tourists in 1963, 23 years after it was discovered.]\n\nWhich title best summarizes the main idea of the passage?",
+      "options": ["Wild Animals in Art", "Hidden Prehistoric Paintings", "Exploring Caves Respectfully", "Determining the Age of French Caves"],
+      "answer": "Hidden Prehistoric Paintings"
+    },
+    {
+      "id": "tmp_rc_80",
+      "q": "[Passage: (Lascaux Cave)]\n\nIn 2nd sentence, the words pays heed to are closest in meaning to _________.",
+      "options": ["discovers", "watches", "notices", "buys"],
+      "answer": "notices"
+    },
+    {
+      "id": "tmp_rc_81",
+      "q": "[Passage: (Lascaux Cave)]\n\nBased on the passage, what is probably true about the south of France?",
+      "options": ["It is home to rare animals.", "It has a large number of caves.", "It is known for horse-racing events.", "It has attracted many famous artists."],
+      "answer": "It has a large number of caves."
+    },
+    {
+      "id": "tmp_rc_82",
+      "q": "[Passage: (Lascaux Cave)]\n\nAccording to the passage, which animals appear most often on the cave walls?",
+      "options": ["Birds", "Bison", "Horses", "Wild cats"],
+      "answer": "Horses"
+    },
+    {
+      "id": "tmp_rc_83",
+      "q": "[Passage: (Lascaux Cave)]\n\nthe word depict is closest in meaning to _________.",
+      "options": ["show", "hunt", "count", "draw"],
+      "answer": "show"
+    },
+    {
+      "id": "tmp_rc_84",
+      "q": "[Passage: (Lascaux Cave)]\n\nWhy was painting inside the Lascaux complex a difficult task?",
+      "options": ["It was completely dark inside.", "The caves were full of wild animals.", "Painting materials were hard to find.", "Many painting spaces were difficult to reach."],
+      "answer": "Many painting spaces were difficult to reach."
+    },
+    {
+      "id": "tmp_rc_85",
+      "q": "[Passage: (Lascaux Cave)]\n\nIn the 3rd paragraph, the word THEY refers to _________.",
+      "options": ["walls", "artists", "animals", "materials"],
+      "answer": "artists"
+    },
+    {
+      "id": "tmp_rc_86",
+      "q": "[Passage: (Lascaux Cave)]\n\nAccording to the passage, all of the following have caused damage to the paintings EXCEPT _________.",
+      "options": ["temperature changes", "air movement", "water", "light"],
+      "answer": "light"
+    },
+    {
+      "id": "tmp_rc_87",
+      "q": "[Passage: (Lascaux Cave)]\n\nWhat does the passage say happened at the Lascaux caves in 1963?",
+      "options": ["Visitors were prohibited from entering.", "A new lighting system was installed.", "Another part was discovered.", "A new entrance was created."],
+      "answer": "Visitors were prohibited from entering."
+    },
+    {
+      "id": "tmp_rc_88",
+      "q": "[Passage: Official records state that the Pueblo Indians lived in New Mexico and Arizona. The word \"Pueblo\" comes from the Spanish word \"pueblo,\" meaning town or village. The Spaniards found these Indians living in apartment houses, some of them on the side of a cliff in order that they could be reached only by ladders. Whenever they were attacked by Apaches, the Pueblos would pull up the ladders. They grew corn, which they watered with water flowing down in ditches. They wove cloth, made wonderful baskets, and created jars and pots out of clay proving how skilful they were at hand-craft.]\n\nFrom the passage we understand that the Pueblo Indians were afraid of ....................",
+      "options": ["cliff dwelling", "Apache Indians", "apartment houses", "water flowing down in ditches", "solitary life"],
+      "answer": "Apache Indians"
+    },
+    {
+      "id": "tmp_rc_89",
+      "q": "[Passage: (Pueblo Indians)]\n\nWhy the Spaniards called these Indians \"Pueblos\" is because they ....................",
+      "options": ["were close to the Apaches", "lived together in a town or village", "farmed and brought down water in ditches", "pulled up their ladders when attacked", "achieved fame thanks to their hand-craft"],
+      "answer": "lived together in a town or village"
+    },
+    {
+      "id": "tmp_rc_90",
+      "q": "[Passage: (Pueblo Indians)]\n\nThe Pueblo Indians lived on the side of a cliff ....................",
+      "options": ["although they had apartment houses", "to observe the stars in the sky for rain season", "so that they could provide themselves with shelters", "and, the didn't have a lake, a stream, or a pond", "as long as they were all together"],
+      "answer": "so that they could provide themselves with shelters"
+    }
+  ]
+}
+====
+>>>>
+````
+
+FILE: src/mcq/civil_service_exam/paragraph_organization/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_po_1",
+      "q": "A. One effective way is to diversify his funds to different investments like real estate, stocks and money instruments like bonds and trust funds.\nB. It is always best to expand money to different investment wheels.\nC. A wise investor must not put all his eggs in one basket.\nD. He should always consider the risks involved in investing his money.",
+      "options": ["CBAD", "CBDA", "CDAB", "CDBA"],
+      "answer": "CDAB"
+    },
+    {
+      "id": "tmp_po_2",
+      "q": "A. It is very vital to have social media presence however personal blogs serve as web domains.\nB. Most people including celebrities and businessmen have blogs nowadays.\nC. Therefore, building them will help anyone in promoting himself or his business.\nD. Apparently blogs are like our offices only they are in the internet.",
+      "options": ["BDAC", "BADC", "BACD", "BDCA"],
+      "answer": "BADC"
+    },
+    {
+      "id": "tmp_po_3",
+      "q": "A. The basic steps in building a website are easy to remember and registering a domain name is the usual priority.\nB. Designing a layout will come after that.\nC. Finally, adding more content and social media presence are required to keep your site active.\nD. Then you need a hosting provider to host your site's content in the World Wide Web.",
+      "options": ["ABCD", "ADBC", "ACBD", "ADCB"],
+      "answer": "ADBC"
+    },
+    {
+      "id": "tmp_po_4",
+      "q": "A. Speaking in English every day is also proven effective.\nB. Another way is watching English movies and TV shows particularly with English subtitles.\nC. Reading articles in books, newspapers, and magazines is just among the helpful ways.\nD. There are many ways to improve and develop English proficiency.",
+      "options": ["DCBA", "DACB", "DABC", "DCAB"],
+      "answer": "DCBA"
+    },
+    {
+      "id": "tmp_po_5",
+      "q": "A. Others don't realize yet what to pursue because they have many dreams.\nB. Finding the right course in college is one of the most challenging decisions anyone can make.\nC. Some people want to pursue their dreams ever since they were just little.\nD. Indeed destiny is a matter of choice.",
+      "options": ["BDAC", "BCDA", "BADC", "BCAD"],
+      "answer": "BCAD"
+    },
+    {
+      "id": "tmp_po_6",
+      "q": "A. While passport, airline tickets and valid IDs are required, proof of financial capacity may be required for visa application.\nB. Many Filipinos rejoiced hearing that good news.\nC. The Bureau of Immigration announced recently that proof of financial capacity is not a primary requirement at the airport.\nD. Positive points go to the bureau for this.",
+      "options": ["CBAD", "CADB", "CABD", "CBDA"],
+      "answer": "CBDA"
+    },
+    {
+      "id": "tmp_po_7",
+      "q": "A. This will be one of your tickets to land a job in the government.\nB. That is why many people apply to take the Career Service examination.\nC. If you passed the exam, you will get a certificate of eligibility.\nD. Career Service Eligibility is a major requirement to apply for a job position in the government.",
+      "options": ["DCBA", "DBAC", "DBCA", "DCAB"],
+      "answer": "DBCA"
+    },
+    {
+      "id": "tmp_po_8",
+      "q": "A. Your passport will arrive in 7 days if you choose the rush processing.\nB. Getting a passport is faster nowadays.\nC. Now, it only takes about 10 working days.\nD. Compared before, it would take about a month for the regular processing.",
+      "options": ["BCAD", "BDCA", "BADC", "BACD"],
+      "answer": "BDCA"
+    },
+    {
+      "id": "tmp_po_9",
+      "q": "A. Facebook has been the number one social network in the web and the world for quite long now.\nB. Mobile instant messaging apps are also dominating social presence in the internet.\nC. After many acquisitions, Facebook bought Instagram, one of the fastest growing photo sharing networks.\nD. Because of that, Facebook acquired WhatsApp, a leading instant chat platform like Kakaotalk.",
+      "options": ["ACBD", "ABCD", "ADCB", "ADBC"],
+      "answer": "ACBD"
+    },
+    {
+      "id": "tmp_po_10",
+      "q": "A. They will help you to purchase through zero-interest installment schemes.\nB. Thus, you must be wise and pay in full if you want to avoid never-ending debts.\nC. Credit cards are helpful if you know how and when to use them wisely.\nD. However, they will produce interests from interests if you didn't pay the whole amount at the due date.",
+      "options": ["CDBA", "CABD", "CDAB", "CADB"],
+      "answer": "CADB"
+    },
+    {
+      "id": "tmp_po_91",
+      "q": "A. One effective way is to diversify his funds to different investments like real estate, stocks and money instruments like bonds and trust funds.\nB. It is always best to expand money to different investment wheels.\nC. A wise investor must not put all his eggs in one basket.\nD. He should always consider the risks involved in investing his money.",
+      "options": ["CBAD", "CBDA", "CDAB", "CDBA"],
+      "answer": "CDAB"
+    },
+    {
+      "id": "tmp_po_92",
+      "q": "A. It is very vital to have social media presence however personal blogs serve as web domains.\nB. Most people including celebrities and businessmen have blogs nowadays.\nC. Therefore, building them will help anyone in promoting himself or his business.\nD. Apparently blogs are like our offices only they are in the internet.",
+      "options": ["BDAC", "BADC", "BACD", "BDCA"],
+      "answer": "BADC"
+    },
+    {
+      "id": "tmp_po_93",
+      "q": "A. The basic steps in building a website are easy to remember and registering a domain name is the usual priority.\nB. Designing a layout will come after that.\nC. Finally, adding more content and social media presence are required to keep your site active.\nD. Then you need a hosting provider to host your site's content in the World Wide Web.",
+      "options": ["ABCD", "ADBC", "ACBD", "ADCB"],
+      "answer": "ADBC"
+    },
+    {
+      "id": "tmp_po_94",
+      "q": "A. Speaking in English every day is also proven effective.\nB. Another way is watching English movies and TV shows particularly with English subtitles.\nC. Reading articles in books, newspapers, and magazines is just among the helpful ways.\nD. There are many ways to improve and develop English proficiency.",
+      "options": ["DCBA", "DACB", "DABC", "DCAB"],
+      "answer": "DCBA"
+    },
+    {
+      "id": "tmp_po_95",
+      "q": "A. Others don't realize yet what to pursue because they have many dreams.\nB. Finding the right course in college is one of the most challenging decisions anyone can make.\nC. Some people want to pursue their dreams ever since they were just little.\nD. Indeed destiny is a matter of choice.",
+      "options": ["BDAC", "BCDA", "BADC", "BCAD"],
+      "answer": "BCAD"
+    },
+    {
+      "id": "tmp_po_96",
+      "q": "A. Many innovations without proven results and follow up evaluation are educational wastages\nB. One wonders in the final analysis if these changes have been deeply rooted on basic problems of the people they serve.\nC. Some curriculum changes were mere fads without foreseeable achievements.\nD. What we need are innovations that overcome the mis-education of the young.",
+      "options": ["BACD", "ACDB", "ABCD", "CBAD"],
+      "answer": "ACDB"
+    },
+    {
+      "id": "tmp_po_97",
+      "q": "A. By trying, man learns to solve his problems through satisfying acts and eliminate actions which are annoying.\nB. He used a hungry cat in a puzzled box where it tried ways to get out in order to get to the food.\nC. Edward C. Thorndike's connectionism theory of learning establishes the trial and error way to learn.\nD. He established the fact that like the cat, man too, learns by trial and error.",
+      "options": ["ACBD", "BACD", "ACDB", "ABCD"],
+      "answer": "ACBD"
+    },
+    {
+      "id": "tmp_po_98",
+      "q": "A. A responsive educational system should be directed towards regional cooperation.\nB. Commonality of educational objectives should be replaced by better ways of achieving goals that fit the regional needs.\nC. It is necessary to revolutionize the contemporary methodologies in the teaching-learning processes.\nD. The educational goals should seek for a better way of experimentation in the teaching strategies and technologies.",
+      "options": ["ABCD", "ABDC", "BCAD", "DABC"],
+      "answer": "ABCD"
+    },
+    {
+      "id": "tmp_po_99",
+      "q": "A. Before, his religion was basically involved with rituals and ceremonies.\nB. The religion of the teacher helps him in reducing his fears and uncertainties.\nC. His religion responds to his needs for a means to allay fears about the uncertainty of events contrary to natural laws.\nD. Religion is important because it provides spiritual nourishment for his total being.",
+      "options": ["ABCD", "BACD", "DBCA", "CBAD"],
+      "answer": "BACD"
+    },
+    {
+      "id": "tmp_po_100",
+      "q": "A. While passport, airline tickets and valid IDs are required, proof of financial capacity may be required for visa application.\nB. Many Filipinos rejoiced hearing that good news.\nC. The Bureau of Immigration announced recently that proof of financial capacity is not a primary requirement at the airport.\nD. Positive points go to the bureau for this.",
+      "options": ["CBAD", "CADB", "CABD", "CBDA"],
+      "answer": "CBDA"
+    },
+    {
+      "id": "tmp_po_101",
+      "q": "A. This will be one of your tickets to land a job in the government.\nB. That is why many people apply to take the Career Service examination.\nC. If you passed the exam, you will get a certificate of eligibility.\nD. Career Service Eligibility is a major requirement to apply for a job position in the government.",
+      "options": ["DCBA", "DBAC", "DBCA", "DCAB"],
+      "answer": "DBCA"
+    },
+    {
+      "id": "tmp_po_102",
+      "q": "A. Your passport will arrive in 7 days if you choose the rush processing.\nB. Getting a passport is faster nowadays.\nC. Now, it only takes about 10 working days.\nD. Compared before, it would take about a month for the regular processing.",
+      "options": ["BCAD", "BDCA", "BADC", "BACD"],
+      "answer": "BDCA"
+    },
+    {
+      "id": "tmp_po_103",
+      "q": "A. Facebook has been the number one social network in the web and the world for quite long now.\nB. Mobile instant messaging apps are also dominating social presence in the internet.\nC. After many acquisitions, Facebook bought Instagram, one of the fastest growing photo sharing networks.\nD. Because of that, Facebook acquired WhatsApp, a leading instant chat platform like Kakaotalk.",
+      "options": ["ACBD", "ABCD", "ADCB", "ADBC"],
+      "answer": "ACBD"
+    },
+    {
+      "id": "tmp_po_104",
+      "q": "A. They will help you to purchase through zero-interest installment schemes.\nB. Thus, you must be wise and pay in full if you want to avoid never-ending debts.\nC. Credit cards are helpful if you know how and when to use them wisely.\nD. However, they will produce interests from interests if you didn't pay the whole amount at the due date.",
+      "options": ["CDBA", "CABD", "CDAB", "CADB"],
+      "answer": "CADB"
+    },
+    {
+      "id": "tmp_po_105",
+      "q": "A. Although the government is willing to put resources to education, alone, it cannot do the job.\nB. Education Act of 1980 provides an all encompassing activity with participation at all educational levels and sectors.\nC. The private schools have to be partners.\nD. The Act not only strengthens but equips the DepEd with its regulatory and developmental tasks as well",
+      "options": ["BACD", "ABCD", "DBCA", "CADB"],
+      "answer": "BACD"
+    }
+  ]
+}
+====
+>>>>
+````
+
+FILE: src/mcq/civil_service_exam/general_information/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_gi_1",
+      "q": "What are the 3 main branches of the Government of the Philippines?",
+      "options": ["Senate, Supreme Court, Congress", "Presidential, Unicameral- Parliamentary, Bicameral-Parliamentary", "Legislative, Executive, Judicial", "The Legislature, The Senate, The Supreme Court"],
+      "answer": "Legislative, Executive, Judicial"
+    },
+    {
+      "id": "tmp_gi_2",
+      "q": "The Supreme Court shall be composed of a Chief Justice and how many Associates Justices?",
+      "options": ["12", "13", "14", "15"],
+      "answer": "14"
+    },
+    {
+      "id": "tmp_gi_3",
+      "q": "The Commander-in-Chief of all armed forces of the Philippines this 2017 is _________.",
+      "options": ["Air Force Commanding General Jeffrey Delgado", "Rodrigo Duterte", "Chief Justice Maria Lourdes Sereno", "AFP Chief Lieutenant Gen. Emmanuel Bautista"],
+      "answer": "Rodrigo Duterte"
+    },
+    {
+      "id": "tmp_gi_4",
+      "q": "The executive power shall be vested in the _________.",
+      "options": ["President of the Philippines", "House of Representatives", "The Supreme Court", "The Congress"],
+      "answer": "President of the Philippines"
+    },
+    {
+      "id": "tmp_gi_5",
+      "q": "The legislative power shall be vested in the _________ which shall consist of a Senate and a House of Representatives.",
+      "options": ["Congress of the Philippines", "House of Ombudsman", "The Supreme Court", "Bureau of Internal Revenue"],
+      "answer": "Congress of the Philippines"
+    },
+    {
+      "id": "tmp_gi_6",
+      "q": "The Senate shall be composed of how many senators elected at large by voters of the Philippines?",
+      "options": ["21", "22", "23", "24"],
+      "answer": "24"
+    },
+    {
+      "id": "tmp_gi_7",
+      "q": "How long shall the term of office of the senators be commenced?",
+      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "answer": "6 years"
+    },
+    {
+      "id": "tmp_gi_8",
+      "q": "The term of office of the President and Vice-president of the Philippines shall be up to how many years?",
+      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "answer": "6 years"
+    },
+    {
+      "id": "tmp_gi_9",
+      "q": "The members of the House of Representatives shall be elected for a term of _________.",
+      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "answer": "3 years"
+    },
+    {
+      "id": "tmp_gi_10",
+      "q": "The following shall be exempted from taxation except:",
+      "options": ["Lands and buildings", "Churches and convents", "Charitable institutions", "Non-profit cemeteries"],
+      "answer": "Lands and buildings"
+    },
+    {
+      "id": "tmp_gi_11",
+      "q": "The Congress, by a vote of _________ of both Houses in joint session assembled, voting separately, shall have the sole power to declare a state of war.",
+      "options": ["Two-thirds", "One-half", "Three quarters", "Minority"],
+      "answer": "Two-thirds"
+    },
+    {
+      "id": "tmp_gi_12",
+      "q": "It states that \"no person shall be deprived of life, liberty, or property without due process of law, nor any person be denied the equal protection of the laws.\"",
+      "options": ["Article VI", "Bill of Rights", "Republic Act", "Court Order"],
+      "answer": "Bill of Rights"
+    },
+    {
+      "id": "tmp_gi_13",
+      "q": "All of the following is TRUE except:",
+      "options": ["No person shall be compelled to be a witness against himself", "No person shall be imprisoned for non-payment of debt or poll tax.", "No ex post facto law or bill of attainder shall not be enacted.", "No person shall be detained solely by reason of his political beliefs and aspirations."],
+      "answer": "No ex post facto law or bill of attainder shall not be enacted."
+    },
+    {
+      "id": "tmp_gi_14",
+      "q": "The following are citizens of the Philippines except:",
+      "options": ["Those fathers or mothers are citizens of the Philippines", "Those who are born before January 17, 1973, of Filipino mothers, who elect Philippine citizenship upon reaching the age of majority", "Those who are naturalized citizens of the Philippines in accordance with law.", "All of the above are true."],
+      "answer": "All of the above are true."
+    },
+    {
+      "id": "tmp_gi_15",
+      "q": "It is the right and obligation by all citizens, who are at least 18 years of age, and qualified by law, to vote in the election of national and local officials of the government without literacy,, property, or other substantive requirement.",
+      "options": ["Suffrage", "Election", "Voting power", "Civil Right"],
+      "answer": "Suffrage"
+    },
+    {
+      "id": "tmp_gi_16",
+      "q": "The three inherent powers of the state are the following except one:",
+      "options": ["Police Power", "Power of Eminent Domain", "Power of Taxation", "Power to Impeach"],
+      "answer": "Power to Impeach"
+    },
+    {
+      "id": "tmp_gi_17",
+      "q": "It is the power of the State to promote public welfare by restraining the use of both liberty and property of all people.",
+      "options": ["Police Power", "Power of Eminent Domain", "Power if Taxation", "Power to Impeach"],
+      "answer": "Police Power"
+    },
+    {
+      "id": "tmp_gi_18",
+      "q": "It is the power of the State to take properties for the purpose of public use upon payment of just compensation.",
+      "options": ["Police Power", "Power of Eminent Domain", "Power if Taxation", "Power to Impeach"],
+      "answer": "Power of Eminent Domain"
+    },
+    {
+      "id": "tmp_gi_19",
+      "q": "It is the power of the State to impose charge or burden to persons and properties, and property rights for the purpose of raising revenues to protect the people and extend public projects and services.",
+      "options": ["Police Power", "Power of Eminent Domain", "Power if Taxation", "Power to Impeach"],
+      "answer": "Power if Taxation"
+    },
+    {
+      "id": "tmp_gi_20",
+      "q": "The following are members of the Constitutional Commission except:",
+      "options": ["Commission on Civil Rights", "Commission on Elections", "Civil Service Commission", "Commission on Audit"],
+      "answer": "Commission on Civil Rights"
+    },
+    {
+      "id": "tmp_gi_21",
+      "q": "It states that public office is public trust and that public officers and employees must, at all times, be accountable to the people, serve them with utmost responsibility, integrity, loyalty and efficiency; act with patriotism and justice and lead modest lives.",
+      "options": ["Public Trust", "Constitutional Rights", "Accountability", "Responsibility"],
+      "answer": "Accountability"
+    },
+    {
+      "id": "tmp_gi_22",
+      "q": "Who shall have the exclusive power to initiate all cases of impeachment?",
+      "options": ["House of Blue Ribbon Committee", "House of Representatives", "House of the Senate", "Speaker of the House"],
+      "answer": "House of Representatives"
+    },
+    {
+      "id": "tmp_gi_23",
+      "q": "R.A. 6713 is an act to uphold the time-honored principle of public office being a public trust, granting incentives and rewards for exemplary service, enumerating prohibited acts and providing penalties for violations thereof and for other purposes.",
+      "options": ["Preamble", "Code of Ethics", "Code of Government Officials", "Code of Conduct and Ethical Standards for Public Officials and Employees"],
+      "answer": "Code of Conduct and Ethical Standards for Public Officials and Employees"
+    },
+    {
+      "id": "tmp_gi_24",
+      "q": "The following are duties and responsibilities of Public officials and Employees except:",
+      "options": ["Act promptly on letters, inquiries, calls or any other form of communications sent by the public.", "Submit performance reports of the agency or office regularly", "Accept gifts from the public upon prioritizing their queries.", "Process documents and papers expeditiously."],
+      "answer": "Accept gifts from the public upon prioritizing their queries."
+    },
+    {
+      "id": "tmp_gi_25",
+      "q": "It is a written instrument containing the proposition and required number of signatories and shall be in a form determined by and submitted to the Commission on Elections.",
+      "options": ["Bill", "Law", "Proposition", "Petition"],
+      "answer": "Petition"
+    },
+    {
+      "id": "tmp_gi_26",
+      "q": "It is the electoral process by which an initiative on the Constitution is either approved or rejected by the people.",
+      "options": ["Referendum", "Plebiscite", "Petition", "Initiative"],
+      "answer": "Plebiscite"
+    },
+    {
+      "id": "tmp_gi_27",
+      "q": "It is the power of the electorate to approve or reject a legislation through an election called for the purpose.",
+      "options": ["Referendum", "Plebiscite", "Petition", "Initiative"],
+      "answer": "Referendum"
+    },
+    {
+      "id": "tmp_gi_28",
+      "q": "This law promotes responsible family planning and proper use of reproductive methods to eliminate over-population growth.",
+      "options": ["RH Bill", "Responsible Parenthood and Reproductive Health Law", "Reproductive Law", "Family Planning"],
+      "answer": "Responsible Parenthood and Reproductive Health Law"
+    },
+    {
+      "id": "tmp_gi_29",
+      "q": "It is a specialized agency of the United Nations that concerns international public health.",
+      "options": ["Department of Health", "World Health Organization", "International Health Organization", "All of the above"],
+      "answer": "World Health Organization"
+    },
+    {
+      "id": "tmp_gi_30",
+      "q": "APEC is a summit that promotes free trade and economic cooperation throughout the Asia-Pacific region countries. APEC stands for:",
+      "options": ["Asia Pacific Economic Corporation", "Asia Pacific Economic Cooperation", "Asia Pacific Economic Council", "Asia Pacific Economic Countries"],
+      "answer": "Asia Pacific Economic Cooperation"
+    },
+    {
+      "id": "tmp_gi_31",
+      "q": "Association of Southeast Asian Nations (ASEAN) aims to accelerate economic growth, stability, social progress and cultural development in the spirit of equality and partnership to strengthen prosperous and peaceful community along Southeast Asian Nations. Which of the following countries is not a member of ASEAN?",
+      "options": ["Hong Kong", "Philippines", "Singapore", "Thailand"],
+      "answer": "Hong Kong"
+    },
+    {
+      "id": "tmp_gi_32",
+      "q": "It is a law in the Philippines that aims to address legal issues concerning online interactions and harmful internet behavior in the Philippines. It aims to prevent and punish cybercrime in the country.",
+      "options": ["Cybersquatting", "Cybercrime Act", "Cybercrime Prevention Act", "Cyber Identity Theft Act"],
+      "answer": "Cybercrime Prevention Act"
+    },
+    {
+      "id": "tmp_gi_33",
+      "q": "_________ waste breaks down into natural components and can be recycled into the life cycle naturally.",
+      "options": ["Bio-chemical", "Recyclable", "Biodegradable", "Non-biodegradable"],
+      "answer": "Biodegradable"
+    },
+    {
+      "id": "tmp_gi_34",
+      "q": "The following are examples of non-biodegradable waste except:",
+      "options": ["Plastics", "Metals", "Styrofoam", "Papers"],
+      "answer": "Papers"
+    },
+    {
+      "id": "tmp_gi_35",
+      "q": "It is a project of DOST for more accurate, integrated and responsive disaster prevention and mitigation system especially in high-risk calamity areas of the Philippines.",
+      "options": ["PAGASA", "I am Ready", "DOST-Advanced Disaster Program", "Project NOAH"],
+      "answer": "Project NOAH"
+    },
+    {
+      "id": "tmp_gi_36",
+      "q": "PAGASA is the official government agency for weather forecasting, flood control, astronomical observations, and time service. PAGASA stands for _________?",
+      "options": ["Philippine Atmospheric Geographical and Astronomical Services Administration", "Philippine Atmospheric Geophysical and Astronomical Services Administration", "Philippine Atmospheric Geological and Astronomical Services Association", "Philippine Atmospheric Geophysical and Astronomical Services Association"],
+      "answer": "Philippine Atmospheric Geophysical and Astronomical Services Administration"
+    },
+    {
+      "id": "tmp_gi_37",
+      "q": "PHIVOLCS is a branch of DOST to moderate disasters that may arise from volcanic eruptions, earthquakes, tsunami and other related geotectonic phenomena in the Philippines. What is PHIVOLCS?",
+      "options": ["Philippine Institute of Volcanology and Seismology", "Philippine Institute of Volcanic and Seismic Services", "Philippine Institute of Volcanic and Seismology Services", "Philippine Institute of Volcano and Seismic System"],
+      "answer": "Philippine Institute of Volcanology and Seismology"
+    },
+    {
+      "id": "tmp_gi_38",
+      "q": "Which of the following is a renewable source of energy?",
+      "options": ["Geothermal energy", "Solar energy", "Wind energy", "All of the above"],
+      "answer": "All of the above"
+    },
+    {
+      "id": "tmp_gi_39",
+      "q": "It is a process by which thermal radiation from the earth's surface is absorbed by atmospheric greenhouse gases and is re-radiated in all directions.",
+      "options": ["Global Warming", "Greenhouse Effect", "Ozone Layer", "Solar Radiation"],
+      "answer": "Greenhouse Effect"
+    },
+    {
+      "id": "tmp_gi_40",
+      "q": "USB is an industry standard that connects computers and electronic devices like keyboards, digicams, portable media devices, disk drivers, smartphones, and network adapters to any computer. USB stands for?",
+      "options": ["Unit Serial Box", "Unit Serial Bolt", "Universal Serial Bin", "Universal Serial Bus"],
+      "answer": "Universal Serial Bus"
+    },
+    {
+      "id": "tmp_gi_116",
+      "q": "The official motto used in 30th Southeast Asian Games is what?",
+      "options": ["We Care As One", "We Play As One", "We Win As One", "We Will As One", "We Work As One"],
+      "answer": "We Win As One"
+    },
+    {
+      "id": "tmp_gi_117",
+      "q": "On August 16, 2018, the government announced at least _________ Philippine holidays for 2019 as declared by virtue of Proclamation No. 555, series of 2018.",
+      "options": ["16", "18", "19", "15", "14"],
+      "answer": "18"
+    },
+    {
+      "id": "tmp_gi_118",
+      "q": "Which of the following statements best describes the relationship between global warming ozone depletion?",
+      "options": ["Ozone depletion contributes to global warming.", "Global warming causes ozone depletion.", "Ozone depletion and global warming have nothing to do with each other.", "Excessive build-up of carbon dioxide causes both global warming and ozone depletion."],
+      "answer": "Ozone depletion contributes to global warming."
+    },
+    {
+      "id": "tmp_gi_119",
+      "q": "It is only Philippine province with an English name.",
+      "options": ["Cebu", "Mountain Province", "General Santos", "Zambales"],
+      "answer": "Mountain Province"
+    },
+    {
+      "id": "tmp_gi_120",
+      "q": "What form of government does the Philippines adopt?",
+      "options": ["Republican", "Democratic", "Neither a nor b", "Both a and b"],
+      "answer": "Both a and b"
+    },
+    {
+      "id": "tmp_gi_121",
+      "q": "Who among the following may issue a warrant of arrest or a search warrant?",
+      "options": ["A senator", "A judge", "A congressman", "The President"],
+      "answer": "A judge"
+    },
+    {
+      "id": "tmp_gi_122",
+      "q": "A foreigner may acquire Filipino citizenship through",
+      "options": ["Naturalization", "Extradition", "Rebirth", "Visa application"],
+      "answer": "Naturalization"
+    },
+    {
+      "id": "tmp_gi_123",
+      "q": "What is regarded by the State as a \"primary social economic force?\"",
+      "options": ["education", "trade", "labor", "commerce"],
+      "answer": "labor"
+    },
+    {
+      "id": "tmp_gi_124",
+      "q": "According to Article III, Section 15 of the Constitution, the writ of habeas corpus may be suspended in times of rebellion or what?",
+      "options": ["martial law", "war", "terrorism", "invasion"],
+      "answer": "invasion"
+    },
+    {
+      "id": "tmp_gi_125",
+      "q": "The Lower Chamber of the Congress of the Philippines is known by what name?",
+      "options": ["Senate", "Congressional Lower Chamber", "National Assembly", "House of Representatives"],
+      "answer": "House of Representatives"
+    },
+    {
+      "id": "tmp_gi_126",
+      "q": "A Member of either house of Congress may be expelled by their fellow Members. For a Member to be expelled, how much of the total number of Members of a house must concur with the expulsion?",
+      "options": ["two-thirds", "majority", "three-fourths", "nine-tenths"],
+      "answer": "two-thirds"
+    },
+    {
+      "id": "tmp_gi_127",
+      "q": "If a President wishes to veto a bill, he/she must communicate it within a certain span of time, otherwise the bill will become a law. How long is this span of time?",
+      "options": ["3 weeks", "48 days", "60 days", "30 days"],
+      "answer": "30 days"
+    },
+    {
+      "id": "tmp_gi_128",
+      "q": "What project of the DENR that includes the protection of Industrial pollution of our Environment?",
+      "options": ["Bantay Kalikasan", "Bantay llog", "Bantay Dagat", "Ecological Watch", "Solid Waste Management"],
+      "answer": "Solid Waste Management"
+    },
+    {
+      "id": "tmp_gi_129",
+      "q": "What government agency thus the status of government employee in the free voluntary services belong?",
+      "options": ["Secretary", "Regional", "Municipal", "National", "Barangay"],
+      "answer": "Barangay"
+    },
+    {
+      "id": "tmp_gi_130",
+      "q": "Which is not a ground for Impeachment of the Pres., Vice-Pres., Ombudsman, and Senator?",
+      "options": ["graft and corruption", "sexual harassment", "grave abuse of the authority", "against the Family if the child scolded by the parents", "Other crimes"],
+      "answer": "against the Family if the child scolded by the parents"
+    },
+    {
+      "id": "tmp_gi_134",
+      "q": "Which is not a ground for Impeachment of the Pres., Vice-Pres., Ombudsman, and Senator?",
+      "options": ["graft and corruption", "sexual harassment", "grave abuse of the authority", "against the Family if the child scolded by the parents", "Other crimes"],
+      "answer": "against the Family if the child scolded by the parents"
+    },
+    {
+      "id": "tmp_gi_135",
+      "q": "What is the ground for impeachment of the Pres., Vice-Pres., Ombudsman, and Senator?",
+      "options": ["sexual harassment", "heinous crime", "grave abuse of the authority", "graft and corruption", "culpable violation of the Constitution"],
+      "answer": "culpable violation of the Constitution"
+    }
+  ]
+}
+====
+>>>>
+````
+
+FILE: src/mcq/civil_service_exam/vocabulary_sentence_completion/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_vc_1",
+      "q": "If you are ambivalent with the answers, analyze the given problem.",
+      "options": ["confusion", "innocent", "uncertain", "unaware"],
+      "answer": "uncertain"
+    },
+    {
+      "id": "tmp_vc_2",
+      "q": "He left the country because of the ominous experiences he had in the past.",
+      "options": ["unforgettable", "threatening", "ugly", "remarkable"],
+      "answer": "threatening"
+    },
+    {
+      "id": "tmp_vc_3",
+      "q": "Teenagers are easily susceptible to peer influence.",
+      "options": ["flexible", "inspired", "dependable", "inclined"],
+      "answer": "inclined"
+    },
+    {
+      "id": "tmp_vc_4",
+      "q": "My mother is always adamant in eating breakfast before leaving the house.",
+      "options": ["resolute", "uncertain", "forgetful", "clueless"],
+      "answer": "resolute"
+    },
+    {
+      "id": "tmp_vc_5",
+      "q": "Reading words without understanding their meaning is futile.",
+      "options": ["helpless", "useless", "unnecessary", "avoidable"],
+      "answer": "useless"
+    },
+    {
+      "id": "tmp_vc_6",
+      "q": "She wears gold but people knows how ostentatious she can be.",
+      "options": ["pretentious", "ambitious", "gorgeous", "rebellious"],
+      "answer": "pretentious"
+    },
+    {
+      "id": "tmp_vc_7",
+      "q": "He submitted a grotesque artwork that nobody in the class could relate to.",
+      "options": ["different", "weird", "beautiful", "colorful"],
+      "answer": "weird"
+    },
+    {
+      "id": "tmp_vc_8",
+      "q": "Their clandestine affair remained unknown for three years.",
+      "options": ["forbidden", "surprise", "secret", "unacceptable"],
+      "answer": "secret"
+    },
+    {
+      "id": "tmp_vc_9",
+      "q": "They say love is like a firework, a fleeting moment.",
+      "options": ["brief", "unforgettable", "shinny", "remarkable"],
+      "answer": "brief"
+    },
+    {
+      "id": "tmp_vc_10",
+      "q": "Cara is repulsive and rebellious. She always speaks sordid words.",
+      "options": ["dirty", "vulgar", "weird", "bizarre"],
+      "answer": "vulgar"
+    },
+    {
+      "id": "tmp_vc_11",
+      "q": "Every time I see Cathy looking at me, I feel Euphoria in my bones.",
+      "options": ["gravity", "ecstasy", "erotic", "numb"],
+      "answer": "ecstasy"
+    },
+    {
+      "id": "tmp_vc_12",
+      "q": "I bought this book because when I read the blurb at the back, I fell in love with it.",
+      "options": ["summary", "teaser", "blog", "plot"],
+      "answer": "teaser"
+    },
+    {
+      "id": "tmp_vc_13",
+      "q": "Finding a way out of the labyrinth is the last challenge of the competition.",
+      "options": ["castle", "forest", "maze", "box"],
+      "answer": "maze"
+    },
+    {
+      "id": "tmp_vc_14",
+      "q": "There is still love in our hearts amidst our seemingly mundane existence.",
+      "options": ["complicated", "modern", "worldly", "wealthy"],
+      "answer": "worldly"
+    },
+    {
+      "id": "tmp_vc_15",
+      "q": "Cassy has a strong penchant in collecting cars.",
+      "options": ["belief", "fondness", "hobby", "route"],
+      "answer": "fondness"
+    },
+    {
+      "id": "tmp_vc_16",
+      "q": "Diskettes and CDs are going obsolete.",
+      "options": ["recycled", "refurbished", "updated", "outdated"],
+      "answer": "outdated"
+    },
+    {
+      "id": "tmp_vc_17",
+      "q": "The Queen of the Night dances vivaciously.",
+      "options": ["lively", "awkward", "kindly", "sweetly"],
+      "answer": "lively"
+    },
+    {
+      "id": "tmp_vc_18",
+      "q": "The court released a dogmatic statement that made people more hopeful.",
+      "options": ["naive", "unbelievable", "assertive", "unclear"],
+      "answer": "assertive"
+    },
+    {
+      "id": "tmp_vc_19",
+      "q": "This generation is prone to plethoric use of mobile gadgets.",
+      "options": ["essential", "crucial", "important", "excessive"],
+      "answer": "excessive"
+    },
+    {
+      "id": "tmp_vc_20",
+      "q": "I am usually haphazard in composing my poetry but they turn out so well anyway.",
+      "options": ["disorganized", "blank", "puzzled", "strategic"],
+      "answer": "disorganized"
+    }
+  ]
+}
+====
+>>>>
+````
+
+FILE: src/mcq/civil_service_exam/verbal_analogy/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_an_1",
+      "q": "Iron: metal: : granite: _________",
+      "options": ["rock", "sand", "solid"],
+      "answer": "rock"
+    },
+    {
+      "id": "tmp_an_2",
+      "q": "Decibel: sound: : volt: _________",
+      "options": ["watts", "fire", "electricity", "lightning"],
+      "answer": "electricity"
+    },
+    {
+      "id": "tmp_an_3",
+      "q": "Coward: brave: : philanthropist: _________",
+      "options": ["selfish", "kind", "pessimist", "optimist"],
+      "answer": "selfish"
+    },
+    {
+      "id": "tmp_an_4",
+      "q": "Logic: reasoning: : ethics: _________",
+      "options": ["character", "behaviour", "subject", "traits"],
+      "answer": "behaviour"
+    },
+    {
+      "id": "tmp_an_5",
+      "q": "Antenna: signal: : net: _________",
+      "options": ["web", "catch", "gross", "fish"],
+      "answer": "fish"
+    },
+    {
+      "id": "tmp_an_6",
+      "q": "Stanza: poem: : act: _________",
+      "options": ["movie", "opera", "song", "lyric"],
+      "answer": "opera"
+    },
+    {
+      "id": "tmp_an_7",
+      "q": "Astrology: Astronomy : Alchemy: _________",
+      "options": ["Chemistry", "Biology", "Physics", "Science"],
+      "answer": "Chemistry"
+    },
+    {
+      "id": "tmp_an_8",
+      "q": "Census: population: : inventory: _________",
+      "options": ["accounting", "merchandise", "cost", "list"],
+      "answer": "merchandise"
+    },
+    {
+      "id": "tmp_an_9",
+      "q": "Oath: promise: : contract: _________",
+      "options": ["license", "contact", "agreement", "paper"],
+      "answer": "agreement"
+    },
+    {
+      "id": "tmp_an_10",
+      "q": "Glimmer: Flicker: : murmur: _________",
+      "options": ["whisper", "shout", "rumor", "speak"],
+      "answer": "whisper"
+    },
+    {
+      "id": "tmp_an_11",
+      "q": "Bouquet: flowers: : flock: _________",
+      "options": ["dogs", "sheep", "ship", "cats"],
+      "answer": "sheep"
+    },
+    {
+      "id": "tmp_an_12",
+      "q": "Rescind: law: : withdraw: _________",
+      "options": ["bank", "candidacy", "deposit", "resume"],
+      "answer": "candidacy"
+    },
+    {
+      "id": "tmp_an_13",
+      "q": "Hoax: deceive: : filibuster: _________",
+      "options": ["delay", "refuse", "stop", "none"],
+      "answer": "delay"
+    },
+    {
+      "id": "tmp_an_14",
+      "q": "Syllabus: course: : agenda: _________",
+      "options": ["subject", "platform", "meeting", "lesson"],
+      "answer": "meeting"
+    },
+    {
+      "id": "tmp_an_15",
+      "q": "Cat: kitten: : horse: _________",
+      "options": ["cab", "puppy", "stallion", "pony"],
+      "answer": "pony"
+    },
+    {
+      "id": "tmp_an_16",
+      "q": "Evaporate: vapor: : petrify: _________",
+      "options": ["liquid", "stone", "magnify", "cold"],
+      "answer": "stone"
+    },
+    {
+      "id": "tmp_an_17",
+      "q": "Canvas: painter: : marble: _________",
+      "options": ["sculptor", "rock", "statue", "form"],
+      "answer": "sculptor"
+    },
+    {
+      "id": "tmp_an_18",
+      "q": "Hammer: anvil: : pestle: _________",
+      "options": ["ground", "grinder", "mortar", "knife"],
+      "answer": "mortar"
+    },
+    {
+      "id": "tmp_an_19",
+      "q": "Librarian: books: : curator: _________",
+      "options": ["atlas", "encyclopedia", "room", "paintings"],
+      "answer": "paintings"
+    },
+    {
+      "id": "tmp_an_20",
+      "q": "Archive: manuscript: arsenal: _________",
+      "options": ["soldier", "weapon", "castle", "king"],
+      "answer": "weapon"
+    },
+    {
+      "id": "tmp_an_21",
+      "q": "Bodyguard: protection: : mentor: _________",
+      "options": ["advice", "counsel", "teacher", "leader"],
+      "answer": "counsel"
+    },
+    {
+      "id": "tmp_an_22",
+      "q": "Novelist: plot: : Architect: _________",
+      "options": ["building", "design", "blueprint", "house"],
+      "answer": "blueprint"
+    },
+    {
+      "id": "tmp_an_23",
+      "q": "Molecule: atoms: : tissue: _________",
+      "options": ["organ", "cells", "body", "neutrons"],
+      "answer": "cells"
+    },
+    {
+      "id": "tmp_an_24",
+      "q": "Call: telephone: : type: _________",
+      "options": ["cellphone", "ipad", "keyboard", "piano"],
+      "answer": "keyboard"
+    },
+    {
+      "id": "tmp_an_25",
+      "q": "Eavesdrop: conversation: : trespass: _________",
+      "options": ["property", "house", "land", "assets"],
+      "answer": "property"
+    }
+>>>>
+````
+
+FILE: src/mcq/civil_service_exam/number_analogy_series/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_ns_1",
+      "q": "2187, 729, 243, 81, 27, 9, _________?",
+      "options": ["6", "3", "4", "2"],
+      "answer": "3"
+    },
+    {
+      "id": "tmp_ns_2",
+      "q": "1, 4, 9, 16, 25, 36, 49, 64, _________?",
+      "options": ["72", "75", "81", "90"],
+      "answer": "81"
+    },
+    {
+      "id": "tmp_ns_3",
+      "q": "13 -21 34 -55 89 _________?",
+      "options": ["-95", "104", "-123", "-144"],
+      "answer": "-144"
+    },
+    {
+      "id": "tmp_ns_4",
+      "q": "AZ CX EV GT _________?",
+      "options": ["IR KP", "IR KQ", "IS KQ", "IS KP"],
+      "answer": "IR KP"
+    },
+    {
+      "id": "tmp_ns_5",
+      "q": "A5 D25 G125 J625 M3125 _________?",
+      "options": ["P15525", "P15625", "O15525", "O15625"],
+      "answer": "P15625"
+    },
+    {
+      "id": "tmp_ns_6",
+      "q": "100%, 2, 15/5, 4, _________?",
+      "options": ["2", "3", "4", "5"],
+      "answer": "5"
+    },
+    {
+      "id": "tmp_ns_7",
+      "q": "1/6, 1/3, 1/2, 2/3, _________?",
+      "options": ["2/6", "2/7", "3/5", "5/6"],
+      "answer": "5/6"
+    },
+    {
+      "id": "tmp_ns_8",
+      "q": "250%, 50%, 100%, 20%, 40%, _________?",
+      "options": ["8%", "10%", "5%", "15%"],
+      "answer": "8%"
+    },
+    {
+      "id": "tmp_ns_9",
+      "q": "0.1, 30%, 1/2, 0.7, 90%, _________?",
+      "options": ["1 1/10", "100%", "7/9", "1.4"],
+      "answer": "1 1/10"
+    },
+    {
+      "id": "tmp_ns_10",
+      "q": "5, 6, 9, 15, _________, 40",
+      "options": ["21", "27", "25", "33"],
+      "answer": "25"
+    },
+    {
+      "id": "tmp_ns_11",
+      "q": "5, 16, 49, 104, _________?",
+      "options": ["170", "148", "115", "181"],
+      "answer": "181"
+    },
+    {
+      "id": "tmp_ns_12",
+      "q": "225, 336, 447, _________, 669, 7710",
+      "options": ["114", "991", "558", "338"],
+      "answer": "558"
+    },
+    {
+      "id": "tmp_ns_13",
+      "q": "563, 647, 479, 815, _________?",
+      "options": ["672", "386", "279", "143"],
+      "answer": "143"
+    },
+    {
+      "id": "tmp_ns_14",
+      "q": "3, 12, 27, 48, 75, 108, _________?",
+      "options": ["183", "192", "162", "147"],
+      "answer": "192"
+    },
+    {
+      "id": "tmp_ns_15",
+      "q": "0.5, 0.55, 0.65, 0.8, _________?",
+      "options": ["0.82", "0.9", "0.95", "1"],
+      "answer": "1"
+    },
+    {
+      "id": "tmp_ns_16",
+      "q": "1/12, 1/6, 1/4, 1/3, _________?",
+      "options": ["1", "1/3", "5/12", "1/2"],
+      "answer": "5/12"
+    }
+  ]
+}
+====
+>>>>
+````
+
+FILE: src/mcq/civil_service_exam/quantitative_word_problems/set.json
+````diff
+<<<<
+  ]
+}
+====
+  ,
+    {
+      "id": "tmp_qw_1",
+      "q": "What is -25 + 16?",
+      "options": ["9", "-9", "-41", "41"],
+      "answer": "-9"
+    },
+    {
+      "id": "tmp_qw_2",
+      "q": "What is 107 - (-17)?",
+      "options": ["-90", "90", "124", "-124"],
+      "answer": "124"
+    },
+    {
+      "id": "tmp_qw_3",
+      "q": "(-9)(-22) = _________?",
+      "options": ["198", "-198", "31", "-31"],
+      "answer": "198"
+    },
+    {
+      "id": "tmp_qw_4",
+      "q": "(21)(-4) + (8)(-2) = _________?",
+      "options": ["-100", "100", "-23", "23"],
+      "answer": "-100"
+    },
+    {
+      "id": "tmp_qw_5",
+      "q": "(-560) / 7 = _________?",
+      "options": ["-80", "80", "-553", "553"],
+      "answer": "-80"
+    },
+    {
+      "id": "tmp_qw_6",
+      "q": "6/8 + 2 1/2 + 4/12 is also the same as?",
+      "options": ["1/2 + 2.5 + 1/4", "1/2 + 5/2 + 1/6", "3/4 + 2.5 + 1/6", "3/4 + 5/2 + 1/3"],
+      "answer": "3/4 + 5/2 + 1/3"
+    },
+    {
+      "id": "tmp_qw_7",
+      "q": "What is the Least Common Denominator of 1/8, 3/4, and 1/16?",
+      "options": ["4", "8", "16", "2"],
+      "answer": "16"
+    },
+    {
+      "id": "tmp_qw_8",
+      "q": "What is the Greatest Common Factor of 36 and 54?",
+      "options": ["6", "12", "18", "9"],
+      "answer": "18"
+    },
+    {
+      "id": "tmp_qw_9",
+      "q": "What is the sum of 1/2 + 8/4 + 6/12 ?",
+      "options": ["15/12", "3/12", "3", "3 1/12"],
+      "answer": "3"
+    },
+    {
+      "id": "tmp_qw_10",
+      "q": "3/9 x 2/3 = _________",
+      "options": ["6/27", "2/9", "9/18", "1/9"],
+      "answer": "2/9"
+    },
+    {
+      "id": "tmp_qw_11",
+      "q": "3/4 / 1/8 = _________",
+      "options": ["8", "4", "12", "6"],
+      "answer": "6"
+    },
+    {
+      "id": "tmp_qw_12",
+      "q": "What is the decimal form of 3/4 %?",
+      "options": [".0075", ".075", ".75", ".00075"],
+      "answer": ".0075"
+    },
+    {
+      "id": "tmp_qw_13",
+      "q": "Convert 3.4% as a fraction.",
+      "options": ["34/100", ".34/100", "3.4/1000", "3.4/100"],
+      "answer": "3.4/100"
+    },
+    {
+      "id": "tmp_qw_14",
+      "q": "What is 1/4 in decimal?",
+      "options": [".025", ".25", "2.5", ".0025"],
+      "answer": ".25"
+    },
+    {
+      "id": "tmp_qw_15",
+      "q": "What is the ratio of 1/2 to 2/5?",
+      "options": ["3:4", "5:4", "1:3", "2:5"],
+      "answer": "5:4"
+    },
+    {
+      "id": "tmp_qw_16",
+      "q": "2.12 is multiplied by 10 to the sixth power is?",
+      "options": ["212,000", "2,120,000", "212,000", "21,200"],
+      "answer": "2,120,000"
+    },
+    {
+      "id": "tmp_qw_17",
+      "q": "25 is multiplied by 10 to the fifth power is?",
+      "options": ["2,500,000", "250,000", "25,000", ".000025"],
+      "answer": "2,500,000"
+    },
+    {
+      "id": "tmp_qw_18",
+      "q": "Find the value of x in the equation: 5x + 25 = 10",
+      "options": ["5", "3", "-3", "-5"],
+      "answer": "-3"
+    },
+    {
+      "id": "tmp_qw_19",
+      "q": "If x=8, find the value of y in the equation: 4x - 2y = 28.",
+      "options": ["-4", "-2", "4", "2"],
+      "answer": "2"
+    },
+    {
+      "id": "tmp_qw_20",
+      "q": "Find the value of x if y= 8 in the equation: 2x + 4y = 50",
+      "options": ["9", "8", "10", "4"],
+      "answer": "9"
+    },
+    {
+      "id": "tmp_qw_21",
+      "q": "Kit is twice as old as his friend Sam. Sam is 5 years older than Cara. In 5 years, Kit will be three times as old as Cara. How old is Sam?",
+      "options": ["2 years old", "3 years old", "4 years old", "5 years old"],
+      "answer": "5 years old"
+    },
+    {
+      "id": "tmp_qw_22",
+      "q": "James's dad is 5 times older than James and James is twice as old as his sister Sara. In two years, the sum of their ages will be 58. How old is James now?",
+      "options": ["6 years old", "7 years old", "8 years old", "9 years old"],
+      "answer": "8 years old"
+    },
+    {
+      "id": "tmp_qw_23",
+      "q": "Cathy scored 85, 87, 90, 95, and 100 in her Math exams. What will be her average grade in Math from this period?",
+      "options": ["91.40", "91.50", "92", "93.50"],
+      "answer": "91.40"
+    },
+    {
+      "id": "tmp_qw_24",
+      "q": "Letty left home and drove at the rate of 50 miles per hour for 2 hours. She stopped for lunch then drove for another 4 hours at 65 mph to reach Los Angeles. How many miles did Letty drive to reach LA?",
+      "options": ["115 miles", "360 miles", "310 miles", "100 miles"],
+      "answer": "360 miles"
+    },
+    {
+      "id": "tmp_qw_25",
+      "q": "Michelle went to SM for the 3-day sale. She bought a new pair of shoes and paid only P2,450 discounted for 20% off. What was the original price of the shoes?",
+      "options": ["P3,062.50", "P3,260.50", "P3,620.50", "P3,026.50"],
+      "answer": "P3,062.50"
+    }
+  ]
+}
+====
+>>>>
+````

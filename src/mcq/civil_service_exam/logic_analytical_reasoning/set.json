@@ -183,5 +183,67 @@
       ],
       "answer": "Barangay X has fewer juvenile delinquents than other barangays"
     }
+  ,
+    {
+      "id": "tmp_lg_61",
+      "q": "Children are in pursuit of a dog whose leash has broken. James is directly behind the dog. Ruby is behind James. Rachel is behind Ruby. Max is ahead of the dog walking down the street in the opposite direction. As the children and dog pass, Max turns around and joins the pursuit. He runs in behind Ruby. James runs faster and is alongside the dog on the left. Ruby runs faster and is alongside the dog on the right. Which child is directly behind the dog?",
+      "options": ["James", "Ruby", "Rachel", "Max"],
+      "answer": "Rachel"
+    },
+    {
+      "id": "tmp_lg_62",
+      "q": "Tom puts on his socks before he puts on his shoes.\nHe puts on his shirt before he puts on his jacket.\nTom puts on his shoes before he puts on his shirt.\nIf the first two statements are true, the third statement is",
+      "options": ["true", "false", "uncertain"],
+      "answer": "uncertain"
+    },
+    {
+      "id": "tmp_lg_63",
+      "q": "Tanya is older than Eric.\nCliff is older than Tanya.\nEric is older than Cliff.\nIf the first two statements are true, the third statement is",
+      "options": ["true", "false", "uncertain"],
+      "answer": "false"
+    },
+    {
+      "id": "tmp_lg_64",
+      "q": "Statement: In the recently held all Philippine Nursing conference, the session on 'Vacination Campaign' surprisingly attracted a large number of participants and also received very good media coverage.\n\nAssumptions:\nI. Media is always very positive towards the Service sector.\nII. The service sector is managed properly in Philippines.\nIII. People weren't expecting such an encouraging response to the service sector conference.",
+      "options": ["I, II, and III", "I and III", "I and II", "II and III", "III only"],
+      "answer": "III only"
+    },
+    {
+      "id": "tmp_lg_65",
+      "q": "Subscribing to Cable T.V. is a luxury. All luxuries are needless expenditures. Having a cellular phone is not a luxury. Dining in a Five-Star hotel is a needless expenditure\n\nCONCLUSION:",
+      "options": ["Having a cellular phone is not a needless expenditure", "Subscribing to Cable TV is a needless expenditure", "Subscribing to cable TV is not a needless expenditure", "Dining in a Five-Star hotel is not a luxury", "Dining in a Five-Star hotel is a luxury"],
+      "answer": "Subscribing to Cable TV is a needless expenditure"
+    },
+    {
+      "id": "tmp_lg_66",
+      "q": "A factory worker has five children. No one else in the factory has five children.",
+      "options": ["All workers in the factory have five children each.", "Everybody in the factory has children.", "Some of the factory workers have more than five children.", "Only one worker in the factory has exactly five children."],
+      "answer": "Only one worker in the factory has exactly five children."
+    },
+    {
+      "id": "tmp_lg_67",
+      "q": "Television convinces viewers that the likelihood of their becoming the victim of a violent crime is extremely high; at the same time by its very nature, TV persuades viewers to passively accept whatever happens to them.",
+      "options": ["TV viewing promotes criminal behaviour.", "TV viewers are most likely to be victimized than others.", "People should not watch TV.", "TV promotes a feeling of helpless vulnerability in viewers."],
+      "answer": "TV promotes a feeling of helpless vulnerability in viewers."
+    },
+    {
+      "id": "tmp_lg_68",
+      "q": "The government is soon going to introduce a bill which would permit the instituting of private universities under very strict directions.",
+      "options": ["We have some private universities in our country even now.", "The demand for more universities is being stepped up.", "Such directions can also be issued without informing the Parliament.", "The government gives directions to establish anything in private sector.", "Unless and until the directions are given, the private universities can charge exorbitant fees."],
+      "answer": "The demand for more universities is being stepped up."
+    },
+    {
+      "id": "tmp_lg_69",
+      "q": "All the tulips in Zoe's garden are white.\nAll the pansies in Zoe's garden are yellow.\nAll the flowers in Zoe's garden are either white or yellow.\nIf the first two statements are true, the third statement is",
+      "options": ["true", "false", "uncertain"],
+      "answer": "uncertain"
+    },
+    {
+      "id": "tmp_lg_70",
+      "q": "Three pencils cost the same as two erasers.\nFour erasers cost the same as one ruler.\nPencils are more expensive than rulers.\nIf the first two statements are true, the third statement is",
+      "options": ["true", "false", "uncertain"],
+      "answer": "false"
+    }
   ]
 }
+====

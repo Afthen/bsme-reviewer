@@ -1,0 +1,283 @@
+{
+  "id": "mcq_cse_clerical_01",
+  "title": "Clerical Operations",
+  "subject": "Civil Service Exam",
+  "category": "Clerical Ability",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Which department of an office is responsible for hiring new personnel?",
+      "options": [
+        "Office of the President",
+        "Accounting Department",
+        "Logistic and Supply",
+        "Human Resource Department"
+      ],
+      "answer": "Human Resource Department"
+    },
+    {
+      "id": 2,
+      "q": "Which computer program should you go if you want to email a company?",
+      "options": [
+        "Word",
+        "Excel",
+        "Outlook",
+        "Powerpoint"
+      ],
+      "answer": "Outlook"
+    },
+    {
+      "id": 3,
+      "q": "This is a telephonic transmission of scanned documents of texts and images to a telephone number connected to a printer.",
+      "options": [
+        "Photocopying Machine",
+        "Fax Machine",
+        "Typewriter",
+        "Inkjet Printer"
+      ],
+      "answer": "Fax Machine"
+    },
+    {
+      "id": 4,
+      "q": "The chief financial officer is responsible for the financial matters and financial management of a corporation, she is also known as the _________.",
+      "options": [
+        "Auditor",
+        "Treasurer",
+        "Chief Executive Officer",
+        "Manager"
+      ],
+      "answer": "Treasurer"
+    },
+    {
+      "id": 5,
+      "q": "Which department of a company is responsible for cash register operations and payment processing?",
+      "options": [
+        "Cashier",
+        "Billing",
+        "Accounting",
+        "Budget"
+      ],
+      "answer": "Cashier"
+    },
+    {
+      "id": 6,
+      "q": "What is the correct filing arrangement for the following names:\n1. Angeles, Mario P.\n2. Angeles, Maricel P.\n3. Angeles, Marissa P.\n4. Angeles, Maria P.",
+      "options": [
+        "4,2,1,3",
+        "4,1,2,3",
+        "4,3,2,1",
+        "4,1,3,2"
+      ],
+      "answer": "4,2,1,3"
+    },
+    {
+      "id": 7,
+      "q": "All of the following items are found in the Official Receipt form except _________.",
+      "options": [
+        "Name and address of the buyer",
+        "Signature of the recipient",
+        "Quantity of the items paid",
+        "Credit Card Number of the customer"
+      ],
+      "answer": "Credit Card Number of the customer"
+    },
+    {
+      "id": 8,
+      "q": "The method of indexing and filing where names are in alphabetized order.",
+      "options": [
+        "Numeric",
+        "Metric",
+        "Geographic",
+        "Alphabetic"
+      ],
+      "answer": "Alphabetic"
+    },
+    {
+      "id": 9,
+      "q": "Which is the best way to address a correspondence for the President of the Philippines?",
+      "options": [
+        "His Excellency Rodrigo Duterte",
+        "His Excellency President Rodrigo Duterte",
+        "President Rodrigo Duterte",
+        "President Digong"
+      ],
+      "answer": "His Excellency President Rodrigo Duterte"
+    },
+    {
+      "id": 10,
+      "q": "How do you address the Queen of England when you talk about her?",
+      "options": [
+        "Her Highness the Queen",
+        "Her Majesty Queen Elizabeth II",
+        "Queen Elizabeth II her Highness",
+        "Queen Elizabeth II her Majesty"
+      ],
+      "answer": "Her Majesty Queen Elizabeth II"
+    },
+    {
+      "id": 11,
+      "q": "Your boss asked you to send her a soft copy of your latest résumé. An example of a soft copy is:",
+      "options": [
+        "A print out copy usually in a paper",
+        "Original copy written in a paper",
+        "A copy saved in a computer and sent through email",
+        "A copy from a Xerox machine"
+      ],
+      "answer": "A copy saved in a computer and sent through email"
+    },
+    {
+      "id": 12,
+      "q": "When a company asked you to submit your latest CV, what does CV stand for?",
+      "options": [
+        "Curriculum Vitum",
+        "Curriculum Virtue",
+        "Curriculum Vitae",
+        "Curriculum Vital"
+      ],
+      "answer": "Curriculum Vitae"
+    },
+    {
+      "id": 13,
+      "q": "It is the section of Accounting Department in a company that records goods and services that it receives and the payments it owes.",
+      "options": [
+        "Budget",
+        "Payroll",
+        "Accounts Payable and Receivable",
+        "Inventory"
+      ],
+      "answer": "Accounts Payable and Receivable"
+    },
+    {
+      "id": 14,
+      "q": "Which of the following is not a function of Accounting Department in a big corporation?",
+      "options": [
+        "Prepare Interim Financial Statements",
+        "Inventory Management",
+        "Bank Reconciliation",
+        "Internal and External Auditing"
+      ],
+      "answer": "Internal and External Auditing"
+    },
+    {
+      "id": 15,
+      "q": "He is the highest ranking executive manager in a corporation and he is the top person in command in an organization.",
+      "options": [
+        "Chief Financial Executive",
+        "Chief Executive Officer",
+        "Executive Admin. Officer",
+        "Chief Executive Assistant"
+      ],
+      "answer": "Chief Executive Officer"
+    },
+    {
+      "id": 16,
+      "q": "Which of the following is not a responsibility of a clerical worker?",
+      "options": [
+        "Marketing and promotion for customers",
+        "Filing and updating purchase orders",
+        "Updating and billing buyer's account",
+        "Answering business emails"
+      ],
+      "answer": "Marketing and promotion for customers"
+    },
+    {
+      "id": 17,
+      "q": "Arrange the proper filing of the following in alphabetical order:\nA. Lieutenant Colonel Mark David\nB. Atty. Elen Rodriguez\nC. Captain Max Aquino\nD. Dr. Juan Castro",
+      "options": [
+        "CDAB",
+        "CDBA",
+        "BDCA",
+        "BCDA"
+      ],
+      "answer": "BCDA"
+    },
+    {
+      "id": 18,
+      "q": "Arrange the proper filing of the following in alphabetical order:\nA. Sec. Dinky Soliman\nB. Sec. Richard Gordon\nC. Sec. Voltaire Gazmin\nD. Sec. Armin Luistro",
+      "options": [
+        "DABC",
+        "DACB",
+        "CBDA",
+        "CBAD"
+      ],
+      "answer": "DABC"
+    },
+    {
+      "id": 19,
+      "q": "How much is the present Value-Added-Tax in the Philippines?",
+      "options": [
+        "12% of gross profit",
+        "12% of cost of goods sold",
+        "12% of gross sales",
+        "12% of net income"
+      ],
+      "answer": "12% of gross sales"
+    },
+    {
+      "id": 20,
+      "q": "This department of the company is responsible for preparing and updating customers' accounts:",
+      "options": [
+        "Purchasing section",
+        "Cashier section",
+        "Billing Section",
+        "Releasing section"
+      ],
+      "answer": "Billing Section"
+    },
+    {
+      "id": 21,
+      "q": "This is a type of document issued by a seller to a buyer relating to a sale transaction and indicating the products, quantities and prices sold to the buyer.",
+      "options": [
+        "Check voucher",
+        "Purchase order",
+        "Delivery receipt",
+        "Sales invoice"
+      ],
+      "answer": "Sales invoice"
+    },
+    {
+      "id": 22,
+      "q": "Which of the following is not a usual document used in a sales company?",
+      "options": [
+        "Form 137",
+        "Delivery receipt",
+        "Sales invoice",
+        "Purchase order"
+      ],
+      "answer": "Form 137"
+    },
+    {
+      "id": 23,
+      "q": "One of the responsibilities of a clerical job is answering and tending phone calls. Which is the best way to answer a phone call in a company?",
+      "options": [
+        "Say \"Hello,\" and wait for the caller to speak.",
+        "Run and get a pen and notebook then pick up the phone.",
+        "Answer the phone politely and give your department or company name.",
+        "Wait for fellow employees to answer the phone."
+      ],
+      "answer": "Answer the phone politely and give your department or company name."
+    },
+    {
+      "id": 24,
+      "q": "An example of a hard copy document is:",
+      "options": [
+        "PDF file letter",
+        "Company email message",
+        "A business letter saved in USB",
+        "Business letter in a paper"
+      ],
+      "answer": "Business letter in a paper"
+    },
+    {
+      "id": 25,
+      "q": "What does a CC means in an email message?",
+      "options": [
+        "Copy sent",
+        "Copy furnished",
+        "Copy cat",
+        "Client copy"
+      ],
+      "answer": "Copy furnished"
+    }
+  ]
+}

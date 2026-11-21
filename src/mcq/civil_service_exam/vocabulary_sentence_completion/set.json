@@ -186,5 +186,249 @@
       ],
       "answer": "Beds of fingernails"
     }
+  ,
+    {
+      "id": "tmp_vc_1",
+      "q": "If you are ambivalent with the answers, analyze the given problem.",
+      "options": ["confusion", "innocent", "uncertain", "unaware"],
+      "answer": "uncertain"
+    },
+    {
+      "id": "tmp_vc_2",
+      "q": "He left the country because of the ominous experiences he had in the past.",
+      "options": ["unforgettable", "threatening", "ugly", "remarkable"],
+      "answer": "threatening"
+    },
+    {
+      "id": "tmp_vc_3",
+      "q": "Teenagers are easily susceptible to peer influence.",
+      "options": ["flexible", "inspired", "dependable", "inclined"],
+      "answer": "inclined"
+    },
+    {
+      "id": "tmp_vc_4",
+      "q": "My mother is always adamant in eating breakfast before leaving the house.",
+      "options": ["resolute", "uncertain", "forgetful", "clueless"],
+      "answer": "resolute"
+    },
+    {
+      "id": "tmp_vc_5",
+      "q": "Reading words without understanding their meaning is futile.",
+      "options": ["helpless", "useless", "unnecessary", "avoidable"],
+      "answer": "useless"
+    },
+    {
+      "id": "tmp_vc_6",
+      "q": "She wears gold but people knows how ostentatious she can be.",
+      "options": ["pretentious", "ambitious", "gorgeous", "rebellious"],
+      "answer": "pretentious"
+    },
+    {
+      "id": "tmp_vc_7",
+      "q": "He submitted a grotesque artwork that nobody in the class could relate to.",
+      "options": ["different", "weird", "beautiful", "colorful"],
+      "answer": "weird"
+    },
+    {
+      "id": "tmp_vc_8",
+      "q": "Their clandestine affair remained unknown for three years.",
+      "options": ["forbidden", "surprise", "secret", "unacceptable"],
+      "answer": "secret"
+    },
+    {
+      "id": "tmp_vc_9",
+      "q": "They say love is like a firework, a fleeting moment.",
+      "options": ["brief", "unforgettable", "shinny", "remarkable"],
+      "answer": "brief"
+    },
+    {
+      "id": "tmp_vc_10",
+      "q": "Cara is repulsive and rebellious. She always speaks sordid words.",
+      "options": ["dirty", "vulgar", "weird", "bizarre"],
+      "answer": "vulgar"
+    },
+    {
+      "id": "tmp_vc_11",
+      "q": "Every time I see Cathy looking at me, I feel Euphoria in my bones.",
+      "options": ["gravity", "ecstasy", "erotic", "numb"],
+      "answer": "ecstasy"
+    },
+    {
+      "id": "tmp_vc_12",
+      "q": "I bought this book because when I read the blurb at the back, I fell in love with it.",
+      "options": ["summary", "teaser", "blog", "plot"],
+      "answer": "teaser"
+    },
+    {
+      "id": "tmp_vc_13",
+      "q": "Finding a way out of the labyrinth is the last challenge of the competition.",
+      "options": ["castle", "forest", "maze", "box"],
+      "answer": "maze"
+    },
+    {
+      "id": "tmp_vc_14",
+      "q": "There is still love in our hearts amidst our seemingly mundane existence.",
+      "options": ["complicated", "modern", "worldly", "wealthy"],
+      "answer": "worldly"
+    },
+    {
+      "id": "tmp_vc_15",
+      "q": "Cassy has a strong penchant in collecting cars.",
+      "options": ["belief", "fondness", "hobby", "route"],
+      "answer": "fondness"
+    },
+    {
+      "id": "tmp_vc_16",
+      "q": "Diskettes and CDs are going obsolete.",
+      "options": ["recycled", "refurbished", "updated", "outdated"],
+      "answer": "outdated"
+    },
+    {
+      "id": "tmp_vc_17",
+      "q": "The Queen of the Night dances vivaciously.",
+      "options": ["lively", "awkward", "kindly", "sweetly"],
+      "answer": "lively"
+    },
+    {
+      "id": "tmp_vc_18",
+      "q": "The court released a dogmatic statement that made people more hopeful.",
+      "options": ["naive", "unbelievable", "assertive", "unclear"],
+      "answer": "assertive"
+    },
+    {
+      "id": "tmp_vc_19",
+      "q": "This generation is prone to plethoric use of mobile gadgets.",
+      "options": ["essential", "crucial", "important", "excessive"],
+      "answer": "excessive"
+    },
+    {
+      "id": "tmp_vc_20",
+      "q": "I am usually haphazard in composing my poetry but they turn out so well anyway.",
+      "options": ["disorganized", "blank", "puzzled", "strategic"],
+      "answer": "disorganized"
+    }
+  ,
+    {
+      "id": "tmp_vc_1",
+      "q": "If you are ambivalent with the answers, analyze the given problem.",
+      "options": ["confusion", "innocent", "uncertain", "unaware"],
+      "answer": "uncertain"
+    },
+    {
+      "id": "tmp_vc_2",
+      "q": "He left the country because of the ominous experiences he had in the past.",
+      "options": ["unforgettable", "threatening", "ugly", "remarkable"],
+      "answer": "threatening"
+    },
+    {
+      "id": "tmp_vc_3",
+      "q": "Teenagers are easily susceptible to peer influence.",
+      "options": ["flexible", "inspired", "dependable", "inclined"],
+      "answer": "inclined"
+    },
+    {
+      "id": "tmp_vc_4",
+      "q": "My mother is always adamant in eating breakfast before leaving the house.",
+      "options": ["resolute", "uncertain", "forgetful", "clueless"],
+      "answer": "resolute"
+    },
+    {
+      "id": "tmp_vc_5",
+      "q": "Reading words without understanding their meaning is futile.",
+      "options": ["helpless", "useless", "unnecessary", "avoidable"],
+      "answer": "useless"
+    },
+    {
+      "id": "tmp_vc_6",
+      "q": "She wears gold but people knows how ostentatious she can be.",
+      "options": ["pretentious", "ambitious", "gorgeous", "rebellious"],
+      "answer": "pretentious"
+    },
+    {
+      "id": "tmp_vc_7",
+      "q": "He submitted a grotesque artwork that nobody in the class could relate to.",
+      "options": ["different", "weird", "beautiful", "colorful"],
+      "answer": "weird"
+    },
+    {
+      "id": "tmp_vc_8",
+      "q": "Their clandestine affair remained unknown for three years.",
+      "options": ["forbidden", "surprise", "secret", "unacceptable"],
+      "answer": "secret"
+    },
+    {
+      "id": "tmp_vc_9",
+      "q": "They say love is like a firework, a fleeting moment.",
+      "options": ["brief", "unforgettable", "shinny", "remarkable"],
+      "answer": "brief"
+    },
+    {
+      "id": "tmp_vc_10",
+      "q": "Cara is repulsive and rebellious. She always speaks sordid words.",
+      "options": ["dirty", "vulgar", "weird", "bizarre"],
+      "answer": "vulgar"
+    },
+    {
+      "id": "tmp_vc_11",
+      "q": "Every time I see Cathy looking at me, I feel Euphoria in my bones.",
+      "options": ["gravity", "ecstasy", "erotic", "numb"],
+      "answer": "ecstasy"
+    },
+    {
+      "id": "tmp_vc_12",
+      "q": "I bought this book because when I read the blurb at the back, I fell in love with it.",
+      "options": ["summary", "teaser", "blog", "plot"],
+      "answer": "teaser"
+    },
+    {
+      "id": "tmp_vc_13",
+      "q": "Finding a way out of the labyrinth is the last challenge of the competition.",
+      "options": ["castle", "forest", "maze", "box"],
+      "answer": "maze"
+    },
+    {
+      "id": "tmp_vc_14",
+      "q": "There is still love in our hearts amidst our seemingly mundane existence.",
+      "options": ["complicated", "modern", "worldly", "wealthy"],
+      "answer": "worldly"
+    },
+    {
+      "id": "tmp_vc_15",
+      "q": "Cassy has a strong penchant in collecting cars.",
+      "options": ["belief", "fondness", "hobby", "route"],
+      "answer": "fondness"
+    },
+    {
+      "id": "tmp_vc_16",
+      "q": "Diskettes and CDs are going obsolete.",
+      "options": ["recycled", "refurbished", "updated", "outdated"],
+      "answer": "outdated"
+    },
+    {
+      "id": "tmp_vc_17",
+      "q": "The Queen of the Night dances vivaciously.",
+      "options": ["lively", "awkward", "kindly", "sweetly"],
+      "answer": "lively"
+    },
+    {
+      "id": "tmp_vc_18",
+      "q": "The court released a dogmatic statement that made people more hopeful.",
+      "options": ["naive", "unbelievable", "assertive", "unclear"],
+      "answer": "assertive"
+    },
+    {
+      "id": "tmp_vc_19",
+      "q": "This generation is prone to plethoric use of mobile gadgets.",
+      "options": ["essential", "crucial", "important", "excessive"],
+      "answer": "excessive"
+    },
+    {
+      "id": "tmp_vc_20",
+      "q": "I am usually haphazard in composing my poetry but they turn out so well anyway.",
+      "options": ["disorganized", "blank", "puzzled", "strategic"],
+      "answer": "disorganized"
+    }
   ]
 }
+====
+====
