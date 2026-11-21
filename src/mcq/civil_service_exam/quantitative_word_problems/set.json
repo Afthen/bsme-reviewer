@@ -1095,8 +1095,7 @@
         "2 dimes and 6 quarters"
       ],
       "answer": "2 dimes and 6 quarters"
-    }
-  ,
+    },
     {
       "id": "tmp_qw_1",
       "q": "What is -25 + 16?",
@@ -1249,4 +1248,3 @@
     }
   ]
 }
-====
