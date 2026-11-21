@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Graph-based engineering problem generator and mastery reviewer",
   "scripts": {
+    "apply": "node tmp/apply_patch.mjs",
     "gen:registry": "node scripts/gen_registry.js",
     "skeleton": "node scripts/repo_skeleton.js",
     "ctx": "node scripts/fulfill_ctx.js",
