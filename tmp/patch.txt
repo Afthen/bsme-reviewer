@@ -1,66 +1,73 @@
-This is a known GitHub Actions "glitch" that occurs when a workflow run is re-triggered or when a single job is re-run multiple times. Each time the `upload-pages-artifact` step runs, it adds a new artifact to the current workflow run ID rather than overwriting the previous one. When `deploy-pages` starts, it sees multiple versions of `github-pages` and crashes.
-
-### The Diagnosis: Artifact Accumulation
-In your current YAML, the **Build** (npm test) and **Deploy** steps are in the same job. If the deployment fails and you click "Re-run failed jobs," GitHub re-runs the upload step, creating a second (and eventually third) artifact for that same run.
-
-### The Fix: Job Decoupling
-The industry-standard solution for GitHub Pages is to decouple the **Build** and **Deploy** phases into two separate jobs.
-
-1.  **The `build` job:** Handles checkout, testing, registry generation, and uploads the artifact **once**.
-2.  **The `deploy` job:** Only starts if the `build` job succeeds. It consumes the artifact and pushes it to the server.
-
-By splitting them, the `deploy` job becomes an atomic operation that doesn't re-upload the artifact if it needs to be re-tried, thus preventing artifact collision.
-
-FILE: .github/workflows/deploy.yml
-````diff
+FILE: src/cas/units/scales.js
+```diff
 <<<<
-jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - run: npm test
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: "."
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      return baseMetaB && baseMetaB.dim === baseMetaA.dim && fB.power === fA.power &&
 ====
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - run: npm test
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: "."
-
-  deploy:
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      return baseMetaB && isDimEqual(baseMetaA.dimMap, baseMetaB.dimMap) && fB.power === fA.power &&
 >>>>
-````
+```
+```diff
+<<<<
+  return formatPairConversion(unitA, unitB, dimA, "whole");
+}
+====
+  return formatPairConversion(unitA, unitB, dimA, dimB, "whole");
+}
 
-### Why this solves the problem:
-- **Isolation:** The `build` job is the only place where the artifact is created.
-- **Atomicity:** If the `deploy` job fails (e.g., due to a GitHub API timeout), you can re-run just the `deploy` job. It will simply pull the existing artifact from the `build` job without creating a duplicate.
-- **Efficiency:** The deployment phase no longer needs to checkout the code or setup Node.js, making the final push faster.
-
-**Suggested Commit:** `ci: decouple build and deploy jobs to prevent github-pages artifact collision`
+function getAtomDimKey(dimMap) {
+  if (!dimMap) return "";
+  const keys = Object.keys(dimMap).sort();
+  if (keys.length === 1 && dimMap.M === 1) return "M";
+  if (keys.length === 1 && dimMap.T === 1) return "T";
+  if (keys.length === 1 && dimMap.T === -1) return "Freq";
+  if (keys.length === 3 && dimMap.M === 1 && dimMap.L === 2 && dimMap.T === -2) return "E";
+  return keys.map(k => `${k}:${dimMap[k]}`).join(",");
+}
+>>>>
+```
+```diff
+<<<<
+  const targetHasEnergy = targetAst.some(a => BASE_UNITS[a.base]?.dim === "E");
+====
+  const targetHasEnergy = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "E");
+>>>>
+```
+```diff
+<<<<
+  const targetHasMass = targetAst.some(a => BASE_UNITS[a.base]?.dim === "M");
+====
+  const targetHasMass = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "M");
+>>>>
+```
+```diff
+<<<<
+      workingUnit = "lb/s^2";
+====
+      workingUnit = "lbm/s^2";
+>>>>
+```
+```diff
+<<<<
+        dim: BASE_UNITS[atom.base]?.dim || atom.base
+====
+        dim: getAtomDimKey(BASE_UNITS[atom.base]?.dimMap) || atom.base
+>>>>
+```
+```diff
+<<<<
+      const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
+      const isRecipPair =
+====
+      const tDim = getAtomDimKey(BASE_UNITS[tAtom.base]?.dimMap) || tAtom.base;
+      const isRecipPair =
+>>>>
+```
+```diff
+<<<<
+      const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
+      return tDim === src.dim && Math.sign(tAtom.power) === Math.sign(src.netPower);
+====
+      const tDim = getAtomDimKey(BASE_UNITS[tAtom.base]?.dimMap) || tAtom.base;
+      return tDim === src.dim && Math.sign(tAtom.power) === Math.sign(src.netPower);
+>>>>
+```

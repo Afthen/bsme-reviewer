@@ -132,6 +132,13 @@ function refreshStepDerivations(activeProblem, relations) {
     activeProblem.solution.filter(s => s.isAnswered).map(s => s.targetVar)
   );
 
+  const userOverrides = {};
+  activeProblem.solution.forEach(s => {
+    if (s.isAnswered && s.userVal !== undefined) {
+      userOverrides[s.targetVar] = s.userVal;
+    }
+  });
+
   activeSteps.forEach((step, idx) => {
     const mathDiv = document.getElementById(`math-display-${idx}`);
     if (mathDiv) {
@@ -142,7 +149,8 @@ function refreshStepDerivations(activeProblem, relations) {
         activeProblem.varsDb,
         relations,
         answeredVars,
-        activeProblem.givens
+        activeProblem.givens,
+        userOverrides
       );
     }
   });
@@ -187,7 +195,7 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
   } else if (typeof meta.tolerance === "number") {
     tol = meta.tolerance;
   } else {
-    tol = Math.max(phi(-8) * Math.abs(expected), 1e-4);
+    tol = Math.max(phi(-10) * Math.abs(expected), 1e-4);
   }
 
   const isCorrect = Math.abs(val - expected) <= tol;

@@ -182,7 +182,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       }
 
       // B. Affine Temperature Conversion (e.g. °F -> °R, °C -> K)
-      if (parsed.length === 1 && BASE_UNITS[parsed[0].base]?.dim === "Th") {
+      if (parsed.length === 1 && BASE_UNITS[parsed[0].base]?.dimMap?.Th) {
         const baseMeta = BASE_UNITS[parsed[0].base];
         const isDiff = meta.dimension === "Temperature Difference" || !!meta.isDifference;
 

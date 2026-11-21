@@ -2,12 +2,6 @@
  * src/core/problem_gen.js
  * ============================================================================
  * ARCHITECTURAL PILLAR: Formula-as-Node Graph Problem Generator
- * - Seamless integration with 40-40-20 unit distribution sampler
- * - Persistent polymorphic names & symbols across statement and solution steps
- * - Neatness pass rounding without disturbing tabulated constants
- * - Direction-Agnostic Chain-Extension Invariant for longest-chain synthesis
- * - Multi-trial graph traversal at high mastery for global longest chain discovery
- * - Backward greedy givens reduction & constant recall-mode pruning preserved
  * ============================================================================
  */
 
@@ -26,13 +20,13 @@ export function relationWeaknessWeight(mastery = 0) {
 }
 
 export function determineGraphDistance(mastery, maxDepth = Infinity) {
-  if (mastery < phi(-2)) return 0;                               // < 38.2%: single relation (0 hops)
-  if (mastery < phi(-1)) return 1;                               // < 61.8%: 1 hop (2 equations)
-  if (mastery < FADING_THRESHOLD) return 2;                      // < 76.4%: 2 hops (3 equations)
-  if (mastery < 1 - phi(-4)) return Math.min(fib(4), maxDepth); // < 85.4%: 3 hops
-  if (mastery < 1 - phi(-5)) return Math.min(fib(5), maxDepth); // < 91.0%: 5 hops
-  if (mastery < 1 - phi(-6)) return Math.min(fib(6), maxDepth); // < 94.4%: 8 hops
-  return Math.min(fib(8), maxDepth);                             // >= 94.4%: maximum depth
+  if (mastery < phi(-2)) return 0;
+  if (mastery < phi(-1)) return 1;
+  if (mastery < FADING_THRESHOLD) return 2;
+  if (mastery < 1 - phi(-4)) return Math.min(fib(4), maxDepth);
+  if (mastery < 1 - phi(-5)) return Math.min(fib(5), maxDepth);
+  if (mastery < 1 - phi(-6)) return Math.min(fib(6), maxDepth);
+  return Math.min(fib(8), maxDepth);
 }
 
 function isRelSolvableFor(rel, varKey, varsDb = {}) {
@@ -54,7 +48,6 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   const isHighMastery = meanMastery >= FADING_THRESHOLD;
   const bestCandidates = [];
 
-  // Iterate through weakness-sorted nodes
   for (const { node: targetNode, mastery } of scoredNodes) {
     const candidateGoals = [...targetNode.nodes].sort(() => Math.random() - 0.5);
 
@@ -62,14 +55,11 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
       const meta = varsDb[goalVar] || CONSTANTS_DB[goalVar] || {};
       if (meta.isConstant) continue;
 
-      if (!isRelSolvableFor(targetNode, goalVar, varsDb)) {
-        continue;
-      }
+      if (!isRelSolvableFor(targetNode, goalVar, varsDb)) continue;
+
       const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery, varsDb);
       if (problem) {
-        if (!isHighMastery) {
-          return problem;
-        }
+        if (!isHighMastery) return problem;
         bestCandidates.push(problem);
       }
     }
@@ -81,7 +71,7 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   }
 
   const fallback = scoredNodes[0].node;
-  const goalVar = fallback.solvable ? fallback.solvable[0] : fallback.nodes[0];
+  const goalVar = fallback.nodes.find(n => !(varsDb[n] || CONSTANTS_DB[n])?.isConstant) || fallback.nodes[0];
   const givens = fallback.nodes.filter(n => n !== goalVar);
   return { goalVar, givens, distractors: [], targetEqId: fallback.id, hopDistance: 0 };
 }
@@ -100,7 +90,6 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
     const currentProduced = new Set(currentRequired.map(s => s.targetVar));
 
     for (const g of bestGivens) {
-      // Find any unvisited relation containing g that can algebraically solve for g
       const neighborRels = relations.filter(r =>
         !usedRelIds.has(r.id) &&
         r.nodes.includes(g) &&
@@ -112,11 +101,7 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
         if (rawNewInputs.includes(goalVar)) continue;
 
         const newInputs = rawNewInputs.filter(inp => !currentProduced.has(inp));
-
-        const candidateSet = Array.from(new Set([
-          ...bestGivens.filter(x => x !== g),
-          ...newInputs
-        ]));
+        const candidateSet = Array.from(new Set([...bestGivens.filter(x => x !== g), ...newInputs]));
 
         if (candidateSet.length <= fib(8) && canSolveTarget(candidateSet, goalVar, relations, S)) {
           const testSteps = solveDAG(candidateSet, S, relations, varsDb, () => 0);
@@ -137,7 +122,6 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
     }
 
     if (expansions.length === 0) break;
-
     expansions.sort((a, b) => (b.chainLen - a.chainLen) || (b.isLHS - a.isLHS) || (Math.random() - 0.5));
     const chosen = expansions[0];
     bestGivens = chosen.candidateSet;
@@ -147,25 +131,17 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
 
   const steps = solveDAG(bestGivens, S, relations, varsDb, () => 0);
   const required = pruneSolutionPath(steps, goalVar);
-
-  const usesTarget = required.some(s => s.eqId === targetNode.id || s.systemEqIds?.includes(targetNode.id));
-  if (!usesTarget) return null;
+  if (!required.some(s => s.eqId === targetNode.id)) return null;
 
   const producedVars = new Set(required.map(s => s.targetVar));
   const essentialGivensSet = new Set();
-
   required.forEach(step => {
     (step.nodes || []).forEach(n => {
-      if (n !== step.targetVar && !producedVars.has(n)) {
-        essentialGivensSet.add(n);
-      }
+      if (n !== step.targetVar && !producedVars.has(n)) essentialGivensSet.add(n);
     });
   });
 
-  const producibleVars = new Set(
-    relations.flatMap(r => r.nodes.filter(n => isRelSolvableFor(r, n, varsDb)))
-  );
-
+  const producibleVars = new Set(relations.flatMap(r => r.nodes.filter(n => isRelSolvableFor(r, n, varsDb))));
   let minimalGivens = Array.from(essentialGivensSet).sort((a, b) => {
     const aProducible = producibleVars.has(a) ? 1 : 0;
     const bProducible = producibleVars.has(b) ? 1 : 0;
@@ -175,38 +151,26 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
   for (let i = 0; i < minimalGivens.length; i++) {
     const candidate = minimalGivens[i];
     const reducedSet = minimalGivens.filter(v => v !== candidate);
-
     if (canSolveTarget(reducedSet, goalVar, relations, S)) {
       minimalGivens = reducedSet;
       i--;
     }
   }
 
-  // Recalculate true solution path and hop distance on the reduced givens
   const finalSteps = solveDAG(minimalGivens, S, relations, varsDb, () => 0);
   const finalRequired = pruneSolutionPath(finalSteps, goalVar);
-
   const finalUsedVars = new Set(finalRequired.flatMap(s => s.nodes || [s.targetVar]));
   minimalGivens.forEach(g => finalUsedVars.add(g));
 
   let distractors = [];
   if (Math.random() < phi(-4)) {
     const candidateDistractors = Object.keys(S).filter(k => {
-      if (k.startsWith("_") || finalUsedVars.has(k) || typeof S[k] !== "number" || isNaN(S[k])) {
-        return false;
-      }
-      // True-Distractor Invariant: exclude variables that can substitute for any minimal given
+      if (k.startsWith("_") || finalUsedVars.has(k) || typeof S[k] !== "number" || isNaN(S[k])) return false;
       const isAlternative = minimalGivens.length === 0
         ? canSolveTarget([k], goalVar, relations, S)
-        : minimalGivens.some(g => canSolveTarget(
-            minimalGivens.filter(v => v !== g).concat(k),
-            goalVar,
-            relations,
-            S
-          ));
+        : minimalGivens.some(g => canSolveTarget(minimalGivens.filter(v => v !== g).concat(k), goalVar, relations, S));
       return !isAlternative;
     });
-
     if (candidateDistractors.length > 0) {
       distractors = [candidateDistractors[Math.floor(Math.random() * candidateDistractors.length)]];
     }
@@ -224,41 +188,30 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
 function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, varsDb = {}) {
   const TRIALS = targetMastery >= FADING_THRESHOLD ? fib(5) : 1;
   let bestOfAll = null;
-
   for (let t = 0; t < TRIALS; t++) {
     const prob = buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, varsDb);
-    if (prob && (!bestOfAll || prob.hopDistance > bestOfAll.hopDistance)) {
-      bestOfAll = prob;
-    }
+    if (prob && (!bestOfAll || prob.hopDistance > bestOfAll.hopDistance)) bestOfAll = prob;
   }
   return bestOfAll;
 }
 
 export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topicConfig = {}) {
-  if (typeof topicConfig.statementBuilder === "function") {
-    return topicConfig.statementBuilder(givens, visibleGoals, S, varsDb);
-  }
+  if (typeof topicConfig.statementBuilder === "function") return topicConfig.statementBuilder(givens, visibleGoals, S, varsDb);
 
   S._displayNames = S._displayNames || {};
   S._displaySymbols = S._displaySymbols || {};
 
   function getPolymorphicMeta(v) {
     const meta = varsDb[v] || CONSTANTS_DB[v] || {};
-
     if (!S._displayNames[v]) {
       const names = meta.nameAliases && meta.nameAliases.length > 0 ? meta.nameAliases : [meta.name || v];
       S._displayNames[v] = names[Math.floor(Math.random() * names.length)];
     }
-
     if (!S._displaySymbols[v]) {
       const symbols = meta.symbolAliases && meta.symbolAliases.length > 0 ? meta.symbolAliases : [meta.symbol || v];
       S._displaySymbols[v] = symbols[Math.floor(Math.random() * symbols.length)];
     }
-
-    return {
-      name: S._displayNames[v],
-      symbol: S._displaySymbols[v]
-    };
+    return { name: S._displayNames[v], symbol: S._displaySymbols[v] };
   }
 
   const parts = givens.map(v => {
@@ -266,43 +219,28 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const meta = varsDb[v] || CONSTANTS_DB[v] || {};
     const u = S._u?.[v] || meta.unit || "";
     const poly = getPolymorphicMeta(v);
-
     const formattedVal = formatGivenValue(val, meta, true, u);
     let valWithUnit = `$${formattedVal}$`;
-
     if (u && u !== "dimless" && u !== "ratio") {
       const uTex = unitToTex(u, true);
-      if (u === "%") {
-        valWithUnit = `$${formattedVal}\\%$`;
-      } else if (u.startsWith("°")) {
-        valWithUnit = `$${formattedVal}${uTex}$`;
-      } else {
-        valWithUnit = `$${formattedVal}\\,${uTex}$`;
-      }
+      if (u === "%") valWithUnit = `$${formattedVal}\\%$`;
+      else if (u.startsWith("°")) valWithUnit = `$${formattedVal}${uTex}$`;
+      else valWithUnit = `$${formattedVal}\\,${uTex}$`;
     }
-
     return `${poly.name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${poly.symbol}$</span> = ${valWithUnit})</span>`;
   });
 
   const goalStrings = visibleGoals.map((gVar, idx) => {
     const poly = getPolymorphicMeta(gVar);
     const u = S._u?.[gVar] || varsDb[gVar]?.unit || CONSTANTS_DB[gVar]?.unit || "";
-
     let uStr = "";
-    if (u && u !== "dimless" && u !== "ratio") {
-      const uTex = unitToTex(u, true);
-      uStr = ` in $${uTex}$`;
-    }
-
+    if (u && u !== "dimless" && u !== "ratio") uStr = ` in $${unitToTex(u, true)}$`;
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
     return `${prefix}<strong>${poly.name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${poly.symbol}$</span>)</span>${uStr}`;
   });
 
   const systemNoun = topicConfig.noun || `${topicConfig.title || "Mechanical"} system`;
-  const firstChar = (systemNoun[0] || "").toLowerCase();
-  const startsWithVowel = "aeiou".includes(firstChar);
-  const article = startsWithVowel ? "An" : "A";
-
+  const article = "aeiou".includes((systemNoun[0] || "").toLowerCase()) ? "An" : "A";
   const goalsFormatted = goalStrings.length > 2
     ? goalStrings.slice(0, -1).join(", ") + ", and " + goalStrings[goalStrings.length - 1]
     : goalStrings.join(" and ");
@@ -321,51 +259,40 @@ export function generateProblem(topic, getMastery = () => 0) {
     createSystem = inst.createSystem;
   }
 
-  // 1. Establish ground truth system with 40-40-20 unit distribution
   const targetMode = sampleSystemMode();
-  let S_raw = createSystem({ sys: targetMode === "MIXED" ? "SI" : targetMode });
-  S_raw = applyProblemUnitSampling(S_raw, varsDb, targetMode);
+  let S_truth = createSystem({ sys: targetMode === "MIXED" ? "SI" : targetMode });
+  S_truth = applyProblemUnitSampling(S_truth, varsDb, targetMode);
 
-  // 2. Autonomous graph path unrolling
-  const path = generateAutonomousProblem(relations, S_raw, varsDb, getMastery);
-
+  const path = generateAutonomousProblem(relations, S_truth, varsDb, getMastery);
   const targetRel = relations.find(r => r.id === path.targetEqId) || relations[relations.length - 1];
   const problemTitle = targetRel ? targetRel.name : `${title} Problem`;
 
-  const S_neat = { ...S_raw };
-  path.givens.forEach(g => {
-    const val = S_raw[g];
-    if (typeof val !== "number") return;
-
-    const meta = varsDb[g] || CONSTANTS_DB[g] || {};
-    if (meta.isConstant) return;
-
-    if (meta.isInteger) {
-      S_neat[g] = Math.round(val);
-    } else {
-      S_neat[g] = parseFloat(val.toPrecision(6));
-    }
-  });
-
-  const allSteps = solveDAG(path.givens, S_neat, relations, varsDb, () => 0);
-
+  const allSteps = solveDAG(path.givens, S_truth, relations, varsDb, () => 0);
   allSteps.forEach(step => {
     const ast = parseMathAST(step.rhsExpr);
-    const { value } = evaluatePhysicalAST(ast, S_neat, step.targetVar, varsDb, step.requiredUnits);
-    S_neat[step.targetVar] = value;
+    const { value } = evaluatePhysicalAST(ast, S_truth, step.targetVar, varsDb, step.requiredUnits);
+    S_truth[step.targetVar] = value;
     step.expectedVal = value;
   });
 
-  const targetGoals = path.goalVar;
-  const solution = pruneSolutionPath(allSteps, targetGoals, getMastery);
+  const solution = pruneSolutionPath(allSteps, path.goalVar, getMastery);
 
-  // Unify units for deliverables in coupled groups
+  // Presentation State (S_display) is only for the Statement and UI.
+  const S_display = { ...S_truth, _u: { ...S_truth._u } };
+  path.givens.forEach(g => {
+    const val = S_truth[g];
+    if (typeof val !== "number") return;
+    const meta = varsDb[g] || CONSTANTS_DB[g] || {};
+    if (meta.isConstant) return;
+    S_display[g] = meta.isInteger ? Math.round(val) : parseFloat(val.toPrecision(6));
+  });
+
   const unifiedUnits = new Map();
   solution.forEach(step => {
     if (!step.isFaded) {
       const grp = findCoupledGroup(step.targetVar);
       if (grp) {
-        const currentUnit = S_neat._u[step.targetVar];
+        const currentUnit = S_truth._u[step.targetVar];
         if (!unifiedUnits.has(grp)) {
           unifiedUnits.set(grp, currentUnit);
         } else {
@@ -375,8 +302,8 @@ export function generateProblem(topic, getMastery = () => 0) {
             const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
             const coherentVal = valueToCoherentBase(step.expectedVal, currentUnit, isDiff, meta.dimension);
             const newVal = formatValueInUnit(coherentVal, targetUnit, isDiff, meta.dimension);
-            S_neat[step.targetVar] = newVal;
-            S_neat._u[step.targetVar] = targetUnit;
+            S_display[step.targetVar] = newVal;
+            S_display._u[step.targetVar] = targetUnit;
             step.expectedVal = newVal;
           }
         }
@@ -392,21 +319,14 @@ export function generateProblem(topic, getMastery = () => 0) {
     }
   });
 
-  // Layer 2: Constant recall-mode pruning heuristic
   const statementGivens = path.givens.filter(g => {
     const meta = varsDb[g] || CONSTANTS_DB[g] || {};
-    if (meta.isConstant) {
-      const constantMastery = getMastery({ id: `const_${g}` });
-      if (constantMastery >= FADING_THRESHOLD) {
-        return false;
-      }
-    }
+    if (meta.isConstant && getMastery({ id: `const_${g}` }) >= FADING_THRESHOLD) return false;
     return true;
   });
 
-  // Layer 3: Cognitive fading step hiding
   const visibleGoals = solution.filter(s => !s.isFaded).map(s => s.targetVar);
-  const statement = buildProblemStatement(statementGivens, visibleGoals, S_neat, varsDb, topic);
+  const statement = buildProblemStatement(statementGivens, visibleGoals, S_display, varsDb, topic);
 
   return {
     title: problemTitle,
@@ -416,7 +336,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     allSteps,
     givens: path.givens,
     distractors: path.distractors,
-    system: S_neat,
+    system: S_truth, // Return high-precision truth to solve "Alien Scale" issue
     varsDb,
     relations,
     topicId: topic.id,

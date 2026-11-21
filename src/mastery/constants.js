@@ -1,5 +1,5 @@
 /**
- * src/repetition/constants.js
+ * src/mastery/constants.js
  * Mathematical & Cognitive Decay Foundations (Golden Ratio & Fibonacci).
  */
 
@@ -45,7 +45,15 @@ export const PHI_INV6 = phi(-6);
 export const PHI_INV7 = phi(-7);
 export const PHI_INV8 = phi(-8);
 
-export const FADING_THRESHOLD = 1 - phi(-3); // ~0.7639 (76.4%)
+/**
+ * Cognitive Fading Threshold
+ * Mastery levels above this (~76.4%) trigger the "Hiding" of intermediate steps.
+ */
+export const FADING_THRESHOLD = 1 - phi(-3); 
+
+// Complexity scaling constants (Fibonacci steps for graph unrolling)
+export const FIB_STEPS = [0, 1, 2, 3, 5, 8, 21];
+export const MAX_HISTORY = 21;
 
 export const FIB_2 = fib(3);  // 2
 export const FIB_3 = fib(4);  // 3
@@ -55,7 +63,6 @@ export const FIB_13 = fib(7); // 13
 export const FIB_21 = fib(8); // 21
 
 export const VALID_WINDOWS = Object.freeze([FIB_2, FIB_3, FIB_5, FIB_8, FIB_13, FIB_21]);
-export const MAX_HISTORY = FIB_21;
 
 export function snapToFibonacci(val) {
   return VALID_WINDOWS.reduce((prev, curr) =>

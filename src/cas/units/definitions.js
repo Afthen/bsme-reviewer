@@ -21,72 +21,43 @@ export const PREFIXES = Object.freeze({
   "G": { name: "giga", scale: 1e9 }
 });
 
+/**
+ * SSOT: Unified Base Units and Dimensional Vectors.
+ * This prevents "Dimensionless Orphans" by forcing every unit to declare its 7D vector.
+ */
 export const BASE_UNITS = Object.freeze({
-  "gram":           { dim: "M", baseScale: 0.001, symbol: "g" },
-  "pound_mass":     { dim: "M", baseScale: 0.45359237, symbol: "lb" },
-  "pound_force":    { dim: "F", baseScale: 4.4482216, symbol: "lb" },
-  "kilogram_force": { dim: "F", baseScale: 9.80665, symbol: "kgf" },
-  "newton":         { dim: "F", baseScale: 1.0, symbol: "N" },
-  "meter":          { dim: "L", baseScale: 1.0, symbol: "m" },
-  "second":         { dim: "T", baseScale: 1.0, symbol: "s" },
-  "percent":        { dim: "C", baseScale: 0.01, symbol: "%" },
-  "Kelvin":         { dim: "Th", baseScale: 1.0, symbol: "K" },
-  "Celsius":        { dim: "Th", baseScale: 1.0, offset: 273.15, symbol: "°C" },
-  "Fahrenheit":     { dim: "Th", baseScale: 5/9, offset: 459.67, symbol: "°F" },
-  "Rankine":        { dim: "Th", baseScale: 5/9, symbol: "°R" },
-  "Btu":            { dim: "E", baseScale: 1055.056, symbol: "Btu" },
-  "Joule":          { dim: "E", baseScale: 1.0, symbol: "J" },
-  "Watt":           { dim: "Pow", baseScale: 1.0, symbol: "W" },
-  "Pascal":         { dim: "P", baseScale: 1.0, symbol: "Pa" },
-  "teeth":          { dim: "C", baseScale: 1.0, symbol: "teeth" },
-  "rad":            { dim: "C", baseScale: 1.0, symbol: "rad" },
-  "rev":            { dim: "C", baseScale: 1.0, symbol: "rev" },
-  "deg":            { dim: "C", baseScale: Math.PI / 180, symbol: "°" },
-  "minute":         { dim: "T", baseScale: 60.0, symbol: "min" },
-  "hour":           { dim: "T", baseScale: 3600.0, symbol: "h" },
-  "inch":           { dim: "L", baseScale: 0.0254, symbol: "in" },
-  "foot":           { dim: "L", baseScale: 0.3048, symbol: "ft" },
-  "yard":           { dim: "L", baseScale: 0.9144, symbol: "yd" },
-  "horsepower":     { dim: "Pow", baseScale: 745.69987, symbol: "hp" },
-  "kWh":            { dim: "E", baseScale: 3600000.0, symbol: "kWh" },
-  "bar":            { dim: "P", baseScale: 100000.0, symbol: "bar" },
-  "litre":          { dim: "Vol", baseScale: 0.001, symbol: "L" },
-  "rpm":            { dim: "Freq", baseScale: 1/60, symbol: "rpm" },
-  "hertz":          { dim: "Freq", baseScale: 1.0, symbol: "Hz" },
-  "cfm":            { dim: "VolFlow", baseScale: 0.3048**3 / 60, symbol: "cfm" }
-});
-
-const ATOM_DIM_VECTORS = Object.freeze({
-  "gram":           { M: 1 },
-  "pound_mass":     { M: 1 },
-  "meter":          { L: 1 },
-  "inch":           { L: 1 },
-  "foot":           { L: 1 },
-  "yard":           { L: 1 },
-  "litre":          { L: 3 },
-  "second":         { T: 1 },
-  "minute":         { T: 1 },
-  "hour":           { T: 1 },
-  "rpm":            { T: -1 },
-  "hertz":          { T: -1 },
-  "cfm":            { L: 3, T: -1 },
-  "Kelvin":         { Th: 1 },
-  "Celsius":        { Th: 1 },
-  "Fahrenheit":     { Th: 1 },
-  "Rankine":        { Th: 1 },
-  "newton":         { M: 1, L: 1, T: -2 },
-  "pound_force":    { M: 1, L: 1, T: -2 },
-  "kilogram_force": { M: 1, L: 1, T: -2 },
-  "Pascal":         { M: 1, L: -1, T: -2 },
-  "bar":            { M: 1, L: -1, T: -2 },
-  "Joule":          { M: 1, L: 2, T: -2 },
-  "Btu":            { M: 1, L: 2, T: -2 },
-  "kWh":            { M: 1, L: 2, T: -2 },
-  "Watt":           { M: 1, L: 2, T: -3 },
-  "horsepower":     { M: 1, L: 2, T: -3 },
-  "deg":            { Ang: 1 },
-  "rad":            { Ang: 1 },
-  "percent":        { Pct: 1 }
+  "gram":           { baseScale: 0.001, symbol: "g", dimMap: { M: 1 } },
+  "pound_mass":     { baseScale: 0.45359237, symbol: "lb", dimMap: { M: 1 } },
+  "pound_force":    { baseScale: 4.4482216, symbol: "lb", dimMap: { M: 1, L: 1, T: -2 } },
+  "kilogram_force": { baseScale: 9.80665, symbol: "kgf", dimMap: { M: 1, L: 1, T: -2 } },
+  "newton":         { baseScale: 1.0, symbol: "N", dimMap: { M: 1, L: 1, T: -2 } },
+  "meter":          { baseScale: 1.0, symbol: "m", dimMap: { L: 1 } },
+  "second":         { baseScale: 1.0, symbol: "s", dimMap: { T: 1 } },
+  "percent":        { baseScale: 0.01, symbol: "%", dimMap: { Pct: 1 } },
+  "Kelvin":         { baseScale: 1.0, symbol: "K", dimMap: { Th: 1 } },
+  "Celsius":        { baseScale: 1.0, symbol: "°C", dimMap: { Th: 1 }, offset: 273.15 },
+  "Fahrenheit":     { baseScale: 5/9, symbol: "°F", dimMap: { Th: 1 }, offset: 459.67 },
+  "Rankine":        { baseScale: 5/9, symbol: "°R", dimMap: { Th: 1 } },
+  "Btu":            { baseScale: 1055.056, symbol: "Btu", dimMap: { M: 1, L: 2, T: -2 } },
+  "Joule":          { baseScale: 1.0, symbol: "J", dimMap: { M: 1, L: 2, T: -2 } },
+  "Watt":           { baseScale: 1.0, symbol: "W", dimMap: { M: 1, L: 2, T: -3 } },
+  "Pascal":         { baseScale: 1.0, symbol: "Pa", dimMap: { M: 1, L: -1, T: -2 } },
+  "teeth":          { baseScale: 1.0, symbol: "teeth", dimMap: { C: 1 } },
+  "rad":            { baseScale: 1.0, symbol: "rad", dimMap: { Ang: 1 } },
+  "rev":            { baseScale: 1.0, symbol: "rev", dimMap: { C: 1 } },
+  "deg":            { baseScale: Math.PI / 180, symbol: "°", dimMap: { Ang: 1 } },
+  "minute":         { baseScale: 60.0, symbol: "min", dimMap: { T: 1 } },
+  "hour":           { baseScale: 3600.0, symbol: "h", dimMap: { T: 1 } },
+  "inch":           { baseScale: 0.0254, symbol: "in", dimMap: { L: 1 } },
+  "foot":           { baseScale: 0.3048, symbol: "ft", dimMap: { L: 1 } },
+  "yard":           { baseScale: 0.9144, symbol: "yd", dimMap: { L: 1 } },
+  "horsepower":     { baseScale: 745.69987, symbol: "hp", dimMap: { M: 1, L: 2, T: -3 } },
+  "kWh":            { baseScale: 3600000.0, symbol: "kWh", dimMap: { M: 1, L: 2, T: -2 } },
+  "bar":            { baseScale: 100000.0, symbol: "bar", dimMap: { M: 1, L: -1, T: -2 } },
+  "litre":          { baseScale: 0.001, symbol: "L", dimMap: { L: 3 } },
+  "rpm":            { baseScale: 1/60, symbol: "rpm", dimMap: { T: -1 } },
+  "hertz":          { baseScale: 1.0, symbol: "Hz", dimMap: { T: -1 } },
+  "cfm":            { baseScale: 0.3048**3 / 60, symbol: "cfm", dimMap: { L: 3, T: -1 } }
 });
 
 export const SUBSTITUTION_GRAPH = Object.freeze({
@@ -108,7 +79,6 @@ export function resolveUnitToken(tokenBody, dimension = null) {
   if (tokenBody === "R" || tokenBody === "°R") return { prefix: null, base: "Rankine" };
   if (tokenBody === "K") return { prefix: null, base: "Kelvin" };
 
-  // Explicit force/mass tokens
   if (tokenBody === "lbf" || tokenBody === "lb_f") return { prefix: null, base: "pound_force" };
   if (tokenBody === "lbm" || tokenBody === "lb_m") return { prefix: null, base: "pound_mass" };
   if (tokenBody === "kgf") return { prefix: null, base: "kilogram_force" };
@@ -118,7 +88,6 @@ export function resolveUnitToken(tokenBody, dimension = null) {
   if (tokenBody === "g") return { prefix: null, base: "gram" };
   if (tokenBody === "N") return { prefix: null, base: "newton" };
 
-  // Dimension-Aware Ambiguous "lb" Resolution
   if (tokenBody === "lb") {
     if (
       dimension === DIMENSIONS.MASS ||
@@ -131,24 +100,18 @@ export function resolveUnitToken(tokenBody, dimension = null) {
     return { prefix: null, base: "pound_force" };
   }
 
-  // Exact base match
   const foundExact = Object.keys(BASE_UNITS).find(
     bKey => bKey === tokenBody || BASE_UNITS[bKey].symbol === tokenBody
   );
-  if (foundExact) {
-    return { prefix: null, base: foundExact };
-  }
+  if (foundExact) return { prefix: null, base: foundExact };
 
-  // Prefix matching
   for (const [pCode, pMeta] of Object.entries(PREFIXES)) {
     if (tokenBody.startsWith(pCode) && tokenBody.length > pCode.length) {
       const possibleBase = tokenBody.slice(pCode.length);
       const foundBase = Object.keys(BASE_UNITS).find(
         bKey => bKey === possibleBase || BASE_UNITS[bKey].symbol === possibleBase
       );
-      if (foundBase) {
-        return { prefix: pMeta.name, base: foundBase };
-      }
+      if (foundBase) return { prefix: pMeta.name, base: foundBase };
     }
   }
 
@@ -171,10 +134,10 @@ export function getAbsoluteCompanionUnit(uName) {
   const ast = parseUnitToSemanticAST(uName);
   if (ast.length !== 1) return uName;
   const meta = BASE_UNITS[ast[0].base];
-  if (meta?.dim !== "Th" || !meta.offset) return uName;
+  if (!meta?.dimMap?.Th || !meta.offset) return uName;
 
   for (const b of Object.values(BASE_UNITS)) {
-    if (b.dim === "Th" && !b.offset && Math.abs(b.baseScale - meta.baseScale) < 1e-6) {
+    if (b.dimMap?.Th && !b.offset && Math.abs(b.baseScale - meta.baseScale) < 1e-6) {
       return b.symbol;
     }
   }
@@ -226,9 +189,7 @@ export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
     res = nStr;
   }
 
-  if (cancelMode === "whole") {
-    return `\\cancel{${res}}`;
-  }
+  if (cancelMode === "whole") return `\\cancel{${res}}`;
   return res;
 }
 
@@ -264,7 +225,7 @@ export function getUnitAtomBag(uName, dimension = null) {
   const isDimensionless = !uName || uName === "dimless" || uName === "ratio";
   ast.forEach(f => {
     if (!BASE_UNITS[f.base]) isUnknown = true;
-    const vec = ATOM_DIM_VECTORS[f.base];
+    const vec = BASE_UNITS[f.base]?.dimMap;
     if (vec) {
       for (const [d, p] of Object.entries(vec)) {
         const next = (dimMap[d] || 0) + p * f.power;

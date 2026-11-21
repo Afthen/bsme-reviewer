@@ -34,6 +34,12 @@ function resolveImportEdge(fromFile, spec) {
   return toRepoRel(path.resolve(path.dirname(fromFile), spec));
 }
 
+function getLineRange(src, startIdx, endIdx) {
+  const startLine = src.slice(0, startIdx + 1).split("\n").length;
+  const endLine = src.slice(0, endIdx + 1).split("\n").length;
+  return startLine === endLine ? `(${startLine})` : `(${startLine}-${endLine})`;
+}
+
 function extractMatchingBlock(src, openIdx, openCh = "{", closeCh = "}") {
   let depth = 0;
   let inStr = null;
@@ -163,37 +169,48 @@ function analyzeFile(absPath) {
     const params = m[5].replace(/\s+/g, " ").trim();
     const braceIdx = m.index + m[0].length - 1;
     const body = extractMatchingBlock(raw, braceIdx);
+    const endIdx = braceIdx + body.length - 1;
     const ret = inferReturnHint(body, isAsync, jsdoc);
-    symbols.push(`${scope} ${name}(${params}) -> ${ret}`);
+    const range = getLineRange(raw, m.index, endIdx);
+    symbols.push(`${scope} ${name}(${params}) -> ${ret} ${range}`);
   }
 
   // Exported constants & frozen structures
   const constRe = /^export\s+const\s+([A-Za-z0-9_]+)\s*=\s*/gm;
   for (const m of raw.matchAll(constRe)) {
     const name = m[1];
+    const startIdx = m.index;
     let rest = raw.slice(m.index + m[0].length).trimStart();
     if (rest.startsWith("Object.freeze(")) rest = rest.slice("Object.freeze(".length).trimStart();
 
     if (rest.startsWith("{")) {
-      const startIdx = raw.indexOf("{", m.index + m[0].length);
-      const block = extractMatchingBlock(raw, startIdx, "{", "}");
+      const blockStart = raw.indexOf("{", m.index + m[0].length);
+      const block = extractMatchingBlock(raw, blockStart, "{", "}");
+      const endIdx = blockStart + block.length - 1;
       const keys = extractTopLevelKeys(block);
       const preview = keys.length > 8
         ? `${keys.slice(0, 8).join(", ")}, +${keys.length - 8}`
         : keys.join(", ");
-      symbols.push(`export const ${name}: { ${preview} }`);
+      symbols.push(`export const ${name}: { ${preview} } ${getLineRange(raw, startIdx, endIdx)}`);
     } else if (rest.startsWith("[")) {
-      symbols.push(`export const ${name}: Array`);
+      const endOfLine = raw.indexOf("\n", startIdx);
+      const endIdx = endOfLine === -1 ? raw.length - 1 : endOfLine - 1;
+      symbols.push(`export const ${name}: Array ${getLineRange(raw, startIdx, endIdx)}`);
     } else if (rest.startsWith("(") || /^[A-Za-z0-9_]+\s*=>/.test(rest)) {
-      symbols.push(`export const ${name}: Function`);
+      const endOfLine = raw.indexOf("\n", startIdx);
+      const endIdx = endOfLine === -1 ? raw.length - 1 : endOfLine - 1;
+      symbols.push(`export const ${name}: Function ${getLineRange(raw, startIdx, endIdx)}`);
     } else {
       const valLine = rest.split("\n")[0].replace(/;$/, "").slice(0, 48);
-      symbols.push(`export const ${name} = ${valLine}`);
+      const endOfLine = raw.indexOf("\n", startIdx);
+      const endIdx = endOfLine === -1 ? raw.length - 1 : endOfLine - 1;
+      symbols.push(`export const ${name} = ${valLine} ${getLineRange(raw, startIdx, endIdx)}`);
     }
   }
 
   for (const m of raw.matchAll(/^export\s+\*\s+from\s+["']([^"']+)["']/gm)) {
-    symbols.push(`reexport * -> ${resolveImportEdge(absPath, m[1])}`);
+    const range = getLineRange(raw, m.index, m.index + m[0].length - 1);
+    symbols.push(`reexport * -> ${resolveImportEdge(absPath, m[1])} ${range}`);
   }
 
   return { rel, imports: Array.from(new Set(imports)), symbols };

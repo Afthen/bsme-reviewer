@@ -13,7 +13,19 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
   const producedBy = {};
 
   let keepPropagating = true;
-  const sortedRelations = [...relations].sort((a, b) => getMastery(a) - getMastery(b));
+  
+  // COMPLEXITY-AWARE SORTING: 
+  // We prioritize relations that lead to higher-difficulty algebraic structures 
+  // to ensure the engine explores the most challenging paths first.
+  const sortedRelations = [...relations].sort((a, b) => {
+    const getDiff = (r) => {
+      const variant = (r.variants && S && S.sys && r.variants[S.sys]) ? r.variants[S.sys] : null;
+      const nodes = variant?.nodes || r.nodes;
+      // Heuristic: More nodes + higher mastery requirement = higher priority for unrolling
+      return (nodes?.length || 0) + (getMastery(r) * 2);
+    };
+    return getDiff(b) - getDiff(a);
+  });
 
   while (keepPropagating) {
     keepPropagating = false;

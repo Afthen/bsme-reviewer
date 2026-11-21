@@ -22,7 +22,8 @@ export function buildAlignedDerivation(
   varsDb = {},
   relations = [],
   answeredVars = new Set(),
-  givens = []
+  givens = [],
+  overrides = {}
 ) {
   const { targetVar, baseFormula, canonicalTex, rhsExpr, requiredUnits } = step;
 
@@ -34,7 +35,7 @@ export function buildAlignedDerivation(
   const formulaRhs = rhsExpr || (baseFormula && baseFormula.includes("=") ? baseFormula.split("=")[1].trim() : baseFormula) || "";
   const unitAnalysis = solveUnitAlgebra(formulaRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
 
-  const evalState = { ...S };
+  const evalState = { ...S, ...overrides };
   const activeUnitMap = { ...(S._u || {}) };
   if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
     unitAnalysis.preConversions.forEach(pc => {
@@ -151,8 +152,8 @@ export function buildAlignedDerivation(
     line1 = `${displayCanonical} \\;\\Rightarrow\\; ${targetSymbol} &= ${symRhs} \\\\[6pt]\n  &= ${numTex}`;
   }
 
-  // 4. Final Boxed Answer with strict `\,` unit spacing
-  const val = step.expectedVal !== undefined ? step.expectedVal : S[canonicalTarget];
+  // 4. Final Boxed Answer: use adopted value if available, else expected truth
+  const val = overrides[canonicalTarget] ?? step.expectedVal ?? S[canonicalTarget];
   const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
 
   let unitTex = "";

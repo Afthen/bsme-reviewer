@@ -163,7 +163,7 @@ export function formatComponentMismatch(unitA, unitB, dimA = null, dimB = null) 
 
     const matchB = astB.find(fB => {
       const baseMetaB = BASE_UNITS[fB.base];
-      return baseMetaB && baseMetaB.dim === baseMetaA.dim && fB.power === fA.power &&
+      return baseMetaB && isDimEqual(baseMetaA.dimMap, baseMetaB.dimMap) && fB.power === fA.power &&
         (fA.base !== fB.base || fA.prefix !== fB.prefix);
     });
 
@@ -194,7 +194,17 @@ export function formatComponentMismatch(unitA, unitB, dimA = null, dimB = null) 
     }
   }
 
-  return formatPairConversion(unitA, unitB, dimA, "whole");
+  return formatPairConversion(unitA, unitB, dimA, dimB, "whole");
+}
+
+function getAtomDimKey(dimMap) {
+  if (!dimMap) return "";
+  const keys = Object.keys(dimMap).sort();
+  if (keys.length === 1 && dimMap.M === 1) return "M";
+  if (keys.length === 1 && dimMap.T === 1) return "T";
+  if (keys.length === 1 && dimMap.T === -1) return "Freq";
+  if (keys.length === 3 && dimMap.M === 1 && dimMap.L === 2 && dimMap.T === -2) return "E";
+  return keys.map(k => `${k}:${dimMap[k]}`).join(",");
 }
 
 function atomToUnitString(atom) {
@@ -214,10 +224,10 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
   const scalars = [];
   const usedTargetIndices = new Set();
 
-  const targetHasEnergy = targetAst.some(a => BASE_UNITS[a.base]?.dim === "E");
+  const targetHasEnergy = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "E");
   const targetPrefersBtu = targetAst.some(a => a.base === "Btu");
 
-  const targetHasMass = targetAst.some(a => BASE_UNITS[a.base]?.dim === "M");
+  const targetHasMass = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "M");
 
   // Flatten all source atoms, expanding compound Power and Force units when interacting across dimensions
   const sourceAtoms = [];
@@ -248,7 +258,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
         : ` \\cdot ${fmtScale(effFactor)} \\, \\cfrac{\\cfrac{\\text{lb}\\cdot\\cancel{\\text{ft}}}{\\text{s}^2}}{\\cancel{\\cfrac{\\text{lb}}{\\text{ft}}}}`;
       conversionsByToken[entry.tok].push(convLatex);
       scalars.push(parseFloat(effFactor.toPrecision(6)));
-      workingUnit = "lb/s^2";
+      workingUnit = "lbm/s^2";
     }
 
     const ast = parseUnitToSemanticAST(workingUnit, entry.dim);
@@ -258,7 +268,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
         atom,
         exp: entry.exp,
         netPower: atom.power * entry.exp,
-        dim: BASE_UNITS[atom.base]?.dim || atom.base
+        dim: getAtomDimKey(BASE_UNITS[atom.base]?.dimMap) || atom.base
       });
     });
   }
@@ -269,7 +279,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     const wantedDim = src.dim === "Freq" ? "T" : "Freq";
     const tIdx = targetAst.findIndex((tAtom, idx) => {
       if (usedTargetIndices.has(idx)) return false;
-      const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
+      const tDim = getAtomDimKey(BASE_UNITS[tAtom.base]?.dimMap) || tAtom.base;
       const isRecipPair =
         (src.dim === "Freq" && src.atom.base === "hertz" && tDim === "T") ||
         (src.dim === "T" && tAtom.base === "hertz");
@@ -305,7 +315,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     if (src.matched) continue;
     const tIdx = targetAst.findIndex((tAtom, idx) => {
       if (usedTargetIndices.has(idx)) return false;
-      const tDim = BASE_UNITS[tAtom.base]?.dim || tAtom.base;
+      const tDim = getAtomDimKey(BASE_UNITS[tAtom.base]?.dimMap) || tAtom.base;
       return tDim === src.dim && Math.sign(tAtom.power) === Math.sign(src.netPower);
     });
 

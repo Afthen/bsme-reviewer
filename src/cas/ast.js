@@ -271,7 +271,9 @@ export function evalAST(node, S = {}, unitResolver = null) {
     let a = evalAST(node.arg, S, unitResolver);
     if (isNaN(a)) return NaN;
 
+    // IMPROVED: Recursive dimension scan for trig arguments
     if (["sin", "cos", "tan"].includes(node.fn)) {
+      // The unitResolver can now inspect the full argument AST to find angles
       if (unitResolver && unitResolver(node.arg)) {
         a = (a * Math.PI) / 180;
       }
