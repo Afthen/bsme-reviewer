@@ -997,8 +997,7 @@
           3
         ]
       ]
-    }
-  ,
+    },
     {
       "id": "tmp_rc_1",
       "q": "[Passage: Boracay, the most famous beach in the Philippines, is also known as a blessed island. I have never met anyone who has not been enthralled and fascinated when they visited Boracay. The first time you set foot on its powder-like sand, you'll surely feel lucky to be in a paradise island. The moment you see its crystal pristine water, you'll be so thankful you're alive. Many locals and foreigners go there again and again not only because of the breathtaking view but also because to celebrate life and its blessings.]\n\nThe best title for the above article is:",
@@ -1173,8 +1172,6 @@
       "options": ["were close to the Apaches", "lived together in a town or village", "farmed and brought down water in ditches", "pulled up their ladders when attacked", "achieved fame thanks to their hand-craft"],
       "answer": "lived together in a town or village"
     },
-====
-=======
     {
       "id": "tmp_rc_90",
       "q": "[Passage: (Pueblo Indians)]\n\nThe Pueblo Indians lived on the side of a cliff ....................",
@@ -1183,4 +1180,3 @@
     }
   ]
 }
-====
