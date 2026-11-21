@@ -14,6 +14,7 @@ let activeCurrentRelations = [];
 let activeAllRelations = [];
 let activeGetMastery = () => 0;
 let sidebarScope = "current"; // "current" | "all"
+let scopeLabels = { current: "Current Problem", all: "All Selected" };
 let isInitialized = false;
 
 /**
@@ -82,10 +83,19 @@ export function initSidebarView(currentRelations = [], getMastery = () => 0, all
   isInitialized = true;
 }
 
-export function updateSidebarRelations(currentRelations = [], allSelectedRelations = [], getMastery = null) {
+export function updateSidebarRelations(
+  currentRelations = [],
+  allSelectedRelations = [],
+  getMastery = null,
+  options = {}
+) {
   activeCurrentRelations = currentRelations;
   activeAllRelations = allSelectedRelations && allSelectedRelations.length > 0 ? allSelectedRelations : currentRelations;
   if (getMastery) activeGetMastery = getMastery;
+  if (options && typeof options === "object") {
+    if (options.currentLabel) scopeLabels.current = options.currentLabel;
+    if (options.allLabel) scopeLabels.all = options.allLabel;
+  }
   renderMasteryView();
 }
 
@@ -105,23 +115,16 @@ function renderMasteryView() {
     toggleBar.style.marginBottom = "0.75rem";
 
     const btnCurrent = document.createElement("button");
+    btnCurrent.id = "sidebar-btn-scope-current";
     btnCurrent.className = "btn";
-    btnCurrent.textContent = "Current Topic";
     btnCurrent.style.flex = "1";
     btnCurrent.style.fontSize = "0.72rem";
 
     const btnAll = document.createElement("button");
+    btnAll.id = "sidebar-btn-scope-all";
     btnAll.className = "btn";
-    btnAll.textContent = "All Selected";
     btnAll.style.flex = "1";
     btnAll.style.fontSize = "0.72rem";
-
-    function updateBtnStyles() {
-      btnCurrent.style.background = sidebarScope === "current" ? "var(--border)" : "transparent";
-      btnCurrent.style.color = sidebarScope === "current" ? "#fff" : "var(--text-muted)";
-      btnAll.style.background = sidebarScope === "all" ? "var(--border)" : "transparent";
-      btnAll.style.color = sidebarScope === "all" ? "#fff" : "var(--text-muted)";
-    }
 
     btnCurrent.addEventListener("click", () => {
       sidebarScope = "current";
@@ -135,10 +138,26 @@ function renderMasteryView() {
       renderMasteryView();
     });
 
-    updateBtnStyles();
     toggleBar.append(btnCurrent, btnAll);
     el.parentElement?.prepend(toggleBar);
   }
+
+  function updateBtnStyles() {
+    const btnCurrent = document.getElementById("sidebar-btn-scope-current");
+    const btnAll = document.getElementById("sidebar-btn-scope-all");
+    if (btnCurrent) {
+      btnCurrent.textContent = scopeLabels.current;
+      btnCurrent.style.background = sidebarScope === "current" ? "var(--border)" : "transparent";
+      btnCurrent.style.color = sidebarScope === "current" ? "#fff" : "var(--text-muted)";
+    }
+    if (btnAll) {
+      btnAll.textContent = scopeLabels.all;
+      btnAll.style.background = sidebarScope === "all" ? "var(--border)" : "transparent";
+      btnAll.style.color = sidebarScope === "all" ? "#fff" : "var(--text-muted)";
+    }
+  }
+
+  updateBtnStyles();
 
   // Deduplicate relations for display
   const rawList = sidebarScope === "all" ? activeAllRelations : activeCurrentRelations;

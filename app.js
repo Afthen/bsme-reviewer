@@ -16,7 +16,7 @@ import {
   exportMasteryJSON, importMasteryJSON
 } from "./src/mastery/index.js";
 import { renderProblemView } from "./src/ui/problem_view.js";
-import { renderMcqSets } from "./src/ui/mcq_view.js";
+import { renderMcqSets, getCurrentMcqSetId } from "./src/ui/mcq_view.js";
 import {
   initSidebarView, updateSidebarRelations, renderMasteryBars, MASTERY_CHANGED_EVENT
 } from "./src/ui/sidebar_view.js";
@@ -258,10 +258,8 @@ async function refreshMcqMode() {
 function updateMcqSidebar(sets) {
   const sidebarTitle = document.querySelector("#sidebar-drawer .sidebar-title");
   if (sidebarTitle) sidebarTitle.textContent = "Quiz Set Mastery";
-  const el = document.getElementById("weight-bars-el");
-  if (!el) return;
 
-  const entries = sets
+  const allEntries = sets
     .map(s => {
       const stats = getSetStats(s);
       return {
@@ -272,7 +270,15 @@ function updateMcqSidebar(sets) {
     })
     .sort((a, b) => a.mastery - b.mastery);
 
-  renderMasteryBars(el, entries, e => e.mastery);
+  const activeId = getCurrentMcqSetId();
+  const currentEntries = allEntries.filter(e => e.id === activeId);
+
+  updateSidebarRelations(
+    currentEntries.length > 0 ? currentEntries : allEntries,
+    allEntries,
+    e => e.mastery,
+    { currentLabel: "Current Set", allLabel: "All Selected" }
+  );
 }
 
 function applyAppMode(mode) {
@@ -327,7 +333,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateSidebarRelations(
         currentTopic.relations,
         allRels,
-        masteryFor(currentTopic)
+        masteryFor(currentTopic),
+        { currentLabel: "Current Problem", allLabel: "All Selected" }
       );
     }
   });
@@ -419,7 +426,8 @@ function setupTopicSelector() {
       updateSidebarRelations(
         currentTopic.relations,
         allRels,
-        masteryFor(currentTopic)
+        masteryFor(currentTopic),
+        { currentLabel: "Current Problem", allLabel: "All Selected" }
       );
     }
   }
@@ -823,6 +831,7 @@ async function generateNewProblem() {
   updateSidebarRelations(
     topic.relations,
     pool.flatMap(t => t.relations),
-    masteryFor(topic)
+    masteryFor(topic),
+    { currentLabel: "Current Problem", allLabel: "All Selected" }
   );
 }

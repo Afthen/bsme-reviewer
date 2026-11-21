@@ -1,95 +1,20 @@
-### Root Cause Analysis
-
-1. **Static Manifest vs. Live Loaded Data:**
-   - In `app.js`, `setupMcqSelector()` populated the dropdown labels using static `m.count` from `MCQ_MANIFEST` (`${m.title} (${m.count})`).
-   - In `mcq_view.js`, the main setup subtitle calculates `totalAvail` dynamically by inspecting `s.questions.length` of the actual loaded sets (`412 questions`).
-   - If `src/mcq/index.js` was cached by the browser or loaded before the expanded question sets, the dropdown showed the stale static counts (`15, 25, 14...`) while the lobby showed the true count (`412`).
-
-2. **Resolution:**
-   - Maintain a live counts map in `app.js`.
-   - In `refreshMcqMode()`, immediately sync each loaded set's real `questions.length` into the dropdown labels so the dropdown and the setup card stay in 100% lockstep parity.
-
----
-
-### Changes
-
-**(a) Applicable Hard Rules:**
-- **R10 & R20:** Consistency and contract integrity across UI views.
-- **R27:** Canonical 4-backtick `diff` format.
-
-**(b) Files Touched:**
-- `app.js`
-
-**(c) Tests Proving the Change:**
-- `npm test` (`node --test test/run_test.js test/run_hygiene_test.js`): All 36+ test suites pass, including MCQ loader and registry tests.
-
----
-
-FILE: app.js
+FILE: test/run_test.js
 ````diff
 <<<<
-let customMcqManifests = [];
-let currentTopic = null;
-let currentProblem = null;
-let selectionSeq = 0;
+    // Relation-level scope simulation (Problem Mode)
+    const rel1 = { id: "eq_1", name: "Formula 1" };
+    const rel2 = { id: "eq_2", name: "Fel.classList.toggle("selected", LETTERS[k] === activeLetter);ormula 2" };
+    updateSidebarRelations([rel1], [rel1, rel2], () => 0.5, {
+      currentLabel: "Current Problem",
+      allLabel: "All Selected"
+    });
 ====
-let customMcqManifests = [];
-const liveMcqCounts = new Map();
-let currentTopic = null;
-let currentProblem = null;
-let selectionSeq = 0;
->>>>
-````
-
-FILE: app.js
-````diff
-<<<<
-async function refreshMcqMode() {
-  const sets = await getSelectedMcqSets();
-  const view = document.getElementById("view-mcq");
-  if (!view) return;
-  if (sets.length === 0) {
-    renderMcqEmptyPrompt();
-  } else {
-    view.classList.remove("is-empty");
-    renderMcqSets(sets);
-  }
-  updateMcqSidebar(sets);
-}
-====
-async function refreshMcqMode() {
-  const sets = await getSelectedMcqSets();
-  for (const s of sets) {
-    const qCount = s.questions?.length ?? s.count ?? 0;
-    liveMcqCounts.set(s.id, qCount);
-    const leaf = document.querySelector(`.topic-leaf[data-mcq-id="${s.id}"] .topic-leaf-title`);
-    if (leaf) {
-      leaf.textContent = `${s.title} (${qCount})`;
-    }
-  }
-  const view = document.getElementById("view-mcq");
-  if (!view) return;
-  if (sets.length === 0) {
-    renderMcqEmptyPrompt();
-  } else {
-    view.classList.remove("is-empty");
-    renderMcqSets(sets);
-  }
-  updateMcqSidebar(sets);
-}
->>>>
-````
-
-FILE: app.js
-````diff
-<<<<
-    const title = document.createElement("span");
-    title.className = "topic-leaf-title";
-    title.textContent = `${m.title} (${m.count})`;
-====
-    const count = liveMcqCounts.get(m.id) ?? m.count;
-    const title = document.createElement("span");
-    title.className = "topic-leaf-title";
-    title.textContent = `${m.title} (${count})`;
+    // Relation-level scope simulation (Problem Mode)
+    const rel1 = { id: "eq_1", name: "Formula 1" };
+    const rel2 = { id: "eq_2", name: "Formula 2" };
+    updateSidebarRelations([rel1], [rel1, rel2], () => 0.5, {
+      currentLabel: "Current Problem",
+      allLabel: "All Selected"
+    });
 >>>>
 ````

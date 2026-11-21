@@ -49,6 +49,17 @@ let timedOutItems = new Set();
 let examSubmitted = false;
 let unansweredPromptOpen = false;
 let keyHandlerBound = false;
+let lastActiveSetId = null;
+
+export function getCurrentMcqSetId() {
+  if (phase === "active" && sessionItems[currentIndex]?.setId) {
+    return sessionItems[currentIndex].setId;
+  }
+  if (lastActiveSetId) {
+    return lastActiveSetId;
+  }
+  return activeSets[0]?.id || null;
+}
 
 function typeset(el) {
   if (typeof window !== "undefined" && typeof window.renderMathInElement === "function" && el) {
@@ -820,9 +831,11 @@ function renderStudyView(stage) {
   btnPrev.addEventListener("click", () => {
     if (currentIndex > 0 && !isPaused) {
       currentIndex--;
+      lastActiveSetId = sessionItems[currentIndex]?.setId || lastActiveSetId;
       startStudyItemTimer();
       renderStudyView(stage);
       updateTimerDisplay();
+      document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
     }
   });
 
@@ -835,9 +848,11 @@ function renderStudyView(stage) {
     if (isPaused) return;
     if (!isLast) {
       currentIndex++;
+      lastActiveSetId = sessionItems[currentIndex]?.setId || lastActiveSetId;
       startStudyItemTimer();
       renderStudyView(stage);
       updateTimerDisplay();
+      document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
     } else {
       finishSession();
     }
@@ -854,6 +869,7 @@ function selectStudyOption(letter) {
   answers[currentIndex] = letter;
 
   const item = sessionItems[currentIndex];
+  lastActiveSetId = item.setId || lastActiveSetId;
   const isCorrect = letter === item.answer;
   recordQuestionAttempt(item.setId, item.item.id, isCorrect);
   document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
@@ -914,6 +930,8 @@ function buildExamListDom(graded = false) {
             delete answers[idx];
           } else {
             answers[idx] = letter;
+            lastActiveSetId = item.setId || lastActiveSetId;
+            document.dispatchEvent(new CustomEvent(MASTERY_CHANGED_EVENT));
           }
           const activeLetter = answers[idx];
           Array.from(optsGrid.children).forEach((el, k) => {

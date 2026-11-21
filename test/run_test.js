@@ -706,8 +706,30 @@ describe("Frontend UI Module & Import Integrity Smoke Tests", () => {
   test("Verify src/ui/sidebar_view.js integrity and exports", async () => {
     const mod = await import("../src/ui/sidebar_view.js");
     assert.equal(typeof mod.initSidebarView, "function");
+    assert.equal(typeof mod.updateSidebarRelations, "function");
     assert.equal(typeof mod.renderSidebar, "function");
     assert.equal(typeof mod.renderMasteryBars, "function");
+  });
+
+  test("Sidebar scope filtering preserves current vs all scope for relations and sets", async () => {
+    const { updateSidebarRelations } = await import("../src/ui/sidebar_view.js");
+
+    const setA = { id: "set_a", name: "Set A", mastery: 0.2 };
+    const setB = { id: "set_b", name: "Set B", mastery: 0.8 };
+
+    // Set-level scope simulation
+    updateSidebarRelations([setA], [setA, setB], e => e.mastery, {
+      currentLabel: "Current Set",
+      allLabel: "All Selected"
+    });
+
+    // Relation-level scope simulation (Problem Mode)
+    const rel1 = { id: "eq_1", name: "Formula 1" };
+    const rel2 = { id: "eq_2", name: "Formula 2" };
+    updateSidebarRelations([rel1], [rel1, rel2], () => 0.5, {
+      currentLabel: "Current Problem",
+      allLabel: "All Selected"
+    });
   });
 
   test("Verify src/ui/carousel_view.js integrity and exports", async () => {
