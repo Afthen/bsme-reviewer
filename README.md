@@ -50,23 +50,30 @@ READ app.js:1-60
 GREP parseZipArchive
 ```
 
-**Code Diffs (4 backticks, one `FILE:` header per file):**
+**Code Diffs (one `FILE:` header per file):**
 
 FILE: path/to/file.ext
-````diff
+```diff 1
 <<<<
 exact old lines
 ====
 new lines
 >>>>
-````
+```
+```diff 2
+<<<<
+exact old lines
+====
+new lines
+>>>>
+```
 
-**Full-File Replacement (use 4 backticks, or `N+1` if content has `N` backticks):**
+**Full-File Replacement (use `N+1` if content has `N` backticks):**
 
 FILE: path/to/new_file.js
-````javascript
+```javascript
 // full file content
-````
+```
 
 ---
 
