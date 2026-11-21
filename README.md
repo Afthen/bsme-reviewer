@@ -610,4 +610,28 @@ node --test test/run_test.js test/run_hygiene_test.js
 - [ ] `node --test test/run_test.js test/run_hygiene_test.js` was run and passed with 0 failures.
 - [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
 - [ ] No tests were renamed, skipped, loosened, or deleted.
-- [ ] LF line endings, header comment on every new file, no dead code, and no new duplication.
+- [ ] LF line endings, header comment on every new file, no dead code, no new duplication.
+- [ ] Commit changes using the Conventional Commits pattern (Section 12).
+
+---
+
+## 12. Commit Guidelines
+
+Once the Definition of Done is met and all tests pass, commit your changes using the Conventional Commits pattern to maintain a clean, searchable history:
+
+`type(scope): short description`
+
+### Types
+- `feat`: New topics, MCQ sets, or core capabilities.
+- `fix`: Corrections to math, unit scaling, or UI bugs.
+- `docs`: Documentation, comments, or README updates.
+- `refactor`: Code reorganization that preserves behavior.
+- `test`: Adding or updating the test suite.
+- `chore`: Routine tasks (registry generation, build scripts, dependencies).
+
+### Common Scopes
+- `core`: Mathematical engine, solver, or unit system.
+- `ui`: All view components.
+- `topic:<name>`: Changes specific to a subject or topic.
+- `mcq`: MCQ engine or manifest updates.
+- `mastery`: Spaced-repetition and decay logic.
