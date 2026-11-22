@@ -1,10 +1,1612 @@
-Adding `formatPairConversion` to the `src/cas/units/index.js` import in `test/run_test.js`.
+**Applicable Hard Rules (README Section 2):**
+- **R2 (AST only):** Symbolic factoring, unit alignment, and selective cancellation are computed strictly on math/unit ASTs.
+- **R7 & R8 (Registered Units & Thermodynamic Temperature Consistency):** All units and affine offsets derive from `definitions.js` (`BASE_UNITS`); affine temperature terms align via exact offsets (`±273.15`, `±459.67`) to their absolute companions.
+- **R20 & R22 (Textbook Derivations & Number Formatting):** Preserves `\text{\%}`, native `°`, `\cancel{}` hierarchy, `fmtSigFig` for measured values, and `fmtScale` for conversion factors and constant equivalences.
+- **R23 & R24 (Test Integrity & Regression Tests):** All existing tests remain intact alongside new regression tests.
+
+**Files Touched:**
+1. `src/core/dimensions.js`
+2. `src/ui/problem_view.js`
+3. `src/core/constants_registry.js`
+4. `src/core/unit_sampler.js`
+5. `src/cas/units/definitions.js`
+6. `src/cas/units/scales.js`
+7. `src/cas/units/analysis.js`
+8. `src/core/derivation.js`
+9. `test/run_test.js`
+
+**Tests Proving the Fix:**
+`node --test test/run_test.js test/run_hygiene_test.js`
+
+---
+
+FILE: src/core/dimensions.js
+````diff 1
+<<<<
+export function targetLabel(name, token, unit) {
+  if (!unit || unit === "dimless" || unit === "ratio") {
+    return `${name} (${token})`;
+  }
+  if (unit === "deg" || unit === "°") {
+    return `${name} (${token}) in °`;
+  }
+  if (unit === "%") {
+    return `${name} (${token}) in %`;
+  }
+  return `${name} (${token}) in ${unit}`;
+}
+====
+export function targetLabel(name, token, unit, unitTex = null) {
+  if (!unit || unit === "dimless" || unit === "ratio") {
+    return `${name} (${token})`;
+  }
+  if (unitTex) {
+    return `${name} (${token}) in $${unitTex}$`;
+  }
+  if (unit === "deg" || unit === "°") {
+    return `${name} (${token}) in °`;
+  }
+  if (unit === "%") {
+    return `${name} (${token}) in %`;
+  }
+  return `${name} (${token}) in ${unit}`;
+}
+>>>>
+````
+
+FILE: src/ui/problem_view.js
+````diff 1
+<<<<
+import { buildAlignedDerivation } from "../core/derivation.js";
+import { targetLabel, fmtSigFig } from "../core/dimensions.js";
+import { CONSTANTS_DB } from "../core/constants_registry.js";
+====
+import { buildAlignedDerivation } from "../core/derivation.js";
+import { targetLabel, fmtSigFig } from "../core/dimensions.js";
+import { unitToTex } from "../cas/units/index.js";
+import { CONSTANTS_DB } from "../core/constants_registry.js";
+>>>>
+````
+````diff 2
+<<<<
+    const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
+    const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
+    const symSpan = `<span class="interactive-var" data-var="${step.targetVar}">$${activeProblem.system._displaySymbols?.[step.targetVar] || meta.symbol || step.targetVar}$</span>`;
+    const labelText = targetLabel(activeProblem.system._displayNames?.[step.targetVar] || meta.name, symSpan, unit);
+====
+    const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
+    const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
+    const symSpan = `<span class="interactive-var" data-var="${step.targetVar}">$${activeProblem.system._displaySymbols?.[step.targetVar] || meta.symbol || step.targetVar}$</span>`;
+    const unitTex = unit && unit !== "dimless" && unit !== "ratio"
+      ? unitToTex(unit, true, meta.dimension)
+      : null;
+    const labelText = targetLabel(activeProblem.system._displayNames?.[step.targetVar] || meta.name, symSpan, unit, unitTex);
+>>>>
+````
+
+FILE: src/core/constants_registry.js
+````diff 1
+<<<<
+  "c_pa": {
+    name: "Specific Heat of Air",
+    symbol: "c_{pa}",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    valueSI: 1.0062,
+    valueUS: 0.24,
+    unitSI: "kJ/kg-K",
+    unitUS: "Btu/lb",
+    isConstant: true,
+    aliases: ["Specific Heat of Air", "Air Specific Heat", "c_{pa}"]
+  },
+  "g": {
+====
+  "cp_w": {
+    name: "Specific Heat of Water",
+    symbol: "c_{p,w}",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    valueSI: 4.187,
+    valueUS: 1.0,
+    unitSI: "kJ/kg-K",
+    unitUS: "Btu/(lb*F)",
+    isConstant: true,
+    aliases: ["Specific Heat of Water", "Water Specific Heat", "c_{p,w}"]
+  },
+  "c_pa": {
+    name: "Specific Heat of Air",
+    symbol: "c_{pa}",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    valueSI: 1.0062,
+    valueUS: 0.24,
+    unitSI: "kJ/kg-K",
+    unitUS: "Btu/(lb*F)",
+    isConstant: true,
+    aliases: ["Specific Heat of Air", "Air Specific Heat", "c_{pa}"]
+  },
+  "c_p": {
+    name: "Specific Heat at Constant Pressure",
+    symbol: "c_p",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    valueSI: 1.0062,
+    valueUS: 0.24,
+    unitSI: "kJ/kg-K",
+    unitUS: "Btu/(lb_m*°R)",
+    isConstant: true,
+    aliases: ["Specific Heat at Constant Pressure", "c_p"]
+  },
+  "c_v": {
+    name: "Specific Heat at Constant Volume",
+    symbol: "c_v",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    valueSI: 0.7186,
+    valueUS: 0.1714,
+    unitSI: "kJ/kg-K",
+    unitUS: "Btu/(lb_m*°R)",
+    isConstant: true,
+    aliases: ["Specific Heat at Constant Volume", "c_v"]
+  },
+  "g": {
+>>>>
+````
+
+FILE: src/core/unit_sampler.js
+````diff 1
+<<<<
+export function sampleConstantUnit(varKey, sys = "SI") {
+  const meta = CONSTANTS_DB[varKey];
+  if (!meta) return null;
+
+  if (varKey === "c_pw") {
+    return sys === "US"
+      ? { unit: "Btu/(lb*F)", value: 1.0 }
+      : { unit: "kJ/kg-K", value: 4.187 };
+  }
+  if (varKey === "c_pa") {
+    return sys === "US"
+      ? { unit: "Btu/(lb*F)", value: 0.24 }
+      : { unit: "kJ/kg-K", value: 1.0062 };
+  }
+  if (varKey === "g") {
+    return sys === "US"
+      ? { unit: "ft/s^2", value: 32.2 }
+      : { unit: "m/s^2", value: 9.81 };
+  }
+  return sys === "US"
+    ? { unit: meta.unitUS || meta.unit, value: meta.valueUS }
+    : { unit: meta.unitSI || meta.unit, value: meta.valueSI };
+}
+====
+export function sampleConstantUnit(varKey, sys = "SI") {
+  const meta = CONSTANTS_DB[varKey];
+  if (!meta) return null;
+
+  return sys === "US"
+    ? { unit: meta.unitUS || meta.unit, value: meta.valueUS }
+    : { unit: meta.unitSI || meta.unit, value: meta.valueSI };
+}
+>>>>
+````
+
+FILE: src/cas/units/definitions.js
+````diff 1
+<<<<
+export function getAbsoluteCompanionUnit(uName) {
+  const ast = parseUnitToSemanticAST(uName);
+  if (ast.length !== 1) return uName;
+  const meta = BASE_UNITS[ast[0].base];
+  if (!meta?.dimMap?.Th || !meta.offset) return uName;
+
+  for (const b of Object.values(BASE_UNITS)) {
+    if (b.dimMap?.Th && !b.offset && Math.abs(b.baseScale - meta.baseScale) < 1e-6) {
+      return b.symbol;
+    }
+  }
+  return "K";
+}
+
+export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
+  if (!factors || factors.length === 0) return "";
+  if (factors.length === 1 && factors[0].base === "percent" && factors[0].power === 1) {
+    return cancelMode !== "none" ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+  }
+  if (factors.length === 1 && factors[0].base === "deg" && factors[0].power === 1) {
+    return cancelMode !== "none" ? "\\cancel{°}" : "°";
+  }
+
+  const prefixSymbols = { pico: "p", nano: "n", micro: "u", milli: "m", centi: "c", deci: "d", kilo: "k", mega: "M", giga: "G" };
+  const numStrs = [];
+  const denStrs = [];
+
+  factors.forEach(f => {
+    const bMeta = BASE_UNITS[f.base];
+    const bSym = bMeta?.symbol || f.base;
+    const pSym = f.prefix ? prefixSymbols[f.prefix] || f.prefix : "";
+    const fullSym = `${pSym}${bSym}`;
+
+    const absP = Math.abs(f.power);
+    const expStr = absP > 1 ? `^{${absP}}` : "";
+
+    let termTex = "";
+    const symSuffixMatch = fullSym.match(/^(.+)_(m|f)$/);
+    if (fullSym === "%") {
+      termTex = cancelMode === "component" ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+    } else if (fullSym.startsWith("°")) {
+      termTex = cancelMode === "component" ? `\\cancel{${fullSym}${expStr}}` : `${fullSym}${expStr}`;
+    } else if (symSuffixMatch) {
+      const [, basePart, subPart] = symSuffixMatch;
+      const bodyTex = `\\text{${basePart}}_{${subPart}}`;
+      termTex = cancelMode === "component" ? `\\cancel{${bodyTex}}${expStr}` : `${bodyTex}${expStr}`;
+    } else {
+      termTex = cancelMode === "component" ? `\\cancel{\\text{${fullSym}}}${expStr}` : `\\text{${fullSym}}${expStr}`;
+    }
+
+    if (f.power > 0) numStrs.push(termTex);
+    else if (f.power < 0) denStrs.push(termTex);
+  });
+====
+export function getUnitOffset(uName, dimension = null) {
+  const ast = parseUnitToSemanticAST(uName, dimension);
+  if (ast.length === 1 && ast[0].power === 1) {
+    return BASE_UNITS[ast[0].base]?.offset || 0;
+  }
+  return 0;
+}
+
+export function getAbsoluteCompanionUnit(uName) {
+  const ast = parseUnitToSemanticAST(uName);
+  if (ast.length !== 1) return uName;
+  const meta = BASE_UNITS[ast[0].base];
+  if (!meta?.dimMap?.Th || !meta.offset) return uName;
+
+  for (const b of Object.values(BASE_UNITS)) {
+    if (b.dimMap?.Th && !b.offset && Math.abs(b.baseScale - meta.baseScale) < 1e-6) {
+      return b.symbol;
+    }
+  }
+  return "K";
+}
+
+export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
+  if (!factors || factors.length === 0) return "";
+  const isSet = cancelMode instanceof Set;
+  const isIdxCancelled = (idx) =>
+    cancelMode === "component" || (isSet && cancelMode.has(idx));
+
+  if (factors.length === 1 && factors[0].base === "percent" && factors[0].power === 1) {
+    const shouldCancel = cancelMode === "whole" || isIdxCancelled(0);
+    return shouldCancel ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+  }
+  if (factors.length === 1 && factors[0].base === "deg" && factors[0].power === 1) {
+    const shouldCancel = cancelMode === "whole" || isIdxCancelled(0);
+    return shouldCancel ? "\\cancel{°}" : "°";
+  }
+
+  const prefixSymbols = { pico: "p", nano: "n", micro: "u", milli: "m", centi: "c", deci: "d", kilo: "k", mega: "M", giga: "G" };
+  const numStrs = [];
+  const denStrs = [];
+
+  factors.forEach((f, idx) => {
+    const cancelThis = isIdxCancelled(idx);
+    const bMeta = BASE_UNITS[f.base];
+    const bSym = bMeta?.symbol || f.base;
+    const pSym = f.prefix ? prefixSymbols[f.prefix] || f.prefix : "";
+    const fullSym = `${pSym}${bSym}`;
+
+    const absP = Math.abs(f.power);
+    const expStr = absP > 1 ? `^{${absP}}` : "";
+
+    let termTex = "";
+    const symSuffixMatch = fullSym.match(/^(.+)_(m|f)$/);
+    if (fullSym === "%") {
+      termTex = cancelThis ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+    } else if (fullSym.startsWith("°")) {
+      termTex = cancelThis ? `\\cancel{${fullSym}${expStr}}` : `${fullSym}${expStr}`;
+    } else if (symSuffixMatch) {
+      const [, basePart, subPart] = symSuffixMatch;
+      const bodyTex = `\\text{${basePart}}_{${subPart}}`;
+      termTex = cancelThis ? `\\cancel{${bodyTex}}${expStr}` : `${bodyTex}${expStr}`;
+    } else {
+      termTex = cancelThis ? `\\cancel{\\text{${fullSym}}}${expStr}` : `\\text{${fullSym}}${expStr}`;
+    }
+
+    if (f.power > 0) numStrs.push(termTex);
+    else if (f.power < 0) denStrs.push(termTex);
+  });
+>>>>
+````
+
+FILE: src/cas/units/scales.js
+````diff 1
+<<<<
+        if (steps.length > 0) {
+          return { tex: steps.join(""), scalar: scalars[0] ?? null, scalars, isDecomposed: true };
+        }
+====
+        if (steps.length > 0) {
+          const numMismatch = Math.abs(numRatio - 1) >= 1e-6;
+          const denMismatch = Math.abs(denRatio - 1) >= 1e-6;
+          let cancelledIndices = null;
+          if (!rawFromParts) {
+            cancelledIndices = new Set([0]);
+          } else if (!(numMismatch && denMismatch)) {
+            cancelledIndices = new Set();
+            parseUnitToSemanticAST(fromUnit, fromDim).forEach((f, idx) => {
+              if ((f.power > 0 && numMismatch) || (f.power < 0 && denMismatch)) {
+                cancelledIndices.add(idx);
+              }
+            });
+          }
+          return { tex: steps.join(""), scalar: scalars[0] ?? null, scalars, isDecomposed: true, cancelledIndices };
+        }
+>>>>
+````
+````diff 2
+<<<<
+export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDim = null) {
+  const targetAst = parseUnitToSemanticAST(targetUnit, targetDim);
+  const conversionsByToken = {};
+  const scalars = [];
+  const usedTargetIndices = new Set();
+
+  const targetHasEnergy = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "E");
+  const targetPrefersBtu = targetAst.some(a => a.base === "Btu");
+
+  const targetHasMass = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "M");
+  const targetHasTime = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "T");
+  const targetHasLen = targetAst.some(a => BASE_UNITS[a.base]?.dimMap?.L === 1);
+  const anyEntryHasPureMass = tokenEntries.some(e =>
+    parseUnitToSemanticAST(e.uName, e.dim).some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "M")
+  );
+  const needsMassForceBridge = targetHasMass || anyEntryHasPureMass;
+
+  // Flatten all source atoms, expanding compound Power and gravitational Force units when bridging to Mass
+  const sourceAtoms = [];
+  for (const entry of tokenEntries) {
+    let workingUnit = entry.uName;
+    if (targetHasEnergy && (workingUnit === "W" || workingUnit === "kW" || workingUnit === "hp")) {
+      if (workingUnit === "W") {
+        workingUnit = "J/s";
+      } else if (workingUnit === "kW") {
+        workingUnit = "kJ/s";
+      } else if (workingUnit === "hp") {
+        const rateTarget = targetPrefersBtu ? "Btu/min" : "kJ/s";
+        const r = getUnitAtomBag("hp").scale / getUnitAtomBag(rateTarget).scale;
+        if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+        conversionsByToken[entry.tok].push(` \\cdot ${fmtScale(r)} \\, \\cfrac{${unitToTex(rateTarget, true)}}{\\cancel{\\text{hp}}}`);
+        scalars.push(parseFloat(r.toPrecision(6)));
+        workingUnit = rateTarget;
+      }
+    }
+
+    let ast = parseUnitToSemanticAST(workingUnit, entry.dim);
+    const gravForceIdx = needsMassForceBridge
+      ? ast.findIndex(a => BASE_UNITS[a.base]?.massCompanion && a.power === 1)
+      : -1;
+
+    if (gravForceIdx >= 0) {
+      const fAtom = ast[gravForceIdx];
+      const fStr = atomToUnitString(fAtom);
+      const isImperialForce = fAtom.base === "pound_force";
+      const baseForceStr = isImperialForce ? "lb_f" : "kg_f";
+      const mStr = isImperialForce ? "lb_m" : "kg";
+
+      const lenAtom = ast.find(a => a !== fAtom && BASE_UNITS[a.base]?.dimMap?.L === 1);
+      const lenAtomStr = lenAtom ? atomToUnitString(lenAtom) : null;
+      const lStr = isImperialForce ? (lenAtomStr === "in" ? "in" : "ft") : "m";
+
+      if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+
+      // Unpack prefix on gravitational force (e.g. klb_f -> 1000 lb_f) so gc stays canonical
+      if (fStr !== baseForceStr) {
+        const prefixRatio = getUnitAtomBag(fStr).scale / getUnitAtomBag(baseForceStr).scale;
+        if (Math.abs(prefixRatio - 1) > 1e-6) {
+          scalars.push(parseFloat((prefixRatio > 1 ? prefixRatio : 1 / prefixRatio).toPrecision(6)));
+          if (prefixRatio > 1) {
+            conversionsByToken[entry.tok].push(` \\cdot ${fmtScale(prefixRatio)} \\, \\cfrac{\\cancel{${unitToTex(baseForceStr)}}}{\\cancel{${unitToTex(fStr)}}}`);
+          } else {
+            conversionsByToken[entry.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(baseForceStr)}}}{${fmtScale(1 / prefixRatio)} \\, \\cancel{${unitToTex(fStr)}}}`);
+          }
+        }
+      }
+
+      const gc = getUnitAtomBag(baseForceStr).scale / (getUnitAtomBag(mStr).scale * getUnitAtomBag(lStr).scale);
+      scalars.push(parseFloat(gc.toPrecision(6)));
+
+      const tokenHasMatchingLen = !!(lenAtom && lenAtom.power === -1 && lenAtomStr === lStr);
+      const mTex = targetHasMass ? unitToTex(mStr) : unitToCancelledTex(mStr, false, null, "component");
+      const lTex = (tokenHasMatchingLen || !targetHasLen) ? unitToCancelledTex(lStr, false, null, "component") : unitToTex(lStr);
+      const s2Tex = targetHasTime ? "\\text{s}^{2}" : "\\cancel{\\text{s}^{2}}";
+
+      conversionsByToken[entry.tok].push(
+        ` \\cdot ${fmtScale(gc)} \\, \\cfrac{${mTex} \\cdot ${lTex}}{\\cancel{${unitToTex(baseForceStr)}} \\cdot ${s2Tex}}`
+      );
+
+      // Rebuild remaining AST after replacing gravitational force with mStr * lStr / s^2
+      const nextFactors = [];
+      for (let idx = 0; idx < ast.length; idx++) {
+        if (idx === gravForceIdx) continue;
+        if (tokenHasMatchingLen && ast[idx] === lenAtom) continue;
+        nextFactors.push(ast[idx]);
+      }
+      const mResolved = resolveUnitToken(mStr, DIMENSIONS.MASS);
+      nextFactors.push({ prefix: mResolved.prefix, base: mResolved.base, power: 1 });
+      if (!tokenHasMatchingLen) {
+        const lResolved = resolveUnitToken(lStr, DIMENSIONS.LENGTH);
+        nextFactors.push({ prefix: lResolved.prefix, base: lResolved.base, power: 1 });
+      }
+      nextFactors.push({ prefix: null, base: "second", power: -2 });
+      ast = nextFactors;
+    }
+    ast.forEach(atom => {
+      sourceAtoms.push({
+        tok: entry.tok,
+        atom,
+        exp: entry.exp,
+        netPower: atom.power * entry.exp,
+        dim: getAtomDimKey(BASE_UNITS[atom.base]?.dimMap) || atom.base
+      });
+    });
+  }
+
+  // 0. Pair reciprocal Frequency (Hz/kHz/MHz) <-> Time (s/ms/min/h) via 1 Hz * 1 s = 1
+  for (const src of sourceAtoms) {
+    if (src.matched || (src.dim !== "Freq" && src.dim !== "T")) continue;
+    const wantedDim = src.dim === "Freq" ? "T" : "Freq";
+    const tIdx = targetAst.findIndex((tAtom, idx) => {
+      if (usedTargetIndices.has(idx)) return false;
+      const tDim = getAtomDimKey(BASE_UNITS[tAtom.base]?.dimMap) || tAtom.base;
+      const isRecipPair =
+        (src.dim === "Freq" && src.atom.base === "hertz" && tDim === "T") ||
+        (src.dim === "T" && tAtom.base === "hertz");
+      return isRecipPair && tDim === wantedDim && Math.sign(tAtom.power) === Math.sign(src.netPower);
+    });
+
+    if (tIdx >= 0) {
+      usedTargetIndices.add(tIdx);
+      src.matched = true;
+      const tAtom = targetAst[tIdx];
+      const srcStr = atomToUnitString(src.atom);
+      const tgtStr = atomToUnitString(tAtom);
+      const sSrc = getUnitAtomBag(srcStr).scale;
+      const sTgt = getUnitAtomBag(tgtStr).scale;
+      const prod = sSrc * sTgt;
+
+      if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
+      if (Math.abs(prod - 1) < 1e-6) {
+        conversionsByToken[src.tok].push(` \\cdot ${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}`);
+      } else if (prod < 1) {
+        const factor = 1 / prod;
+        scalars.push(parseFloat(factor.toPrecision(6)));
+        conversionsByToken[src.tok].push(` \\cdot ${fmtScale(factor)} \\, ${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}`);
+      } else {
+        scalars.push(parseFloat(prod.toPrecision(6)));
+        conversionsByToken[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}}{${fmtScale(prod)}}`);
+      }
+    }
+  }
+
+  // 1. Pair source atoms with matching target atoms by base dimension
+  for (const src of sourceAtoms) {
+    if (src.matched) continue;
+    const tIdx = targetAst.findIndex((tAtom, idx) => {
+      if (usedTargetIndices.has(idx)) return false;
+      const tDim = getAtomDimKey(BASE_UNITS[tAtom.base]?.dimMap) || tAtom.base;
+      return tDim === src.dim && Math.sign(tAtom.power) === Math.sign(src.netPower);
+    });
+
+    if (tIdx >= 0) {
+      usedTargetIndices.add(tIdx);
+      const tAtom = targetAst[tIdx];
+      const srcStr = atomToUnitString(src.atom);
+      const tgtStr = atomToUnitString(tAtom);
+      const sSrc = getUnitAtomBag(srcStr).scale;
+      const sTgt = getUnitAtomBag(tgtStr).scale;
+      const ratio = sSrc / sTgt;
+
+      if (Math.abs(ratio - 1) > 1e-6) {
+        if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
+        const sVal = ratio > 1 ? ratio : (1 / ratio);
+        scalars.push(parseFloat(sVal.toPrecision(6)));
+
+        if (src.atom.power > 0) {
+          if (ratio > 1) {
+            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${unitToTex(tgtStr)}}{\\cancel{${unitToTex(srcStr)}}}`);
+          } else {
+            conversionsByToken[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)}}{${fmtScale(1 / ratio)} \\, \\cancel{${unitToTex(srcStr)}}}`);
+          }
+        } else {
+          if (ratio > 1) {
+            conversionsByToken[src.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${fmtScale(ratio)} \\, ${unitToTex(tgtStr)}}`);
+          } else {
+            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${unitToTex(tgtStr)}}`);
+          }
+        }
+      }
+      src.matched = true;
+    }
+  }
+
+  // 2. Pair remaining unmatched source atoms that cancel each other across tokens (e.g. min vs h or ms vs s)
+  const unmatched = sourceAtoms.filter(s => !s.matched);
+  for (let i = 0; i < unmatched.length; i++) {
+    const a = unmatched[i];
+    if (a.matched) continue;
+    const partner = unmatched.find((b, j) =>
+      j > i && !b.matched && b.dim === a.dim && a.netPower + b.netPower === 0
+    );
+    if (partner) {
+      a.matched = true;
+      partner.matched = true;
+      const strA = atomToUnitString(a.atom);
+      const strB = atomToUnitString(partner.atom);
+      const sA = getUnitAtomBag(strA).scale;
+      const sB = getUnitAtomBag(strB).scale;
+      const ratio = sA / sB;
+
+      if (Math.abs(ratio - 1) > 1e-6) {
+        if (!conversionsByToken[a.tok]) conversionsByToken[a.tok] = [];
+        const sVal = ratio > 1 ? ratio : (1 / ratio);
+        scalars.push(parseFloat(sVal.toPrecision(6)));
+
+        if (a.atom.power < 0) {
+          if (ratio < 1) {
+            conversionsByToken[a.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(strA)}}}{\\cancel{${unitToTex(strB)}}}`);
+          } else {
+            conversionsByToken[a.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(strA)}}}{${fmtScale(ratio)} \\, \\cancel{${unitToTex(strB)}}}`);
+          }
+        } else {
+          const targetTok = a.atom.prefix ? a.tok : partner.tok;
+          const prefixedStr = a.atom.prefix ? strA : strB;
+          const baseStr = a.atom.prefix ? strB : strA;
+          const pRatio = getUnitAtomBag(prefixedStr).scale / getUnitAtomBag(baseStr).scale;
+          const invRatio = 1 / pRatio;
+          if (!conversionsByToken[targetTok]) conversionsByToken[targetTok] = [];
+          conversionsByToken[targetTok].push(` \\cdot \\cfrac{${unitToTex(baseStr)}}{${fmtScale(invRatio)} \\, \\cancel{${unitToTex(prefixedStr)}}}`);
+        }
+      }
+    }
+  }
+
+  return { conversionsByToken, scalars };
+}
+====
+export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDim = null) {
+  const targetAst = parseUnitToSemanticAST(targetUnit, targetDim);
+  const conversionsByToken = {};
+  const cancelledIndicesByToken = {};
+  const scalars = [];
+  const usedTargetIndices = new Set();
+
+  const markCancelled = (tok, idx) => {
+    if (idx === null || idx === undefined) return;
+    if (!cancelledIndicesByToken[tok]) cancelledIndicesByToken[tok] = new Set();
+    cancelledIndicesByToken[tok].add(idx);
+  };
+
+  const targetHasEnergy = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "E");
+  const targetPrefersBtu = targetAst.some(a => a.base === "Btu");
+
+  const targetHasMass = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "M");
+  const targetHasTime = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "T");
+  const targetHasLen = targetAst.some(a => BASE_UNITS[a.base]?.dimMap?.L === 1);
+  const anyEntryHasPureMass = tokenEntries.some(e =>
+    parseUnitToSemanticAST(e.uName, e.dim).some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "M")
+  );
+  const needsMassForceBridge = targetHasMass || anyEntryHasPureMass;
+
+  // Flatten all source atoms, expanding compound Power and gravitational Force units when bridging to Mass
+  const sourceAtoms = [];
+  for (const entry of tokenEntries) {
+    if (!cancelledIndicesByToken[entry.tok]) cancelledIndicesByToken[entry.tok] = new Set();
+
+    let workingUnit = entry.uName;
+    let expandedFromSingleAtom = false;
+    let convertedBeforeExpand = false;
+    if (targetHasEnergy && (workingUnit === "W" || workingUnit === "kW" || workingUnit === "hp")) {
+      if (workingUnit === "W") {
+        workingUnit = "J/s";
+        expandedFromSingleAtom = true;
+      } else if (workingUnit === "kW") {
+        workingUnit = "kJ/s";
+        expandedFromSingleAtom = true;
+      } else if (workingUnit === "hp") {
+        const rateTarget = targetPrefersBtu ? "Btu/min" : "kJ/s";
+        const r = getUnitAtomBag("hp").scale / getUnitAtomBag(rateTarget).scale;
+        if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+        conversionsByToken[entry.tok].push(` \\cdot ${fmtScale(r)} \\, \\cfrac{${unitToTex(rateTarget, true)}}{\\cancel{\\text{hp}}}`);
+        scalars.push(parseFloat(r.toPrecision(6)));
+        markCancelled(entry.tok, 0);
+        workingUnit = rateTarget;
+        convertedBeforeExpand = true;
+      }
+    }
+
+    let ast = parseUnitToSemanticAST(workingUnit, entry.dim).map((atom, idx) => ({
+      ...atom,
+      origIndex: convertedBeforeExpand ? null : (expandedFromSingleAtom ? 0 : idx)
+    }));
+
+    const gravForceIdx = needsMassForceBridge
+      ? ast.findIndex(a => BASE_UNITS[a.base]?.massCompanion && a.power === 1)
+      : -1;
+
+    if (gravForceIdx >= 0) {
+      const fAtom = ast[gravForceIdx];
+      const fStr = atomToUnitString(fAtom);
+      const isImperialForce = fAtom.base === "pound_force";
+      const baseForceStr = isImperialForce ? "lb_f" : "kg_f";
+      const mStr = isImperialForce ? "lb_m" : "kg";
+
+      const lenAtom = ast.find(a => a !== fAtom && BASE_UNITS[a.base]?.dimMap?.L === 1);
+      const lenAtomStr = lenAtom ? atomToUnitString(lenAtom) : null;
+      const lStr = isImperialForce ? (lenAtomStr === "in" ? "in" : "ft") : "m";
+
+      if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+
+      // Unpack prefix on gravitational force (e.g. klb_f -> 1000 lb_f) so gc stays canonical
+      if (fStr !== baseForceStr) {
+        const prefixRatio = getUnitAtomBag(fStr).scale / getUnitAtomBag(baseForceStr).scale;
+        if (Math.abs(prefixRatio - 1) > 1e-6) {
+          scalars.push(parseFloat((prefixRatio > 1 ? prefixRatio : 1 / prefixRatio).toPrecision(6)));
+          if (prefixRatio > 1) {
+            conversionsByToken[entry.tok].push(` \\cdot ${fmtScale(prefixRatio)} \\, \\cfrac{\\cancel{${unitToTex(baseForceStr)}}}{\\cancel{${unitToTex(fStr)}}}`);
+          } else {
+            conversionsByToken[entry.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(baseForceStr)}}}{${fmtScale(1 / prefixRatio)} \\, \\cancel{${unitToTex(fStr)}}}`);
+          }
+        }
+      }
+
+      const gc = getUnitAtomBag(baseForceStr).scale / (getUnitAtomBag(mStr).scale * getUnitAtomBag(lStr).scale);
+      scalars.push(parseFloat(gc.toPrecision(6)));
+
+      const tokenHasMatchingLen = !!(lenAtom && lenAtom.power === -1 && lenAtomStr === lStr);
+      const mTex = targetHasMass ? unitToTex(mStr) : unitToCancelledTex(mStr, false, null, "component");
+      const lTex = (tokenHasMatchingLen || !targetHasLen) ? unitToCancelledTex(lStr, false, null, "component") : unitToTex(lStr);
+      const s2Tex = targetHasTime ? "\\text{s}^{2}" : "\\cancel{\\text{s}^{2}}";
+
+      conversionsByToken[entry.tok].push(
+        ` \\cdot ${fmtScale(gc)} \\, \\cfrac{${mTex} \\cdot ${lTex}}{\\cancel{${unitToTex(baseForceStr)}} \\cdot ${s2Tex}}`
+      );
+
+      markCancelled(entry.tok, fAtom.origIndex);
+      if (tokenHasMatchingLen && lenAtom) {
+        markCancelled(entry.tok, lenAtom.origIndex);
+      }
+
+      // Rebuild remaining AST after replacing gravitational force with mStr * lStr / s^2
+      const nextFactors = [];
+      for (let idx = 0; idx < ast.length; idx++) {
+        if (idx === gravForceIdx) continue;
+        if (tokenHasMatchingLen && ast[idx] === lenAtom) continue;
+        nextFactors.push(ast[idx]);
+      }
+      const mResolved = resolveUnitToken(mStr, DIMENSIONS.MASS);
+      nextFactors.push({ prefix: mResolved.prefix, base: mResolved.base, power: 1, origIndex: null });
+      if (!tokenHasMatchingLen) {
+        const lResolved = resolveUnitToken(lStr, DIMENSIONS.LENGTH);
+        nextFactors.push({ prefix: lResolved.prefix, base: lResolved.base, power: 1, origIndex: null });
+      }
+      nextFactors.push({ prefix: null, base: "second", power: -2, origIndex: null });
+      ast = nextFactors;
+    }
+    ast.forEach(atom => {
+      sourceAtoms.push({
+        tok: entry.tok,
+        atom,
+        origIndex: atom.origIndex ?? null,
+        exp: entry.exp,
+        netPower: atom.power * entry.exp,
+        dim: getAtomDimKey(BASE_UNITS[atom.base]?.dimMap) || atom.base
+      });
+    });
+  }
+
+  // 0. Pair reciprocal Frequency (Hz/kHz/MHz) <-> Time (s/ms/min/h) via 1 Hz * 1 s = 1
+  for (const src of sourceAtoms) {
+    if (src.matched || (src.dim !== "Freq" && src.dim !== "T")) continue;
+    const wantedDim = src.dim === "Freq" ? "T" : "Freq";
+    const tIdx = targetAst.findIndex((tAtom, idx) => {
+      if (usedTargetIndices.has(idx)) return false;
+      const tDim = getAtomDimKey(BASE_UNITS[tAtom.base]?.dimMap) || tAtom.base;
+      const isRecipPair =
+        (src.dim === "Freq" && src.atom.base === "hertz" && tDim === "T") ||
+        (src.dim === "T" && tAtom.base === "hertz");
+      return isRecipPair && tDim === wantedDim && Math.sign(tAtom.power) === Math.sign(src.netPower);
+    });
+
+    if (tIdx >= 0) {
+      usedTargetIndices.add(tIdx);
+      src.matched = true;
+      markCancelled(src.tok, src.origIndex);
+      const tAtom = targetAst[tIdx];
+      const srcStr = atomToUnitString(src.atom);
+      const tgtStr = atomToUnitString(tAtom);
+      const sSrc = getUnitAtomBag(srcStr).scale;
+      const sTgt = getUnitAtomBag(tgtStr).scale;
+      const prod = sSrc * sTgt;
+
+      if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
+      if (Math.abs(prod - 1) < 1e-6) {
+        conversionsByToken[src.tok].push(` \\cdot ${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}`);
+      } else if (prod < 1) {
+        const factor = 1 / prod;
+        scalars.push(parseFloat(factor.toPrecision(6)));
+        conversionsByToken[src.tok].push(` \\cdot ${fmtScale(factor)} \\, ${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}`);
+      } else {
+        scalars.push(parseFloat(prod.toPrecision(6)));
+        conversionsByToken[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)} \\cdot \\cancel{${unitToTex(srcStr)}}}{${fmtScale(prod)}}`);
+      }
+    }
+  }
+
+  // 1. Pair source atoms with matching target atoms by base dimension
+  for (const src of sourceAtoms) {
+    if (src.matched) continue;
+    const tIdx = targetAst.findIndex((tAtom, idx) => {
+      if (usedTargetIndices.has(idx)) return false;
+      const tDim = getAtomDimKey(BASE_UNITS[tAtom.base]?.dimMap) || tAtom.base;
+      return tDim === src.dim && Math.sign(tAtom.power) === Math.sign(src.netPower);
+    });
+
+    if (tIdx >= 0) {
+      usedTargetIndices.add(tIdx);
+      const tAtom = targetAst[tIdx];
+      const srcStr = atomToUnitString(src.atom);
+      const tgtStr = atomToUnitString(tAtom);
+      const sSrc = getUnitAtomBag(srcStr).scale;
+      const sTgt = getUnitAtomBag(tgtStr).scale;
+      const ratio = sSrc / sTgt;
+
+      if (Math.abs(ratio - 1) > 1e-6) {
+        markCancelled(src.tok, src.origIndex);
+        if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
+        const sVal = ratio > 1 ? ratio : (1 / ratio);
+        scalars.push(parseFloat(sVal.toPrecision(6)));
+
+        if (src.atom.power > 0) {
+          if (ratio > 1) {
+            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(ratio)} \\, \\cfrac{${unitToTex(tgtStr)}}{\\cancel{${unitToTex(srcStr)}}}`);
+          } else {
+            conversionsByToken[src.tok].push(` \\cdot \\cfrac{${unitToTex(tgtStr)}}{${fmtScale(1 / ratio)} \\, \\cancel{${unitToTex(srcStr)}}}`);
+          }
+        } else {
+          if (ratio > 1) {
+            conversionsByToken[src.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${fmtScale(ratio)} \\, ${unitToTex(tgtStr)}}`);
+          } else {
+            conversionsByToken[src.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(srcStr)}}}{${unitToTex(tgtStr)}}`);
+          }
+        }
+      }
+      src.matched = true;
+    }
+  }
+
+  // 2. Pair remaining unmatched source atoms that cancel each other across tokens (e.g. min vs h or ms vs s)
+  const unmatched = sourceAtoms.filter(s => !s.matched);
+  for (let i = 0; i < unmatched.length; i++) {
+    const a = unmatched[i];
+    if (a.matched) continue;
+    const partner = unmatched.find((b, j) =>
+      j > i && !b.matched && b.dim === a.dim && a.netPower + b.netPower === 0
+    );
+    if (partner) {
+      a.matched = true;
+      partner.matched = true;
+      markCancelled(a.tok, a.origIndex);
+      markCancelled(partner.tok, partner.origIndex);
+
+      const strA = atomToUnitString(a.atom);
+      const strB = atomToUnitString(partner.atom);
+      const sA = getUnitAtomBag(strA).scale;
+      const sB = getUnitAtomBag(strB).scale;
+      const ratio = sA / sB;
+
+      if (Math.abs(ratio - 1) > 1e-6) {
+        if (!conversionsByToken[a.tok]) conversionsByToken[a.tok] = [];
+        const sVal = ratio > 1 ? ratio : (1 / ratio);
+        scalars.push(parseFloat(sVal.toPrecision(6)));
+
+        if (a.atom.power < 0) {
+          if (ratio < 1) {
+            conversionsByToken[a.tok].push(` \\cdot ${fmtScale(1 / ratio)} \\, \\cfrac{\\cancel{${unitToTex(strA)}}}{\\cancel{${unitToTex(strB)}}}`);
+          } else {
+            conversionsByToken[a.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(strA)}}}{${fmtScale(ratio)} \\, \\cancel{${unitToTex(strB)}}}`);
+          }
+        } else {
+          const targetTok = a.atom.prefix ? a.tok : partner.tok;
+          const prefixedStr = a.atom.prefix ? strA : strB;
+          const baseStr = a.atom.prefix ? strB : strA;
+          const pRatio = getUnitAtomBag(prefixedStr).scale / getUnitAtomBag(baseStr).scale;
+          const invRatio = 1 / pRatio;
+          if (!conversionsByToken[targetTok]) conversionsByToken[targetTok] = [];
+          conversionsByToken[targetTok].push(` \\cdot \\cfrac{${unitToTex(baseStr)}}{${fmtScale(invRatio)} \\, \\cancel{${unitToTex(prefixedStr)}}}`);
+        }
+      }
+    }
+  }
+
+  return { conversionsByToken, scalars, cancelledIndicesByToken };
+}
+>>>>
+````
+
+FILE: src/cas/units/analysis.js
+````diff 1
+<<<<
+          } else {
+            const cancelMode = conv.isDecomposed ? "component" : "whole";
+            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, cancelMode);
+            const convTex = useInlineUnit ? conv.tex.replaceAll("\\cfrac", "\\tfrac") : conv.tex;
+            if (inAdditive) {
+              // Inside any additive subtree (incl. 1/(1/k_1 + 1/k_2)), convert in-situ
+              tokenConversions[tok] = [convTex];
+              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+            } else if (!globalConversionTex) {
+              // Single-branch Option B: preserves target unit intact on main line
+              globalConversionTex = convTex;
+              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+            }
+          }
+        } else {
+          // Compound branch (e.g. m_f / IP or Q_rej / m_a)
+          tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, "component");
+          if (!compoundComputed) {
+            compoundComputed = true;
+            const entries = Object.entries(tokenBags).map(([t, info]) => ({
+              tok: t, uName: info.uName, dim: info.dim, exp: info.exp
+            }));
+            const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
+            for (const [k, convList] of Object.entries(conversionsByToken)) {
+              tokenConversions[k] = useInlineUnit
+                ? convList.map(c => c.replaceAll("\\cfrac", "\\tfrac"))
+                : convList;
+            }
+            conversionScalars.push(...scalars);
+          }
+        }
+====
+          } else {
+            const cancelTarget = conv.cancelledIndices
+              || (conv.isDecomposed ? "component" : "whole");
+            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, cancelTarget);
+            const convTex = useInlineUnit ? conv.tex.replaceAll("\\cfrac", "\\tfrac") : conv.tex;
+            if (inAdditive) {
+              // Inside any additive subtree (incl. 1/(1/k_1 + 1/k_2)), convert in-situ
+              tokenConversions[tok] = [convTex];
+              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+            } else if (!globalConversionTex) {
+              // Single-branch Option B: preserves target unit intact on main line
+              globalConversionTex = convTex;
+              conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+            }
+          }
+        } else {
+          // Compound branch (e.g. m_f / IP or Q_rej / m_a)
+          if (!compoundComputed) {
+            compoundComputed = true;
+            const entries = Object.entries(tokenBags).map(([t, info]) => ({
+              tok: t, uName: info.uName, dim: info.dim, exp: info.exp
+            }));
+            const { conversionsByToken, scalars, cancelledIndicesByToken } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
+            for (const [k, convList] of Object.entries(conversionsByToken)) {
+              tokenConversions[k] = useInlineUnit
+                ? convList.map(c => c.replaceAll("\\cfrac", "\\tfrac"))
+                : convList;
+            }
+            for (const [k, idxSet] of Object.entries(cancelledIndicesByToken || {})) {
+              if (tokenMarkup[k] !== undefined) continue;
+              const kCanon = resolveCanonicalKey(k, varsDb);
+              const kMeta = varsDb[kCanon] || varsDb[k] || {};
+              const kU = S._u?.[kCanon] || S._u?.[k] || kMeta.unit || "";
+              const kDepth = getFormulaFractionDepth(branchAst, k) || 0;
+              tokenMarkup[k] = unitToCancelledTex(kU, kDepth >= 2, kMeta.dimension, idxSet);
+            }
+            conversionScalars.push(...scalars);
+          }
+          if (tokenMarkup[tok] === undefined) {
+            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, new Set());
+          }
+        }
+>>>>
+````
+
+FILE: src/core/derivation.js
+````diff 1
+<<<<
+import { parseMathAST } from "../cas/ast.js";
+import { resolveCanonicalKey } from "../cas/algebra.js";
+import { casToTex, astToLatex } from "../cas/latex.js";
+import { solveUnitAlgebra, getUnitAtomBag, isDimEqual, unitToTex } from "../cas/units/index.js";
+import { fmtSigFig, formatGivenValue } from "./dimensions.js";
+
+export function buildAlignedDerivation(
+  step,
+  S = {},
+  allSteps = [],
+  varsDb = {},
+  relations = [],
+  answeredVars = new Set(),
+  givens = [],
+  overrides = {}
+) {
+  const { targetVar, baseFormula, canonicalTex, rhsExpr, requiredUnits } = step;
+
+  const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
+  const targetMeta = varsDb[canonicalTarget] || varsDb[targetVar] || {};
+  const targetSymbol = S._displaySymbols?.[canonicalTarget] || S._displaySymbols?.[targetVar] || targetMeta.symbol || targetVar;
+  const targetUnit = S._u?.[canonicalTarget] || S._u?.[targetVar] || targetMeta.unit || "";
+
+  const formulaRhs = rhsExpr || (baseFormula && baseFormula.includes("=") ? baseFormula.split("=")[1].trim() : baseFormula) || "";
+  const unitAnalysis = solveUnitAlgebra(formulaRhs, S, targetVar, targetUnit, varsDb, requiredUnits);
+
+  const evalState = { ...S, ...overrides };
+  const activeUnitMap = { ...(S._u || {}) };
+  if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
+    unitAnalysis.preConversions.forEach(pc => {
+      evalState[pc.token] = pc.convertedVal;
+      evalState[pc.canonicalKey] = pc.convertedVal;
+      const convUnit = pc.toUnit || pc.targetUnit || "__PRE_CONVERTED__";
+      activeUnitMap[pc.token] = convUnit;
+      activeUnitMap[pc.canonicalKey] = convUnit;
+    });
+  }
+
+  // 1. Build Localized Substitution Mapping with explicit `\,` spacing
+  const subsMap = {};
+  for (const [k, v] of Object.entries(evalState)) {
+    if (typeof v === "number") {
+      const meta = varsDb[k] || {};
+      const activeUnit = activeUnitMap[k] || meta.unit || "";
+      const formattedNum = formatGivenValue(v, meta, true, activeUnit);
+      const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
+      const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
+
+      if (inlineConv === "__AFFINE_CONVERTED__") {
+        subsMap[k] = unitMarkup;
+      } else if (unitMarkup !== "" || inlineConv !== "") {
+        subsMap[k] = `${formattedNum} \\, ${unitMarkup}${inlineConv}`;
+      } else {
+        subsMap[k] = formattedNum;
+      }
+    }
+  }
+
+  // 2. Pure AST Additive Factoring:
+  //    Mutates the additive binary subtree directly into a single factored identifier node
+  const rhsAst = parseMathAST(formulaRhs);
+  const unitOfKey = k => S._u?.[k] || varsDb[k]?.unit || "";
+
+  (function factorAdditiveGroups(node) {
+    if (!node) return;
+    if (node.type === "group") { factorAdditiveGroups(node.expr); return; }
+    if (node.type === "call") { factorAdditiveGroups(node.arg); return; }
+    if (node.type !== "binary") return;
+
+    if (node.op === "+" || node.op === "-") {
+      const leaves = [];
+      (function walk(n, sign) {
+        const u = n && n.type === "group" ? n.expr : n;
+        if (u && u.type === "binary" && (u.op === "+" || u.op === "-")) {
+          walk(u.left, sign);
+          walk(u.right, u.op === "+" ? sign : -sign);
+          return;
+        }
+        if (u && u.type === "id" && typeof evalState[u.name] === "number") {
+          leaves.push({ key: u.name, sign });
+        }
+      })(node, 1);
+
+      const units = leaves.map(l => unitOfKey(l.key));
+      const firstBag = getUnitAtomBag(units[0]);
+      const allShareUnit = leaves.length > 1 && units.every(u => {
+        if (!u && !units[0]) return true;
+        if (!u || !units[0]) return false;
+        const b = getUnitAtomBag(u);
+        return isDimEqual(firstBag.dimMap, b.dimMap) && Math.abs(firstBag.scale - b.scale) < 1e-9;
+      });
+
+      if (allShareUnit) {
+        const meta0 = varsDb[leaves[0].key] || {};
+        const uTex = unitAnalysis.tokenMarkup?.[leaves[0].key] || unitToTex(units[0]);
+        const inner = leaves
+          .map((l, i) => {
+            const signStr = i === 0 ? (l.sign < 0 ? "-" : "") : (l.sign < 0 ? " - " : " + ");
+            const lMeta = varsDb[l.key] || meta0;
+            const lUnit = activeUnitMap[l.key] || lMeta.unit || "";
+            return `${signStr}${formatGivenValue(evalState[l.key], lMeta, true, lUnit)}`;
+          })
+          .join("");
+
+        const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
+        const groupConv = unitAnalysis.tokenConversions?.[leaves[0].key]?.join("") || "";
+        subsMap[factoredId] = uTex ? `(${inner})\\,${uTex}${groupConv}` : `(${inner})${groupConv}`;
+
+        node.type = "id";
+        node.name = factoredId;
+        delete node.op;
+        delete node.left;
+        delete node.right;
+        return;
+      }
+    }
+
+    factorAdditiveGroups(node.left);
+    factorAdditiveGroups(node.right);
+  })(rhsAst);
+
+  // 3. Implication Arrow Logic
+  const symRhs = casToTex(formulaRhs, varsDb);
+  const displayCanonical = canonicalTex || casToTex(baseFormula, varsDb);
+
+  const formulaLhs = baseFormula && baseFormula.includes("=")
+    ? baseFormula.split("=")[0].trim()
+    : "";
+  const isAlreadyIsolated = formulaLhs !== "" && (
+    formulaLhs === targetVar ||
+    resolveCanonicalKey(formulaLhs, varsDb) === canonicalTarget
+  );
+
+  const numTex = astToLatex(rhsAst, subsMap, varsDb)
+    + (unitAnalysis.globalConversionTex || "");
+
+  let line1;
+  if (isAlreadyIsolated || !baseFormula) {
+    line1 = `${displayCanonical} &= ${numTex}`;
+  } else {
+    line1 = `${displayCanonical} \\;\\Rightarrow\\; ${targetSymbol} &= ${symRhs} \\\\[6pt]\n  &= ${numTex}`;
+  }
+
+  // 4. Final Boxed Answer: use adopted value if available, else expected truth
+  const val = overrides[canonicalTarget] ?? step.expectedVal ?? S[canonicalTarget];
+  const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
+
+  let unitTex = "";
+  if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
+    if (targetUnit === "deg" || targetUnit === "°") {
+      unitTex = "°";
+    } else if (targetUnit === "%") {
+      unitTex = "\\text{\\%}";
+    } else {
+      unitTex = unitToTex(targetUnit, true);
+    }
+  }
+
+  const finalLine = unitTex
+    ? (unitTex === "°" ? `${targetSymbol} &= \\boxed{${formattedVal}°}` : `${targetSymbol} &= \\boxed{${formattedVal} \\, ${unitTex}}`)
+    : `${targetSymbol} &= \\boxed{${formattedVal}}`;
+
+  return `$$\\begin{aligned}\n  ${line1} \\\\[6pt]\n  ${finalLine}\n\\end{aligned}$$`;
+}
+====
+import { parseMathAST, getAstIdentifiers } from "../cas/ast.js";
+import { resolveCanonicalKey, isReservedMathToken } from "../cas/algebra.js";
+import { casToTex, astToLatex, toLatexSymbol } from "../cas/latex.js";
+import {
+  solveUnitAlgebra,
+  getUnitAtomBag,
+  getUnitOffset,
+  getAbsoluteCompanionUnit,
+  isDimEqual,
+  unitToTex,
+  unitToCancelledTex,
+  fmtScale,
+  valueToCoherentBase,
+  formatValueInUnit
+} from "../cas/units/index.js";
+import { CONSTANTS_DB } from "./constants_registry.js";
+import { fmtSigFig, formatGivenValue, DIMENSIONS } from "./dimensions.js";
+
+function countConversionItems(analysis) {
+  let count = analysis.globalConversionTex ? 1 : 0;
+  for (const list of Object.values(analysis.tokenConversions || {})) {
+    if (Array.isArray(list)) {
+      count += list.filter(item => item !== "__AFFINE_CONVERTED__").length;
+    }
+  }
+  return count;
+}
+
+export function buildAlignedDerivation(
+  step,
+  S = {},
+  allSteps = [],
+  varsDb = {},
+  relations = [],
+  answeredVars = new Set(),
+  givens = [],
+  overrides = {}
+) {
+  const { targetVar, baseFormula, canonicalTex, rhsExpr, requiredUnits } = step;
+
+  const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
+  const targetMeta = varsDb[canonicalTarget] || varsDb[targetVar] || {};
+  const targetSymbol = S._displaySymbols?.[canonicalTarget] || S._displaySymbols?.[targetVar] || targetMeta.symbol || targetVar;
+  const targetUnit = S._u?.[canonicalTarget] || S._u?.[targetVar] || targetMeta.unit || "";
+
+  const formulaRhs = rhsExpr || (baseFormula && baseFormula.includes("=") ? baseFormula.split("=")[1].trim() : baseFormula) || "";
+  const evalState = { ...S, ...overrides };
+  const activeUnitMap = { ...(S._u || {}) };
+  const workingVarsDb = { ...varsDb };
+  const rhsAst = parseMathAST(formulaRhs);
+  const prepLines = [];
+  const alignedTokens = new Set();
+  const useScaleFmtFor = new Set();
+  const factoredInfo = {};
+
+  const unitOfKey = k => {
+    const c = resolveCanonicalKey(k, workingVarsDb);
+    return activeUnitMap[k] || activeUnitMap[c] || workingVarsDb[k]?.unit || workingVarsDb[c]?.unit || "";
+  };
+
+  let unitAnalysis;
+
+  if (requiredUnits && typeof requiredUnits === "object") {
+    unitAnalysis = solveUnitAlgebra(formulaRhs, evalState, targetVar, targetUnit, workingVarsDb, requiredUnits);
+    if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
+      unitAnalysis.preConversions.forEach(pc => {
+        evalState[pc.token] = pc.convertedVal;
+        evalState[pc.canonicalKey] = pc.convertedVal;
+        const convUnit = pc.toUnit || pc.targetUnit || "__PRE_CONVERTED__";
+        activeUnitMap[pc.token] = convUnit;
+        activeUnitMap[pc.canonicalKey] = convUnit;
+      });
+    }
+  } else {
+    // 1. Align mismatched additive groups (including affine temperatures like °R vs °F or K vs °C)
+    const alignLeafToUnit = (key, targetU) => {
+      const currU = unitOfKey(key);
+      const cKey = resolveCanonicalKey(key, workingVarsDb);
+      const meta = workingVarsDb[cKey] || workingVarsDb[key] || {};
+      if (!currU || !targetU || currU === targetU || alignedTokens.has(key)) return;
+
+      const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
+      const currOffset = getUnitOffset(currU, meta.dimension);
+      const targetOffset = getUnitOffset(targetU, meta.dimension);
+      const currBag = getUnitAtomBag(currU, meta.dimension);
+      const targetBag = getUnitAtomBag(targetU, meta.dimension);
+      if (isDimEqual(currBag.dimMap, targetBag.dimMap) && Math.abs(currBag.scale - targetBag.scale) < 1e-9 && Math.abs(currOffset - targetOffset) < 1e-9) {
+        return;
+      }
+
+      const rawVal = evalState[key];
+      const alignedVal = formatValueInUnit(
+        valueToCoherentBase(rawVal, currU, isDiff, meta.dimension),
+        targetU,
+        isDiff,
+        meta.dimension
+      );
+      const sym = S._displaySymbols?.[cKey] || S._displaySymbols?.[key] || toLatexSymbol(key, workingVarsDb);
+      const formattedRaw = formatGivenValue(rawVal, meta, true, currU);
+
+      if (currOffset && !isDiff) {
+        const absUnit = getAbsoluteCompanionUnit(currU);
+        const absVal = formatValueInUnit(valueToCoherentBase(rawVal, currU, false, meta.dimension), absUnit, false, meta.dimension);
+        if (absUnit === targetU) {
+          prepLines.push(`${sym} &= (${formattedRaw} + ${currOffset}) \\, ${unitToTex(targetU, false, meta.dimension)} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
+        } else {
+          const singleConv = solveUnitAlgebra(key, { ...evalState, [key]: absVal, _u: { ...activeUnitMap, [key]: absUnit } }, key, targetU, workingVarsDb);
+          const convTex = (singleConv.tokenConversions?.[key]?.join("") || "") + (singleConv.globalConversionTex || "");
+          const absTex = convTex ? unitToCancelledTex(absUnit, false, meta.dimension, "whole") : unitToTex(absUnit, false, meta.dimension);
+          prepLines.push(`${sym} &= (${formattedRaw} + ${currOffset}) \\, ${absTex}${convTex} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
+        }
+      } else {
+        const singleConv = solveUnitAlgebra(key, { ...evalState, _u: { ...activeUnitMap, [key]: currU } }, key, targetU, workingVarsDb);
+        const unitTex = singleConv.tokenMarkup?.[key] || unitToTex(currU, false, meta.dimension);
+        const convTex = (singleConv.tokenConversions?.[key]?.join("") || "") + (singleConv.globalConversionTex || "");
+        prepLines.push(`${sym} &= ${formattedRaw} \\, ${unitTex}${convTex} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
+      }
+
+      alignedTokens.add(key);
+      evalState[key] = alignedVal;
+      evalState[cKey] = alignedVal;
+      activeUnitMap[key] = targetU;
+      activeUnitMap[cKey] = targetU;
+    };
+
+    const hasOuterWrapper = rhsAst && rhsAst.type === "binary" && rhsAst.op !== "+" && rhsAst.op !== "-";
+
+    (function alignAdditiveGroups(node, isTop) {
+      if (!node) return;
+      if (node.type === "group") { alignAdditiveGroups(node.expr, isTop); return; }
+      if (node.type === "call") { alignAdditiveGroups(node.arg, false); return; }
+      if (node.type !== "binary") return;
+
+      if (node.op === "+" || node.op === "-") {
+        const leaves = [];
+        (function walk(n, sign) {
+          const u = n && n.type === "group" ? n.expr : n;
+          if (u && u.type === "binary" && (u.op === "+" || u.op === "-")) {
+            walk(u.left, sign);
+            walk(u.right, u.op === "+" ? sign : -sign);
+            return;
+          }
+          if (u && u.type === "id" && typeof evalState[u.name] === "number") {
+            leaves.push({ key: u.name, sign });
+          }
+        })(node, 1);
+
+        if (leaves.length > 1) {
+          const units = leaves.map(l => unitOfKey(l.key));
+          const firstBag = getUnitAtomBag(units[0]);
+          const firstOff = getUnitOffset(units[0]);
+          const allShareUnit = units.every(u => {
+            if (!u && !units[0]) return true;
+            if (!u || !units[0]) return false;
+            const b = getUnitAtomBag(u);
+            return isDimEqual(firstBag.dimMap, b.dimMap)
+              && Math.abs(firstBag.scale - b.scale) < 1e-9
+              && Math.abs(firstOff - getUnitOffset(u)) < 1e-9;
+          });
+
+          const isPureTemp = firstBag.dimMap && Object.keys(firstBag.dimMap).length === 1 && firstBag.dimMap.Th === 1;
+          const anyOffset = units.some(u => getUnitOffset(u) !== 0);
+
+          if (!allShareUnit || (isPureTemp && anyOffset && (!isTop || hasOuterWrapper))) {
+            let alignedUnit = null;
+            if (isPureTemp) {
+              const zeroOffLeaf = units.find(u => getUnitOffset(u) === 0);
+              if (targetUnit && getUnitAtomBag(targetUnit).dimMap?.Th === 1 && getUnitOffset(targetUnit) === 0) {
+                alignedUnit = targetUnit;
+              } else if (zeroOffLeaf) {
+                alignedUnit = zeroOffLeaf;
+              } else {
+                alignedUnit = getAbsoluteCompanionUnit(units[0]);
+              }
+            } else {
+              const targetBag = targetUnit ? getUnitAtomBag(targetUnit, targetMeta.dimension) : null;
+              alignedUnit = (targetBag && isDimEqual(firstBag.dimMap, targetBag.dimMap)) ? targetUnit : units[0];
+            }
+
+            leaves.forEach(l => alignLeafToUnit(l.key, alignedUnit));
+            return;
+          }
+        }
+      }
+
+      alignAdditiveGroups(node.left, false);
+      alignAdditiveGroups(node.right, false);
+    })(rhsAst, true);
+
+    // Align non-additive affine temperature variables in compound/power expressions (e.g. T_2 = T_1 * r_k^(k-1))
+    if (rhsAst && rhsAst.type !== "id") {
+      const tokens = Array.from(new Set(getAstIdentifiers(rhsAst).filter(t => !isReservedMathToken(t))));
+      for (const tok of tokens) {
+        if (alignedTokens.has(tok) || typeof evalState[tok] !== "number") continue;
+        const currU = unitOfKey(tok);
+        const cKey = resolveCanonicalKey(tok, workingVarsDb);
+        const meta = workingVarsDb[cKey] || workingVarsDb[tok] || {};
+        const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
+        const currOffset = getUnitOffset(currU, meta.dimension);
+        if (currOffset && !isDiff && !(rhsAst.type === "binary" && (rhsAst.op === "+" || rhsAst.op === "-") && currU === targetUnit)) {
+          alignLeafToUnit(tok, getAbsoluteCompanionUnit(currU));
+        }
+      }
+    }
+
+    // 2. Pure AST Additive Factoring (runs BEFORE solveUnitAlgebra so factored groups carry one unit token)
+    (function factorAdditiveGroups(node) {
+      if (!node) return;
+      if (node.type === "group") { factorAdditiveGroups(node.expr); return; }
+      if (node.type === "call") { factorAdditiveGroups(node.arg); return; }
+      if (node.type !== "binary") return;
+
+      if (node.op === "+" || node.op === "-") {
+        const leaves = [];
+        (function walk(n, sign) {
+          const u = n && n.type === "group" ? n.expr : n;
+          if (u && u.type === "binary" && (u.op === "+" || u.op === "-")) {
+            walk(u.left, sign);
+            walk(u.right, u.op === "+" ? sign : -sign);
+            return;
+          }
+          if (u && u.type === "id" && typeof evalState[u.name] === "number") {
+            leaves.push({ key: u.name, sign });
+          }
+        })(node, 1);
+
+        const units = leaves.map(l => unitOfKey(l.key));
+        const firstBag = getUnitAtomBag(units[0]);
+        const firstOff = getUnitOffset(units[0]);
+        const allShareUnit = leaves.length > 1 && units.every(u => {
+          if (!u && !units[0]) return true;
+          if (!u || !units[0]) return false;
+          const b = getUnitAtomBag(u);
+          return isDimEqual(firstBag.dimMap, b.dimMap)
+            && Math.abs(firstBag.scale - b.scale) < 1e-9
+            && Math.abs(firstOff - getUnitOffset(u)) < 1e-9;
+        });
+
+        if (allShareUnit) {
+          const meta0 = workingVarsDb[leaves[0].key] || {};
+          const inner = leaves
+            .map((l, i) => {
+              const signStr = i === 0 ? (l.sign < 0 ? "-" : "") : (l.sign < 0 ? " - " : " + ");
+              const lMeta = workingVarsDb[l.key] || meta0;
+              const lUnit = unitOfKey(l.key);
+              return `${signStr}${formatGivenValue(evalState[l.key], lMeta, true, lUnit)}`;
+            })
+            .join("");
+
+          const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
+          const sharedUnit = units[0];
+          const sharedDim = meta0.dimension || null;
+
+          factoredInfo[factoredId] = { inner, unit: sharedUnit, dimension: sharedDim };
+          activeUnitMap[factoredId] = sharedUnit;
+          workingVarsDb[factoredId] = { unit: sharedUnit, dimension: sharedDim };
+
+          node.type = "id";
+          node.name = factoredId;
+          delete node.op;
+          delete node.left;
+          delete node.right;
+          return;
+        }
+      }
+
+      factorAdditiveGroups(node.left);
+      factorAdditiveGroups(node.right);
+    })(rhsAst);
+
+    // 3. Unit Algebra & Constant System Equivalence Insight
+    unitAnalysis = solveUnitAlgebra(rhsAst, { ...evalState, _u: activeUnitMap }, targetVar, targetUnit, workingVarsDb);
+
+    const activeTokens = Array.from(new Set(getAstIdentifiers(rhsAst).filter(t => !isReservedMathToken(t) && !factoredInfo[t])));
+    let baselineItems = countConversionItems(unitAnalysis);
+
+    for (const tok of activeTokens) {
+      const cKey = resolveCanonicalKey(tok, workingVarsDb);
+      const constEntry = CONSTANTS_DB[cKey] || CONSTANTS_DB[tok];
+      if (!constEntry || !constEntry.unitSI || !constEntry.unitUS || constEntry.unitSI === constEntry.unitUS) continue;
+
+      const currU = unitOfKey(tok);
+      const altU = currU === constEntry.unitSI ? constEntry.unitUS : (currU === constEntry.unitUS ? constEntry.unitSI : null);
+      if (!altU || currU === altU) continue;
+
+      const currBag = getUnitAtomBag(currU, constEntry.dimension);
+      const altBag = getUnitAtomBag(altU, constEntry.dimension);
+      if (!isDimEqual(currBag.dimMap, altBag.dimMap)) continue;
+
+      const tokConvs = unitAnalysis.tokenConversions?.[tok]?.length || 0;
+      if (tokConvs < 2 && !(activeTokens.length === 1 && unitAnalysis.globalConversionTex)) continue;
+
+      const testAnalysis = solveUnitAlgebra(
+        rhsAst,
+        { ...evalState, _u: { ...activeUnitMap, [tok]: altU, [cKey]: altU } },
+        targetVar,
+        targetUnit,
+        workingVarsDb
+      );
+      const testItems = countConversionItems(testAnalysis);
+      if (testItems < baselineItems) {
+        const rawVal = evalState[tok];
+        const altVal = formatValueInUnit(
+          valueToCoherentBase(rawVal, currU, false, constEntry.dimension),
+          altU,
+          false,
+          constEntry.dimension
+        );
+        const sym = S._displaySymbols?.[cKey] || S._displaySymbols?.[tok] || toLatexSymbol(tok, workingVarsDb);
+        const meta = workingVarsDb[cKey] || workingVarsDb[tok] || constEntry;
+        const currFormatted = formatGivenValue(rawVal, meta, true, currU);
+        const altFormatted = fmtScale(altVal, true);
+
+        prepLines.push(`${sym} &= ${currFormatted} \\, ${unitToTex(currU, false, constEntry.dimension)} = ${altFormatted} \\, ${unitToTex(altU, false, constEntry.dimension)}`);
+        evalState[tok] = altVal;
+        evalState[cKey] = altVal;
+        activeUnitMap[tok] = altU;
+        activeUnitMap[cKey] = altU;
+        useScaleFmtFor.add(tok);
+        useScaleFmtFor.add(cKey);
+
+        unitAnalysis = testAnalysis;
+        baselineItems = testItems;
+      }
+    }
+  }
+
+  // 4. Build Localized Substitution Mapping with explicit `\,` spacing
+  const subsMap = {};
+  for (const [k, v] of Object.entries(evalState)) {
+    if (typeof v === "number") {
+      const meta = workingVarsDb[k] || {};
+      const activeUnit = activeUnitMap[k] || meta.unit || "";
+      const formattedNum = useScaleFmtFor.has(k) ? fmtScale(v, true) : formatGivenValue(v, meta, true, activeUnit);
+      const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
+      const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
+
+      if (inlineConv === "__AFFINE_CONVERTED__") {
+        subsMap[k] = unitMarkup;
+      } else if (unitMarkup !== "" || inlineConv !== "") {
+        subsMap[k] = `${formattedNum} \\, ${unitMarkup}${inlineConv}`;
+      } else {
+        subsMap[k] = formattedNum;
+      }
+    }
+  }
+
+  for (const [factoredId, info] of Object.entries(factoredInfo)) {
+    const uTex = unitAnalysis.tokenMarkup?.[factoredId] !== undefined
+      ? unitAnalysis.tokenMarkup[factoredId]
+      : unitToTex(info.unit, false, info.dimension);
+    const groupConv = unitAnalysis.tokenConversions?.[factoredId]?.join("") || "";
+    subsMap[factoredId] = uTex ? `(${info.inner})\\,${uTex}${groupConv}` : `(${info.inner})${groupConv}`;
+  }
+
+  // 5. Vertical Equation Formatting & Implication Arrow Logic
+  const symRhs = casToTex(formulaRhs, varsDb);
+  const displayCanonical = canonicalTex || casToTex(baseFormula, varsDb);
+
+  const formulaLhs = baseFormula && baseFormula.includes("=")
+    ? baseFormula.split("=")[0].trim()
+    : "";
+  const isAlreadyIsolated = formulaLhs !== "" && (
+    formulaLhs === targetVar ||
+    resolveCanonicalKey(formulaLhs, varsDb) === canonicalTarget
+  );
+
+  const numTex = astToLatex(rhsAst, subsMap, workingVarsDb)
+    + (unitAnalysis.globalConversionTex || "");
+
+  const rows = [...prepLines];
+  const shouldBreakVertical = prepLines.length > 0
+    || numTex.includes("\\cfrac")
+    || numTex.includes("\\cdot")
+    || numTex.length > 45;
+
+  if (isAlreadyIsolated || !baseFormula) {
+    if (shouldBreakVertical && displayCanonical.includes("=")) {
+      const eqIdx = displayCanonical.indexOf("=");
+      const alignedCanonical = `${displayCanonical.slice(0, eqIdx).trim()} &= ${displayCanonical.slice(eqIdx + 1).trim()}`;
+      rows.push(alignedCanonical, `&= ${numTex}`);
+    } else {
+      rows.push(`${displayCanonical} &= ${numTex}`);
+    }
+  } else {
+    rows.push(`${displayCanonical} \\;\\Rightarrow\\; ${targetSymbol} &= ${symRhs}`, `&= ${numTex}`);
+  }
+
+  // 6. Final Boxed Answer
+  const val = overrides[canonicalTarget] ?? step.expectedVal ?? S[canonicalTarget];
+  const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
+
+  let unitTex = "";
+  if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {
+    if (targetUnit === "deg" || targetUnit === "°") {
+      unitTex = "°";
+    } else if (targetUnit === "%") {
+      unitTex = "\\text{\\%}";
+    } else {
+      unitTex = unitToTex(targetUnit, true);
+    }
+  }
+
+  const finalLine = unitTex
+    ? (unitTex === "°" ? `${targetSymbol} &= \\boxed{${formattedVal}°}` : `${targetSymbol} &= \\boxed{${formattedVal} \\, ${unitTex}}`)
+    : `${targetSymbol} &= \\boxed{${formattedVal}}`;
+
+  rows.push(finalLine);
+
+  return `$$\\begin{aligned}\n  ${rows.join(" \\\\[6pt]\n  ")}\n\\end{aligned}$$`;
+}
+>>>>
+````
 
 FILE: test/run_test.js
-````diff
+````diff 1
 <<<<
-import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor } from "../src/cas/units/index.js";
+import { formatGivenValue } from "../src/core/dimensions.js";
 ====
-import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor, formatPairConversion } from "../src/cas/units/index.js";
+import { formatGivenValue, targetLabel } from "../src/core/dimensions.js";
+>>>>
+````
+````diff 2
+<<<<
+import {
+  getUnitAtomBag,
+  valueToCoherentBase,
+  formatValueInUnit
+} from "../src/cas/units/definitions.js";
+====
+import {
+  getUnitAtomBag,
+  unitToTex,
+  valueToCoherentBase,
+  formatValueInUnit
+} from "../src/cas/units/definitions.js";
+>>>>
+````
+````diff 3
+<<<<
+    assert.ok(!deriv.includes("\\left(\\left("), `Derivation must not contain double parens: ${deriv}`);
+    assert.ok(deriv.includes("386.089"), `Derivation must contain gravitational acceleration factor gc (386.089): ${deriv}`);
+    assert.ok(deriv.includes("1{,}000"), `Derivation must contain millisecond to second conversion factor: ${deriv}`);
+  });
+});
+====
+    assert.ok(!deriv.includes("\\left(\\left("), `Derivation must not contain double parens: ${deriv}`);
+    assert.ok(deriv.includes("386.089"), `Derivation must contain gravitational acceleration factor gc (386.089): ${deriv}`);
+    assert.ok(deriv.includes("1{,}000"), `Derivation must contain millisecond to second conversion factor: ${deriv}`);
+  });
+
+  test("Regression: targetLabel renders KaTeX-delimited units for step headers", () => {
+    const lblLbf = targetLabel("Spring 2 Load", "$F_2$", "lb_f", unitToTex("lb_f", true, "Force"));
+    assert.equal(lblLbf, "Spring 2 Load ($F_2$) in $\\text{lb}_{f}$");
+
+    const lblRate = targetLabel("Specific Heat Rejected", "$q_R$", "Btu/lb_m", unitToTex("Btu/lb_m", true, "Specific Energy / Enthalpy"));
+    assert.equal(lblRate, "Specific Heat Rejected ($q_R$) in $\\tfrac{\\text{Btu}}{\\text{lb}_{m}}$");
+
+    const lblPct = targetLabel("Efficiency", "$\\eta$", "%", unitToTex("%", true, "Percentage"));
+    assert.equal(lblPct, "Efficiency ($\\eta$) in $\\text{\\%}$");
+  });
+
+  test("Regression: selective unit cancellation keeps surviving atoms uncancelled", () => {
+    const dbSpring = {
+      F_2: { dimension: "Force", unit: "lb_f", symbol: "F_2" },
+      k_2: { dimension: "Spring Rate / Stiffness", unit: "lb_f/in", symbol: "k_2" },
+      delta_T: { dimension: "Length", unit: "in", symbol: "\\delta_T" }
+    };
+    const sSpring = { F_2: 45, k_2: 30, delta_T: 1.5, _u: { F_2: "lb_f", k_2: "lb_f/in", delta_T: "in" } };
+
+    // 1. F_2 = k_2 * delta_T (lb_f/in * in -> lb_f): in cancels, lb_f survives
+    const algForce = solveUnitAlgebra("k_2 * delta_T", sSpring, "F_2", "lb_f", dbSpring);
+    assert.equal(algForce.tokenMarkup.k_2, "\\cfrac{\\text{lb}_{f}}{\\cancel{\\text{in}}}");
+    assert.equal(algForce.tokenMarkup.delta_T, "\\cancel{\\text{in}}");
+
+    // 2. delta_T = F_2 / k_2 (lb_f / (lb_f/in) -> in): lb_f cancels, in survives
+    const algDefl = solveUnitAlgebra("F_2 / k_2", sSpring, "delta_T", "in", dbSpring);
+    assert.equal(algDefl.tokenMarkup.F_2, "\\cancel{\\text{lb}_{f}}");
+    assert.equal(algDefl.tokenMarkup.k_2, "\\cfrac{\\cancel{\\text{lb}_{f}}}{\\text{in}}");
+
+    // 3. k_2 = F_2 / delta_T (lb_f / in -> lb_f/in): neither cancels
+    const algStiff = solveUnitAlgebra("F_2 / delta_T", sSpring, "k_2", "lb_f/in", dbSpring);
+    assert.equal(algStiff.tokenMarkup.F_2, "\\text{lb}_{f}");
+    assert.equal(algStiff.tokenMarkup.delta_T, "\\text{in}");
+
+    // 4. Partial rate decomposition (kg/s -> kg/h): s cancels, kg survives
+    const dbFlow = { m: { dimension: "Mass Flow Rate", unit: "kg/s" }, m_out: { dimension: "Mass Flow Rate", unit: "kg/h" } };
+    const algFlow = solveUnitAlgebra("m", { m: 2, _u: { m: "kg/s", m_out: "kg/h" } }, "m_out", "kg/h", dbFlow);
+    assert.equal(algFlow.tokenMarkup.m, "\\cfrac{\\text{kg}}{\\cancel{\\text{s}}}");
+  });
+
+  test("Regression: mixed Diesel Cycle q_R aligns affine temperatures, emits c_v equivalence insight, and flows vertically", () => {
+    const varsDb = TOPICS.powerplant_design_diesel_cycle.varsDb;
+    const S = {
+      T_1: 80.33,
+      T_4: 1425.07,
+      c_v: 0.7186,
+      Q_R: 151.908,
+      _u: { T_1: "°F", T_4: "°R", c_v: "kJ/kg-K", Q_R: "Btu/lb_m" }
+    };
+    const step = {
+      targetVar: "Q_R",
+      baseFormula: "Q_R = c_v * (T_4 - T_1)",
+      rhsExpr: "c_v * (T_4 - T_1)",
+      canonicalTex: "q_R = c_v (T_4 - T_1)",
+      expectedVal: 151.908
+    };
+
+    const deriv = buildAlignedDerivation(step, S, [step], varsDb, []);
+    validateDerivationLatex(deriv);
+
+    // Must align T_1 (°F -> °R) instead of emitting bogus (1,425.07 - 80.33) °R
+    assert.ok(!deriv.includes("1{,}425.07 - 80.33"), `Must not subtract °F from °R without offset conversion: ${deriv}`);
+    assert.ok(deriv.includes("80.33 + 459.67"), `Expected affine °F -> °R conversion for T_1: ${deriv}`);
+    assert.ok(deriv.includes("1{,}425.07 - 540"), `Expected aligned °R subtraction (1,425.07 - 540): ${deriv}`);
+
+    // Must emit constant equivalence insight for c_v and keep Btu/lb_m uncancelled
+    assert.ok(deriv.includes("0.171635"), `Expected c_v English constant equivalence (0.171635): ${deriv}`);
+    assert.ok(!deriv.includes("\\cancel{\\text{Btu}}"), `Surviving Btu must not be cancelled: ${deriv}`);
+    assert.ok(!deriv.includes("\\cancel{\\text{lb}_{m}}"), `Surviving lb_m must not be cancelled: ${deriv}`);
+    assert.ok(deriv.includes("\\cancel{°R}"), `Cancelling °R must be marked cancelled: ${deriv}`);
+
+    // Must break vertically across multiple aligned rows
+    assert.ok((deriv.match(/\\\\\[6pt\]/g) || []).length >= 4, `Expected vertical multi-row aligned layout: ${deriv}`);
+  });
+});
 >>>>
 ````

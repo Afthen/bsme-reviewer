@@ -243,8 +243,9 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
           if (!conv.tex) {
             tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
           } else {
-            const cancelMode = conv.isDecomposed ? "component" : "whole";
-            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, cancelMode);
+            const cancelTarget = conv.cancelledIndices
+              || (conv.isDecomposed ? "component" : "whole");
+            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, cancelTarget);
             const convTex = useInlineUnit ? conv.tex.replaceAll("\\cfrac", "\\tfrac") : conv.tex;
             if (inAdditive) {
               // Inside any additive subtree (incl. 1/(1/k_1 + 1/k_2)), convert in-situ
@@ -258,19 +259,29 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
           }
         } else {
           // Compound branch (e.g. m_f / IP or Q_rej / m_a)
-          tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, "component");
           if (!compoundComputed) {
             compoundComputed = true;
             const entries = Object.entries(tokenBags).map(([t, info]) => ({
               tok: t, uName: info.uName, dim: info.dim, exp: info.exp
             }));
-            const { conversionsByToken, scalars } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
+            const { conversionsByToken, scalars, cancelledIndicesByToken } = buildCompoundTokenConversions(entries, targetUnit, targetDim);
             for (const [k, convList] of Object.entries(conversionsByToken)) {
               tokenConversions[k] = useInlineUnit
                 ? convList.map(c => c.replaceAll("\\cfrac", "\\tfrac"))
                 : convList;
             }
+            for (const [k, idxSet] of Object.entries(cancelledIndicesByToken || {})) {
+              if (tokenMarkup[k] !== undefined) continue;
+              const kCanon = resolveCanonicalKey(k, varsDb);
+              const kMeta = varsDb[kCanon] || varsDb[k] || {};
+              const kU = S._u?.[kCanon] || S._u?.[k] || kMeta.unit || "";
+              const kDepth = getFormulaFractionDepth(branchAst, k) || 0;
+              tokenMarkup[k] = unitToCancelledTex(kU, kDepth >= 2, kMeta.dimension, idxSet);
+            }
             conversionScalars.push(...scalars);
+          }
+          if (tokenMarkup[tok] === undefined) {
+            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, new Set());
           }
         }
       } else {

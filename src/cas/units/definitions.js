@@ -159,6 +159,14 @@ export function parseUnitToSemanticAST(uName, dimension = null) {
   return flattenUnitAST(ast);
 }
 
+export function getUnitOffset(uName, dimension = null) {
+  const ast = parseUnitToSemanticAST(uName, dimension);
+  if (ast.length === 1 && ast[0].power === 1) {
+    return BASE_UNITS[ast[0].base]?.offset || 0;
+  }
+  return 0;
+}
+
 export function getAbsoluteCompanionUnit(uName) {
   const ast = parseUnitToSemanticAST(uName);
   if (ast.length !== 1) return uName;
@@ -175,18 +183,25 @@ export function getAbsoluteCompanionUnit(uName) {
 
 export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
   if (!factors || factors.length === 0) return "";
+  const isSet = cancelMode instanceof Set;
+  const isIdxCancelled = (idx) =>
+    cancelMode === "component" || (isSet && cancelMode.has(idx));
+
   if (factors.length === 1 && factors[0].base === "percent" && factors[0].power === 1) {
-    return cancelMode !== "none" ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+    const shouldCancel = cancelMode === "whole" || isIdxCancelled(0);
+    return shouldCancel ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
   }
   if (factors.length === 1 && factors[0].base === "deg" && factors[0].power === 1) {
-    return cancelMode !== "none" ? "\\cancel{°}" : "°";
+    const shouldCancel = cancelMode === "whole" || isIdxCancelled(0);
+    return shouldCancel ? "\\cancel{°}" : "°";
   }
 
   const prefixSymbols = { pico: "p", nano: "n", micro: "u", milli: "m", centi: "c", deci: "d", kilo: "k", mega: "M", giga: "G" };
   const numStrs = [];
   const denStrs = [];
 
-  factors.forEach(f => {
+  factors.forEach((f, idx) => {
+    const cancelThis = isIdxCancelled(idx);
     const bMeta = BASE_UNITS[f.base];
     const bSym = bMeta?.symbol || f.base;
     const pSym = f.prefix ? prefixSymbols[f.prefix] || f.prefix : "";
@@ -198,15 +213,15 @@ export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
     let termTex = "";
     const symSuffixMatch = fullSym.match(/^(.+)_(m|f)$/);
     if (fullSym === "%") {
-      termTex = cancelMode === "component" ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+      termTex = cancelThis ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
     } else if (fullSym.startsWith("°")) {
-      termTex = cancelMode === "component" ? `\\cancel{${fullSym}${expStr}}` : `${fullSym}${expStr}`;
+      termTex = cancelThis ? `\\cancel{${fullSym}${expStr}}` : `${fullSym}${expStr}`;
     } else if (symSuffixMatch) {
       const [, basePart, subPart] = symSuffixMatch;
       const bodyTex = `\\text{${basePart}}_{${subPart}}`;
-      termTex = cancelMode === "component" ? `\\cancel{${bodyTex}}${expStr}` : `${bodyTex}${expStr}`;
+      termTex = cancelThis ? `\\cancel{${bodyTex}}${expStr}` : `${bodyTex}${expStr}`;
     } else {
-      termTex = cancelMode === "component" ? `\\cancel{\\text{${fullSym}}}${expStr}` : `\\text{${fullSym}}${expStr}`;
+      termTex = cancelThis ? `\\cancel{\\text{${fullSym}}}${expStr}` : `\\text{${fullSym}}${expStr}`;
     }
 
     if (f.power > 0) numStrs.push(termTex);

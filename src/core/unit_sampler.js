@@ -258,21 +258,6 @@ export function sampleConstantUnit(varKey, sys = "SI") {
   const meta = CONSTANTS_DB[varKey];
   if (!meta) return null;
 
-  if (varKey === "c_pw") {
-    return sys === "US"
-      ? { unit: "Btu/(lb*F)", value: 1.0 }
-      : { unit: "kJ/kg-K", value: 4.187 };
-  }
-  if (varKey === "c_pa") {
-    return sys === "US"
-      ? { unit: "Btu/(lb*F)", value: 0.24 }
-      : { unit: "kJ/kg-K", value: 1.0062 };
-  }
-  if (varKey === "g") {
-    return sys === "US"
-      ? { unit: "ft/s^2", value: 32.2 }
-      : { unit: "m/s^2", value: 9.81 };
-  }
   return sys === "US"
     ? { unit: meta.unitUS || meta.unit, value: meta.valueUS }
     : { unit: meta.unitSI || meta.unit, value: meta.valueSI };

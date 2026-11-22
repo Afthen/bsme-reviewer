@@ -44,13 +44,14 @@ import { casToTex } from "../src/cas/latex.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
 import { pruneSolutionPath, solveDAG, canSolveTarget } from "../src/core/graph_solver.js";
-import { formatGivenValue } from "../src/core/dimensions.js";
+import { formatGivenValue, targetLabel } from "../src/core/dimensions.js";
 import {
   sampleSystemMode, sampleByInverseTokens, retainsSufficientSigFigs,
   applyProblemUnitSampling, DIMENSION_TOKEN_PALETTES
 } from "../src/core/unit_sampler.js";
 import {
   getUnitAtomBag,
+  unitToTex,
   valueToCoherentBase,
   formatValueInUnit
 } from "../src/cas/units/definitions.js";
@@ -911,6 +912,81 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
     assert.ok(!deriv.includes("\\left(\\left("), `Derivation must not contain double parens: ${deriv}`);
     assert.ok(deriv.includes("386.089"), `Derivation must contain gravitational acceleration factor gc (386.089): ${deriv}`);
     assert.ok(deriv.includes("1{,}000"), `Derivation must contain millisecond to second conversion factor: ${deriv}`);
+  });
+
+  test("Regression: targetLabel renders KaTeX-delimited units for step headers", () => {
+    const lblLbf = targetLabel("Spring 2 Load", "$F_2$", "lb_f", unitToTex("lb_f", true, "Force"));
+    assert.equal(lblLbf, "Spring 2 Load ($F_2$) in $\\text{lb}_{f}$");
+
+    const lblRate = targetLabel("Specific Heat Rejected", "$q_R$", "Btu/lb_m", unitToTex("Btu/lb_m", true, "Specific Energy / Enthalpy"));
+    assert.equal(lblRate, "Specific Heat Rejected ($q_R$) in $\\tfrac{\\text{Btu}}{\\text{lb}_{m}}$");
+
+    const lblPct = targetLabel("Efficiency", "$\\eta$", "%", unitToTex("%", true, "Percentage"));
+    assert.equal(lblPct, "Efficiency ($\\eta$) in $\\text{\\%}$");
+  });
+
+  test("Regression: selective unit cancellation keeps surviving atoms uncancelled", () => {
+    const dbSpring = {
+      F_2: { dimension: "Force", unit: "lb_f", symbol: "F_2" },
+      k_2: { dimension: "Spring Rate / Stiffness", unit: "lb_f/in", symbol: "k_2" },
+      delta_T: { dimension: "Length", unit: "in", symbol: "\\delta_T" }
+    };
+    const sSpring = { F_2: 45, k_2: 30, delta_T: 1.5, _u: { F_2: "lb_f", k_2: "lb_f/in", delta_T: "in" } };
+
+    // 1. F_2 = k_2 * delta_T (lb_f/in * in -> lb_f): in cancels, lb_f survives
+    const algForce = solveUnitAlgebra("k_2 * delta_T", sSpring, "F_2", "lb_f", dbSpring);
+    assert.equal(algForce.tokenMarkup.k_2, "\\cfrac{\\text{lb}_{f}}{\\cancel{\\text{in}}}");
+    assert.equal(algForce.tokenMarkup.delta_T, "\\cancel{\\text{in}}");
+
+    // 2. delta_T = F_2 / k_2 (lb_f / (lb_f/in) -> in): lb_f cancels, in survives
+    const algDefl = solveUnitAlgebra("F_2 / k_2", sSpring, "delta_T", "in", dbSpring);
+    assert.equal(algDefl.tokenMarkup.F_2, "\\cancel{\\text{lb}_{f}}");
+    assert.equal(algDefl.tokenMarkup.k_2, "\\cfrac{\\cancel{\\text{lb}_{f}}}{\\text{in}}");
+
+    // 3. k_2 = F_2 / delta_T (lb_f / in -> lb_f/in): neither cancels
+    const algStiff = solveUnitAlgebra("F_2 / delta_T", sSpring, "k_2", "lb_f/in", dbSpring);
+    assert.equal(algStiff.tokenMarkup.F_2, "\\text{lb}_{f}");
+    assert.equal(algStiff.tokenMarkup.delta_T, "\\text{in}");
+
+    // 4. Partial rate decomposition (kg/s -> kg/h): s cancels, kg survives
+    const dbFlow = { m: { dimension: "Mass Flow Rate", unit: "kg/s" }, m_out: { dimension: "Mass Flow Rate", unit: "kg/h" } };
+    const algFlow = solveUnitAlgebra("m", { m: 2, _u: { m: "kg/s", m_out: "kg/h" } }, "m_out", "kg/h", dbFlow);
+    assert.equal(algFlow.tokenMarkup.m, "\\cfrac{\\text{kg}}{\\cancel{\\text{s}}}");
+  });
+
+  test("Regression: mixed Diesel Cycle q_R aligns affine temperatures, emits c_v equivalence insight, and flows vertically", () => {
+    const varsDb = TOPICS.powerplant_design_diesel_cycle.varsDb;
+    const S = {
+      T_1: 80.33,
+      T_4: 1425.07,
+      c_v: 0.7186,
+      Q_R: 151.908,
+      _u: { T_1: "°F", T_4: "°R", c_v: "kJ/kg-K", Q_R: "Btu/lb_m" }
+    };
+    const step = {
+      targetVar: "Q_R",
+      baseFormula: "Q_R = c_v * (T_4 - T_1)",
+      rhsExpr: "c_v * (T_4 - T_1)",
+      canonicalTex: "q_R = c_v (T_4 - T_1)",
+      expectedVal: 151.908
+    };
+
+    const deriv = buildAlignedDerivation(step, S, [step], varsDb, []);
+    validateDerivationLatex(deriv);
+
+    // Must align T_1 (°F -> °R) instead of emitting bogus (1,425.07 - 80.33) °R
+    assert.ok(!deriv.includes("1{,}425.07 - 80.33"), `Must not subtract °F from °R without offset conversion: ${deriv}`);
+    assert.ok(deriv.includes("80.33 + 459.67"), `Expected affine °F -> °R conversion for T_1: ${deriv}`);
+    assert.ok(deriv.includes("1{,}425.07 - 540"), `Expected aligned °R subtraction (1,425.07 - 540): ${deriv}`);
+
+    // Must emit constant equivalence insight for c_v and keep Btu/lb_m uncancelled
+    assert.ok(deriv.includes("0.171635"), `Expected c_v English constant equivalence (0.171635): ${deriv}`);
+    assert.ok(!deriv.includes("\\cancel{\\text{Btu}}"), `Surviving Btu must not be cancelled: ${deriv}`);
+    assert.ok(!deriv.includes("\\cancel{\\text{lb}_{m}}"), `Surviving lb_m must not be cancelled: ${deriv}`);
+    assert.ok(deriv.includes("\\cancel{°R}"), `Cancelling °R must be marked cancelled: ${deriv}`);
+
+    // Must break vertically across multiple aligned rows
+    assert.ok((deriv.match(/\\\\\[6pt\]/g) || []).length >= 4, `Expected vertical multi-row aligned layout: ${deriv}`);
   });
 });
 

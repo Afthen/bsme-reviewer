@@ -10,6 +10,7 @@
 
 import { buildAlignedDerivation } from "../core/derivation.js";
 import { targetLabel, fmtSigFig } from "../core/dimensions.js";
+import { unitToTex } from "../cas/units/index.js";
 import { CONSTANTS_DB } from "../core/constants_registry.js";
 import {
   recordAttempt, penalizeAncestors, reinforceAncestors,
@@ -52,7 +53,10 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     const meta = resolveMeta(step.targetVar, activeProblem.varsDb);
     const unit = activeProblem.system._u?.[step.targetVar] || meta.unit || "";
     const symSpan = `<span class="interactive-var" data-var="${step.targetVar}">$${activeProblem.system._displaySymbols?.[step.targetVar] || meta.symbol || step.targetVar}$</span>`;
-    const labelText = targetLabel(activeProblem.system._displayNames?.[step.targetVar] || meta.name, symSpan, unit);
+    const unitTex = unit && unit !== "dimless" && unit !== "ratio"
+      ? unitToTex(unit, true, meta.dimension)
+      : null;
+    const labelText = targetLabel(activeProblem.system._displayNames?.[step.targetVar] || meta.name, symSpan, unit, unitTex);
 
     const targetSpan = document.createElement("span");
     targetSpan.innerHTML = `Step ${idx + 1}: ${labelText}`;

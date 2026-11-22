@@ -18,6 +18,18 @@ export const CONSTANTS_DB = Object.freeze({
     isConstant: true,
     aliases: ["Specific Heat of Water", "Water Specific Heat", "c_{pw}"]
   },
+  "cp_w": {
+    name: "Specific Heat of Water",
+    symbol: "c_{p,w}",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    valueSI: 4.187,
+    valueUS: 1.0,
+    unitSI: "kJ/kg-K",
+    unitUS: "Btu/(lb*F)",
+    isConstant: true,
+    aliases: ["Specific Heat of Water", "Water Specific Heat", "c_{p,w}"]
+  },
   "c_pa": {
     name: "Specific Heat of Air",
     symbol: "c_{pa}",
@@ -26,9 +38,33 @@ export const CONSTANTS_DB = Object.freeze({
     valueSI: 1.0062,
     valueUS: 0.24,
     unitSI: "kJ/kg-K",
-    unitUS: "Btu/lb",
+    unitUS: "Btu/(lb*F)",
     isConstant: true,
     aliases: ["Specific Heat of Air", "Air Specific Heat", "c_{pa}"]
+  },
+  "c_p": {
+    name: "Specific Heat at Constant Pressure",
+    symbol: "c_p",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    valueSI: 1.0062,
+    valueUS: 0.24,
+    unitSI: "kJ/kg-K",
+    unitUS: "Btu/(lb_m*°R)",
+    isConstant: true,
+    aliases: ["Specific Heat at Constant Pressure", "c_p"]
+  },
+  "c_v": {
+    name: "Specific Heat at Constant Volume",
+    symbol: "c_v",
+    dimension: DIMENSIONS.SPECIFIC_ENERGY,
+    unit: "kJ/kg-K",
+    valueSI: 0.7186,
+    valueUS: 0.1714,
+    unitSI: "kJ/kg-K",
+    unitUS: "Btu/(lb_m*°R)",
+    isConstant: true,
+    aliases: ["Specific Heat at Constant Volume", "c_v"]
   },
   "g": {
     name: "Acceleration Due to Gravity",

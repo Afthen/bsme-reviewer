@@ -116,9 +116,12 @@ export function textUnit(unitStr) {
   return `\\text{${unitStr}}`;
 }
 
-export function targetLabel(name, token, unit) {
+export function targetLabel(name, token, unit, unitTex = null) {
   if (!unit || unit === "dimless" || unit === "ratio") {
     return `${name} (${token})`;
+  }
+  if (unitTex) {
+    return `${name} (${token}) in $${unitTex}$`;
   }
   if (unit === "deg" || unit === "°") {
     return `${name} (${token}) in °`;

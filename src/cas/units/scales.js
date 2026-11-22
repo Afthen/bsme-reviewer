@@ -120,7 +120,20 @@ export function formatPairConversion(fromUnit, toUnit, fromDim = null, toDim = f
         }
 
         if (steps.length > 0) {
-          return { tex: steps.join(""), scalar: scalars[0] ?? null, scalars, isDecomposed: true };
+          const numMismatch = Math.abs(numRatio - 1) >= 1e-6;
+          const denMismatch = Math.abs(denRatio - 1) >= 1e-6;
+          let cancelledIndices = null;
+          if (!rawFromParts) {
+            cancelledIndices = new Set([0]);
+          } else if (!(numMismatch && denMismatch)) {
+            cancelledIndices = new Set();
+            parseUnitToSemanticAST(fromUnit, fromDim).forEach((f, idx) => {
+              if ((f.power > 0 && numMismatch) || (f.power < 0 && denMismatch)) {
+                cancelledIndices.add(idx);
+              }
+            });
+          }
+          return { tex: steps.join(""), scalar: scalars[0] ?? null, scalars, isDecomposed: true, cancelledIndices };
         }
       }
     }
@@ -224,8 +237,15 @@ function atomToUnitString(atom) {
 export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDim = null) {
   const targetAst = parseUnitToSemanticAST(targetUnit, targetDim);
   const conversionsByToken = {};
+  const cancelledIndicesByToken = {};
   const scalars = [];
   const usedTargetIndices = new Set();
+
+  const markCancelled = (tok, idx) => {
+    if (idx === null || idx === undefined) return;
+    if (!cancelledIndicesByToken[tok]) cancelledIndicesByToken[tok] = new Set();
+    cancelledIndicesByToken[tok].add(idx);
+  };
 
   const targetHasEnergy = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "E");
   const targetPrefersBtu = targetAst.some(a => a.base === "Btu");
@@ -241,23 +261,35 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
   // Flatten all source atoms, expanding compound Power and gravitational Force units when bridging to Mass
   const sourceAtoms = [];
   for (const entry of tokenEntries) {
+    if (!cancelledIndicesByToken[entry.tok]) cancelledIndicesByToken[entry.tok] = new Set();
+
     let workingUnit = entry.uName;
+    let expandedFromSingleAtom = false;
+    let convertedBeforeExpand = false;
     if (targetHasEnergy && (workingUnit === "W" || workingUnit === "kW" || workingUnit === "hp")) {
       if (workingUnit === "W") {
         workingUnit = "J/s";
+        expandedFromSingleAtom = true;
       } else if (workingUnit === "kW") {
         workingUnit = "kJ/s";
+        expandedFromSingleAtom = true;
       } else if (workingUnit === "hp") {
         const rateTarget = targetPrefersBtu ? "Btu/min" : "kJ/s";
         const r = getUnitAtomBag("hp").scale / getUnitAtomBag(rateTarget).scale;
         if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
         conversionsByToken[entry.tok].push(` \\cdot ${fmtScale(r)} \\, \\cfrac{${unitToTex(rateTarget, true)}}{\\cancel{\\text{hp}}}`);
         scalars.push(parseFloat(r.toPrecision(6)));
+        markCancelled(entry.tok, 0);
         workingUnit = rateTarget;
+        convertedBeforeExpand = true;
       }
     }
 
-    let ast = parseUnitToSemanticAST(workingUnit, entry.dim);
+    let ast = parseUnitToSemanticAST(workingUnit, entry.dim).map((atom, idx) => ({
+      ...atom,
+      origIndex: convertedBeforeExpand ? null : (expandedFromSingleAtom ? 0 : idx)
+    }));
+
     const gravForceIdx = needsMassForceBridge
       ? ast.findIndex(a => BASE_UNITS[a.base]?.massCompanion && a.power === 1)
       : -1;
@@ -300,6 +332,11 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
         ` \\cdot ${fmtScale(gc)} \\, \\cfrac{${mTex} \\cdot ${lTex}}{\\cancel{${unitToTex(baseForceStr)}} \\cdot ${s2Tex}}`
       );
 
+      markCancelled(entry.tok, fAtom.origIndex);
+      if (tokenHasMatchingLen && lenAtom) {
+        markCancelled(entry.tok, lenAtom.origIndex);
+      }
+
       // Rebuild remaining AST after replacing gravitational force with mStr * lStr / s^2
       const nextFactors = [];
       for (let idx = 0; idx < ast.length; idx++) {
@@ -308,18 +345,19 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
         nextFactors.push(ast[idx]);
       }
       const mResolved = resolveUnitToken(mStr, DIMENSIONS.MASS);
-      nextFactors.push({ prefix: mResolved.prefix, base: mResolved.base, power: 1 });
+      nextFactors.push({ prefix: mResolved.prefix, base: mResolved.base, power: 1, origIndex: null });
       if (!tokenHasMatchingLen) {
         const lResolved = resolveUnitToken(lStr, DIMENSIONS.LENGTH);
-        nextFactors.push({ prefix: lResolved.prefix, base: lResolved.base, power: 1 });
+        nextFactors.push({ prefix: lResolved.prefix, base: lResolved.base, power: 1, origIndex: null });
       }
-      nextFactors.push({ prefix: null, base: "second", power: -2 });
+      nextFactors.push({ prefix: null, base: "second", power: -2, origIndex: null });
       ast = nextFactors;
     }
     ast.forEach(atom => {
       sourceAtoms.push({
         tok: entry.tok,
         atom,
+        origIndex: atom.origIndex ?? null,
         exp: entry.exp,
         netPower: atom.power * entry.exp,
         dim: getAtomDimKey(BASE_UNITS[atom.base]?.dimMap) || atom.base
@@ -343,6 +381,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     if (tIdx >= 0) {
       usedTargetIndices.add(tIdx);
       src.matched = true;
+      markCancelled(src.tok, src.origIndex);
       const tAtom = targetAst[tIdx];
       const srcStr = atomToUnitString(src.atom);
       const tgtStr = atomToUnitString(tAtom);
@@ -383,6 +422,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
       const ratio = sSrc / sTgt;
 
       if (Math.abs(ratio - 1) > 1e-6) {
+        markCancelled(src.tok, src.origIndex);
         if (!conversionsByToken[src.tok]) conversionsByToken[src.tok] = [];
         const sVal = ratio > 1 ? ratio : (1 / ratio);
         scalars.push(parseFloat(sVal.toPrecision(6)));
@@ -416,6 +456,9 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     if (partner) {
       a.matched = true;
       partner.matched = true;
+      markCancelled(a.tok, a.origIndex);
+      markCancelled(partner.tok, partner.origIndex);
+
       const strA = atomToUnitString(a.atom);
       const strB = atomToUnitString(partner.atom);
       const sA = getUnitAtomBag(strA).scale;
@@ -446,7 +489,7 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     }
   }
 
-  return { conversionsByToken, scalars };
+  return { conversionsByToken, scalars, cancelledIndicesByToken };
 }
 
 // ============================================================================
