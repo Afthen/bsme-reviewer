@@ -55,9 +55,11 @@ export const BASE_UNITS = Object.freeze({
   "kWh":            { baseScale: 3600000.0, symbol: "kWh", dimMap: { M: 1, L: 2, T: -2 } },
   "bar":            { baseScale: 100000.0, symbol: "bar", dimMap: { M: 1, L: -1, T: -2 } },
   "litre":          { baseScale: 0.001, symbol: "L", dimMap: { L: 3 } },
+  "gallon":         { baseScale: 0.003785411784, symbol: "gal", dimMap: { L: 3 } },
   "rpm":            { baseScale: 1/60, symbol: "rpm", dimMap: { T: -1 } },
   "hertz":          { baseScale: 1.0, symbol: "Hz", dimMap: { T: -1 } },
-  "cfm":            { baseScale: 0.3048**3 / 60, symbol: "cfm", dimMap: { L: 3, T: -1 } }
+  "cfm":            { baseScale: 0.3048**3 / 60, symbol: "cfm", dimMap: { L: 3, T: -1 } },
+  "gpm":            { baseScale: 0.003785411784 / 60, symbol: "gpm", dimMap: { L: 3, T: -1 } }
 });
 
 export const SUBSTITUTION_GRAPH = Object.freeze({
@@ -92,6 +94,7 @@ export function resolveUnitToken(tokenBody, dimension = null) {
     if (
       dimension === DIMENSIONS.MASS ||
       dimension === DIMENSIONS.MASS_FLOW ||
+      dimension === DIMENSIONS.DENSITY ||
       dimension === DIMENSIONS.SPECIFIC_ENERGY ||
       dimension === DIMENSIONS.SPECIFIC_CONSUMPTION
     ) {
@@ -125,6 +128,7 @@ export function parseUnitToSemanticAST(uName, dimension = null) {
   if (uName === "ksi") return [{ prefix: "kilo", base: "pound_force", power: 1 }, { prefix: null, base: "inch", power: -2 }];
   if (uName === "rpm") return [{ prefix: null, base: "rev", power: 1 }, { prefix: null, base: "minute", power: -1 }];
   if (uName === "cfm") return [{ prefix: null, base: "foot", power: 3 }, { prefix: null, base: "minute", power: -1 }];
+  if (uName === "gpm") return [{ prefix: null, base: "gallon", power: 1 }, { prefix: null, base: "minute", power: -1 }];
 
   const ast = parseUnitAST(uName, dimension);
   return flattenUnitAST(ast);

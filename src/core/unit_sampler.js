@@ -100,9 +100,13 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "m^3", tokens: 1 },
       { unit: "L", tokens: 1 }
     ],
+    [DIMENSIONS.DENSITY]: [
+      { unit: "kg/m^3", tokens: 2 }
+    ],
     [DIMENSIONS.VOLUME_FLOW]: [
       { unit: "m^3/s", tokens: 2 },
       { unit: "m^3/h", tokens: 2 },
+      { unit: "L/s", tokens: 2 },
       { unit: "L/h", tokens: 2 }
     ],
     [DIMENSIONS.TEMPERATURE]: [
@@ -196,8 +200,13 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
     [DIMENSIONS.VOLUME]: [
       { unit: "ft^3", tokens: 1 }
     ],
+    [DIMENSIONS.DENSITY]: [
+      { unit: "lb/ft^3", tokens: 2 }
+    ],
     [DIMENSIONS.VOLUME_FLOW]: [
-      { unit: "cfm", tokens: 1 }
+      { unit: "cfm", tokens: 1 },
+      { unit: "gpm", tokens: 1 },
+      { unit: "ft^3/s", tokens: 2 }
     ],
     [DIMENSIONS.TEMPERATURE]: [
       { unit: "°F", tokens: 1 },
@@ -280,6 +289,12 @@ const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["Q_A", "Q_R", "W_net"]),
   new Set(["Q_ip", "Q_cw", "Q_exh", "Q_rad"]),
   new Set(["t_w1", "t_w2", "t_wb1", "R_ct", "A_ct"]),
+  new Set(["h_1", "h_2"]),
+  new Set(["m_w", "m_evap", "m_bd", "m_drift", "m_mu"]),
+  new Set(["t_a1", "t_a2"]),
+  new Set(["M_w1", "M_w2"]),
+  new Set(["m_f", "m_p", "m_s", "m_w"]),
+  new Set(["Q_h", "Q_evap"]),
   new Set(["pct_ip", "pct_cw", "pct_exh", "pct_rad"]),
   new Set(["phi_n", "phi_t", "psi"]),
   new Set(["p_n", "p_t", "p_x"]),
