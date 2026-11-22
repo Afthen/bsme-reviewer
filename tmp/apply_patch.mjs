@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import readline from "node:readline/promises";
 
 const args = process.argv.slice(2);
-const dryRun = args.includes("--dry-run");
+const dryRun = !args.includes("-y") && !args.includes("--yes");
 const fileArg = args.find(a => !a.startsWith("-")) || "tmp/patch.txt";
 
 if (!fs.existsSync(fileArg)) {
