@@ -48,11 +48,11 @@ export function createCoolingTowerSystem({ sys = null } = {}) {
 
     _u = {
       t_w1: "°F", t_w2: "°F", t_wb1: "°F", R_ct: "°F", A_ct: "°F", eta_ct: "%",
-      h_1: "Btu/lb", h_2: "Btu/lb", W_1: "dimless", W_2: "dimless", v_1: "ft^3/lbm",
-      m_w: "lb/min", c_pw: "Btu/(lb*F)", rho_w: "lb/ft^3",
-      Q_rej: "Btu/min", m_a: "lb/min", LG: "dimless", V_a: "cfm", V_w: "gpm",
-      m_evap: "lb/min", f_drift: "%", m_drift: "lb/min", COC: "dimless",
-      m_bd: "lb/min", m_mu: "lb/min"
+      h_1: "Btu/lb_m", h_2: "Btu/lb_m", W_1: "dimless", W_2: "dimless", v_1: "ft^3/lb_m",
+      m_w: "lb_m/min", c_pw: "Btu/(lb_m*F)", rho_w: "lb_m/ft^3",
+      Q_rej: "Btu/min", m_a: "lb_m/min", LG: "dimless", V_a: "cfm", V_w: "gpm",
+      m_evap: "lb_m/min", f_drift: "%", m_drift: "lb_m/min", COC: "dimless",
+      m_bd: "lb_m/min", m_mu: "lb_m/min"
     };
   } else {
     // Pure SI

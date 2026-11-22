@@ -42,11 +42,11 @@ export function createDryerSystem({ sys = "SI" } = {}) {
     eta_d = (Q_evap / Q_h) * 100;                                // %
 
     _u = {
-      m_f: "lb/min", m_p: "lb/min", m_s: "lb/min", m_w: "lb/min",
+      m_f: "lb_m/min", m_p: "lb_m/min", m_s: "lb_m/min", m_w: "lb_m/min",
       M_w1: "%", M_w2: "%", X_1: "dimless", X_2: "dimless",
-      m_a: "lb/min", W_1: "dimless", W_2: "dimless", v_1: "ft^3/lbm", V_a: "cfm",
-      t_a1: "°F", t_a2: "°F", c_pa: "Btu/(lb*F)",
-      Q_h: "Btu/min", h_fg: "Btu/lb", Q_evap: "Btu/min", eta_d: "%"
+      m_a: "lb_m/min", W_1: "dimless", W_2: "dimless", v_1: "ft^3/lb_m", V_a: "cfm",
+      t_a1: "°F", t_a2: "°F", c_pa: "Btu/(lb_m*F)",
+      Q_h: "Btu/min", h_fg: "Btu/lb_m", Q_evap: "Btu/min", eta_d: "%"
     };
   } else {
     m_f = [1.0, 1.5, 2.0][Math.floor(Math.random() * 3)];        // kg/s

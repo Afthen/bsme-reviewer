@@ -26,10 +26,11 @@ export const PREFIXES = Object.freeze({
  * This prevents "Dimensionless Orphans" by forcing every unit to declare its 7D vector.
  */
 export const BASE_UNITS = Object.freeze({
-  "gram":           { baseScale: 0.001, symbol: "g", dimMap: { M: 1 } },
-  "pound_mass":     { baseScale: 0.45359237, symbol: "lb", dimMap: { M: 1 } },
-  "pound_force":    { baseScale: 4.4482216, symbol: "lb", dimMap: { M: 1, L: 1, T: -2 } },
-  "kilogram_force": { baseScale: 9.80665, symbol: "kgf", dimMap: { M: 1, L: 1, T: -2 } },
+  "gram":           { baseScale: 0.001, symbol: "g", dimMap: { M: 1 }, forceCompanion: "gram_force" },
+  "gram_force":     { baseScale: 0.001 * 9.80665, symbol: "g_f", dimMap: { M: 1, L: 1, T: -2 }, massCompanion: "gram" },
+  "pound_mass":     { baseScale: 0.45359237, symbol: "lb_m", dimMap: { M: 1 }, forceCompanion: "pound_force" },
+  "pound_force":    { baseScale: 0.45359237 * 9.80665, symbol: "lb_f", dimMap: { M: 1, L: 1, T: -2 }, massCompanion: "pound_mass" },
+  "kilogram_force": { baseScale: 9.80665, symbol: "kg_f", dimMap: { M: 1, L: 1, T: -2 }, massCompanion: "gram" },
   "newton":         { baseScale: 1.0, symbol: "N", dimMap: { M: 1, L: 1, T: -2 } },
   "meter":          { baseScale: 1.0, symbol: "m", dimMap: { L: 1 } },
   "second":         { baseScale: 1.0, symbol: "s", dimMap: { T: 1 } },
@@ -73,24 +74,14 @@ export const SUBSTITUTION_GRAPH = Object.freeze({
   "ksi": { num: ["kilo-pound_force"], den: ["inch", "inch"] }
 });
 
-export function resolveUnitToken(tokenBody, dimension = null) {
-  if (tokenBody === "%" || tokenBody === "\\%") return { prefix: null, base: "percent" };
-  if (tokenBody === "°" || tokenBody === "deg") return { prefix: null, base: "deg" };
-  if (tokenBody === "F" || tokenBody === "°F") return { prefix: null, base: "Fahrenheit" };
-  if (tokenBody === "C" || tokenBody === "°C") return { prefix: null, base: "Celsius" };
-  if (tokenBody === "R" || tokenBody === "°R") return { prefix: null, base: "Rankine" };
-  if (tokenBody === "K") return { prefix: null, base: "Kelvin" };
+function resolveBaseStem(stem, dimension = null) {
+  if (stem === "hr") return { prefix: null, base: "hour" };
+  if (stem === "kip" || stem === "kips" || stem === "klb") return { prefix: "kilo", base: "pound_force" };
+  if (stem === "kg") return { prefix: "kilo", base: "gram" };
+  if (stem === "g") return { prefix: null, base: "gram" };
+  if (stem === "N") return { prefix: null, base: "newton" };
 
-  if (tokenBody === "lbf" || tokenBody === "lb_f") return { prefix: null, base: "pound_force" };
-  if (tokenBody === "lbm" || tokenBody === "lb_m") return { prefix: null, base: "pound_mass" };
-  if (tokenBody === "kgf") return { prefix: null, base: "kilogram_force" };
-  if (tokenBody === "kip" || tokenBody === "kips" || tokenBody === "klb") return { prefix: "kilo", base: "pound_force" };
-  if (tokenBody === "hr") return { prefix: null, base: "hour" };
-  if (tokenBody === "kg") return { prefix: "kilo", base: "gram" };
-  if (tokenBody === "g") return { prefix: null, base: "gram" };
-  if (tokenBody === "N") return { prefix: null, base: "newton" };
-
-  if (tokenBody === "lb") {
+  if (stem === "lb") {
     if (
       dimension === DIMENSIONS.MASS ||
       dimension === DIMENSIONS.MASS_FLOW ||
@@ -104,13 +95,17 @@ export function resolveUnitToken(tokenBody, dimension = null) {
   }
 
   const foundExact = Object.keys(BASE_UNITS).find(
-    bKey => bKey === tokenBody || BASE_UNITS[bKey].symbol === tokenBody
+    bKey => bKey === stem || BASE_UNITS[bKey].symbol === stem
   );
   if (foundExact) return { prefix: null, base: foundExact };
 
   for (const [pCode, pMeta] of Object.entries(PREFIXES)) {
-    if (tokenBody.startsWith(pCode) && tokenBody.length > pCode.length) {
-      const possibleBase = tokenBody.slice(pCode.length);
+    if (stem.startsWith(pCode) && stem.length > pCode.length) {
+      const possibleBase = stem.slice(pCode.length);
+      if (possibleBase === "lb") {
+        const lbBase = dimension === DIMENSIONS.MASS ? "pound_mass" : "pound_force";
+        return { prefix: pMeta.name, base: lbBase };
+      }
       const foundBase = Object.keys(BASE_UNITS).find(
         bKey => bKey === possibleBase || BASE_UNITS[bKey].symbol === possibleBase
       );
@@ -118,7 +113,37 @@ export function resolveUnitToken(tokenBody, dimension = null) {
     }
   }
 
-  return { prefix: null, base: tokenBody };
+  return null;
+}
+
+export function resolveUnitToken(tokenBody, dimension = null) {
+  if (tokenBody === "%" || tokenBody === "\\%") return { prefix: null, base: "percent" };
+  if (tokenBody === "°" || tokenBody === "deg") return { prefix: null, base: "deg" };
+  if (tokenBody === "F" || tokenBody === "°F") return { prefix: null, base: "Fahrenheit" };
+  if (tokenBody === "C" || tokenBody === "°C") return { prefix: null, base: "Celsius" };
+  if (tokenBody === "R" || tokenBody === "°R") return { prefix: null, base: "Rankine" };
+  if (tokenBody === "K") return { prefix: null, base: "Kelvin" };
+
+  // General _m / _f suffix + legacy compact gravitational aliases (lbm, lbf, kgf, gf, klbm, klbf)
+  const suffixMatch = tokenBody.match(/^(.+)_(m|f)$/) || tokenBody.match(/^(lb|klb|kg|g)(m|f)$/);
+  if (suffixMatch) {
+    const [, rawStem, suffix] = suffixMatch;
+    const stemDim = suffix === "m" ? DIMENSIONS.MASS : DIMENSIONS.FORCE;
+    const resolvedStem = resolveBaseStem(rawStem, stemDim);
+    if (resolvedStem && BASE_UNITS[resolvedStem.base]) {
+      const baseMeta = BASE_UNITS[resolvedStem.base];
+      if (suffix === "m") {
+        if (baseMeta.forceCompanion) return resolvedStem;
+        if (baseMeta.massCompanion) return { prefix: resolvedStem.prefix, base: baseMeta.massCompanion };
+      } else if (suffix === "f") {
+        if (baseMeta.massCompanion) return resolvedStem;
+        if (baseMeta.forceCompanion) return { prefix: resolvedStem.prefix, base: baseMeta.forceCompanion };
+      }
+    }
+    return { prefix: null, base: tokenBody };
+  }
+
+  return resolveBaseStem(tokenBody, dimension) || { prefix: null, base: tokenBody };
 }
 
 export function parseUnitToSemanticAST(uName, dimension = null) {
@@ -171,10 +196,15 @@ export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
     const expStr = absP > 1 ? `^{${absP}}` : "";
 
     let termTex = "";
+    const symSuffixMatch = fullSym.match(/^(.+)_(m|f)$/);
     if (fullSym === "%") {
       termTex = cancelMode === "component" ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
     } else if (fullSym.startsWith("°")) {
       termTex = cancelMode === "component" ? `\\cancel{${fullSym}${expStr}}` : `${fullSym}${expStr}`;
+    } else if (symSuffixMatch) {
+      const [, basePart, subPart] = symSuffixMatch;
+      const bodyTex = `\\text{${basePart}}_{${subPart}}`;
+      termTex = cancelMode === "component" ? `\\cancel{${bodyTex}}${expStr}` : `${bodyTex}${expStr}`;
     } else {
       termTex = cancelMode === "component" ? `\\cancel{\\text{${fullSym}}}${expStr}` : `\\text{${fullSym}}${expStr}`;
     }

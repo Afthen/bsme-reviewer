@@ -102,6 +102,8 @@ export function formatGivenValue(value, meta = {}, isLatex = true, activeUnit = 
 export function cancelUnit(unitStr) {
   if (!unitStr) return "";
   if (unitStr === "%" || unitStr === "\\%") return "\\cancel{\\text{\\%}}";
+  const m = unitStr.match(/^(.+)_(m|f)$/);
+  if (m) return `\\cancel{\\text{${m[1]}}_{${m[2]}}}`;
   return `\\cancel{\\text{${unitStr}}}`;
 }
 
@@ -109,6 +111,8 @@ export function textUnit(unitStr) {
   if (!unitStr) return "";
   if (unitStr === "%" || unitStr === "\\%") return "\\text{\\%}";
   if (unitStr.startsWith("°")) return unitStr;
+  const m = unitStr.match(/^(.+)_(m|f)$/);
+  if (m) return `\\text{${m[1]}}_{${m[2]}}`;
   return `\\text{${unitStr}}`;
 }
 

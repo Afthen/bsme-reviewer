@@ -38,7 +38,7 @@ const TOPICS = Object.fromEntries(ALL_TOPICS.map(t => [t.id, t]));
 import { validateTopic } from "./validator.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
-import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor } from "../src/cas/units/index.js";
+import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor, formatPairConversion } from "../src/cas/units/index.js";
 import { parseMathAST } from "../src/cas/ast.js";
 import { casToTex } from "../src/cas/latex.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
@@ -233,10 +233,16 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
   test("Property 1: Universal Round-Trip Invariant across all registered units", () => {
     const testUnits = [
       "m", "mm", "cm", "in", "ft", "yd", "s", "min", "h",
-      "N", "kN", "lb", "kips", "g", "kg", "K", "°C", "°F", "°R",
+      "N", "kN", "lb", "lb_m", "lb_f", "klb_m", "klb_f", "kips",
+      "g", "kg", "g_m", "kg_m", "g_f", "kg_f",
+      "K", "°C", "°F", "°R",
       "Btu", "J", "kJ", "W", "kW", "MPa", "kPa", "Pa", "psi", "psf", "ksi",
-      "rpm", "cfm", "%", "°"
+      "rpm", "cfm", "gpm", "%", "°"
     ];
+
+    for (const invalid of ["m_f", "m_m", "N_f", "N_m", "s_m", "J_f"]) {
+      assert.equal(getUnitAtomBag(invalid).isUnknown, true, `Invalid suffix unit '${invalid}' must be rejected as unknown`);
+    }
 
     for (const u of testUnits) {
       let testVal = 42.5;
@@ -577,6 +583,59 @@ describe("Derivation Fidelity & LaTeX Rendering", () => {
       !deriv.includes("1{,}200\\,\\cfrac") && !deriv.includes("1200\\,\\cfrac"),
       `Terms must not retain individual units inside parentheses: ${deriv}`
     );
+  });
+
+  test("Gravitational force-to-mass bridge (gc) renders clean 2-row lb_f/lb_m cancellations", () => {
+    const varsDb = {
+      T_period: { symbol: "T", dimension: "Time / Period", unit: "s" },
+      k: { symbol: "k", dimension: "Spring Rate / Stiffness", unit: "lb_f/ft" },
+      m: { symbol: "m", dimension: "Mass", unit: "lb_m" }
+    };
+    const S = {
+      T_period: 0.495388,
+      k: 50,
+      m: 10,
+      _u: { T_period: "s", k: "lb_f/ft", m: "lb_m" }
+    };
+
+    const solveMassStep = {
+      targetVar: "m",
+      baseFormula: "T_period = 2 * pi * sqrt(m / k)",
+      rhsExpr: "(T_period / (2 * pi))^2 * k",
+      nodes: ["T_period", "m", "k"],
+      expectedVal: 10
+    };
+    const evalMass = evaluatePhysicalAST(parseMathAST(solveMassStep.rhsExpr), S, "m", varsDb);
+    assert.ok(Math.abs(evalMass.value - 10) < 0.01, `Expected m ~10 lb_m, got ${evalMass.value}`);
+
+    const derivMass = buildAlignedDerivation(solveMassStep, S, [solveMassStep], varsDb, []);
+    validateDerivationLatex(derivMass);
+    assert.ok(derivMass.includes("\\text{lb}_{f}"), `Expected lb_f in derivation: ${derivMass}`);
+    assert.ok(derivMass.includes("\\text{lb}_{m}"), `Expected lb_m in derivation: ${derivMass}`);
+    assert.ok(derivMass.includes("32.174"), `Expected gc = 32.174 in derivation: ${derivMass}`);
+    assert.ok(!derivMass.includes("\\cfrac{\\cfrac{"), `Must not emit broken nested 4-row gc tower: ${derivMass}`);
+
+    const solvePeriodStep = {
+      targetVar: "T_period",
+      baseFormula: "T_period = 2 * pi * sqrt(m / k)",
+      rhsExpr: "2 * pi * sqrt(m / k)",
+      nodes: ["T_period", "m", "k"],
+      expectedVal: 0.495388
+    };
+    const evalPeriod = evaluatePhysicalAST(parseMathAST(solvePeriodStep.rhsExpr), S, "T_period", varsDb);
+    assert.ok(Math.abs(evalPeriod.value - 0.495388) < 0.001, `Expected T ~0.495 s, got ${evalPeriod.value}`);
+
+    const derivPeriod = buildAlignedDerivation(solvePeriodStep, S, [solvePeriodStep], varsDb, []);
+    validateDerivationLatex(derivPeriod);
+    assert.ok(derivPeriod.includes("32.174"), `Expected gc = 32.174 in period derivation: ${derivPeriod}`);
+  });
+
+  test("Compound squared pressure conversion (lb_f/in^2 -> N/mm^2) decomposes 645.16 into 25.4^2", () => {
+    const conv = formatPairConversion("lb_f/in^2", "N/mm^2", "Pressure / Stress", "Pressure / Stress");
+    assert.ok(conv.tex.includes("(25.4)^2"), `Expected (25.4)^2 in conversion tex: ${conv.tex}`);
+    for (const s of conv.scalars) {
+      assert.ok(isCanonicalScaleFactor(s), `Expected canonical scalar, got ${s}`);
+    }
   });
 });
 

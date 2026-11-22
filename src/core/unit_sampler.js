@@ -128,29 +128,29 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "yd", tokens: 1 }
     ],
     [DIMENSIONS.FORCE]: [
-      { unit: "lb", tokens: 1 },
+      { unit: "lb_f", tokens: 1 },
       { unit: "kip", tokens: 1 }
     ],
     [DIMENSIONS.PRESSURE]: [
       { unit: "psi", tokens: 1 },
-      { unit: "lb/in^2", tokens: 2 },
+      { unit: "lb_f/in^2", tokens: 2 },
       { unit: "psf", tokens: 1 },
-      { unit: "lb/ft^2", tokens: 2 },
+      { unit: "lb_f/ft^2", tokens: 2 },
       { unit: "ksi", tokens: 1 }
     ],
     [DIMENSIONS.STRESS]: [
       { unit: "psi", tokens: 1 },
-      { unit: "lb/in^2", tokens: 2 },
+      { unit: "lb_f/in^2", tokens: 2 },
       { unit: "ksi", tokens: 1 }
     ],
     [DIMENSIONS.MODULUS]: [
       { unit: "ksi", tokens: 1 },
       { unit: "psi", tokens: 1 },
-      { unit: "lb/in^2", tokens: 2 }
+      { unit: "lb_f/in^2", tokens: 2 }
     ],
     [DIMENSIONS.STIFFNESS]: [
-      { unit: "lb/in", tokens: 2 },
-      { unit: "lb/ft", tokens: 2 },
+      { unit: "lb_f/in", tokens: 2 },
+      { unit: "lb_f/ft", tokens: 2 },
       { unit: "kip/in", tokens: 2 }
     ],
     [DIMENSIONS.TIME]: [
@@ -167,31 +167,31 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "in/s^2", tokens: 2 }
     ],
     [DIMENSIONS.MASS]: [
-      { unit: "lb", tokens: 1 }
+      { unit: "lb_m", tokens: 1 }
     ],
     [DIMENSIONS.POWER]: [
       { unit: "hp", tokens: 1 },
       { unit: "Btu/min", tokens: 2 },
       { unit: "Btu/h", tokens: 2 },
-      { unit: "ft-lb/s", tokens: 3 },
-      { unit: "ft-lb/min", tokens: 3 }
+      { unit: "ft-lb_f/s", tokens: 3 },
+      { unit: "ft-lb_f/min", tokens: 3 }
     ],
     [DIMENSIONS.TORQUE]: [
-      { unit: "lb-in", tokens: 2 },
-      { unit: "lb-ft", tokens: 2 }
+      { unit: "lb_f-in", tokens: 2 },
+      { unit: "lb_f-ft", tokens: 2 }
     ],
     [DIMENSIONS.ENERGY]: [
-      { unit: "in-lb", tokens: 2 },
-      { unit: "ft-lb", tokens: 2 },
+      { unit: "in-lb_f", tokens: 2 },
+      { unit: "ft-lb_f", tokens: 2 },
       { unit: "Btu", tokens: 1 }
     ],
     [DIMENSIONS.SPECIFIC_ENERGY]: [
-      { unit: "Btu/lb", tokens: 2 }
+      { unit: "Btu/lb_m", tokens: 2 }
     ],
     [DIMENSIONS.MASS_FLOW]: [
-      { unit: "lb/s", tokens: 2 },
-      { unit: "lb/min", tokens: 2 },
-      { unit: "lb/h", tokens: 2 }
+      { unit: "lb_m/s", tokens: 2 },
+      { unit: "lb_m/min", tokens: 2 },
+      { unit: "lb_m/h", tokens: 2 }
     ],
     [DIMENSIONS.VELOCITY]: [
       { unit: "ft/min", tokens: 2 },
@@ -201,7 +201,7 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "ft^3", tokens: 1 }
     ],
     [DIMENSIONS.DENSITY]: [
-      { unit: "lb/ft^3", tokens: 2 }
+      { unit: "lb_m/ft^3", tokens: 2 }
     ],
     [DIMENSIONS.VOLUME_FLOW]: [
       { unit: "cfm", tokens: 1 },

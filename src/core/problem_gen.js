@@ -222,7 +222,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const formattedVal = formatGivenValue(val, meta, true, u);
     let valWithUnit = `$${formattedVal}$`;
     if (u && u !== "dimless" && u !== "ratio") {
-      const uTex = unitToTex(u, true);
+      const uTex = unitToTex(u, true, meta.dimension);
       if (u === "%") valWithUnit = `$${formattedVal}\\%$`;
       else if (u.startsWith("°")) valWithUnit = `$${formattedVal}${uTex}$`;
       else valWithUnit = `$${formattedVal}\\,${uTex}$`;
@@ -232,9 +232,10 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
 
   const goalStrings = visibleGoals.map((gVar, idx) => {
     const poly = getPolymorphicMeta(gVar);
-    const u = S._u?.[gVar] || varsDb[gVar]?.unit || CONSTANTS_DB[gVar]?.unit || "";
+    const gMeta = varsDb[gVar] || CONSTANTS_DB[gVar] || {};
+    const u = S._u?.[gVar] || gMeta.unit || "";
     let uStr = "";
-    if (u && u !== "dimless" && u !== "ratio") uStr = ` in $${unitToTex(u, true)}$`;
+    if (u && u !== "dimless" && u !== "ratio") uStr = ` in $${unitToTex(u, true, gMeta.dimension)}$`;
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
     return `${prefix}<strong>${poly.name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${poly.symbol}$</span>)</span>${uStr}`;
   });

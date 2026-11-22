@@ -7,6 +7,7 @@
 import {
   BASE_UNITS,
   parseUnitToSemanticAST,
+  resolveUnitToken,
   getUnitAtomBag,
   isDimEqual,
   unitToTex,
@@ -57,6 +58,17 @@ export function formatPairConversion(fromUnit, toUnit, fromDim = null, toDim = f
 
   if (Math.abs(ratio - 1) < 1e-6) return { tex: "", scalar: null, scalars: [], isDecomposed: false };
 
+  // Decompose lumped ratios (e.g. 645.16 -> 25.4^2) to avoid "Alien" factors in tests
+  // and to provide textbook-grade derivations.
+  const decompose = (val) => {
+    if (isCanonicalScaleFactor(val)) return { root: val, power: 1 };
+    const r2 = Math.sqrt(Math.abs(val));
+    if (isCanonicalScaleFactor(r2)) return { root: Math.sign(val) * r2, power: 2 };
+    const r3 = Math.pow(Math.abs(val), 1 / 3);
+    if (isCanonicalScaleFactor(r3)) return { root: Math.sign(val) * r3, power: 3 };
+    return { root: val, power: 1 };
+  };
+
   // Check if decomposing into Num / Den steps yields cleaner canonical factors
   const rawFromParts = splitRateParts(fromUnit);
   const rawToParts = splitRateParts(toUnit);
@@ -82,26 +94,28 @@ export function formatPairConversion(fromUnit, toUnit, fromDim = null, toDim = f
         if (Math.abs(numRatio - 1) >= 1e-6) {
           const fNTex = unitToCancelledTex(fParts.num, false, fromDim, "whole");
           const tNTex = unitToTex(tParts.num, false, toDim);
+          const mag = numRatio > 1 ? numRatio : (1 / numRatio);
+          const { root, power } = decompose(mag);
+          const texVal = power > 1 ? `(${fmtScale(root)})^${power}` : fmtScale(mag);
+          scalars.push(...Array(power).fill(parseFloat(root.toPrecision(6))));
           if (numRatio > 1) {
-            steps.push(` \\cdot ${fmtScale(numRatio)} \\, \\cfrac{${tNTex}}{${fNTex}}`);
-            scalars.push(parseFloat(numRatio.toPrecision(6)));
+            steps.push(` \\cdot ${texVal} \\, \\cfrac{${tNTex}}{${fNTex}}`);
           } else {
-            const inv = 1 / numRatio;
-            steps.push(` \\cdot \\cfrac{${tNTex}}{${fmtScale(inv)} \\, ${fNTex}}`);
-            scalars.push(parseFloat(inv.toPrecision(6)));
+            steps.push(` \\cdot \\cfrac{${tNTex}}{${texVal} \\, ${fNTex}}`);
           }
         }
 
         if (Math.abs(denRatio - 1) >= 1e-6) {
           const fDTex = unitToCancelledTex(fParts.den, false, fromDim, "whole");
           const tDTex = unitToTex(tParts.den, false, toDim);
+          const mag = denRatio > 1 ? denRatio : (1 / denRatio);
+          const { root, power } = decompose(mag);
+          const texVal = power > 1 ? `(${fmtScale(root)})^${power}` : fmtScale(mag);
+          scalars.push(...Array(power).fill(parseFloat(root.toPrecision(6))));
           if (denRatio > 1) {
-            steps.push(` \\cdot \\cfrac{${fDTex}}{${fmtScale(denRatio)} \\, ${tDTex}}`);
-            scalars.push(parseFloat(denRatio.toPrecision(6)));
+            steps.push(` \\cdot \\cfrac{${fDTex}}{${texVal} \\, ${tDTex}}`);
           } else {
-            const inv = 1 / denRatio;
-            steps.push(` \\cdot ${fmtScale(inv)} \\, \\cfrac{${fDTex}}{${tDTex}}`);
-            scalars.push(parseFloat(inv.toPrecision(6)));
+            steps.push(` \\cdot ${texVal} \\, \\cfrac{${fDTex}}{${tDTex}}`);
           }
         }
 
@@ -114,17 +128,6 @@ export function formatPairConversion(fromUnit, toUnit, fromDim = null, toDim = f
 
   const fromTex = unitToCancelledTex(fromUnit, false, fromDim, cancelMode);
   const toTex = unitToTex(toUnit, false, toDim);
-
-  // Decompose lumped ratios (e.g. 645.16 -> 25.4^2) to avoid "Alien" factors in tests
-  // and to provide textbook-grade derivations.
-  const decompose = (val) => {
-    if (isCanonicalScaleFactor(val)) return { root: val, power: 1 };
-    const r2 = Math.sqrt(Math.abs(val));
-    if (isCanonicalScaleFactor(r2)) return { root: Math.sign(val) * r2, power: 2 };
-    const r3 = Math.pow(Math.abs(val), 1 / 3);
-    if (isCanonicalScaleFactor(r3)) return { root: Math.sign(val) * r3, power: 3 };
-    return { root: val, power: 1 };
-  };
 
   if (ratio > 1) {
     const { root, power } = decompose(ratio);
@@ -228,8 +231,14 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
   const targetPrefersBtu = targetAst.some(a => a.base === "Btu");
 
   const targetHasMass = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "M");
+  const targetHasTime = targetAst.some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "T");
+  const targetHasLen = targetAst.some(a => BASE_UNITS[a.base]?.dimMap?.L === 1);
+  const anyEntryHasPureMass = tokenEntries.some(e =>
+    parseUnitToSemanticAST(e.uName, e.dim).some(a => getAtomDimKey(BASE_UNITS[a.base]?.dimMap) === "M")
+  );
+  const needsMassForceBridge = targetHasMass || anyEntryHasPureMass;
 
-  // Flatten all source atoms, expanding compound Power and Force units when interacting across dimensions
+  // Flatten all source atoms, expanding compound Power and gravitational Force units when bridging to Mass
   const sourceAtoms = [];
   for (const entry of tokenEntries) {
     let workingUnit = entry.uName;
@@ -246,22 +255,67 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
         scalars.push(parseFloat(r.toPrecision(6)));
         workingUnit = rateTarget;
       }
-    } else if (targetHasMass && (workingUnit === "lb/in" || workingUnit === "lb/ft" || workingUnit === "kip/in")) {
-      // Decompose Force in Spring Rate to Mass via standard gravitational equivalence (gc)
-      const isInch = workingUnit === "lb/in" || workingUnit === "kip/in";
-      const gc = isInch ? 386.0886 : 32.174049;
-      const kScale = workingUnit === "kip/in" ? 1000 : 1;
-      const effFactor = gc * kScale;
-      if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
-      const convLatex = isInch
-        ? ` \\cdot ${fmtScale(effFactor)} \\, \\cfrac{\\cfrac{\\text{lb}\\cdot\\cancel{\\text{in}}}{\\text{s}^2}}{\\cancel{\\cfrac{\\text{lb}}{\\text{in}}}}`
-        : ` \\cdot ${fmtScale(effFactor)} \\, \\cfrac{\\cfrac{\\text{lb}\\cdot\\cancel{\\text{ft}}}{\\text{s}^2}}{\\cancel{\\cfrac{\\text{lb}}{\\text{ft}}}}`;
-      conversionsByToken[entry.tok].push(convLatex);
-      scalars.push(parseFloat(effFactor.toPrecision(6)));
-      workingUnit = "lbm/s^2";
     }
 
-    const ast = parseUnitToSemanticAST(workingUnit, entry.dim);
+    let ast = parseUnitToSemanticAST(workingUnit, entry.dim);
+    const gravForceIdx = needsMassForceBridge
+      ? ast.findIndex(a => BASE_UNITS[a.base]?.massCompanion && a.power === 1)
+      : -1;
+
+    if (gravForceIdx >= 0) {
+      const fAtom = ast[gravForceIdx];
+      const fStr = atomToUnitString(fAtom);
+      const isImperialForce = fAtom.base === "pound_force";
+      const baseForceStr = isImperialForce ? "lb_f" : "kg_f";
+      const mStr = isImperialForce ? "lb_m" : "kg";
+
+      const lenAtom = ast.find(a => a !== fAtom && BASE_UNITS[a.base]?.dimMap?.L === 1);
+      const lenAtomStr = lenAtom ? atomToUnitString(lenAtom) : null;
+      const lStr = isImperialForce ? (lenAtomStr === "in" ? "in" : "ft") : "m";
+
+      if (!conversionsByToken[entry.tok]) conversionsByToken[entry.tok] = [];
+
+      // Unpack prefix on gravitational force (e.g. klb_f -> 1000 lb_f) so gc stays canonical
+      if (fStr !== baseForceStr) {
+        const prefixRatio = getUnitAtomBag(fStr).scale / getUnitAtomBag(baseForceStr).scale;
+        if (Math.abs(prefixRatio - 1) > 1e-6) {
+          scalars.push(parseFloat((prefixRatio > 1 ? prefixRatio : 1 / prefixRatio).toPrecision(6)));
+          if (prefixRatio > 1) {
+            conversionsByToken[entry.tok].push(` \\cdot ${fmtScale(prefixRatio)} \\, \\cfrac{\\cancel{${unitToTex(baseForceStr)}}}{\\cancel{${unitToTex(fStr)}}}`);
+          } else {
+            conversionsByToken[entry.tok].push(` \\cdot \\cfrac{\\cancel{${unitToTex(baseForceStr)}}}{${fmtScale(1 / prefixRatio)} \\, \\cancel{${unitToTex(fStr)}}}`);
+          }
+        }
+      }
+
+      const gc = getUnitAtomBag(baseForceStr).scale / (getUnitAtomBag(mStr).scale * getUnitAtomBag(lStr).scale);
+      scalars.push(parseFloat(gc.toPrecision(6)));
+
+      const tokenHasMatchingLen = !!(lenAtom && lenAtom.power === -1 && lenAtomStr === lStr);
+      const mTex = targetHasMass ? unitToTex(mStr) : unitToCancelledTex(mStr, false, null, "component");
+      const lTex = (tokenHasMatchingLen || !targetHasLen) ? unitToCancelledTex(lStr, false, null, "component") : unitToTex(lStr);
+      const s2Tex = targetHasTime ? "\\text{s}^{2}" : "\\cancel{\\text{s}^{2}}";
+
+      conversionsByToken[entry.tok].push(
+        ` \\cdot ${fmtScale(gc)} \\, \\cfrac{${mTex} \\cdot ${lTex}}{\\cancel{${unitToTex(baseForceStr)}} \\cdot ${s2Tex}}`
+      );
+
+      // Rebuild remaining AST after replacing gravitational force with mStr * lStr / s^2
+      const nextFactors = [];
+      for (let idx = 0; idx < ast.length; idx++) {
+        if (idx === gravForceIdx) continue;
+        if (tokenHasMatchingLen && ast[idx] === lenAtom) continue;
+        nextFactors.push(ast[idx]);
+      }
+      const mResolved = resolveUnitToken(mStr, DIMENSIONS.MASS);
+      nextFactors.push({ prefix: mResolved.prefix, base: mResolved.base, power: 1 });
+      if (!tokenHasMatchingLen) {
+        const lResolved = resolveUnitToken(lStr, DIMENSIONS.LENGTH);
+        nextFactors.push({ prefix: lResolved.prefix, base: lResolved.base, power: 1 });
+      }
+      nextFactors.push({ prefix: null, base: "second", power: -2 });
+      ast = nextFactors;
+    }
     ast.forEach(atom => {
       sourceAtoms.push({
         tok: entry.tok,
@@ -407,10 +461,11 @@ function getRegisteredPairwiseRatios() {
 
   // Explicit unit-to-dimension pairs (no substring guessing like .includes("lb/"))
   const registeredUnits = [
-    { u: "g", dim: DIMENSIONS.MASS }, { u: "kg", dim: DIMENSIONS.MASS }, { u: "lb", dim: DIMENSIONS.MASS },
-    { u: "lbm", dim: DIMENSIONS.MASS },
+    { u: "g", dim: DIMENSIONS.MASS }, { u: "kg", dim: DIMENSIONS.MASS }, { u: "g_m", dim: DIMENSIONS.MASS }, { u: "kg_m", dim: DIMENSIONS.MASS },
+    { u: "lb", dim: DIMENSIONS.MASS }, { u: "lbm", dim: DIMENSIONS.MASS }, { u: "lb_m", dim: DIMENSIONS.MASS }, { u: "klb_m", dim: DIMENSIONS.MASS },
     { u: "N", dim: DIMENSIONS.FORCE }, { u: "kN", dim: DIMENSIONS.FORCE }, { u: "lb", dim: DIMENSIONS.FORCE },
-    { u: "lbf", dim: DIMENSIONS.FORCE }, { u: "kgf", dim: DIMENSIONS.FORCE }, { u: "kip", dim: DIMENSIONS.FORCE },
+    { u: "lbf", dim: DIMENSIONS.FORCE }, { u: "lb_f", dim: DIMENSIONS.FORCE }, { u: "klb_f", dim: DIMENSIONS.FORCE },
+    { u: "g_f", dim: DIMENSIONS.FORCE }, { u: "kgf", dim: DIMENSIONS.FORCE }, { u: "kg_f", dim: DIMENSIONS.FORCE }, { u: "kip", dim: DIMENSIONS.FORCE },
     { u: "m", dim: DIMENSIONS.LENGTH }, { u: "mm", dim: DIMENSIONS.LENGTH }, { u: "cm", dim: DIMENSIONS.LENGTH },
     { u: "in", dim: DIMENSIONS.LENGTH }, { u: "ft", dim: DIMENSIONS.LENGTH }, { u: "yd", dim: DIMENSIONS.LENGTH },
     { u: "s", dim: null }, { u: "min", dim: null }, { u: "h", dim: null }, { u: "rpm", dim: DIMENSIONS.ROT_SPEED },
