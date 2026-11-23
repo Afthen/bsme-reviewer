@@ -18,7 +18,7 @@
 
 import { astHasVariable, parseMathAST } from "../src/cas/ast.js";
 import { isolateVariable } from "../src/cas/algebra.js";
-import { getUnitAtomBag, evaluatePhysicalAST } from "../src/cas/units/index.js";
+import { getUnitAtomBag, hasPointTempInCompound, evaluatePhysicalAST } from "../src/cas/units/index.js";
 import { solveDAG, pruneSolutionPath } from "../src/core/graph_solver.js";
 
 export function validateTopic(topic) {
@@ -54,10 +54,31 @@ export function validateTopic(topic) {
 
   for (const [k, meta] of Object.entries(varsDb)) {
     if (meta.unit) {
-      const bag = getUnitAtomBag(meta.unit);
+      const bag = getUnitAtomBag(meta.unit, meta.dimension);
       if (bag.isUnknown) {
         report.errors.push(`Variable "${k}" references unregistered unit: "${meta.unit}"`);
       }
+      if (hasPointTempInCompound(meta.unit, meta.dimension)) {
+        report.errors.push(`Variable "${k}" compound unit "${meta.unit}" must use Δ temperature atoms`);
+      }
+    }
+  }
+
+  for (const rel of relations) {
+    const checkReq = (reqMap, label) => {
+      for (const [tok, u] of Object.entries(reqMap || {})) {
+        const bag = getUnitAtomBag(u, varsDb[tok]?.dimension);
+        if (bag.isUnknown) {
+          report.errors.push(`${label} token "${tok}" references unregistered unit: "${u}"`);
+        }
+        if (hasPointTempInCompound(u, varsDb[tok]?.dimension)) {
+          report.errors.push(`${label} token "${tok}" compound unit "${u}" must use Δ temperature atoms`);
+        }
+      }
+    };
+    checkReq(rel.requiredUnits, `Relation [${rel.id}]`);
+    for (const [sysName, v] of Object.entries(rel.variants || {})) {
+      checkReq(v.requiredUnits, `Relation [${rel.id}.${sysName}]`);
     }
   }
 

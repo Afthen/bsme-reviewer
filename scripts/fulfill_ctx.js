@@ -19,6 +19,24 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { extractSymbols, findEnclosing } from "./lib/symbols.js";
 import { parseCase } from "./lib/trace_parse.js";
+import {
+  handleGraph,
+  handleTopic,
+  handleUnit,
+  handleConvert,
+  handleSolve,
+  handleHygiene,
+  handleFailures,
+  handleDerive,
+  handleAuditLatex,
+  handleAuditStep,
+  handleRenderStep,
+  handleProblemSteps,
+  handleStepAst,
+  handleDiffStep,
+  handleDiffDerive,
+  handleRoundtripStep
+} from "./lib/ctx_tools.js";
 
 export const LIMITS = Object.freeze({
   MAX_DIRECTIVES: 8,
@@ -299,15 +317,36 @@ function handleTrace(arg, { remaining }) {
   return { text: fenced(`TRACE: ${arg}`, shown.join("\n")), lines: shown.length };
 }
 
-const HANDLERS = { READ: handleRead, OUTLINE: handleOutline, GREP: handleGrep, TRACE: handleTrace };
-const USAGE = "Valid: READ path[#symbol|:a-b|:-N], OUTLINE path, GREP [-C n] [-i] term [@ path[:a-b]], TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]";
+const HANDLERS = {
+  READ: handleRead,
+  OUTLINE: handleOutline,
+  GREP: handleGrep,
+  TRACE: handleTrace,
+  GRAPH: handleGraph,
+  TOPIC: handleTopic,
+  UNIT: handleUnit,
+  CONVERT: handleConvert,
+  SOLVE: handleSolve,
+  HYGIENE: handleHygiene,
+  FAILURES: handleFailures,
+  DERIVE: handleDerive,
+  "AUDIT-LATEX": handleAuditLatex,
+  "AUDIT-STEP": handleAuditStep,
+  "RENDER-STEP": handleRenderStep,
+  "PROBLEM-STEPS": handleProblemSteps,
+  "STEP-AST": handleStepAst,
+  "DIFF-STEP": handleDiffStep,
+  "DIFF-DERIVE": handleDiffDerive,
+  "ROUNDTRIP-STEP": handleRoundtripStep
+};
+const USAGE = "Valid: READ, OUTLINE, GREP, TRACE, GRAPH, TOPIC, UNIT, CONVERT, SOLVE, HYGIENE, FAILURES, DERIVE, AUDIT-LATEX, AUDIT-STEP, RENDER-STEP, PROBLEM-STEPS, STEP-AST, DIFF-STEP, DIFF-DERIVE, ROUNDTRIP-STEP";
 
 export function parseDirectives(raw) {
   return raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith(FENCE));
 }
 
 /** Fulfills a raw request; returns the response text ("" when no directives). */
-export function fulfill(raw, { root = process.cwd() } = {}) {
+export async function fulfill(raw, { root = process.cwd() } = {}) {
   const directives = parseDirectives(raw);
   if (directives.length === 0) return "";
 
@@ -315,11 +354,24 @@ export function fulfill(raw, { root = process.cwd() } = {}) {
   const dropped = directives.slice(LIMITS.MAX_DIRECTIVES);
   const parts = [];
   let used = 0;
+  const DIRECTIVE_RE = /^(READ|OUTLINE|GREP|TRACE|GRAPH|TOPIC|UNIT|CONVERT|SOLVE|HYGIENE|FAILURES|DERIVE|AUDIT-LATEX|AUDIT-STEP|RENDER-STEP|PROBLEM-STEPS|STEP-AST|DIFF-STEP|DIFF-DERIVE|ROUNDTRIP-STEP)(?:\s+(.*))?$/;
 
   for (const line of run) {
     const remaining = Math.max(0, LIMITS.MAX_OUTPUT_LINES - used);
-    const m = line.match(/^(READ|OUTLINE|GREP|TRACE)\s+(.+)$/);
-    const r = m ? HANDLERS[m[1]](m[2].trim(), { root, remaining }) : { text: `[UNRECOGNIZED: ${line}]\n${USAGE}\n`, lines: 1 };
+    const m = line.match(DIRECTIVE_RE);
+    let r;
+    if (m) {
+      const verb = m[1];
+      const arg = (m[2] || "").trim();
+      try {
+        const res = HANDLERS[verb](arg, { root, remaining });
+        r = res instanceof Promise ? await res : res;
+      } catch (err) {
+        r = { text: `[${verb} ERROR: ${err.message}]\n`, lines: 1 };
+      }
+    } else {
+      r = { text: `[UNRECOGNIZED: ${line}]\n${USAGE}\n`, lines: 1 };
+    }
     parts.push(r.text);
     used += r.lines;
   }
@@ -339,7 +391,7 @@ if (isMain) {
     console.error("Missing tmp/ctx_req.txt: paste the model's directive block there first.");
     process.exit(1);
   }
-  const text = fulfill(fs.readFileSync(REQ_FILE, "utf8"));
+  const text = await fulfill(fs.readFileSync(REQ_FILE, "utf8"));
   if (!text) {
     console.error("No READ, OUTLINE, GREP, or TRACE directives found in tmp/ctx_req.txt.");
     process.exit(1);

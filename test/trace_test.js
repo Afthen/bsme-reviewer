@@ -56,8 +56,8 @@ describe("trace_hooks.recordNumericPushes", () => {
 });
 
 describe("fulfill TRACE", () => {
-  test("malformed TRACE is rejected with usage, not executed", () => {
-    const out = fulfill("TRACE not a case");
+  test("malformed TRACE is rejected with usage, not executed", async () => {
+    const out = await fulfill("TRACE not a case");
     assert.match(out, /TRACE needs a matrix case/);
     assert.match(out, /1\/8 directives used/);
   });

@@ -5,7 +5,7 @@
 
 import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
-import { fmtSigFig, DIMENSIONS } from "../../core/dimensions.js";
+import { DIMENSIONS } from "../../core/dimensions.js";
 import {
   parseUnitToSemanticAST,
   BASE_UNITS,
@@ -14,7 +14,8 @@ import {
   unitToTex,
   unitToCancelledTex,
   getUnitOffset,
-  getAbsoluteCompanionUnit,
+  getUnitKind,
+  toDeltaUnit,
   valueToCoherentBase,
   formatValueInUnit
 } from "./definitions.js";
@@ -40,7 +41,155 @@ function getFormulaFractionDepth(node, targetName, currentDepth = 0) {
   return null;
 }
 
-export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {}, requiredUnits = null, forceInSitu = false) {
+function isPureThDim(d = {}) {
+  const keys = Object.keys(d);
+  return keys.length === 1 && d.Th === 1;
+}
+
+function combineDimMaps(a = {}, b = {}, sign = 1) {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    const next = (out[k] || 0) + sign * v;
+    if (Math.abs(next) < 1e-9) delete out[k];
+    else out[k] = next;
+  }
+  return out;
+}
+
+function scaleDimMapLocal(d = {}, p = 1) {
+  const out = {};
+  for (const [k, v] of Object.entries(d)) {
+    const next = v * p;
+    if (Math.abs(next) >= 1e-9) out[k] = next;
+  }
+  return out;
+}
+
+/**
+ * Pure AST temperature typing pass: distinguishes affine points (P), temperature
+ * differences (L = P - P or Δ units), and expressions requiring absolute frames (abs).
+ */
+export function analyzeTempAST(node, unitOfKey, varsDb = {}) {
+  const empty = () => ({ dimMap: {}, tempState: "none", hasAbs: false, liftTokens: new Set(), pointTokens: new Set() });
+
+  function walk(n) {
+    if (!n) return empty();
+    if (n.type === "num") return empty();
+    if (n.type === "group") return walk(n.expr);
+
+    if (n.type === "id") {
+      if (isReservedMathToken(n.name)) return empty();
+      const cKey = resolveCanonicalKey(n.name, varsDb);
+      const meta = varsDb[cKey] || varsDb[n.name] || {};
+      const uName = unitOfKey(n.name) || unitOfKey(cKey) || meta.unit || "";
+      if (!uName || uName === "dimless" || uName === "ratio") return empty();
+      const bag = getUnitAtomBag(uName, meta.dimension);
+      if (bag.kind === "point") {
+        return { dimMap: bag.dimMap, tempState: "point", hasAbs: false, liftTokens: new Set(), pointTokens: new Set([n.name]) };
+      }
+      if (bag.kind === "delta") {
+        return { dimMap: bag.dimMap, tempState: "delta", hasAbs: false, liftTokens: new Set(), pointTokens: new Set() };
+      }
+      return { dimMap: bag.dimMap, tempState: "none", hasAbs: false, liftTokens: new Set(), pointTokens: new Set() };
+    }
+
+    if (n.type === "call") {
+      const A = walk(n.arg);
+      const liftTokens = new Set(A.liftTokens);
+      if (A.tempState === "point") A.pointTokens.forEach(t => liftTokens.add(t));
+      return {
+        dimMap: {},
+        tempState: "none",
+        hasAbs: A.hasAbs || A.tempState === "point" || A.tempState === "abs",
+        liftTokens,
+        pointTokens: new Set()
+      };
+    }
+
+    if (n.type === "binary") {
+      const L = walk(n.left);
+      const R = walk(n.right);
+      const liftTokens = new Set([...L.liftTokens, ...R.liftTokens]);
+
+      if (n.op === "+" || n.op === "-") {
+        const hasAbs = L.hasAbs || R.hasAbs;
+        if (L.tempState === "point" && R.tempState === "point") {
+          if (n.op === "-") {
+            return {
+              dimMap: L.dimMap,
+              tempState: "delta",
+              hasAbs,
+              liftTokens,
+              pointTokens: new Set([...L.pointTokens, ...R.pointTokens])
+            };
+          }
+          L.pointTokens.forEach(t => liftTokens.add(t));
+          R.pointTokens.forEach(t => liftTokens.add(t));
+          return { dimMap: L.dimMap, tempState: "abs", hasAbs: true, liftTokens, pointTokens: new Set() };
+        }
+        if (L.tempState === "point" && R.tempState === "delta") {
+          return { dimMap: L.dimMap, tempState: "point", hasAbs, liftTokens, pointTokens: new Set([...L.pointTokens, ...R.pointTokens]) };
+        }
+        if (L.tempState === "delta" && R.tempState === "point") {
+          if (n.op === "+") {
+            return { dimMap: R.dimMap, tempState: "point", hasAbs, liftTokens, pointTokens: new Set([...L.pointTokens, ...R.pointTokens]) };
+          }
+          R.pointTokens.forEach(t => liftTokens.add(t));
+          return { dimMap: R.dimMap, tempState: "abs", hasAbs: true, liftTokens, pointTokens: new Set() };
+        }
+        if (L.tempState === "delta" && R.tempState === "delta") {
+          return { dimMap: L.dimMap, tempState: "delta", hasAbs, liftTokens, pointTokens: new Set([...L.pointTokens, ...R.pointTokens]) };
+        }
+        if (L.tempState === "abs" || R.tempState === "abs") {
+          if (L.tempState === "point") L.pointTokens.forEach(t => liftTokens.add(t));
+          if (R.tempState === "point") R.pointTokens.forEach(t => liftTokens.add(t));
+          const outDim = isPureThDim(L.dimMap) ? L.dimMap : R.dimMap;
+          return { dimMap: outDim, tempState: "abs", hasAbs: true, liftTokens, pointTokens: new Set() };
+        }
+        let lifted = false;
+        if (L.tempState === "point") { L.pointTokens.forEach(t => liftTokens.add(t)); lifted = true; }
+        if (R.tempState === "point") { R.pointTokens.forEach(t => liftTokens.add(t)); lifted = true; }
+        const outDim = Object.keys(L.dimMap).length ? L.dimMap : R.dimMap;
+        const tempState = lifted ? "abs" : (L.tempState === "delta" || R.tempState === "delta" ? "delta" : "none");
+        return { dimMap: outDim, tempState, hasAbs: hasAbs || lifted, liftTokens, pointTokens: new Set() };
+      }
+
+      if (n.op === "*" || n.op === "/") {
+        if (L.tempState === "point") L.pointTokens.forEach(t => liftTokens.add(t));
+        if (R.tempState === "point") R.pointTokens.forEach(t => liftTokens.add(t));
+        const hasAbs = L.hasAbs || R.hasAbs || L.tempState === "point" || R.tempState === "point" || L.tempState === "abs" || R.tempState === "abs";
+        const dimMap = combineDimMaps(L.dimMap, R.dimMap, n.op === "*" ? 1 : -1);
+        const tempState = isPureThDim(dimMap) ? (hasAbs ? "abs" : "delta") : "none";
+        return { dimMap, tempState, hasAbs, liftTokens, pointTokens: new Set() };
+      }
+
+      if (n.op === "^") {
+        if (L.tempState === "point") L.pointTokens.forEach(t => liftTokens.add(t));
+        if (R.tempState === "point") R.pointTokens.forEach(t => liftTokens.add(t));
+        const hasAbs = L.hasAbs || R.hasAbs || L.tempState === "point" || R.tempState === "point";
+        const p = evalAST(n.right, {});
+        const dimMap = Number.isFinite(p) ? scaleDimMapLocal(L.dimMap, p) : {};
+        const tempState = isPureThDim(dimMap) ? (hasAbs ? "abs" : "delta") : "none";
+        return { dimMap, tempState, hasAbs, liftTokens, pointTokens: new Set() };
+      }
+    }
+
+    return empty();
+  }
+
+  return walk(node);
+}
+
+export function solveUnitAlgebra(
+  exprOrAST,
+  S,
+  targetVar,
+  targetUnit,
+  varsDb = {},
+  requiredUnits = null,
+  forceInSitu = false,
+  cancelTokenDims = null
+) {
   const ast = typeof exprOrAST === "string" ? parseMathAST(exprOrAST) : exprOrAST;
   const tokenMarkup = {};
   const tokenConversions = {};
@@ -64,27 +213,17 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       if (!reqU) return;
 
       if (currU && reqU && currU !== reqU) {
-        const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
         const currBag = getUnitAtomBag(currU, meta.dimension);
         const reqBag = getUnitAtomBag(reqU, meta.dimension);
         if (currBag.scale && reqBag.scale) {
           const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
           const convertedVal = formatValueInUnit(
-            valueToCoherentBase(rawVal, currU, isDiff, meta.dimension),
+            valueToCoherentBase(rawVal, currU, meta.dimension),
             reqU,
-            isDiff,
             meta.dimension
           );
-          const ratio = currBag.scale / reqBag.scale;
-          const isAffine = !isDiff && (currBag.dimMap.Th !== undefined || reqBag.dimMap.Th !== undefined);
           preConversions.push({
             token: tok, canonicalKey: cKey, fromUnit: currU, toUnit: reqU,
-            conv: {
-              factor: isAffine ? 1.0 : ratio,
-              latex: isAffine
-                ? `${fmtSigFig(convertedVal, 6, true)}\\,${unitToTex(reqU)}`
-                : `\\cfrac{${fmtScale(ratio, true)}\\,${unitToTex(reqU)}}{\\cancel{${unitToTex(currU)}}}`
-            },
             rawVal, convertedVal
           });
         }
@@ -95,12 +234,11 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     const reqTargetU = requiredUnits[cTarget] || requiredUnits[targetVar];
     if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
       const targetMeta = varsDb[cTarget] || varsDb[targetVar] || {};
-      const targetIsDiff = targetMeta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!targetMeta.isDifference;
       const reqBag = getUnitAtomBag(reqTargetU, targetMeta.dimension);
       const targetBag = getUnitAtomBag(targetUnit, targetMeta.dimension);
-      const isTargetAffine = !targetIsDiff && (reqBag.dimMap.Th !== undefined || targetBag.dimMap.Th !== undefined);
+      const hasTargetOffset = (reqBag.offset !== 0 || targetBag.offset !== 0);
 
-      if (reqBag.scale && targetBag.scale && !isTargetAffine) {
+      if (reqBag.scale && targetBag.scale && !hasTargetOffset) {
         numericConversionFactor = reqBag.scale / targetBag.scale;
         if (Math.abs(numericConversionFactor - 1) > 1e-12) {
           const ratio = numericConversionFactor;
@@ -193,11 +331,31 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
     }
 
     const hasExplicitTarget = !!(targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio");
+    let effectiveBranchTarget = targetUnit;
+    if (hasExplicitTarget && isMultiBranch && getUnitKind(targetUnit, targetDim) === "point") {
+      const branchTemp = analyzeTempAST(branchAst, k => {
+        const cK = resolveCanonicalKey(k, varsDb);
+        const m = varsDb[cK] || varsDb[k] || {};
+        return S._u?.[cK] || S._u?.[k] || m.unit || "";
+      }, varsDb);
+      if (branchTemp.tempState === "delta") {
+        effectiveBranchTarget = toDeltaUnit(targetUnit);
+      }
+    }
     const branchTargetBag = hasExplicitTarget
-      ? getUnitAtomBag(targetUnit, targetDim)
+      ? getUnitAtomBag(effectiveBranchTarget, targetDim)
       : null;
 
     const pairedInSectionC = new Set();
+    const fullyCancelledTokens = new Set();
+    const cancelTokSet = new Set();
+    if (Array.isArray(cancelTokenDims) && cancelTokenDims.length > 0) {
+      for (const [tok, info] of Object.entries(tokenBags)) {
+        if (cancelTokenDims.some(d => isDimEqual(info.bag.dimMap, d))) {
+          cancelTokSet.add(tok);
+        }
+      }
+    }
     const resolvedUnitByTok = {};
 
     const findCounterpart = (tok) => {
@@ -242,50 +400,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
       if (pairedInSectionC.has(tok)) continue;
 
-      const parsed = parseUnitToSemanticAST(uName, meta.dimension);
       const counterpart = findCounterpart(tok);
-
-      // B. Affine Temperature Conversion (e.g. °F -> °R, °C -> K)
-      if (parsed.length === 1 && BASE_UNITS[parsed[0].base]?.dimMap?.Th) {
-        const baseMeta = BASE_UNITS[parsed[0].base];
-        const isDiff = meta.dimension === "Temperature Difference" || !!meta.isDifference;
-
-        if (!isDiff && baseMeta.offset) {
-          const rawVal = S[cKey] !== undefined ? S[cKey] : S[tok];
-          const absUnit = getAbsoluteCompanionUnit(uName);
-          const offsetVal = baseMeta.offset;
-          const formattedNum = fmtSigFig(rawVal, 6, true);
-
-          if (counterpart) {
-            tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToCancelledTex(absUnit, false, null, "whole")}`;
-            pairedInSectionC.add(tok);
-            const otherOffset = getUnitOffset(counterpart.uName, counterpart.dim);
-            if (!otherOffset && Math.abs(getUnitAtomBag(absUnit).scale / getUnitAtomBag(counterpart.uName, counterpart.dim).scale - 1) < 1e-6) {
-              pairedInSectionC.add(counterpart.tok);
-              const otherDepth = getFormulaFractionDepth(branchAst, counterpart.tok) || 0;
-              tokenMarkup[counterpart.tok] = unitToCancelledTex(counterpart.uName, otherDepth >= 2, counterpart.dim, "whole");
-              resolvedUnitByTok[counterpart.tok] = counterpart.uName;
-            }
-          } else {
-            tokenMarkup[tok] = `(${formattedNum} + ${offsetVal}) \\, ${unitToTex(absUnit)}`;
-          }
-          resolvedUnitByTok[tok] = absUnit;
-          tokenConversions[tok] = ["__AFFINE_CONVERTED__"];
-          continue;
-        } else if (!isDiff && counterpart) {
-          const otherOffset = getUnitOffset(counterpart.uName, counterpart.dim);
-          if (!otherOffset && Math.abs(getUnitAtomBag(uName, meta.dimension).scale / getUnitAtomBag(counterpart.uName, counterpart.dim).scale - 1) < 1e-6) {
-            tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, "whole");
-            pairedInSectionC.add(tok);
-            pairedInSectionC.add(counterpart.tok);
-            const otherDepth = getFormulaFractionDepth(branchAst, counterpart.tok) || 0;
-            tokenMarkup[counterpart.tok] = unitToCancelledTex(counterpart.uName, otherDepth >= 2, counterpart.dim, "whole");
-            resolvedUnitByTok[tok] = uName;
-            resolvedUnitByTok[counterpart.tok] = counterpart.uName;
-            continue;
-          }
-        }
-      }
 
       // C. Counterpart with Matching Dimension Vector
       if (counterpart) {
@@ -297,6 +412,8 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
         pairedInSectionC.add(tok);
         pairedInSectionC.add(counterpart.tok);
+        fullyCancelledTokens.add(tok);
+        fullyCancelledTokens.add(counterpart.tok);
 
         if (Math.abs(scaleRatio - 1) < 1e-6) {
           tokenMarkup[tok] = unitToCancelledTex(uName, useInlineUnit, meta.dimension, "whole");
@@ -359,11 +476,12 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         && remainingTokens.every(tok => isDimEqual(tokenBags[tok].bag.dimMap, branchTargetBag.dimMap));
 
       // The pairwise shortcut is valid only when every token converts by registered ratios.
-      // Atom-soup targets (e.g. kg*m*m/(h*h^2)) fall through to the per-atom compound builder.
+      // Atom-soup targets (e.g. kg*m*m/(h*h^2)) and outer-cancelled sibling terms route to compound builder.
       const pairwiseIsCanonical = hasExplicitTarget && isSingleDimRemaining
         && remainingTokens.every(tok => {
+          if (cancelTokSet.has(tok)) return false;
           const { uName, dim } = tokenBags[tok];
-          return formatPairConversion(uName, targetUnit, dim, targetDim, "whole").scalars.every(isCanonicalScaleFactor);
+          return formatPairConversion(uName, effectiveBranchTarget, dim, targetDim, "whole").scalars.every(isCanonicalScaleFactor);
         });
 
       if (pairwiseIsCanonical) {
@@ -376,7 +494,7 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
           const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
           const useInlineUnit = fDepth >= 2;
           const inAdditive = forceInSitu || isMultiBranch || isTokenInAdditiveSubtree(branchAst, tok);
-          const conv = formatPairConversion(uName, targetUnit, tokDim, targetDim, "whole");
+          const conv = formatPairConversion(uName, effectiveBranchTarget, tokDim, targetDim, "whole");
 
           if (!conv.tex) {
             tokenMarkup[tok] = unitToTex(uName, useInlineUnit, tokDim);
@@ -387,14 +505,18 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
             const convTex = useInlineUnit ? conv.tex.replaceAll("\\cfrac", "\\tfrac") : conv.tex;
             const convScalars = conv.scalars || (conv.scalar !== null ? [conv.scalar] : []);
 
+            if (cancelTarget === "whole" || (cancelTarget instanceof Set && cancelTarget.size === parseUnitToSemanticAST(uName, tokDim).length)) {
+              fullyCancelledTokens.add(tok);
+            }
+
             if (!inAdditive && !globalConversionTex && tokExp === 1 && mismatchingCount === 1) {
               globalConversionTex = convTex;
               conversionScalars.push(...convScalars);
-              resolvedUnitByTok[tok] = targetUnit;
+              resolvedUnitByTok[tok] = effectiveBranchTarget;
             } else {
               tokenConversions[tok] = [convTex];
               conversionScalars.push(...convScalars);
-              resolvedUnitByTok[tok] = targetUnit;
+              resolvedUnitByTok[tok] = effectiveBranchTarget;
             }
           }
         }
@@ -407,10 +529,10 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
         }));
         const compoundTarget = (targetDim === DIMENSIONS.PERCENTAGE && isDimensionlessBranch(branchAst))
           ? "dimless"
-          : (targetUnit || "dimless");
+          : (effectiveBranchTarget || "dimless");
         const compoundDim = compoundTarget === "dimless" ? null : targetDim;
         const { conversionsByToken, scalars, cancelledIndicesByToken, globalConvTex, resolvedUnitsByToken } =
-          buildCompoundTokenConversions(entries, compoundTarget, compoundDim);
+          buildCompoundTokenConversions(entries, compoundTarget, compoundDim, cancelTokSet);
 
         for (const [k, convList] of Object.entries(conversionsByToken)) {
           const kDepth = getFormulaFractionDepth(branchAst, k) || 0;
@@ -424,7 +546,13 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
           const kMeta = varsDb[kCanon] || varsDb[k] || {};
           const kU = S._u?.[kCanon] || S._u?.[k] || kMeta.unit || "";
           const kDepth = getFormulaFractionDepth(branchAst, k) || 0;
-          tokenMarkup[k] = unitToCancelledTex(kU, kDepth >= 2, kMeta.dimension, idxSet);
+          const kAst = parseUnitToSemanticAST(kU, kMeta.dimension);
+          const hasConvs = (tokenConversions[k] || []).length > 0;
+          if (kAst.length > 0 && idxSet.size === kAst.length) {
+            fullyCancelledTokens.add(k);
+          }
+          const mode = (!hasConvs && kAst.length > 0 && idxSet.size === kAst.length) ? "whole" : idxSet;
+          tokenMarkup[k] = unitToCancelledTex(kU, kDepth >= 2, kMeta.dimension, mode);
         }
         Object.assign(resolvedUnitByTok, resolvedUnitsByToken || {});
         if (globalConvTex) {
@@ -530,8 +658,15 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
 
     for (const { firstTerm, siblingTerms } of unfactoredSums) {
       const sibTargetUnit = unitForSubExpr(firstTerm);
+      const ftIds = Array.from(new Set(getAstIdentifiers(firstTerm).filter(t => !isReservedMathToken(t))));
+      const cancelledTokDims = [];
+      for (const ftTok of ftIds) {
+        if (fullyCancelledTokens.has(ftTok) && tokenBags[ftTok]) {
+          cancelledTokDims.push(tokenBags[ftTok].bag.dimMap);
+        }
+      }
       for (const sib of siblingTerms) {
-        mergeSubAnalysis(solveUnitAlgebra(sib, S, "__sum_sib__", sibTargetUnit, varsDb, null, true));
+        mergeSubAnalysis(solveUnitAlgebra(sib, S, "__sum_sib__", sibTargetUnit, varsDb, null, true, cancelledTokDims));
       }
     }
     for (const argNode of transcendentalArgs) {

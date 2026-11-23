@@ -38,7 +38,7 @@ export function createBypassAirSystem({ sys = "SI" } = {}) {
     m_o: "kg/s", m_r: "kg/s", m_m: "kg/s", y: "dimless",
     t_o: "°C", t_r: "°C", t_m: "°C", t_s: "°C", t_adp: "°C", t_rh: "°C",
     h_o: "kJ/kg", h_r: "kJ/kg", h_m: "kJ/kg", h_s: "kJ/kg", h_adp: "kJ/kg", h_rh: "kJ/kg",
-    q_c: "kW", q_rh: "kW", BF: "dimless", CF: "dimless", c_pa: "kJ/kg-K",
+    q_c: "kW", q_rh: "kW", BF: "dimless", CF: "dimless", c_pa: "kJ/kg-ΔK",
     V_o: "m^3/s", v_o: "m^3/kg", V_m: "m^3/s", v_m: "m^3/kg", V_s: "m^3/s", v_s: "m^3/kg"
   };
 

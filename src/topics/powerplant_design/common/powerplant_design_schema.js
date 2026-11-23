@@ -10,13 +10,13 @@ export const POWERPLANT_DESIGN_VARS = Object.freeze({
   "T_air": { name: "Ambient Air Temperature", symbol: "T_a", dimension: DIMENSIONS.TEMPERATURE, unit: "K" },
   "rho_gas": { name: "Flue Gas Density", symbol: "\\rho_g", dimension: DIMENSIONS.DENSITY, unit: "kg/m^3" },
   "rho_air": { name: "Ambient Air Density", symbol: "\\rho_a", dimension: DIMENSIONS.DENSITY, unit: "kg/m^3" },
-  "R_g": { name: "Specific Gas Const (Flue Gas)", symbol: "R_g", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "J/kg-K", isConstant: true },
+  "R_g": { name: "Specific Gas Const (Flue Gas)", symbol: "R_g", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "J/kg-ΔK", isConstant: true },
   "g": { name: "Gravity", symbol: "g", dimension: DIMENSIONS.ACCELERATION, unit: "m/s^2", isConstant: true },
   // Heat Exchangers
   "Q_HX": { name: "Heat Transfer Rate", symbol: "Q", dimension: DIMENSIONS.POWER, unit: "kW" },
   "U": { name: "Overall Heat Transfer Coeff", symbol: "U", dimension: DIMENSIONS.HEAT_TRANSFER_COEFF, unit: "kW/m^2-K" },
   "A_HX": { name: "Heat Transfer Area", symbol: "A", dimension: DIMENSIONS.AREA, unit: "m^2" },
-  "LMTD": { name: "Log Mean Temp Difference", symbol: "LMTD", dimension: DIMENSIONS.TEMPERATURE, unit: "K" },
+  "LMTD": { name: "Log Mean Temp Difference", symbol: "LMTD", dimension: DIMENSIONS.TEMPERATURE, unit: "ΔK" },
   // Piping
   "V_fluid": { name: "Fluid Velocity", symbol: "V", dimension: DIMENSIONS.VELOCITY, unit: "m/s" },
   "Vol_flow": { name: "Volumetric Flow Rate", symbol: "\\dot{V}", dimension: DIMENSIONS.VOLUME_FLOW, unit: "m^3/s" },

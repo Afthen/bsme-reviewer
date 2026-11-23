@@ -10,6 +10,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { loadAllTopics } from "../src/topics/index.js";
 import { phi, fib } from "../src/mastery/constants.js";
+import { CONSTANTS_DB } from "../src/core/constants_registry.js";
+import { DIMENSIONS } from "../src/core/dimensions.js";
+import { getUnitAtomBag, hasPointTempInCompound } from "../src/cas/units/index.js";
 
 const ALL_TOPICS = await loadAllTopics();
 
@@ -248,6 +251,41 @@ describe("Hygiene: LaTeX Formatting Restrictions", () => {
         checkString(meta.substituteTex, `Topic [${topic.id}] Var [${meta.name}] substituteTex`);
         checkString(meta.displayTex, `Topic [${topic.id}] Var [${meta.name}] displayTex`);
       });
+    }
+  });
+});
+
+// ============================================================================
+// 8. STRICT Δ COMPOUND UNIT & TEMPERATURE-DIFF ELIMINATION GATE
+// ============================================================================
+describe("Hygiene: Strict Δ Compound Units & Registry Integrity", () => {
+  test("DIMENSIONS.TEMPERATURE_DIFF and isDifference flags must not exist; compound units must use Δ atoms", () => {
+    assert.equal(DIMENSIONS.TEMPERATURE_DIFF, undefined, "DIMENSIONS.TEMPERATURE_DIFF must be removed");
+
+    for (const [key, entry] of Object.entries(CONSTANTS_DB)) {
+      for (const field of ["unit", "unitSI", "unitUS"]) {
+        const u = entry[field];
+        if (!u) continue;
+        assert.equal(getUnitAtomBag(u, entry.dimension).isUnknown, false, `CONSTANTS_DB.${key}.${field} unknown unit: "${u}"`);
+        assert.equal(hasPointTempInCompound(u, entry.dimension), false, `CONSTANTS_DB.${key}.${field} must use Δ atom: "${u}"`);
+      }
+    }
+
+    for (const topic of ALL_TOPICS) {
+      for (const [varKey, meta] of Object.entries(topic.varsDb)) {
+        assert.equal(meta.isDifference, undefined, `Legacy isDifference on ${topic.id}.${varKey}`);
+        if (meta.unit) {
+          assert.equal(hasPointTempInCompound(meta.unit, meta.dimension), false, `${topic.id}.${varKey} compound unit "${meta.unit}" must use Δ atom`);
+        }
+      }
+      for (const sys of ["SI", "US"]) {
+        const S = topic.createSystem({ sys });
+        for (const [varKey, u] of Object.entries(S._u || {})) {
+          const dim = topic.varsDb[varKey]?.dimension;
+          assert.equal(getUnitAtomBag(u, dim).isUnknown, false, `${topic.id}[${sys}]._u.${varKey} unknown unit: "${u}"`);
+          assert.equal(hasPointTempInCompound(u, dim), false, `${topic.id}[${sys}]._u.${varKey} compound unit "${u}" must use Δ atom`);
+        }
+      }
     }
   });
 });

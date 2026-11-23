@@ -184,5 +184,5 @@ export const HVAC_BASE_VARS = Object.freeze({
   "v_o": { name: "Outside Air Specific Volume", symbol: "v_o", dimension: DIMENSIONS.VOLUME, unit: "m^3/kg", aliases: ["Specific Volume of Outside Air"] },
   "v_m": { name: "Mixed Air Specific Volume", symbol: "v_m", dimension: DIMENSIONS.VOLUME, unit: "m^3/kg", aliases: ["Specific Volume of Mixed Air"] },
   "v_s": { name: "Supply Air Specific Volume", symbol: "v_s", dimension: DIMENSIONS.VOLUME, unit: "m^3/kg", aliases: ["Specific Volume of Supply Air"] },
-  "c_pa": { name: "Specific Heat of Air", symbol: "c_{pa}", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg-K", isConstant: true, aliases: ["Specific Heat of Air", "Air Specific Heat", "c_{pa}"] }
+  "c_pa": { name: "Specific Heat of Air", symbol: "c_{pa}", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg-ΔK", isConstant: true, aliases: ["Specific Heat of Air", "Air Specific Heat", "c_{pa}"] }
 });

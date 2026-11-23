@@ -21,12 +21,12 @@ export function tokenizeUnitExpr(str) {
       let num = "";
       while (i < str.length && /[0-9.]/.test(str[i])) num += str[i++];
       tokens.push({ type: "num", val: num });
-    } else if (/[a-zA-Z°%]/.test(ch)) {
+    } else if (/[a-zA-Z°%Δ]/.test(ch)) {
       let id = "";
-      while (i < str.length && /[a-zA-Z0-9°_%]/.test(str[i])) id += str[i++];
+      while (i < str.length && /[a-zA-Z0-9°_%Δ]/.test(str[i])) id += str[i++];
       tokens.push({ type: "id", val: id });
     } else {
-      i++;
+      throw new Error(`Invalid character '${ch}' in unit expression "${str}"`);
     }
   }
   return tokens;

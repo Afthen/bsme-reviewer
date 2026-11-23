@@ -13,7 +13,7 @@ import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
 import { applyProblemUnitSampling, planProblemUnits, sampleSystemMode, findCoupledGroup } from "./unit_sampler.js";
 import { fmtSigFig, formatGivenValue, DIMENSIONS } from "./dimensions.js";
-import { valueToCoherentBase, formatValueInUnit, unitToTex } from "../cas/units/definitions.js";
+import { getUnitKind, toDeltaUnit, toPointUnit, convertUnitValue, unitToTex } from "../cas/units/definitions.js";
 
 export function relationWeaknessWeight(mastery = 0) {
   return Math.max(phi(-7), Math.pow((1 + phi(-6)) - mastery, fib(4)));
@@ -249,7 +249,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   return `${article} ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalsFormatted}.`;
 }
 
-export function generateProblem(topic, getMastery = () => 0) {
+export function generateProblem(topic, getMastery = () => 0, options = {}) {
   let { title, varsDb, relations, createSystem } = topic;
   if (typeof topic.instantiate === "function" && Array.isArray(topic.countRange)) {
     const [minN, maxN] = topic.countRange;
@@ -260,7 +260,7 @@ export function generateProblem(topic, getMastery = () => 0) {
     createSystem = inst.createSystem;
   }
 
-  const targetMode = sampleSystemMode();
+  const targetMode = sampleSystemMode(options?.mode ?? null);
   const unitPlan = planProblemUnits(varsDb, targetMode);
   let S_truth = createSystem({ sys: targetMode === "MIXED" ? "SI" : targetMode, unitPlan });
   S_truth = applyProblemUnitSampling(S_truth, varsDb, targetMode, unitPlan);
@@ -298,12 +298,18 @@ export function generateProblem(topic, getMastery = () => 0) {
         if (!unifiedUnits.has(grp)) {
           unifiedUnits.set(grp, currentUnit);
         } else {
-          const targetUnit = unifiedUnits.get(grp);
+          const rawTargetUnit = unifiedUnits.get(grp);
+          const curKind = getUnitKind(currentUnit);
+          const tgtKind = getUnitKind(rawTargetUnit);
+          let targetUnit = rawTargetUnit;
+          if (curKind === "delta" && tgtKind === "point") targetUnit = toDeltaUnit(rawTargetUnit);
+          else if (curKind === "point" && tgtKind === "delta") targetUnit = toPointUnit(rawTargetUnit);
+
           if (currentUnit !== targetUnit) {
             const meta = varsDb[step.targetVar] || {};
-            const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-            const coherentVal = valueToCoherentBase(step.expectedVal, currentUnit, isDiff, meta.dimension);
-            const newVal = formatValueInUnit(coherentVal, targetUnit, isDiff, meta.dimension);
+            const newVal = convertUnitValue(step.expectedVal, currentUnit, targetUnit, meta.dimension);
+            S_truth[step.targetVar] = newVal;
+            S_truth._u[step.targetVar] = targetUnit;
             S_display[step.targetVar] = newVal;
             S_display._u[step.targetVar] = targetUnit;
             step.expectedVal = newVal;

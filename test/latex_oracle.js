@@ -6,6 +6,77 @@
 
 import assert from "node:assert/strict";
 
+let katex = null;
+try {
+  const mod = await import("katex");
+  katex = mod.default || mod;
+} catch (_) {
+  katex = null;
+}
+
+export function validateDerivationLatex(derivLatex) {
+  assert.ok(typeof derivLatex === "string" && derivLatex.length > 0, "Derivation LaTeX must be non-empty");
+  assert.ok(derivLatex.includes("\\boxed{"), "Derivation step missing boxed answer");
+  assert.ok(derivLatex.includes("="), "Derivation step missing equality");
+  assert.ok(!derivLatex.includes("\\cdot^"), `\\cdot cannot take a direct superscript in step: ${derivLatex}`);
+  assert.ok(!derivLatex.includes("\\cancel{}") && !derivLatex.includes("\\cancel{ }"), `Empty cancel bracket in step: ${derivLatex}`);
+  assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{\\cfrac{"), `Illegal nested fraction tower (exceeds 2 levels) in step: ${derivLatex}`);
+
+  let braceDepth = 0;
+  for (let i = 0; i < derivLatex.length; i++) {
+    const ch = derivLatex[i];
+    const prev = i > 0 ? derivLatex[i - 1] : "";
+    if (prev !== "\\") {
+      if (ch === "{") braceDepth++;
+      else if (ch === "}") braceDepth--;
+      assert.ok(braceDepth >= 0, `Unbalanced closing brace '}' in derivation: ${derivLatex}`);
+    }
+  }
+  assert.equal(braceDepth, 0, `Unbalanced opening brace '{' in derivation: ${derivLatex}`);
+
+  const beginAligned = derivLatex.split("\\begin{aligned}").length - 1;
+  const endAligned = derivLatex.split("\\end{aligned}").length - 1;
+  assert.equal(beginAligned, endAligned, `Mismatched aligned environment in: ${derivLatex}`);
+
+  if (katex && typeof katex.renderToString === "function") {
+    let raw = derivLatex.trim();
+    if (raw.startsWith("$$") && raw.endsWith("$$")) {
+      raw = raw.slice(2, -2).trim();
+    }
+    try {
+      katex.renderToString(raw, { displayMode: true, throwOnError: true });
+    } catch (err) {
+      assert.fail(`KaTeX rendering error: ${err.message} in derivation:\n${derivLatex}`);
+    }
+  }
+}
+
+export function validateStatementLatex(statement, ctx = "") {
+  const str = String(statement || "");
+  let pos = 0;
+  while (pos < str.length) {
+    if (str.startsWith("$$", pos)) {
+      const end = str.indexOf("$$", pos + 2);
+      assert.ok(end !== -1, `Unclosed $$ in ${ctx} statement: ${str}`);
+      const math = str.slice(pos + 2, end).trim();
+      if (katex && typeof katex.renderToString === "function") {
+        katex.renderToString(math, { displayMode: true, throwOnError: true });
+      }
+      pos = end + 2;
+    } else if (str[pos] === "$") {
+      const end = str.indexOf("$", pos + 1);
+      assert.ok(end !== -1, `Unclosed $ in ${ctx} statement: ${str}`);
+      const math = str.slice(pos + 1, end).trim();
+      if (katex && typeof katex.renderToString === "function") {
+        katex.renderToString(math, { displayMode: false, throwOnError: true });
+      }
+      pos = end + 1;
+    } else {
+      pos++;
+    }
+  }
+}
+
 function readBalancedGroup(str, openIdx, openCh = "{", closeCh = "}") {
   if (str[openIdx] !== openCh) return { content: "", nextIdx: openIdx };
   let depth = 0;
@@ -57,9 +128,10 @@ function skipOptionalSubSuper(str, idx) {
   return pos;
 }
 
-function evalLatexMathToNumber(tex, inTrigArg = false) {
+function evalLatexNode(tex, inTrigArg = false) {
+  const fail = () => ({ val: NaN, pureUnit: false });
   const s = (tex || "").replace(/\{,\}/g, "").trim();
-  if (!s) return NaN;
+  if (!s) return fail();
 
   const tokens = [];
   let i = 0;
@@ -74,6 +146,19 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
     }
     if (s.startsWith("\\quad", i)) {
       i += 5;
+      continue;
+    }
+    if (s.startsWith("\\Delta", i) && !/[a-zA-Z]/.test(s[i + 6] || "")) {
+      i += 6;
+      while (i < s.length && (s[i] === " " || s.startsWith("\\,", i))) {
+        i += s[i] === " " ? 1 : 2;
+      }
+      if (s[i] !== "°" && !s.startsWith("\\text{", i)) return fail();
+      continue;
+    }
+    if (s[i] === "Δ") {
+      i++;
+      if (s[i] !== "°" && s[i] !== "K" && !s.startsWith("\\text{", i)) return fail();
       continue;
     }
     if (s.startsWith("\\left(", i) || s.startsWith("\\left[", i)) {
@@ -92,14 +177,14 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
       continue;
     }
     if (s.startsWith("\\pi", i)) {
-      tokens.push({ type: "num", val: Math.PI });
+      tokens.push({ type: "num", val: Math.PI, pureUnit: false });
       i += 3;
       continue;
     }
     if (s.startsWith("\\cancel{", i)) {
       const grp = readBalancedGroup(s, i + 7);
       i = skipOptionalSubSuper(s, grp.nextIdx);
-      tokens.push({ type: "unit", val: 1 });
+      tokens.push({ type: "unit", val: 1, pureUnit: true });
       continue;
     }
     if (s.startsWith("\\text{", i)) {
@@ -109,20 +194,26 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
         i = grp.nextIdx;
       } else if (grp.content === "\\%" || grp.content === "%") {
         i = skipOptionalSubSuper(s, grp.nextIdx);
-        tokens.push({ type: "unit", val: 0.01 });
+        tokens.push({ type: "unit", val: 0.01, pureUnit: true });
       } else {
         i = skipOptionalSubSuper(s, grp.nextIdx);
-        tokens.push({ type: "unit", val: 1 });
+        tokens.push({ type: "unit", val: 1, pureUnit: true });
       }
       continue;
     }
-    if (s[i] === "°") {
-      i++;
-      if (i < s.length && (s[i] === "C" || s[i] === "F" || s[i] === "R" || s[i] === "K")) {
+    if (s[i] === "°" || s[i] === "K") {
+      if (s[i] === "K") {
+        if (i > 0 && /[a-zA-Z]/.test(s[i - 1])) return fail();
+        if (i + 1 < s.length && /[a-zA-Z]/.test(s[i + 1])) return fail();
         i++;
+      } else {
+        i++;
+        if (i < s.length && (s[i] === "C" || s[i] === "F" || s[i] === "R" || s[i] === "K")) {
+          i++;
+        }
       }
       i = skipOptionalSubSuper(s, i);
-      tokens.push({ type: "unit", val: inTrigArg ? (Math.PI / 180) : 1 });
+      tokens.push({ type: "unit", val: inTrigArg ? (Math.PI / 180) : 1, pureUnit: true });
       continue;
     }
     if (s.startsWith("\\cfrac{", i) || s.startsWith("\\tfrac{", i) || s.startsWith("\\frac{", i)) {
@@ -130,18 +221,18 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
       const numGrp = readBalancedGroup(s, i + cmdLen);
       const denGrp = readBalancedGroup(s, numGrp.nextIdx);
       i = denGrp.nextIdx;
-      const nVal = evalLatexMathToNumber(numGrp.content, false);
-      const dVal = evalLatexMathToNumber(denGrp.content, false);
-      if (!Number.isFinite(nVal) || !Number.isFinite(dVal) || dVal === 0) return NaN;
-      tokens.push({ type: "num", val: nVal / dVal });
+      const nRes = evalLatexNode(numGrp.content, false);
+      const dRes = evalLatexNode(denGrp.content, false);
+      if (!Number.isFinite(nRes.val) || !Number.isFinite(dRes.val) || dRes.val === 0) return fail();
+      tokens.push({ type: "num", val: nRes.val / dRes.val, pureUnit: nRes.pureUnit && dRes.pureUnit });
       continue;
     }
     if (s.startsWith("\\sqrt{", i)) {
       const grp = readBalancedGroup(s, i + 5);
       i = grp.nextIdx;
-      const innerVal = evalLatexMathToNumber(grp.content, false);
-      if (!Number.isFinite(innerVal)) return NaN;
-      tokens.push({ type: "num", val: Math.sqrt(innerVal) });
+      const innerRes = evalLatexNode(grp.content, false);
+      if (!Number.isFinite(innerRes.val) || innerRes.pureUnit) return fail();
+      tokens.push({ type: "num", val: Math.sqrt(innerRes.val), pureUnit: false });
       continue;
     }
     if (s.startsWith("\\ln", i)) {
@@ -164,49 +255,51 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
         i++;
         if (s[i] === "{") {
           const pGrp = readBalancedGroup(s, i);
-          pow = evalLatexMathToNumber(pGrp.content, false);
+          const pRes = evalLatexNode(pGrp.content, false);
+          if (pRes.pureUnit) return fail();
+          pow = pRes.val;
           i = pGrp.nextIdx;
         } else {
           pow = Number(s[i++]);
         }
       }
       while (i < s.length && s[i] === " ") i++;
-      let argVal = NaN;
+      let argRes = fail();
       if (s.startsWith("\\left(", i)) {
         const grp = readBalancedLeftRightParens(s, i);
-        if (grp.nextIdx === i) return NaN;
-        argVal = evalLatexMathToNumber(grp.content, true);
+        if (grp.nextIdx === i) return fail();
+        argRes = evalLatexNode(grp.content, true);
         i = grp.nextIdx;
       } else if (s[i] === "(") {
         const grp = readBalancedGroup(s, i, "(", ")");
-        argVal = evalLatexMathToNumber(grp.content, true);
+        argRes = evalLatexNode(grp.content, true);
         i = grp.nextIdx;
       } else {
         const mNum = s.slice(i).match(/^[\d.]+(?:\s*(?:\\,\s*)?°)?/);
         if (mNum) {
-          argVal = evalLatexMathToNumber(mNum[0], true);
+          argRes = evalLatexNode(mNum[0], true);
           i += mNum[0].length;
         }
       }
-      if (!Number.isFinite(argVal) || !Number.isFinite(pow)) return NaN;
+      if (!Number.isFinite(argRes.val) || argRes.pureUnit || !Number.isFinite(pow)) return fail();
       const fnName = trigMatch.slice(1);
-      tokens.push({ type: "num", val: Math.pow(Math[fnName](argVal), pow) });
+      tokens.push({ type: "num", val: Math.pow(Math[fnName](argRes.val), pow), pureUnit: false });
       continue;
     }
     if (s.startsWith("e^{", i)) {
       const grp = readBalancedGroup(s, i + 2);
       i = grp.nextIdx;
-      const expVal = evalLatexMathToNumber(grp.content, false);
-      if (!Number.isFinite(expVal)) return NaN;
-      tokens.push({ type: "num", val: Math.exp(expVal) });
+      const expRes = evalLatexNode(grp.content, false);
+      if (!Number.isFinite(expRes.val) || expRes.pureUnit) return fail();
+      tokens.push({ type: "num", val: Math.exp(expRes.val), pureUnit: false });
       continue;
     }
     if (s[i] === "{") {
       const grp = readBalancedGroup(s, i);
       i = grp.nextIdx;
-      const innerVal = evalLatexMathToNumber(grp.content, inTrigArg);
-      if (!Number.isFinite(innerVal)) return NaN;
-      tokens.push({ type: "num", val: innerVal });
+      const innerRes = evalLatexNode(grp.content, inTrigArg);
+      if (!Number.isFinite(innerRes.val)) return fail();
+      tokens.push({ type: "num", val: innerRes.val, pureUnit: innerRes.pureUnit });
       continue;
     }
     if (/[0-9.]/.test(s[i])) {
@@ -219,7 +312,7 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
           while (i < s.length && /[0-9]/.test(s[i])) numStr += s[i++];
         }
       }
-      tokens.push({ type: "num", val: parseFloat(numStr) });
+      tokens.push({ type: "num", val: parseFloat(numStr), pureUnit: false });
       continue;
     }
     if ("+-*/^()".includes(s[i])) {
@@ -227,7 +320,7 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
       i++;
       continue;
     }
-    return NaN;
+    return fail();
   }
 
   let pos = 0;
@@ -236,14 +329,18 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
 
   function parsePrimary() {
     const t = peek();
-    if (!t) return NaN;
+    if (!t) return fail();
     if (t.type === "op" && t.val === "-") {
       next();
-      return -parsePower();
+      const inner = parsePower();
+      if (inner.pureUnit) return fail();
+      return { val: -inner.val, pureUnit: false };
     }
     if (t.type === "op" && t.val === "+") {
       next();
-      return parsePower();
+      const inner = parsePower();
+      if (inner.pureUnit) return fail();
+      return { val: inner.val, pureUnit: false };
     }
     if (t.type === "op" && t.val === "(") {
       next();
@@ -254,18 +351,20 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
     if (t.type === "fn") {
       const fn = next().val;
       const arg = parsePrimary();
-      if (fn === "ln") return Math.log(arg);
-      if (fn === "log") return Math.log10(arg);
-      if (fn === "abs") return Math.abs(arg);
-      if (fn === "sininv") return Math.asin(arg) * 180 / Math.PI;
-      if (fn === "cosinv") return Math.acos(arg) * 180 / Math.PI;
-      if (fn === "taninv") return Math.atan(arg) * 180 / Math.PI;
-      return NaN;
+      if (arg.pureUnit || !Number.isFinite(arg.val)) return fail();
+      if (fn === "ln") return { val: Math.log(arg.val), pureUnit: false };
+      if (fn === "log") return { val: Math.log10(arg.val), pureUnit: false };
+      if (fn === "abs") return { val: Math.abs(arg.val), pureUnit: false };
+      if (fn === "sininv") return { val: Math.asin(arg.val) * 180 / Math.PI, pureUnit: false };
+      if (fn === "cosinv") return { val: Math.acos(arg.val) * 180 / Math.PI, pureUnit: false };
+      if (fn === "taninv") return { val: Math.atan(arg.val) * 180 / Math.PI, pureUnit: false };
+      return fail();
     }
     if (t.type === "num" || t.type === "unit") {
-      return next().val;
+      const tok = next();
+      return { val: tok.val, pureUnit: !!tok.pureUnit };
     }
-    return NaN;
+    return fail();
   }
 
   function parsePower() {
@@ -273,7 +372,8 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
     while (peek()?.type === "op" && peek().val === "^") {
       next();
       const right = parsePower();
-      left = Math.pow(left, right);
+      if (left.pureUnit || right.pureUnit) return fail();
+      left = { val: Math.pow(left.val, right.val), pureUnit: false };
     }
     return left;
   }
@@ -285,10 +385,11 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
       if (t.type === "op" && (t.val === "*" || t.val === "/")) {
         next();
         const right = parsePower();
-        left = t.val === "*" ? left * right : left / right;
+        const val = t.val === "*" ? left.val * right.val : left.val / right.val;
+        left = { val, pureUnit: left.pureUnit && right.pureUnit };
       } else if (t.type === "unit" || t.type === "num" || t.type === "fn" || (t.type === "op" && t.val === "(")) {
         const right = parsePower();
-        left = left * right;
+        left = { val: left.val * right.val, pureUnit: left.pureUnit && right.pureUnit };
       } else {
         break;
       }
@@ -301,13 +402,20 @@ function evalLatexMathToNumber(tex, inTrigArg = false) {
     while (peek()?.type === "op" && (peek().val === "+" || peek().val === "-")) {
       const op = next().val;
       const right = parseMul();
-      left = op === "+" ? left + right : left - right;
+      if (left.pureUnit || right.pureUnit) return fail();
+      left = { val: op === "+" ? left.val + right.val : left.val - right.val, pureUnit: false };
     }
     return left;
   }
 
   const out = parseAdd();
-  return pos === tokens.length ? out : NaN;
+  if (pos !== tokens.length) return fail();
+  return out;
+}
+
+export function evalLatexMathToNumber(tex, inTrigArg = false) {
+  const res = evalLatexNode(tex, inTrigArg);
+  return (res.pureUnit || !Number.isFinite(res.val)) ? NaN : res.val;
 }
 
 export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "", varsDb = {}, targetUnit = null) {
@@ -337,4 +445,22 @@ export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "",
     Math.abs(evaluated - boxedVal) <= tol,
     `Derivation evaluates to ${evaluated}, boxed is ${boxedVal} (${ctx}):\n${numTex}`
   );
+
+  // If the row above the conversion row is itself a numeric formula row, verify it feeds the conversion row accurately.
+  if (rows.length >= 3) {
+    const prevRow = rows[rows.length - 3];
+    const prevAmp = prevRow.indexOf("&=");
+    const prevTex = prevAmp >= 0 ? prevRow.slice(prevAmp + 2).trim() : prevRow;
+    const prevEval = evalLatexMathToNumber(prevTex);
+    if (Number.isFinite(prevEval)) {
+      const leadMatch = numTex.replace(/\{,\}|,/g, "").match(/^[(\s]*([+-]?[\d.]+(?:[eE][+-]?\d+)?)/);
+      assert.ok(leadMatch, `Expected numeric lead in conversion row (${ctx}): ${numTex}`);
+      const leadVal = parseFloat(leadMatch[1]);
+      const prevTol = Math.max(Math.abs(prevEval) * 1e-3, 1e-3);
+      assert.ok(
+        Math.abs(prevEval - leadVal) <= prevTol,
+        `Formula row evaluated to ${prevEval}, but conversion row starts with ${leadVal} (${ctx}):\n${prevTex}`
+      );
+    }
+  }
 }

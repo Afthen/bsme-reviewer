@@ -27,8 +27,8 @@ export const TOWER_VARS_DB = Object.freeze({
   "V_a":     { name: "Entering Air Volume Flow", symbol: "V_a", dimension: DIMENSIONS.VOLUME_FLOW, unit: "m^3/s", aliases: ["Entering Air Volume Flow", "Air Volume Flow Rate", "Tower Fan Capacity"] },
   "V_w":     { name: "Circulating Water Volume Flow", symbol: "V_w", dimension: DIMENSIONS.VOLUME_FLOW, unit: "L/s", aliases: ["Circulating Water Volume Flow", "Condenser Water Volume Rate", "Pump Water Flow Rate"] },
   "rho_w":   { name: "Water Density", symbol: "\\rho_w", dimension: DIMENSIONS.DENSITY, unit: "kg/m^3", aliases: ["Water Density", "Density of Circulating Water"] },
-  "c_pw":    { name: "Specific Heat of Water", symbol: "c_{pw}", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg-K", isConstant: true, aliases: ["Specific Heat of Water", "Water Specific Heat", "c_{pw}"] },
-  "R_ct":    { name: "Cooling Range", symbol: "Range", dimension: DIMENSIONS.TEMPERATURE_DIFF, unit: "°C", aliases: ["Cooling Range", "Range", "Water Temperature Drop", "Actual Cooling"] },
-  "A_ct":    { name: "Cooling Approach", symbol: "Approach", dimension: DIMENSIONS.TEMPERATURE_DIFF, unit: "°C", aliases: ["Cooling Approach", "Approach", "Tower Approach"] },
+  "c_pw":    { name: "Specific Heat of Water", symbol: "c_{pw}", dimension: DIMENSIONS.SPECIFIC_ENERGY, unit: "kJ/kg-ΔK", isConstant: true, aliases: ["Specific Heat of Water", "Water Specific Heat", "c_{pw}"] },
+  "R_ct":    { name: "Cooling Range", symbol: "Range", dimension: DIMENSIONS.TEMPERATURE, unit: "Δ°C", aliases: ["Cooling Range", "Range", "Water Temperature Drop", "Actual Cooling"] },
+  "A_ct":    { name: "Cooling Approach", symbol: "Approach", dimension: DIMENSIONS.TEMPERATURE, unit: "Δ°C", aliases: ["Cooling Approach", "Approach", "Tower Approach"] },
   "Q_rej":   { name: "Heat Rejected", symbol: "Q_{rej}", dimension: DIMENSIONS.POWER, unit: "kW", aliases: ["Heat Rejected", "Cooling Tower Heat Load", "Heat Removed from Water", "Heat Absorbed by Air", "Q_{rej}", "q_{rej}"] }
 });

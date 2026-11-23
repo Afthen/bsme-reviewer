@@ -30,7 +30,7 @@ export function createCoolingTowerSystem({ sys = null } = {}) {
     v_1 = 14.0;              // ft^3/lbm
 
     m_w = [8000.0, 10000.0, 12000.0][Math.floor(Math.random() * 3)]; // lb/min
-    c_pw = 1.0;   // Btu/(lb-°F)
+    c_pw = 1.0;   // Btu/(lb-Δ°F)
     rho_w = 62.4; // lb/ft^3 (water at ~85 °F)
 
     Q_rej = m_w * c_pw * R_ct;                    // Btu/min
@@ -47,9 +47,9 @@ export function createCoolingTowerSystem({ sys = null } = {}) {
     m_mu = m_evap + m_bd + m_drift;               // lb/min
 
     _u = {
-      t_w1: "°F", t_w2: "°F", t_wb1: "°F", R_ct: "°F", A_ct: "°F", eta_ct: "%",
+      t_w1: "°F", t_w2: "°F", t_wb1: "°F", R_ct: "Δ°F", A_ct: "Δ°F", eta_ct: "%",
       h_1: "Btu/lb_m", h_2: "Btu/lb_m", W_1: "dimless", W_2: "dimless", v_1: "ft^3/lb_m",
-      m_w: "lb_m/min", c_pw: "Btu/(lb_m*F)", rho_w: "lb_m/ft^3",
+      m_w: "lb_m/min", c_pw: "Btu/(lb_m*Δ°F)", rho_w: "lb_m/ft^3",
       Q_rej: "Btu/min", m_a: "lb_m/min", LG: "dimless", V_a: "cfm", V_w: "gpm",
       m_evap: "lb_m/min", f_drift: "%", m_drift: "lb_m/min", COC: "dimless",
       m_bd: "lb_m/min", m_mu: "lb_m/min"
@@ -69,7 +69,7 @@ export function createCoolingTowerSystem({ sys = null } = {}) {
     v_1 = 0.875;             // m^3/kg
 
     m_w = [80.0, 100.0, 120.0][Math.floor(Math.random() * 3)]; // kg/s
-    c_pw = 4.187;  // kJ/kg-K
+    c_pw = 4.187;  // kJ/kg-ΔK
     rho_w = 1000.0; // kg/m^3
 
     Q_rej = m_w * c_pw * R_ct;       // kW
@@ -86,9 +86,9 @@ export function createCoolingTowerSystem({ sys = null } = {}) {
     m_mu = m_evap + m_bd + m_drift;  // kg/s
 
     _u = {
-      t_w1: "°C", t_w2: "°C", t_wb1: "°C", R_ct: "°C", A_ct: "°C", eta_ct: "%",
+      t_w1: "°C", t_w2: "°C", t_wb1: "°C", R_ct: "Δ°C", A_ct: "Δ°C", eta_ct: "%",
       h_1: "kJ/kg", h_2: "kJ/kg", W_1: "dimless", W_2: "dimless", v_1: "m^3/kg",
-      m_w: "kg/s", c_pw: "kJ/kg-K", rho_w: "kg/m^3",
+      m_w: "kg/s", c_pw: "kJ/kg-ΔK", rho_w: "kg/m^3",
       Q_rej: "kW", m_a: "kg/s", LG: "dimless", V_a: "m^3/s", V_w: "L/s",
       m_evap: "kg/s", f_drift: "%", m_drift: "kg/s", COC: "dimless",
       m_bd: "kg/s", m_mu: "kg/s"

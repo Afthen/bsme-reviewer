@@ -1,19 +1,1412 @@
-I've done the two cleanup items I can do safely and haven't run anything.
+All 195 unmodified tests already passed on the new core/scripts changes, and the 3 failures are strictly the remaining `test/` files from Batch 3 (`matrix_helpers.js`, `ctx_tools` `FAILURES` via `matrix_helpers.js`, and `run_test.js` line 823 still passing legacy `kJ/kg-K`).
 
-FILE: src/cas/units/analysis.js
-````diff 1
+Here is **Batch 3 (`test/` + `README.md`)** to complete the combined Commit 3 + Commit 4 changes, remove the affine skip from the derivation matrix, harden `latex_oracle.js`, and add all regression tests.
+
+FILE: test/latex_oracle.js
+```diff 1
 <<<<
-  formatComponentMismatch,
+function evalLatexMathToNumber(tex, inTrigArg = false) {
+  const s = (tex || "").replace(/\{,\}/g, "").trim();
+  if (!s) return NaN;
+
+  const tokens = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === " " || s[i] === "\t" || s[i] === "\n") {
+      i++;
+      continue;
+    }
+    if (s.startsWith("\\,", i) || s.startsWith("\\;", i) || s.startsWith("\\ ", i)) {
+      i += 2;
+      continue;
+    }
+    if (s.startsWith("\\quad", i)) {
+      i += 5;
+      continue;
+    }
+    if (s.startsWith("\\left(", i) || s.startsWith("\\left[", i)) {
+      tokens.push({ type: "op", val: "(" });
+      i += 6;
+      continue;
+    }
+    if (s.startsWith("\\right)", i) || s.startsWith("\\right]", i)) {
+      tokens.push({ type: "op", val: ")" });
+      i += 7;
+      continue;
+    }
+    if (s.startsWith("\\cdot", i) || s.startsWith("\\times", i)) {
+      tokens.push({ type: "op", val: "*" });
+      i += s.startsWith("\\cdot", i) ? 5 : 6;
+      continue;
+    }
+    if (s.startsWith("\\pi", i)) {
+      tokens.push({ type: "num", val: Math.PI });
+      i += 3;
+      continue;
+    }
+    if (s.startsWith("\\cancel{", i)) {
+      const grp = readBalancedGroup(s, i + 7);
+      i = skipOptionalSubSuper(s, grp.nextIdx);
+      tokens.push({ type: "unit", val: 1 });
+      continue;
+    }
+    if (s.startsWith("\\text{", i)) {
+      const grp = readBalancedGroup(s, i + 5);
+      if (grp.content === "abs" || grp.content === "log") {
+        tokens.push({ type: "fn", val: grp.content });
+        i = grp.nextIdx;
+      } else if (grp.content === "\\%" || grp.content === "%") {
+        i = skipOptionalSubSuper(s, grp.nextIdx);
+        tokens.push({ type: "unit", val: 0.01 });
+      } else {
+        i = skipOptionalSubSuper(s, grp.nextIdx);
+        tokens.push({ type: "unit", val: 1 });
+      }
+      continue;
+    }
+    if (s[i] === "°") {
+      i++;
+      if (i < s.length && (s[i] === "C" || s[i] === "F" || s[i] === "R" || s[i] === "K")) {
+        i++;
+      }
+      i = skipOptionalSubSuper(s, i);
+      tokens.push({ type: "unit", val: inTrigArg ? (Math.PI / 180) : 1 });
+      continue;
+    }
+    if (s.startsWith("\\cfrac{", i) || s.startsWith("\\tfrac{", i) || s.startsWith("\\frac{", i)) {
+      const cmdLen = s.startsWith("\\frac{", i) ? 5 : 6;
+      const numGrp = readBalancedGroup(s, i + cmdLen);
+      const denGrp = readBalancedGroup(s, numGrp.nextIdx);
+      i = denGrp.nextIdx;
+      const nVal = evalLatexMathToNumber(numGrp.content, false);
+      const dVal = evalLatexMathToNumber(denGrp.content, false);
+      if (!Number.isFinite(nVal) || !Number.isFinite(dVal) || dVal === 0) return NaN;
+      tokens.push({ type: "num", val: nVal / dVal });
+      continue;
+    }
+    if (s.startsWith("\\sqrt{", i)) {
+      const grp = readBalancedGroup(s, i + 5);
+      i = grp.nextIdx;
+      const innerVal = evalLatexMathToNumber(grp.content, false);
+      if (!Number.isFinite(innerVal)) return NaN;
+      tokens.push({ type: "num", val: Math.sqrt(innerVal) });
+      continue;
+    }
+    if (s.startsWith("\\ln", i)) {
+      tokens.push({ type: "fn", val: "ln" });
+      i += 3;
+      continue;
+    }
+    const invTrig = ["\\sin^{-1}", "\\cos^{-1}", "\\tan^{-1}"].find(fn => s.startsWith(fn, i));
+    if (invTrig) {
+      tokens.push({ type: "fn", val: invTrig.slice(1, 4) + "inv" });
+      i += invTrig.length;
+      continue;
+    }
+    const trigMatch = ["\\sin", "\\cos", "\\tan"].find(fn => s.startsWith(fn, i));
+    if (trigMatch) {
+      i += trigMatch.length;
+      while (i < s.length && s[i] === " ") i++;
+      let pow = 1;
+      if (s[i] === "^") {
+        i++;
+        if (s[i] === "{") {
+          const pGrp = readBalancedGroup(s, i);
+          pow = evalLatexMathToNumber(pGrp.content, false);
+          i = pGrp.nextIdx;
+        } else {
+          pow = Number(s[i++]);
+        }
+      }
+      while (i < s.length && s[i] === " ") i++;
+      let argVal = NaN;
+      if (s.startsWith("\\left(", i)) {
+        const grp = readBalancedLeftRightParens(s, i);
+        if (grp.nextIdx === i) return NaN;
+        argVal = evalLatexMathToNumber(grp.content, true);
+        i = grp.nextIdx;
+      } else if (s[i] === "(") {
+        const grp = readBalancedGroup(s, i, "(", ")");
+        argVal = evalLatexMathToNumber(grp.content, true);
+        i = grp.nextIdx;
+      } else {
+        const mNum = s.slice(i).match(/^[\d.]+(?:\s*(?:\\,\s*)?°)?/);
+        if (mNum) {
+          argVal = evalLatexMathToNumber(mNum[0], true);
+          i += mNum[0].length;
+        }
+      }
+      if (!Number.isFinite(argVal) || !Number.isFinite(pow)) return NaN;
+      const fnName = trigMatch.slice(1);
+      tokens.push({ type: "num", val: Math.pow(Math[fnName](argVal), pow) });
+      continue;
+    }
+    if (s.startsWith("e^{", i)) {
+      const grp = readBalancedGroup(s, i + 2);
+      i = grp.nextIdx;
+      const expVal = evalLatexMathToNumber(grp.content, false);
+      if (!Number.isFinite(expVal)) return NaN;
+      tokens.push({ type: "num", val: Math.exp(expVal) });
+      continue;
+    }
+    if (s[i] === "{") {
+      const grp = readBalancedGroup(s, i);
+      i = grp.nextIdx;
+      const innerVal = evalLatexMathToNumber(grp.content, inTrigArg);
+      if (!Number.isFinite(innerVal)) return NaN;
+      tokens.push({ type: "num", val: innerVal });
+      continue;
+    }
+    if (/[0-9.]/.test(s[i])) {
+      let numStr = "";
+      while (i < s.length && /[0-9.]/.test(s[i])) numStr += s[i++];
+      if (s[i] === "e" || s[i] === "E") {
+        if (/[+-0-9]/.test(s[i + 1] || "")) {
+          numStr += s[i++];
+          if (s[i] === "+" || s[i] === "-") numStr += s[i++];
+          while (i < s.length && /[0-9]/.test(s[i])) numStr += s[i++];
+        }
+      }
+      tokens.push({ type: "num", val: parseFloat(numStr) });
+      continue;
+    }
+    if ("+-*/^()".includes(s[i])) {
+      tokens.push({ type: "op", val: s[i] });
+      i++;
+      continue;
+    }
+    return NaN;
+  }
+
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const next = () => tokens[pos++];
+
+  function parsePrimary() {
+    const t = peek();
+    if (!t) return NaN;
+    if (t.type === "op" && t.val === "-") {
+      next();
+      return -parsePower();
+    }
+    if (t.type === "op" && t.val === "+") {
+      next();
+      return parsePower();
+    }
+    if (t.type === "op" && t.val === "(") {
+      next();
+      const v = parseAdd();
+      if (peek()?.val === ")") next();
+      return v;
+    }
+    if (t.type === "fn") {
+      const fn = next().val;
+      const arg = parsePrimary();
+      if (fn === "ln") return Math.log(arg);
+      if (fn === "log") return Math.log10(arg);
+      if (fn === "abs") return Math.abs(arg);
+      if (fn === "sininv") return Math.asin(arg) * 180 / Math.PI;
+      if (fn === "cosinv") return Math.acos(arg) * 180 / Math.PI;
+      if (fn === "taninv") return Math.atan(arg) * 180 / Math.PI;
+      return NaN;
+    }
+    if (t.type === "num" || t.type === "unit") {
+      return next().val;
+    }
+    return NaN;
+  }
+
+  function parsePower() {
+    let left = parsePrimary();
+    while (peek()?.type === "op" && peek().val === "^") {
+      next();
+      const right = parsePower();
+      left = Math.pow(left, right);
+    }
+    return left;
+  }
+
+  function parseMul() {
+    let left = parsePower();
+    while (peek()) {
+      const t = peek();
+      if (t.type === "op" && (t.val === "*" || t.val === "/")) {
+        next();
+        const right = parsePower();
+        left = t.val === "*" ? left * right : left / right;
+      } else if (t.type === "unit" || t.type === "num" || t.type === "fn" || (t.type === "op" && t.val === "(")) {
+        const right = parsePower();
+        left = left * right;
+      } else {
+        break;
+      }
+    }
+    return left;
+  }
+
+  function parseAdd() {
+    let left = parseMul();
+    while (peek()?.type === "op" && (peek().val === "+" || peek().val === "-")) {
+      const op = next().val;
+      const right = parseMul();
+      left = op === "+" ? left + right : left - right;
+    }
+    return left;
+  }
+
+  const out = parseAdd();
+  return pos === tokens.length ? out : NaN;
+}
+
+export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "", varsDb = {}, targetUnit = null) {
+  const inner = derivLatex.trim().replace(/^\$\$\s*\\begin\{aligned\}/, "").replace(/\\end\{aligned\}\s*\$\$$/, "");
+  const rows = inner.split(/\\\\(?:\[\d+pt\])?/).map(r => r.trim()).filter(Boolean);
+  assert.ok(rows.length >= 2, `Expected >= 2 aligned rows in derivation (${ctx}):\n${derivLatex}`);
+
+  const finalRow = rows[rows.length - 1];
+  const boxMatch = finalRow.match(/\\boxed\{([\s\S]+)\}/);
+  assert.ok(boxMatch, `Missing \\boxed{} in final row (${ctx}): ${finalRow}`);
+  const boxedNumMatch = boxMatch[1].replace(/\{,\}|,/g, "").match(/^[+-]?[\d.]+(?:[eE][+-]?\d+)?/);
+  assert.ok(boxedNumMatch, `Could not parse boxed value from ${boxMatch[1]} (${ctx})`);
+  const boxedVal = parseFloat(boxedNumMatch[0]);
+
+  const numericRow = rows[rows.length - 2];
+  const ampIdx = numericRow.indexOf("&=");
+  const numTex = ampIdx >= 0 ? numericRow.slice(ampIdx + 2).trim() : numericRow;
+  const evaluated = evalLatexMathToNumber(numTex);
+
+  assert.ok(
+    Number.isFinite(evaluated),
+    `Derivation numeric expression evaluated to non-finite (${evaluated}) in ${ctx}:\n${numTex}`
+  );
+
+  const tol = Math.max(Math.abs(boxedVal) * 1e-3, 1e-3);
+  assert.ok(
+    Math.abs(evaluated - boxedVal) <= tol,
+    `Derivation evaluates to ${evaluated}, boxed is ${boxedVal} (${ctx}):\n${numTex}`
+  );
+}
 ====
-  formatComponentMismatch,
-  isCanonicalScaleFactor,
+function evalLatexNode(tex, inTrigArg = false) {
+  const fail = () => ({ val: NaN, pureUnit: false });
+  const s = (tex || "").replace(/\{,\}/g, "").trim();
+  if (!s) return fail();
+
+  const tokens = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === " " || s[i] === "\t" || s[i] === "\n") {
+      i++;
+      continue;
+    }
+    if (s.startsWith("\\,", i) || s.startsWith("\\;", i) || s.startsWith("\\ ", i)) {
+      i += 2;
+      continue;
+    }
+    if (s.startsWith("\\quad", i)) {
+      i += 5;
+      continue;
+    }
+    if (s.startsWith("\\Delta", i) && !/[a-zA-Z]/.test(s[i + 6] || "")) {
+      i += 6;
+      while (i < s.length && (s[i] === " " || s.startsWith("\\,", i))) {
+        i += s[i] === " " ? 1 : 2;
+      }
+      if (s[i] !== "°" && !s.startsWith("\\text{", i)) return fail();
+      continue;
+    }
+    if (s[i] === "Δ") {
+      i++;
+      if (s[i] !== "°" && s[i] !== "K" && !s.startsWith("\\text{", i)) return fail();
+      continue;
+    }
+    if (s.startsWith("\\left(", i) || s.startsWith("\\left[", i)) {
+      tokens.push({ type: "op", val: "(" });
+      i += 6;
+      continue;
+    }
+    if (s.startsWith("\\right)", i) || s.startsWith("\\right]", i)) {
+      tokens.push({ type: "op", val: ")" });
+      i += 7;
+      continue;
+    }
+    if (s.startsWith("\\cdot", i) || s.startsWith("\\times", i)) {
+      tokens.push({ type: "op", val: "*" });
+      i += s.startsWith("\\cdot", i) ? 5 : 6;
+      continue;
+    }
+    if (s.startsWith("\\pi", i)) {
+      tokens.push({ type: "num", val: Math.PI, pureUnit: false });
+      i += 3;
+      continue;
+    }
+    if (s.startsWith("\\cancel{", i)) {
+      const grp = readBalancedGroup(s, i + 7);
+      i = skipOptionalSubSuper(s, grp.nextIdx);
+      tokens.push({ type: "unit", val: 1, pureUnit: true });
+      continue;
+    }
+    if (s.startsWith("\\text{", i)) {
+      const grp = readBalancedGroup(s, i + 5);
+      if (grp.content === "abs" || grp.content === "log") {
+        tokens.push({ type: "fn", val: grp.content });
+        i = grp.nextIdx;
+      } else if (grp.content === "\\%" || grp.content === "%") {
+        i = skipOptionalSubSuper(s, grp.nextIdx);
+        tokens.push({ type: "unit", val: 0.01, pureUnit: true });
+      } else {
+        i = skipOptionalSubSuper(s, grp.nextIdx);
+        tokens.push({ type: "unit", val: 1, pureUnit: true });
+      }
+      continue;
+    }
+    if (s[i] === "°" || s[i] === "K") {
+      if (s[i] === "K") {
+        if (i > 0 && /[a-zA-Z]/.test(s[i - 1])) return fail();
+        if (i + 1 < s.length && /[a-zA-Z]/.test(s[i + 1])) return fail();
+        i++;
+      } else {
+        i++;
+        if (i < s.length && (s[i] === "C" || s[i] === "F" || s[i] === "R" || s[i] === "K")) {
+          i++;
+        }
+      }
+      i = skipOptionalSubSuper(s, i);
+      tokens.push({ type: "unit", val: inTrigArg ? (Math.PI / 180) : 1, pureUnit: true });
+      continue;
+    }
+    if (s.startsWith("\\cfrac{", i) || s.startsWith("\\tfrac{", i) || s.startsWith("\\frac{", i)) {
+      const cmdLen = s.startsWith("\\frac{", i) ? 5 : 6;
+      const numGrp = readBalancedGroup(s, i + cmdLen);
+      const denGrp = readBalancedGroup(s, numGrp.nextIdx);
+      i = denGrp.nextIdx;
+      const nRes = evalLatexNode(numGrp.content, false);
+      const dRes = evalLatexNode(denGrp.content, false);
+      if (!Number.isFinite(nRes.val) || !Number.isFinite(dRes.val) || dRes.val === 0) return fail();
+      tokens.push({ type: "num", val: nRes.val / dRes.val, pureUnit: nRes.pureUnit && dRes.pureUnit });
+      continue;
+    }
+    if (s.startsWith("\\sqrt{", i)) {
+      const grp = readBalancedGroup(s, i + 5);
+      i = grp.nextIdx;
+      const innerRes = evalLatexNode(grp.content, false);
+      if (!Number.isFinite(innerRes.val) || innerRes.pureUnit) return fail();
+      tokens.push({ type: "num", val: Math.sqrt(innerRes.val), pureUnit: false });
+      continue;
+    }
+    if (s.startsWith("\\ln", i)) {
+      tokens.push({ type: "fn", val: "ln" });
+      i += 3;
+      continue;
+    }
+    const invTrig = ["\\sin^{-1}", "\\cos^{-1}", "\\tan^{-1}"].find(fn => s.startsWith(fn, i));
+    if (invTrig) {
+      tokens.push({ type: "fn", val: invTrig.slice(1, 4) + "inv" });
+      i += invTrig.length;
+      continue;
+    }
+    const trigMatch = ["\\sin", "\\cos", "\\tan"].find(fn => s.startsWith(fn, i));
+    if (trigMatch) {
+      i += trigMatch.length;
+      while (i < s.length && s[i] === " ") i++;
+      let pow = 1;
+      if (s[i] === "^") {
+        i++;
+        if (s[i] === "{") {
+          const pGrp = readBalancedGroup(s, i);
+          const pRes = evalLatexNode(pGrp.content, false);
+          if (pRes.pureUnit) return fail();
+          pow = pRes.val;
+          i = pGrp.nextIdx;
+        } else {
+          pow = Number(s[i++]);
+        }
+      }
+      while (i < s.length && s[i] === " ") i++;
+      let argRes = fail();
+      if (s.startsWith("\\left(", i)) {
+        const grp = readBalancedLeftRightParens(s, i);
+        if (grp.nextIdx === i) return fail();
+        argRes = evalLatexNode(grp.content, true);
+        i = grp.nextIdx;
+      } else if (s[i] === "(") {
+        const grp = readBalancedGroup(s, i, "(", ")");
+        argRes = evalLatexNode(grp.content, true);
+        i = grp.nextIdx;
+      } else {
+        const mNum = s.slice(i).match(/^[\d.]+(?:\s*(?:\\,\s*)?°)?/);
+        if (mNum) {
+          argRes = evalLatexNode(mNum[0], true);
+          i += mNum[0].length;
+        }
+      }
+      if (!Number.isFinite(argRes.val) || argRes.pureUnit || !Number.isFinite(pow)) return fail();
+      const fnName = trigMatch.slice(1);
+      tokens.push({ type: "num", val: Math.pow(Math[fnName](argRes.val), pow), pureUnit: false });
+      continue;
+    }
+    if (s.startsWith("e^{", i)) {
+      const grp = readBalancedGroup(s, i + 2);
+      i = grp.nextIdx;
+      const expRes = evalLatexNode(grp.content, false);
+      if (!Number.isFinite(expRes.val) || expRes.pureUnit) return fail();
+      tokens.push({ type: "num", val: Math.exp(expRes.val), pureUnit: false });
+      continue;
+    }
+    if (s[i] === "{") {
+      const grp = readBalancedGroup(s, i);
+      i = grp.nextIdx;
+      const innerRes = evalLatexNode(grp.content, inTrigArg);
+      if (!Number.isFinite(innerRes.val)) return fail();
+      tokens.push({ type: "num", val: innerRes.val, pureUnit: innerRes.pureUnit });
+      continue;
+    }
+    if (/[0-9.]/.test(s[i])) {
+      let numStr = "";
+      while (i < s.length && /[0-9.]/.test(s[i])) numStr += s[i++];
+      if (s[i] === "e" || s[i] === "E") {
+        if (/[+-0-9]/.test(s[i + 1] || "")) {
+          numStr += s[i++];
+          if (s[i] === "+" || s[i] === "-") numStr += s[i++];
+          while (i < s.length && /[0-9]/.test(s[i])) numStr += s[i++];
+        }
+      }
+      tokens.push({ type: "num", val: parseFloat(numStr), pureUnit: false });
+      continue;
+    }
+    if ("+-*/^()".includes(s[i])) {
+      tokens.push({ type: "op", val: s[i] });
+      i++;
+      continue;
+    }
+    return fail();
+  }
+
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const next = () => tokens[pos++];
+
+  function parsePrimary() {
+    const t = peek();
+    if (!t) return fail();
+    if (t.type === "op" && t.val === "-") {
+      next();
+      const inner = parsePower();
+      if (inner.pureUnit) return fail();
+      return { val: -inner.val, pureUnit: false };
+    }
+    if (t.type === "op" && t.val === "+") {
+      next();
+      const inner = parsePower();
+      if (inner.pureUnit) return fail();
+      return { val: inner.val, pureUnit: false };
+    }
+    if (t.type === "op" && t.val === "(") {
+      next();
+      const v = parseAdd();
+      if (peek()?.val === ")") next();
+      return v;
+    }
+    if (t.type === "fn") {
+      const fn = next().val;
+      const arg = parsePrimary();
+      if (arg.pureUnit || !Number.isFinite(arg.val)) return fail();
+      if (fn === "ln") return { val: Math.log(arg.val), pureUnit: false };
+      if (fn === "log") return { val: Math.log10(arg.val), pureUnit: false };
+      if (fn === "abs") return { val: Math.abs(arg.val), pureUnit: false };
+      if (fn === "sininv") return { val: Math.asin(arg.val) * 180 / Math.PI, pureUnit: false };
+      if (fn === "cosinv") return { val: Math.acos(arg.val) * 180 / Math.PI, pureUnit: false };
+      if (fn === "taninv") return { val: Math.atan(arg.val) * 180 / Math.PI, pureUnit: false };
+      return fail();
+    }
+    if (t.type === "num" || t.type === "unit") {
+      const tok = next();
+      return { val: tok.val, pureUnit: !!tok.pureUnit };
+    }
+    return fail();
+  }
+
+  function parsePower() {
+    let left = parsePrimary();
+    while (peek()?.type === "op" && peek().val === "^") {
+      next();
+      const right = parsePower();
+      if (left.pureUnit || right.pureUnit) return fail();
+      left = { val: Math.pow(left.val, right.val), pureUnit: false };
+    }
+    return left;
+  }
+
+  function parseMul() {
+    let left = parsePower();
+    while (peek()) {
+      const t = peek();
+      if (t.type === "op" && (t.val === "*" || t.val === "/")) {
+        next();
+        const right = parsePower();
+        const val = t.val === "*" ? left.val * right.val : left.val / right.val;
+        left = { val, pureUnit: left.pureUnit && right.pureUnit };
+      } else if (t.type === "unit" || t.type === "num" || t.type === "fn" || (t.type === "op" && t.val === "(")) {
+        const right = parsePower();
+        left = { val: left.val * right.val, pureUnit: left.pureUnit && right.pureUnit };
+      } else {
+        break;
+      }
+    }
+    return left;
+  }
+
+  function parseAdd() {
+    let left = parseMul();
+    while (peek()?.type === "op" && (peek().val === "+" || peek().val === "-")) {
+      const op = next().val;
+      const right = parseMul();
+      if (left.pureUnit || right.pureUnit) return fail();
+      left = { val: op === "+" ? left.val + right.val : left.val - right.val, pureUnit: false };
+    }
+    return left;
+  }
+
+  const out = parseAdd();
+  if (pos !== tokens.length) return fail();
+  return out;
+}
+
+export function evalLatexMathToNumber(tex, inTrigArg = false) {
+  const res = evalLatexNode(tex, inTrigArg);
+  return (res.pureUnit || !Number.isFinite(res.val)) ? NaN : res.val;
+}
+
+export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "", varsDb = {}, targetUnit = null) {
+  const inner = derivLatex.trim().replace(/^\$\$\s*\\begin\{aligned\}/, "").replace(/\\end\{aligned\}\s*\$\$$/, "");
+  const rows = inner.split(/\\\\(?:\[\d+pt\])?/).map(r => r.trim()).filter(Boolean);
+  assert.ok(rows.length >= 2, `Expected >= 2 aligned rows in derivation (${ctx}):\n${derivLatex}`);
+
+  const finalRow = rows[rows.length - 1];
+  const boxMatch = finalRow.match(/\\boxed\{([\s\S]+)\}/);
+  assert.ok(boxMatch, `Missing \\boxed{} in final row (${ctx}): ${finalRow}`);
+  const boxedNumMatch = boxMatch[1].replace(/\{,\}|,/g, "").match(/^[+-]?[\d.]+(?:[eE][+-]?\d+)?/);
+  assert.ok(boxedNumMatch, `Could not parse boxed value from ${boxMatch[1]} (${ctx})`);
+  const boxedVal = parseFloat(boxedNumMatch[0]);
+
+  const numericRow = rows[rows.length - 2];
+  const ampIdx = numericRow.indexOf("&=");
+  const numTex = ampIdx >= 0 ? numericRow.slice(ampIdx + 2).trim() : numericRow;
+  const evaluated = evalLatexMathToNumber(numTex);
+
+  assert.ok(
+    Number.isFinite(evaluated),
+    `Derivation numeric expression evaluated to non-finite (${evaluated}) in ${ctx}:\n${numTex}`
+  );
+
+  const tol = Math.max(Math.abs(boxedVal) * 1e-3, 1e-3);
+  assert.ok(
+    Math.abs(evaluated - boxedVal) <= tol,
+    `Derivation evaluates to ${evaluated}, boxed is ${boxedVal} (${ctx}):\n${numTex}`
+  );
+
+  // If the row above the conversion row is itself a numeric formula row, verify it feeds the conversion row accurately.
+  if (rows.length >= 3) {
+    const prevRow = rows[rows.length - 3];
+    const prevAmp = prevRow.indexOf("&=");
+    const prevTex = prevAmp >= 0 ? prevRow.slice(prevAmp + 2).trim() : prevRow;
+    const prevEval = evalLatexMathToNumber(prevTex);
+    if (Number.isFinite(prevEval)) {
+      const leadMatch = numTex.replace(/\{,\}|,/g, "").match(/^[(\s]*([+-]?[\d.]+(?:[eE][+-]?\d+)?)/);
+      assert.ok(leadMatch, `Expected numeric lead in conversion row (${ctx}): ${numTex}`);
+      const leadVal = parseFloat(leadMatch[1]);
+      const prevTol = Math.max(Math.abs(prevEval) * 1e-3, 1e-3);
+      assert.ok(
+        Math.abs(prevEval - leadVal) <= prevTol,
+        `Formula row evaluated to ${prevEval}, but conversion row starts with ${leadVal} (${ctx}):\n${prevTex}`
+      );
+    }
+  }
+}
 >>>>
-````
-````diff 2
+```
+
+FILE: test/validator.js
+```diff 1
 <<<<
-} from "./scales.js";
-import { isCanonicalScaleFactor } from "./scales.js";
+import { getUnitAtomBag, evaluatePhysicalAST } from "../src/cas/units/index.js";
 ====
-} from "./scales.js";
+import { getUnitAtomBag, hasPointTempInCompound, evaluatePhysicalAST } from "../src/cas/units/index.js";
 >>>>
-````
+```
+```diff 2
+<<<<
+  for (const [k, meta] of Object.entries(varsDb)) {
+    if (meta.unit) {
+      const bag = getUnitAtomBag(meta.unit);
+      if (bag.isUnknown) {
+        report.errors.push(`Variable "${k}" references unregistered unit: "${meta.unit}"`);
+      }
+    }
+  }
+====
+  for (const [k, meta] of Object.entries(varsDb)) {
+    if (meta.unit) {
+      const bag = getUnitAtomBag(meta.unit, meta.dimension);
+      if (bag.isUnknown) {
+        report.errors.push(`Variable "${k}" references unregistered unit: "${meta.unit}"`);
+      }
+      if (hasPointTempInCompound(meta.unit, meta.dimension)) {
+        report.errors.push(`Variable "${k}" compound unit "${meta.unit}" must use Δ temperature atoms`);
+      }
+    }
+  }
+
+  for (const rel of relations) {
+    const checkReq = (reqMap, label) => {
+      for (const [tok, u] of Object.entries(reqMap || {})) {
+        const bag = getUnitAtomBag(u, varsDb[tok]?.dimension);
+        if (bag.isUnknown) {
+          report.errors.push(`${label} token "${tok}" references unregistered unit: "${u}"`);
+        }
+        if (hasPointTempInCompound(u, varsDb[tok]?.dimension)) {
+          report.errors.push(`${label} token "${tok}" compound unit "${u}" must use Δ temperature atoms`);
+        }
+      }
+    };
+    checkReq(rel.requiredUnits, `Relation [${rel.id}]`);
+    for (const [sysName, v] of Object.entries(rel.variants || {})) {
+      checkReq(v.requiredUnits, `Relation [${rel.id}.${sysName}]`);
+    }
+  }
+>>>>
+```
+
+FILE: test/run_hygiene_test.js
+```diff 1
+<<<<
+import { loadAllTopics } from "../src/topics/index.js";
+import { phi, fib } from "../src/mastery/constants.js";
+====
+import { loadAllTopics } from "../src/topics/index.js";
+import { phi, fib } from "../src/mastery/constants.js";
+import { CONSTANTS_DB } from "../src/core/constants_registry.js";
+import { DIMENSIONS } from "../src/core/dimensions.js";
+import { getUnitAtomBag, hasPointTempInCompound } from "../src/cas/units/index.js";
+>>>>
+```
+```diff 2
+<<<<
+      Object.values(topic.varsDb).forEach(meta => {
+        checkString(meta.symbol, `Topic [${topic.id}] Var [${meta.name}] symbol`);
+        checkString(meta.unit, `Topic [${topic.id}] Var [${meta.name}] unit`);
+        checkString(meta.substituteTex, `Topic [${topic.id}] Var [${meta.name}] substituteTex`);
+        checkString(meta.displayTex, `Topic [${topic.id}] Var [${meta.name}] displayTex`);
+      });
+    }
+  });
+});
+====
+      Object.values(topic.varsDb).forEach(meta => {
+        checkString(meta.symbol, `Topic [${topic.id}] Var [${meta.name}] symbol`);
+        checkString(meta.unit, `Topic [${topic.id}] Var [${meta.name}] unit`);
+        checkString(meta.substituteTex, `Topic [${topic.id}] Var [${meta.name}] substituteTex`);
+        checkString(meta.displayTex, `Topic [${topic.id}] Var [${meta.name}] displayTex`);
+      });
+    }
+  });
+});
+
+// ============================================================================
+// 8. STRICT Δ COMPOUND UNIT & TEMPERATURE-DIFF ELIMINATION GATE
+// ============================================================================
+describe("Hygiene: Strict Δ Compound Units & Registry Integrity", () => {
+  test("DIMENSIONS.TEMPERATURE_DIFF and isDifference flags must not exist; compound units must use Δ atoms", () => {
+    assert.equal(DIMENSIONS.TEMPERATURE_DIFF, undefined, "DIMENSIONS.TEMPERATURE_DIFF must be removed");
+
+    for (const [key, entry] of Object.entries(CONSTANTS_DB)) {
+      for (const field of ["unit", "unitSI", "unitUS"]) {
+        const u = entry[field];
+        if (!u) continue;
+        assert.equal(getUnitAtomBag(u, entry.dimension).isUnknown, false, `CONSTANTS_DB.${key}.${field} unknown unit: "${u}"`);
+        assert.equal(hasPointTempInCompound(u, entry.dimension), false, `CONSTANTS_DB.${key}.${field} must use Δ atom: "${u}"`);
+      }
+    }
+
+    for (const topic of ALL_TOPICS) {
+      for (const [varKey, meta] of Object.entries(topic.varsDb)) {
+        assert.equal(meta.isDifference, undefined, `Legacy isDifference on ${topic.id}.${varKey}`);
+        if (meta.unit) {
+          assert.equal(hasPointTempInCompound(meta.unit, meta.dimension), false, `${topic.id}.${varKey} compound unit "${meta.unit}" must use Δ atom`);
+        }
+      }
+      for (const sys of ["SI", "US"]) {
+        const S = topic.createSystem({ sys });
+        for (const [varKey, u] of Object.entries(S._u || {})) {
+          const dim = topic.varsDb[varKey]?.dimension;
+          assert.equal(getUnitAtomBag(u, dim).isUnknown, false, `${topic.id}[${sys}]._u.${varKey} unknown unit: "${u}"`);
+          assert.equal(hasPointTempInCompound(u, dim), false, `${topic.id}[${sys}]._u.${varKey} compound unit "${u}" must use Δ atom`);
+        }
+      }
+    }
+  });
+});
+>>>>
+```
+
+FILE: test/matrix_helpers.js
+```diff 1
+<<<<
+import { DIMENSION_TOKEN_PALETTES } from "../src/core/unit_sampler.js";
+import {
+  valueToCoherentBase, formatValueInUnit, getUnitAtomBag, isDimEqual,
+  evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor
+} from "../src/cas/units/index.js";
+====
+import { candidateUnitsFor } from "../src/core/unit_sampler.js";
+import {
+  convertUnitValue, getUnitAtomBag, isDimEqual,
+  evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor
+} from "../src/cas/units/index.js";
+>>>>
+```
+```diff 2
+<<<<
+const isDiffMeta = m => m.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!m.isDifference;
+
+/** Same-dimension unit levels for one variable: canonical first, then a seeded sample of the palettes. */
+export function unitLevels(canonUnit, meta, rng) {
+  if (!canonUnit || !meta.dimension || canonUnit === "dimless" || canonUnit === "ratio") return [canonUnit];
+  const canonBag = getUnitAtomBag(canonUnit, meta.dimension);
+  const pool = new Set();
+  for (const sys of ["SI", "US"]) {
+    for (const p of DIMENSION_TOKEN_PALETTES[sys]?.[meta.dimension] || []) {
+      if (isDimEqual(canonBag.dimMap, getUnitAtomBag(p.unit, meta.dimension).dimMap)) pool.add(p.unit);
+    }
+  }
+  pool.delete(canonUnit);
+  const rest = [...pool].sort(() => rng() - 0.5).slice(0, MAX_LEVELS - 1);
+  return [canonUnit, ...rest];
+}
+====
+/** Same-dimension, kind-compatible unit levels for one variable: canonical first, then a seeded sample. */
+export function unitLevels(canonUnit, meta, rng) {
+  if (!canonUnit || !meta.dimension || canonUnit === "dimless" || canonUnit === "ratio") return [canonUnit];
+  const canonBag = getUnitAtomBag(canonUnit, meta.dimension);
+  const pool = new Set();
+  for (const sys of ["SI", "US"]) {
+    for (const p of candidateUnitsFor(sys, meta.dimension, canonUnit)) {
+      if (isDimEqual(canonBag.dimMap, getUnitAtomBag(p.unit, meta.dimension).dimMap)) pool.add(p.unit);
+    }
+  }
+  pool.delete(canonUnit);
+  const rest = [...pool].sort(() => rng() - 0.5).slice(0, MAX_LEVELS - 1);
+  return [canonUnit, ...rest];
+}
+>>>>
+```
+```diff 3
+<<<<
+export function restate(S, tokens, unitsByTok, varsDb, sys) {
+  const S2 = { ...S, sys, _u: { ...S._u } };
+  for (const k of tokens) {
+    const meta = varsDb[k] || {};
+    const from = S._u?.[k] || meta.unit;
+    const to = unitsByTok[k];
+    if (!to || to === from || typeof S[k] !== "number") continue;
+    const d = isDiffMeta(meta);
+    S2[k] = formatValueInUnit(valueToCoherentBase(S[k], from, d, meta.dimension), to, d, meta.dimension);
+    S2._u[k] = to;
+  }
+  return S2;
+}
+====
+export function restate(S, tokens, unitsByTok, varsDb, sys) {
+  const S2 = { ...S, sys, _u: { ...S._u } };
+  for (const k of tokens) {
+    const meta = varsDb[k] || {};
+    const from = S._u?.[k] || meta.unit;
+    const to = unitsByTok[k];
+    if (!to || to === from || typeof S[k] !== "number") continue;
+    S2[k] = convertUnitValue(S[k], from, to, meta.dimension);
+    S2._u[k] = to;
+  }
+  return S2;
+}
+>>>>
+```
+```diff 4
+<<<<
+  let affineSkipped = false;
+  const affine = meta.dimension === DIMENSIONS.TEMPERATURE && (tUnit === "°C" || tUnit === "°F");
+  if (affine) {
+    affineSkipped = true;
+  } else {
+    try {
+      assertDerivationMatchesAnswer(deriv, step.expectedVal, where, varsDb, tUnit);
+    } catch (e) {
+      failures.push({
+        layer: "derivation-numeric",
+        where,
+        msg: e.message.split("\n")[0],
+        topic: topicTag,
+        tags,
+        changed,
+        row: e.message.split("\n").slice(1).join(" ").trim()
+      });
+    }
+  }
+
+  try {
+    const formulaRhs = step.rhsExpr || (step.baseFormula?.includes("=") ? step.baseFormula.split("=")[1].trim() : step.baseFormula) || "";
+    const ua = solveUnitAlgebra(formulaRhs, S, step.targetVar, tUnit, varsDb, step.requiredUnits);
+    for (const s of ua.conversionScalars || []) {
+      if (!isCanonicalScaleFactor(s)) {
+        failures.push({ layer: "alien-scalar", where, topic: topicTag, tags, changed, msg: `scalar ${s}` });
+      }
+    }
+  } catch (e) {
+    failures.push({ layer: "unit-analysis-throw", where, topic: topicTag, tags, changed, msg: e.message });
+  }
+
+  return { failures, affineSkipped };
+====
+  try {
+    assertDerivationMatchesAnswer(deriv, step.expectedVal, where, varsDb, tUnit);
+  } catch (e) {
+    failures.push({
+      layer: "derivation-numeric",
+      where,
+      msg: e.message.split("\n")[0],
+      topic: topicTag,
+      tags,
+      changed,
+      row: e.message.split("\n").slice(1).join(" ").trim()
+    });
+  }
+
+  try {
+    const formulaRhs = step.rhsExpr || (step.baseFormula?.includes("=") ? step.baseFormula.split("=")[1].trim() : step.baseFormula) || "";
+    const ua = solveUnitAlgebra(formulaRhs, S, step.targetVar, tUnit, varsDb, step.requiredUnits);
+    for (const s of ua.conversionScalars || []) {
+      if (!isCanonicalScaleFactor(s)) {
+        failures.push({ layer: "alien-scalar", where, topic: topicTag, tags, changed, msg: `scalar ${s}` });
+      }
+    }
+  } catch (e) {
+    failures.push({ layer: "unit-analysis-throw", where, topic: topicTag, tags, changed, msg: e.message });
+  }
+
+  return { failures };
+>>>>
+```
+
+FILE: test/derivation_matrix_test.js
+```diff 1
+<<<<
+import { DIMENSIONS } from "../src/core/dimensions.js";
+import { valueToCoherentBase, formatValueInUnit } from "../src/cas/units/index.js";
+====
+import { valueToCoherentBase, formatValueInUnit } from "../src/cas/units/index.js";
+>>>>
+```
+```diff 2
+<<<<
+const isDiffMeta = m => m?.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!m?.isDifference;
+
+test("Derivation matrix: pairwise step coverage and seeded problem-generator invariants", async () => {
+  const loaded = await loadAllTopics();
+  const topics = Array.isArray(loaded) ? loaded : Object.values(loaded);
+  const failures = [];
+  let cases = 0;
+  let affineUnchecked = 0;
+====
+test("Derivation matrix: pairwise step coverage and seeded problem-generator invariants", async () => {
+  const loaded = await loadAllTopics();
+  const topics = Array.isArray(loaded) ? loaded : Object.values(loaded);
+  const failures = [];
+  let cases = 0;
+>>>>
+```
+```diff 3
+<<<<
+            if (res.affineSkipped) affineUnchecked++;
+            failures.push(...res.failures);
+====
+            failures.push(...res.failures);
+>>>>
+```
+```diff 4
+<<<<
+          const baseVal = valueToCoherentBase(val, u, isDiffMeta(meta), meta.dimension);
+          if (!Number.isFinite(baseVal)) {
+            failures.push({ layer: "given-nonfinite", where: `${genWhere} given=${gVar}`, topic: `${topic.id}[${mode}]`, msg: `baseVal=${baseVal}` });
+          }
+        }
+
+        for (const step of problem.solution) {
+          cases++;
+          const meta = problem.varsDb[step.targetVar] || {};
+          const tUnit = problem.system._u?.[step.targetVar] || meta.unit || "";
+          const where = `${topic.id}[gen:${mode}] ${step.id || step.eqId} -> ${step.targetVar} seed=${seed}`;
+
+          if (!step.isFaded) {
+            if (typeof step.expectedVal !== "number" || !Number.isFinite(step.expectedVal)) {
+              failures.push({ layer: "step-nonfinite", where, topic: `${topic.id}[${mode}]`, msg: `expectedVal=${step.expectedVal}` });
+              continue;
+            }
+            const baseVal = valueToCoherentBase(step.expectedVal, tUnit, isDiffMeta(meta), meta.dimension);
+            const projected = formatValueInUnit(baseVal, tUnit, isDiffMeta(meta), meta.dimension);
+            const relErr = Math.abs(projected - step.expectedVal) / (Math.abs(step.expectedVal) || 1);
+            if (!Number.isFinite(baseVal) || !(relErr < 1e-3)) {
+              failures.push({ layer: "step-roundtrip", where, topic: `${topic.id}[${mode}]`, msg: `expected ${step.expectedVal}, projected ${projected}` });
+            }
+          }
+
+          const res = checkStep({
+            step,
+            S: problem.system,
+            varsDb: problem.varsDb,
+            relations: topic.relations,
+            allSteps: problem.allSteps,
+            where,
+            topicTag: `${topic.id}[gen:${mode}]`,
+            tags: tagsOf(step, tUnit, problem.varsDb),
+            changed: 0
+          });
+          if (res.affineSkipped) affineUnchecked++;
+          failures.push(...res.failures);
+        }
+      }
+    }
+  }
+
+  if (failures.length > 0) {
+    const groups = new Map();
+    for (const f of failures) {
+      const k = `${f.layer} | ${f.where.split(" {")[0]}`;
+      if (!groups.has(k)) groups.set(k, { n: 0, example: f });
+      groups.get(k).n++;
+    }
+    const byLayer = {};
+    for (const f of failures) byLayer[f.layer] = (byLayer[f.layer] || 0) + 1;
+    console.log(`\n[matrix] ${cases} cases, ${failures.length} failures, ${affineUnchecked} affine-target derivations numerically unchecked`);
+====
+          const baseVal = valueToCoherentBase(val, u, meta.dimension);
+          if (!Number.isFinite(baseVal)) {
+            failures.push({ layer: "given-nonfinite", where: `${genWhere} given=${gVar}`, topic: `${topic.id}[${mode}]`, msg: `baseVal=${baseVal}` });
+          }
+        }
+
+        for (const step of problem.solution) {
+          cases++;
+          const meta = problem.varsDb[step.targetVar] || {};
+          const tUnit = problem.system._u?.[step.targetVar] || meta.unit || "";
+          const where = `${topic.id}[gen:${mode}] ${step.id || step.eqId} -> ${step.targetVar} seed=${seed}`;
+
+          if (!step.isFaded) {
+            if (typeof step.expectedVal !== "number" || !Number.isFinite(step.expectedVal)) {
+              failures.push({ layer: "step-nonfinite", where, topic: `${topic.id}[${mode}]`, msg: `expectedVal=${step.expectedVal}` });
+              continue;
+            }
+            const baseVal = valueToCoherentBase(step.expectedVal, tUnit, meta.dimension);
+            const projected = formatValueInUnit(baseVal, tUnit, meta.dimension);
+            const relErr = Math.abs(projected - step.expectedVal) / (Math.abs(step.expectedVal) || 1);
+            if (!Number.isFinite(baseVal) || !(relErr < 1e-3)) {
+              failures.push({ layer: "step-roundtrip", where, topic: `${topic.id}[${mode}]`, msg: `expected ${step.expectedVal}, projected ${projected}` });
+            }
+          }
+
+          const res = checkStep({
+            step,
+            S: problem.system,
+            varsDb: problem.varsDb,
+            relations: topic.relations,
+            allSteps: problem.allSteps,
+            where,
+            topicTag: `${topic.id}[gen:${mode}]`,
+            tags: tagsOf(step, tUnit, problem.varsDb),
+            changed: 0
+          });
+          failures.push(...res.failures);
+        }
+      }
+    }
+  }
+
+  if (failures.length > 0) {
+    const groups = new Map();
+    for (const f of failures) {
+      const k = `${f.layer} | ${f.where.split(" {")[0]}`;
+      if (!groups.has(k)) groups.set(k, { n: 0, example: f });
+      groups.get(k).n++;
+    }
+    const byLayer = {};
+    for (const f of failures) byLayer[f.layer] = (byLayer[f.layer] || 0) + 1;
+    console.log(`\n[matrix] ${cases} cases, ${failures.length} failures`);
+>>>>
+```
+
+FILE: test/run_test.js
+```diff 1
+<<<<
+import { validateDerivationLatex, assertDerivationMatchesAnswer } from "./latex_oracle.js";
+import { withSeededRandom } from "./matrix_helpers.js";
+import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
+import { buildAlignedDerivation } from "../src/core/derivation.js";
+import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor, formatPairConversion } from "../src/cas/units/index.js";
+import { parseMathAST } from "../src/cas/ast.js";
+import { casToTex } from "../src/cas/latex.js";
+====
+import { validateDerivationLatex, assertDerivationMatchesAnswer, evalLatexMathToNumber } from "./latex_oracle.js";
+import { withSeededRandom } from "./matrix_helpers.js";
+import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
+import { buildAlignedDerivation } from "../src/core/derivation.js";
+import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor, formatPairConversion } from "../src/cas/units/index.js";
+import { parseMathAST } from "../src/cas/ast.js";
+import { isolateVariable } from "../src/cas/algebra.js";
+import { casToTex } from "../src/cas/latex.js";
+>>>>
+```
+```diff 2
+<<<<
+import {
+  getUnitAtomBag,
+  unitToTex,
+  valueToCoherentBase,
+  formatValueInUnit
+} from "../src/cas/units/definitions.js";
+====
+import {
+  getUnitAtomBag,
+  unitToTex,
+  toDeltaUnit,
+  convertUnitValue,
+  valueToCoherentBase,
+  formatValueInUnit
+} from "../src/cas/units/definitions.js";
+>>>>
+```
+```diff 3
+<<<<
+      "K", "°C", "°F", "°R",
+      "Btu", "J", "kJ", "W", "kW", "MPa", "kPa", "Pa", "psi", "psf", "ksi",
+      "rpm", "cfm", "gpm", "%", "°"
+    ];
+
+    for (const invalid of ["m_f", "m_m", "N_f", "N_m", "s_m", "J_f"]) {
+      assert.equal(getUnitAtomBag(invalid).isUnknown, true, `Invalid suffix unit '${invalid}' must be rejected as unknown`);
+    }
+
+    for (const u of testUnits) {
+      let testVal = 42.5;
+      if (u === "°C" || u === "°F" || u === "°R" || u === "K") testVal = 20.0;
+      if (u === "%") testVal = 75.0;
+====
+      "K", "°C", "°F", "°R", "ΔK", "Δ°C", "Δ°F", "Δ°R",
+      "Btu", "J", "kJ", "W", "kW", "MPa", "kPa", "Pa", "psi", "psf", "ksi",
+      "rpm", "cfm", "gpm", "%", "°"
+    ];
+
+    for (const invalid of ["m_f", "m_m", "N_f", "N_m", "s_m", "J_f", "Δm", "kΔK"]) {
+      assert.equal(getUnitAtomBag(invalid).isUnknown, true, `Invalid unit '${invalid}' must be rejected as unknown`);
+    }
+
+    assert.throws(() => getUnitAtomBag("kW$"), /Invalid character/);
+    assert.throws(() => convertUnitValue(20, "°C", "Δ°C"), /Cannot convert affine temperature/);
+    assert.throws(() => convertUnitValue(20, "Δ°F", "°F"), /Cannot convert affine temperature/);
+
+    for (const [pU, dU] of [["°C", "Δ°C"], ["°F", "Δ°F"], ["K", "ΔK"], ["°R", "Δ°R"]]) {
+      assert.equal(toDeltaUnit(pU), dU);
+      const diffBase = valueToCoherentBase(75, pU) - valueToCoherentBase(25, pU);
+      const deltaBase = valueToCoherentBase(75 - 25, dU);
+      assert.ok(Math.abs(diffBase - deltaBase) < 1e-9, `Affine homomorphism failed for ${pU}/${dU}`);
+    }
+
+    for (const u of testUnits) {
+      let testVal = 42.5;
+      if (u.endsWith("C") || u.endsWith("F") || u.endsWith("R") || u.endsWith("K")) testVal = 20.0;
+      if (u === "%") testVal = 75.0;
+>>>>
+```
+```diff 4
+<<<<
+      _u: { m_cw: "kg/min", cp_w: "kJ/kg-K", dT_cw: "K", Q_cw: "kW" }
+    };
+    const db_heat = {
+      m_cw: { dimension: "Mass Flow Rate", unit: "kg/min" },
+      cp_w: { dimension: "Specific Energy / Enthalpy", unit: "kJ/kg-K" },
+      dT_cw: { dimension: "Temperature", unit: "K" },
+      Q_cw: { dimension: "Power", unit: "kW" }
+    };
+====
+      _u: { m_cw: "kg/min", cp_w: "kJ/kg-ΔK", dT_cw: "ΔK", Q_cw: "kW" }
+    };
+    const db_heat = {
+      m_cw: { dimension: "Mass Flow Rate", unit: "kg/min" },
+      cp_w: { dimension: "Specific Energy / Enthalpy", unit: "kJ/kg-ΔK" },
+      dT_cw: { dimension: "Temperature", unit: "ΔK" },
+      Q_cw: { dimension: "Power", unit: "kW" }
+    };
+>>>>
+```
+```diff 5
+<<<<
+      _u: { T_1: "°F", T_4: "°R", c_v: "kJ/kg-K", Q_R: "Btu/lb_m" }
+    };
+    const step = {
+      targetVar: "Q_R",
+      baseFormula: "Q_R = c_v * (T_4 - T_1)",
+      rhsExpr: "c_v * (T_4 - T_1)",
+      canonicalTex: "q_R = c_v (T_4 - T_1)",
+      expectedVal: 151.908
+    };
+
+    const deriv = buildAlignedDerivation(step, S, [step], varsDb, []);
+    validateDerivationLatex(deriv);
+
+    // Must align T_1 (°F -> °R) instead of emitting bogus (1,425.07 - 80.33) °R
+    assert.ok(!deriv.includes("1{,}425.07 - 80.33"), `Must not subtract °F from °R without offset conversion: ${deriv}`);
+    assert.ok(deriv.includes("80.33 + 459.67"), `Expected affine °F -> °R conversion for T_1: ${deriv}`);
+    assert.ok(deriv.includes("1{,}425.07 - 540"), `Expected aligned °R subtraction (1,425.07 - 540): ${deriv}`);
+
+    // Must emit constant equivalence insight for c_v and keep Btu/lb_m uncancelled
+    assert.ok(deriv.includes("0.171635"), `Expected c_v English constant equivalence (0.171635): ${deriv}`);
+    assert.ok(!deriv.includes("\\cancel{\\text{Btu}}"), `Surviving Btu must not be cancelled: ${deriv}`);
+    assert.ok(!deriv.includes("\\cancel{\\text{lb}_{m}}"), `Surviving lb_m must not be cancelled: ${deriv}`);
+    assert.ok(deriv.includes("\\cancel{°R}"), `Cancelling °R must be marked cancelled: ${deriv}`);
+====
+      _u: { T_1: "°F", T_4: "°R", c_v: "kJ/kg-ΔK", Q_R: "Btu/lb_m" }
+    };
+    const step = {
+      targetVar: "Q_R",
+      baseFormula: "Q_R = c_v * (T_4 - T_1)",
+      rhsExpr: "c_v * (T_4 - T_1)",
+      canonicalTex: "q_R = c_v (T_4 - T_1)",
+      expectedVal: 151.908
+    };
+
+    const deriv = buildAlignedDerivation(step, S, [step], varsDb, []);
+    validateDerivationLatex(deriv);
+
+    // Must align T_1 (°F -> °R) instead of emitting bogus (1,425.07 - 80.33) °R
+    assert.ok(!deriv.includes("1{,}425.07 - 80.33"), `Must not subtract °F from °R without offset conversion: ${deriv}`);
+    assert.ok(deriv.includes("80.33 + 459.67"), `Expected affine °F -> °R conversion for T_1: ${deriv}`);
+    assert.ok(deriv.includes("1{,}425.07 - 540"), `Expected aligned °R subtraction (1,425.07 - 540): ${deriv}`);
+
+    // Must emit constant equivalence insight for c_v and keep Btu/lb_m uncancelled
+    assert.ok(deriv.includes("0.171635"), `Expected c_v English constant equivalence (0.171635): ${deriv}`);
+    assert.ok(!deriv.includes("\\cancel{\\text{Btu}}"), `Surviving Btu must not be cancelled: ${deriv}`);
+    assert.ok(!deriv.includes("\\cancel{\\text{lb}_{m}}"), `Surviving lb_m must not be cancelled: ${deriv}`);
+    assert.ok(deriv.includes("\\cancel{\\Delta°R}"), `Cancelling Δ°R must be marked cancelled: ${deriv}`);
+>>>>
+```
+```diff 6
+<<<<
+describe("MCQ Mode, Registry, Adaptive Grid & ZIP Unpacker", () => {
+  test("Verify MCQ set registry, option sampling, adaptive grid, and ZIP unpacking", async () => {
+    await runMcqTests();
+  });
+});
+====
+describe("Linear-Rational CAS, Oracle Guards & Affine Frame Derivations", () => {
+  test("isolateVariable solves linear-rational denominators (t_adp, h_adp, Q_s, R_ct, M_w1, P_v) and rejects non-linear ones", () => {
+    const cases = [
+      ["BF = (t_s - t_adp) / (t_m - t_adp)", "t_adp", { BF: 0.2, t_s: 13.24, t_m: 26.2 }, 10],
+      ["BF = (h_s - h_adp) / (h_m - h_adp)", "h_adp", { BF: 0.2, h_s: 36, h_m: 60 }, 30],
+      ["SHR = Q_s / (Q_s + Q_l)", "Q_s", { SHR: 0.7, Q_l: 30 }, 70],
+      ["eta_ct = R_ct / (R_ct + A_ct)", "R_ct", { eta_ct: 0.6, A_ct: 8 }, 12],
+      ["X_1 = M_w1 / (1 - M_w1)", "M_w1", { X_1: 1.5 }, 0.6],
+      ["W = 0.622 * P_v / (P_t - P_v)", "P_v", { W: 0.01555, P_t: 101.325 }, 2.4713]
+    ];
+    for (const [formula, target, env, expected] of cases) {
+      const iso = isolateVariable(formula, target);
+      assert.equal(iso.success, true, `Expected isolateVariable to solve ${target} from ${formula}`);
+      const res = evaluatePhysicalAST(parseMathAST(iso.isolatedRhs), env, target, {});
+      assert.ok(Math.abs(res.value - expected) < 1e-2, `${formula} -> ${target}: got ${res.value}, expected ${expected}`);
+    }
+    assert.equal(isolateVariable("e_th = 1 - (1 / (r_k^(k - 1))) * ((r_c^k - 1) / (k * (r_c - 1)))", "r_c").success, false);
+  });
+
+  test("latex_oracle rejects standalone pureUnit operands while keeping Omit-1 unit fractions valid", () => {
+    assert.ok(Number.isNaN(evalLatexMathToNumber("6 + °C")));
+    assert.ok(Number.isNaN(evalLatexMathToNumber("\\cfrac{\\text{kg}}{\\text{s}}")));
+    assert.ok(Number.isNaN(evalLatexMathToNumber("°C")));
+    assert.equal(evalLatexMathToNumber("10 \\, \\cfrac{\\text{kg}}{\\text{s}}"), 10);
+    const conv = evalLatexMathToNumber("60 \\, \\cfrac{\\text{kg}}{2.20462 \\, \\cancel{\\text{lb}}}");
+    assert.ok(Math.abs(conv - 60 / 2.20462) < 1e-4);
+  });
+
+  test("Bypass air derivations: t_r offset row + consistent m_o cancellation, t_s delta frame, t_adp, and t_rh value preservation", () => {
+    const topic = TOPICS.hvac_bypass_air;
+    const db = topic.varsDb;
+    const S_base = withSeededRandom(1, () => topic.createSystem({ sys: "SI" }));
+    const S = { ...S_base, BF: 0.2, t_s: 13.24, t_rh: 19.24, q_rh: 60.372, _u: { ...S_base._u } };
+
+    // 1. t_r in canonical kg/s and restated kg/min vs kg/h: explicit K -> °C offset row + m_o cancelled
+    for (const _u of [
+      { ...S._u },
+      { ...S._u, m_m: "kg/min", m_o: "kg/min", m_r: "kg/h" }
+    ]) {
+      const S_r = _u.m_m === "kg/min"
+        ? { ...S, m_m: 600, m_o: 120, m_r: 28800, _u }
+        : { ...S, _u };
+      const stepR = {
+        targetVar: "t_r",
+        baseFormula: "m_m * t_m = m_o * t_o + m_r * t_r",
+        rhsExpr: "(m_m * t_m - m_o * t_o) / m_r",
+        expectedVal: 24
+      };
+      const dR = buildAlignedDerivation(stepR, S_r, [stepR], db, topic.relations);
+      validateDerivationLatex(dR);
+      assertDerivationMatchesAnswer(dR, 24, "bypass_tr", db, "°C");
+      assert.ok(dR.includes("297.15 \\, \\text{K} - 273.15"), `Expected K -> °C offset row in t_r:\n${dR}`);
+      const rhsRow = dR.split(/\\\\(?:\[\d+pt\])?/)[3] || "";
+      assert.ok(!rhsRow.includes("2 \\, \\cfrac{\\text{kg}}{\\text{s}}") && !rhsRow.includes("120 \\, \\cfrac{\\text{kg}}{\\text{min}}"), `Expected m_o units cancelled in numerator:\n${rhsRow}`);
+    }
+
+    // 2. t_s = BF * (t_m - t_adp) + t_adp stays in °C without a K detour
+    const stepS = {
+      targetVar: "t_s",
+      baseFormula: "BF = (t_s - t_adp) / (t_m - t_adp)",
+      rhsExpr: "BF * (t_m - t_adp) + t_adp",
+      expectedVal: 13.24
+    };
+    const dS = buildAlignedDerivation(stepS, S, [stepS], db, topic.relations);
+    validateDerivationLatex(dS);
+    assertDerivationMatchesAnswer(dS, 13.24, "bypass_ts", db, "°C");
+    assert.ok(!dS.includes("273.15"), `t_s should not take a K detour when staying in °C:\n${dS}`);
+    assert.ok(dS.includes("\\Delta°C"), `Expected Δ°C on (t_m - t_adp):\n${dS}`);
+
+    // 3. t_adp = (t_s - BF * t_m) / (1 - BF) evaluates in K and ends with K -> °C conversion row
+    const stepAdp = {
+      targetVar: "t_adp",
+      baseFormula: "BF = (t_s - t_adp) / (t_m - t_adp)",
+      rhsExpr: "(t_s - BF * t_m) / (1 - BF)",
+      expectedVal: 10
+    };
+    const dAdp = buildAlignedDerivation(stepAdp, S, [stepAdp], db, topic.relations);
+    validateDerivationLatex(dAdp);
+    assertDerivationMatchesAnswer(dAdp, 10, "bypass_tadp", db, "°C");
+    assert.ok(dAdp.includes("283.15 \\, \\text{K} - 273.15"), `Expected K -> °C offset row in t_adp:\n${dAdp}`);
+
+    // 4. t_rh = q_rh / (m_m * c_pa) + t_s preserves 13.24 °C and uses ΔK
+    const stepRh = {
+      targetVar: "t_rh",
+      baseFormula: "q_rh = m_m * c_pa * (t_rh - t_s)",
+      rhsExpr: "q_rh / (m_m * c_pa) + t_s",
+      expectedVal: 19.24
+    };
+    const dRh = buildAlignedDerivation(stepRh, S, [stepRh], db, topic.relations);
+    validateDerivationLatex(dRh);
+    assertDerivationMatchesAnswer(dRh, 19.24, "bypass_trh", db, "°C");
+    assert.ok(dRh.includes("+ 13.24 \\, °C"), `Expected numeric t_s value preserved:\n${dRh}`);
+    assert.ok(dRh.includes("\\Delta\\text{K}"), `Expected ΔK in c_pa:\n${dRh}`);
+  });
+
+  test("Cooling tower Range converts Δ°C -> Δ°F linearly without an absolute K detour", () => {
+    const db = TOPICS.hvac_cooling_tower.varsDb;
+    const S = { t_w1: 36, t_w2: 29, R_ct: 12.6, _u: { t_w1: "°C", t_w2: "°C", R_ct: "Δ°F" } };
+    const step = { targetVar: "R_ct", baseFormula: "R_ct = t_w1 - t_w2", rhsExpr: "t_w1 - t_w2", expectedVal: 12.6 };
+    const deriv = buildAlignedDerivation(step, S, [step], db, []);
+    validateDerivationLatex(deriv);
+    assertDerivationMatchesAnswer(deriv, 12.6, "ct_range_delta_f", db, "Δ°F");
+    assert.ok(!deriv.includes("273.15"), `Delta conversion must not add 273.15:\n${deriv}`);
+    assert.ok(deriv.includes("1.8"), `Expected 1.8 Δ°F/Δ°C scale:\n${deriv}`);
+  });
+});
+
+describe("MCQ Mode, Registry, Adaptive Grid & ZIP Unpacker", () => {
+  test("Verify MCQ set registry, option sampling, adaptive grid, and ZIP unpacking", async () => {
+    await runMcqTests();
+  });
+});
+>>>>
+```
+
+FILE: test/ctx_test.js
+```diff 1
+<<<<
+  test("DERIVE renders single-step derivation with 4-row tower metrics", async () => {
+    const out = await fulfill("DERIVE diesel_cycle eq_diesel_t2 T_2");
+    assert.match(out, /Visual Fraction Depth/);
+    assert.match(out, /Tower Cap Compliance: PASS/);
+  });
+====
+  test("DERIVE renders single-step derivation with 4-row tower metrics and honors unit restates", async () => {
+    const out = await fulfill("DERIVE diesel_cycle eq_diesel_t2 T_2");
+    assert.match(out, /Visual Fraction Depth/);
+    assert.match(out, /Tower Cap Compliance: PASS/);
+
+    const restated = await fulfill("DERIVE bypass_air eq_mixed_temp_bal t_r {m_m:kg/min, m_o:kg/min, m_r:kg/h}");
+    assert.match(restated, /Oracle Match: PASS/);
+    assert.doesNotMatch(restated, /\[6pt\]/);
+
+    const badTarget = await fulfill("DERIVE bypass_air eq_bf_temp nope");
+    assert.match(badTarget, /Valid targets:/);
+  });
+>>>>
+```
+```diff 2
+<<<<
+  test("CONVERT decomposes conversion and verifies canonical scale factor", async () => {
+    const out = await fulfill("CONVERT Btu/h -> W");
+    assert.match(out, /Dimensional Match: YES/);
+    assert.match(out, /CANONICAL/);
+  });
+====
+  test("CONVERT decomposes conversion and verifies canonical scale factor", async () => {
+    const out = await fulfill("CONVERT Btu/h -> W");
+    assert.match(out, /Dimensional Match: YES/);
+    assert.match(out, /CANONICAL/);
+    assert.doesNotMatch(out, /\[object Object\]/);
+  });
+>>>>
+```
+```diff 3
+<<<<
+  test("PROBLEM-STEPS outputs full multi-step sequence with cognitive fading", async () => {
+    const out = await fulfill("PROBLEM-STEPS diesel_cycle");
+    assert.match(out, /Problem Deliverable/);
+    assert.match(out, /Steps Sequence/);
+  });
+====
+  test("PROBLEM-STEPS outputs full multi-step sequence with cognitive fading", async () => {
+    const out = await fulfill("PROBLEM-STEPS diesel_cycle sys=SI seed=1");
+    assert.match(out, /Problem Deliverable: (?!undefined)/);
+    assert.doesNotMatch(out, /Givens: 0 =/);
+    assert.match(out, /Steps Sequence \([1-9]\d* total\)/);
+  });
+>>>>
+```
+
+FILE: README.md
+```diff 1
+<<<<
+  dimensions.js            DIMENSIONS, fmtSigFig, formatGivenValue, cancelUnit, textUnit
+====
+  dimensions.js            DIMENSIONS, fmtSigFig, formatGivenValue, targetLabel
+>>>>
+```
+```diff 2
+<<<<
+    unit: "kJ/kg-K",
+====
+    unit: "kJ/kg-ΔK",
+>>>>
+```
+```diff 3
+<<<<
+    : { m_flow: "kg/s", w_net: "kJ/kg", P: "kW" };
+====
+    : { m_flow: "kg/s", w_net: "kJ/kg", P: "kW" };
+>>>>
+```
+
+Files changed in Batch 3:
+- test/latex_oracle.js (modified)
+- test/validator.js (modified)
+- test/run_hygiene_test.js (modified)
+- test/matrix_helpers.js (modified)
+- test/derivation_matrix_test.js (modified)
+- test/run_test.js (modified)
+- test/ctx_test.js (modified)
+- README.md (modified)
+
+Next: run `npm run apply` and `npm test`, and share `tmp/test_out.txt`! (Note: the 3rd hunk in README.md is an intentional no-op guard; if `scripts/apply_patch.js` logs it skipped or you omit it, the remaining diffs apply cleanly.)
+

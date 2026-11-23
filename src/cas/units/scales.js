@@ -320,7 +320,7 @@ function atomToPoweredUnitString(atom, pow = Math.abs(atom.power)) {
  * kg/min / gpm -> lb_m/ft^3, GPa * mm^4 / mm^3 -> N/mm) into canonical atomic
  * factor-label steps attached in-situ to each token.
  */
-export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDim = null) {
+export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDim = null, cancelTokens = null) {
   const PRESSURE_DIM = { M: 1, L: -1, T: -2 };
   const ENERGY_DIM = { M: 1, L: 2, T: -2 };
   const FORCE_DIM = { M: 1, L: 1, T: -2 };
@@ -678,7 +678,8 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
           ? Math.min(srcPow, tgtPow)
           : 1;
 
-        if (emitSingleUnitConversion(src.tok, srcStr, tgtStr, src.atom.power, expPow, false)) {
+        const cancelBoth = !!cancelTokens?.has(src.tok);
+        if (emitSingleUnitConversion(src.tok, srcStr, tgtStr, src.atom.power, expPow, cancelBoth) || cancelBoth) {
           markCancelled(src.tok, src.origIndex);
         }
         src.resolvedUnit = tgtStr;
@@ -856,7 +857,8 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
           const tgtStr = atomToPoweredUnitString(tgtUnitAtom, tgtPow);
           const expPow = isDimEqual(srcBaseDim, tgtBaseDim) ? Math.min(Math.abs(src.atom.power), tgtPow) : 1;
 
-          if (emitSingleUnitConversion(src.tok, srcStr, tgtStr, src.atom.power, expPow, false)) {
+          const cancelBoth = !!cancelTokens?.has(src.tok);
+          if (emitSingleUnitConversion(src.tok, srcStr, tgtStr, src.atom.power, expPow, cancelBoth) || cancelBoth) {
             markCancelled(src.tok, src.origIndex);
           }
           src.resolvedUnit = tgtStr;
@@ -1020,6 +1022,8 @@ function getRegisteredPairwiseRatios() {
     { u: "s", dim: null }, { u: "min", dim: null }, { u: "h", dim: null }, { u: "rpm", dim: DIMENSIONS.ROT_SPEED },
     { u: "K", dim: DIMENSIONS.TEMPERATURE }, { u: "°C", dim: DIMENSIONS.TEMPERATURE },
     { u: "°F", dim: DIMENSIONS.TEMPERATURE }, { u: "°R", dim: DIMENSIONS.TEMPERATURE },
+    { u: "ΔK", dim: DIMENSIONS.TEMPERATURE }, { u: "Δ°C", dim: DIMENSIONS.TEMPERATURE },
+    { u: "Δ°F", dim: DIMENSIONS.TEMPERATURE }, { u: "Δ°R", dim: DIMENSIONS.TEMPERATURE },
     { u: "ms", dim: DIMENSIONS.TIME },
     { u: "Hz", dim: DIMENSIONS.FREQUENCY }, { u: "kHz", dim: DIMENSIONS.FREQUENCY }, { u: "1/s", dim: DIMENSIONS.FREQUENCY },
     { u: "J", dim: DIMENSIONS.ENERGY }, { u: "kJ", dim: DIMENSIONS.ENERGY }, { u: "Btu", dim: DIMENSIONS.ENERGY },
@@ -1057,7 +1061,7 @@ function getRegisteredPairwiseRatios() {
     { u: "lb_m/s", dim: DIMENSIONS.MASS_FLOW }, { u: "lb_m/min", dim: DIMENSIONS.MASS_FLOW }, { u: "lb_m/h", dim: DIMENSIONS.MASS_FLOW },
     { u: "J/kg", dim: DIMENSIONS.SPECIFIC_ENERGY }, { u: "kJ/kg", dim: DIMENSIONS.SPECIFIC_ENERGY },
     { u: "Btu/lb", dim: DIMENSIONS.SPECIFIC_ENERGY }, { u: "Btu/lb_m", dim: DIMENSIONS.SPECIFIC_ENERGY }, { u: "Btu/lbm", dim: DIMENSIONS.SPECIFIC_ENERGY },
-    { u: "kJ/kg-K", dim: DIMENSIONS.SPECIFIC_ENERGY }, { u: "Btu/(lb*F)", dim: DIMENSIONS.SPECIFIC_ENERGY }
+    { u: "kJ/kg-ΔK", dim: DIMENSIONS.SPECIFIC_ENERGY }, { u: "Btu/(lb*Δ°F)", dim: DIMENSIONS.SPECIFIC_ENERGY }
   ];
 
   const bags = registeredUnits.map(({ u, dim }) => ({ u, dim, bag: getUnitAtomBag(u, dim) }));

@@ -6,7 +6,10 @@
  * - 3-significant-figure retention validation ($|v| >= 0.100$)
  */
 
-import { getUnitAtomBag, isDimEqual, valueToCoherentBase, formatValueInUnit } from "../cas/units/definitions.js";
+import {
+  getUnitAtomBag, getUnitKind, toDeltaUnit, isDimEqual,
+  valueToCoherentBase, formatValueInUnit, convertUnitValue
+} from "../cas/units/definitions.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
 import { DIMENSIONS } from "./dimensions.js";
 
@@ -113,10 +116,6 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "K", tokens: 1 },
       { unit: "°C", tokens: 1 }
     ],
-    [DIMENSIONS.TEMPERATURE_DIFF]: [
-      { unit: "°C", tokens: 1 },
-      { unit: "K", tokens: 1 }
-    ],
     [DIMENSIONS.PERCENTAGE]: [
       { unit: "%", tokens: 1 }
     ]
@@ -212,10 +211,6 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "°F", tokens: 1 },
       { unit: "°R", tokens: 1 }
     ],
-    [DIMENSIONS.TEMPERATURE_DIFF]: [
-      { unit: "°F", tokens: 1 },
-      { unit: "°R", tokens: 1 }
-    ],
     [DIMENSIONS.PERCENTAGE]: [
       { unit: "%", tokens: 1 }
     ]
@@ -271,6 +266,23 @@ export function snapClean(x) {
  * A candidate unit is accepted when the typical-range midpoint stays readable
  * in it; otherwise the canonical unit is kept.
  */
+export function candidateUnitsFor(sys, dimension, canonUnit) {
+  const palette = DIMENSION_TOKEN_PALETTES[sys]?.[dimension] || [];
+  const canonBag = getUnitAtomBag(canonUnit, dimension);
+  if (canonBag.kind === "delta") {
+    return palette
+      .map(p => ({ ...p, unit: toDeltaUnit(p.unit) }))
+      .filter(p => {
+        const b = getUnitAtomBag(p.unit, dimension);
+        return b.kind === "delta" && isDimEqual(canonBag.dimMap, b.dimMap);
+      });
+  }
+  return palette.filter(p => {
+    const b = getUnitAtomBag(p.unit, dimension);
+    return b.kind === canonBag.kind && isDimEqual(canonBag.dimMap, b.dimMap);
+  });
+}
+
 export function planProblemUnits(varsDb = {}, forcedMode = null) {
   const mode = sampleSystemMode(forcedMode);
   const roots = Object.keys(varsDb).filter(k => {
@@ -284,14 +296,11 @@ export function planProblemUnits(varsDb = {}, forcedMode = null) {
   const plan = {};
   shuffled.forEach((k, i) => {
     const meta = varsDb[k];
-    const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-    const canonBag = getUnitAtomBag(meta.unit, meta.dimension);
-    const mid = valueToCoherentBase((meta.typical[0] + meta.typical[1]) / 2, meta.unit, isDiff, meta.dimension);
-    const palette = DIMENSION_TOKEN_PALETTES[i < usCount ? "US" : "SI"]?.[meta.dimension] || [];
-    const chosen = [...palette]
-      .filter(p => isDimEqual(canonBag.dimMap, getUnitAtomBag(p.unit, meta.dimension).dimMap))
+    const mid = valueToCoherentBase((meta.typical[0] + meta.typical[1]) / 2, meta.unit, meta.dimension);
+    const candidates = candidateUnitsFor(i < usCount ? "US" : "SI", meta.dimension, meta.unit);
+    const chosen = [...candidates]
       .sort(() => Math.random() - 0.5)
-      .find(p => retainsSufficientSigFigs(formatValueInUnit(mid, p.unit, isDiff, meta.dimension)));
+      .find(p => retainsSufficientSigFigs(formatValueInUnit(mid, p.unit, meta.dimension)));
     plan[k] = chosen ? chosen.unit : meta.unit;
   });
   return plan;
@@ -310,10 +319,9 @@ export function makeDraw(unitPlan = {}, varsDb = {}, rng = Math.random) {
     const lo = bounds.lo ?? meta.typical[0];
     const hi = bounds.hi ?? meta.typical[1];
     if (!(hi > lo)) throw new Error(`draw(${key}): empty range [${lo}, ${hi}]`);
-    const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
     const shown = unitPlan[key] || meta.unit;
-    const toShown = v => formatValueInUnit(valueToCoherentBase(v, meta.unit, isDiff, meta.dimension), shown, isDiff, meta.dimension);
-    const toCanon = v => formatValueInUnit(valueToCoherentBase(v, shown, isDiff, meta.dimension), meta.unit, isDiff, meta.dimension);
+    const toShown = v => convertUnitValue(v, meta.unit, shown, meta.dimension);
+    const toCanon = v => convertUnitValue(v, shown, meta.unit, meta.dimension);
     const [a, b] = [toShown(lo), toShown(hi)].sort((x, y) => x - y);
     const clean = Math.min(snapClean(b), Math.max(snapClean(a), snapClean(a + rng() * (b - a))));
     return toCanon(clean);
@@ -414,33 +422,25 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null, unit
       return;
     }
 
-    const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-    const canonBag = getUnitAtomBag(canonUnit, meta.dimension);
     const canonVal = S[k];
-    const coherentVal = valueToCoherentBase(canonVal, canonUnit, isDiff, meta.dimension);
+    const coherentVal = valueToCoherentBase(canonVal, canonUnit, meta.dimension);
 
     // Root variables drawn clean in their planned unit: convert, never re-choose.
     const plannedUnit = unitPlan[k];
     if (plannedUnit) {
-      S[k] = formatValueInUnit(coherentVal, plannedUnit, isDiff, meta.dimension);
+      S[k] = formatValueInUnit(coherentVal, plannedUnit, meta.dimension);
       S._u[k] = plannedUnit;
       return;
     }
 
-    const palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
-
-    const validCandidates = palette.filter(p => {
-      const b = getUnitAtomBag(p.unit, meta.dimension);
-      return isDimEqual(canonBag.dimMap, b.dimMap);
-    });
-
+    const validCandidates = candidateUnitsFor(targetSys, meta.dimension, canonUnit);
     if (validCandidates.length === 0) return;
 
     const shuffledCandidates = [...validCandidates].sort(() => Math.random() - 0.5);
     let chosenUnit = null;
 
     for (const cand of shuffledCandidates) {
-      const candVal = formatValueInUnit(coherentVal, cand.unit, isDiff, meta.dimension);
+      const candVal = formatValueInUnit(coherentVal, cand.unit, meta.dimension);
       if (retainsSufficientSigFigs(candVal)) {
         chosenUnit = cand.unit;
         S[k] = candVal;

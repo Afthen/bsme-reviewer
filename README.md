@@ -39,20 +39,45 @@ You are modifying the BSME Reviewer repository.
                                   created it. Paste the failing line from the matrix output
                                   verbatim; without seed= both matrix seeds are tried. Output is
                                   capped at 80 lines and counts against the 700-line budget.
+   - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
+                                  renders bipartite reachability, degrees of freedom, and unrolled DAG
+   - TOPIC topic                  one-page summary of varsDb, dimensions, relations, and contracts
+   - UNIT expr                    7D dimensional vector, base scale factor, offset, and companion
+   - CONVERT unitA -> unitB       factor-label decomposition and canonical scale factor verification
+   - SOLVE "formula" target       tests CAS variable isolation (isolateVariable) and isolated LaTeX
+   - HYGIENE [topic|all]          fast-path static schema validator (orphans, collisions, native °)
+   - FAILURES [topic]             clusters derivation matrix failures by root cause
+   - DERIVE topic rel target [{u}] [sys=SI|US]
+                                  single-step derivation with 4-row tower height and oracle verification
+   - AUDIT-LATEX [topic|"tex"]    KaTeX visual formatting linter (spacing, commas, %, °)
+   - AUDIT-STEP topic rel target [{u}] [sys=SI|US]
+                                  AST-native structural derivation linter (tower height, omit 1, spacing)
+   - RENDER-STEP topic rel target visual wireframe & phase-by-phase layout progression
+   - PROBLEM-STEPS topic [sys=SI|US] [seed=N]
+                                  full multi-step problem progression with cognitive fading status
+   - STEP-AST topic rel target    dual representation: AST node hierarchy side-by-side with KaTeX
+   - DIFF-STEP topic rel t1 vs t2 AST-level structural diff between two isolated formulas or targets
+   - DIFF-DERIVE topic rel target line-by-line LaTeX derivation comparison (SI vs US)
+   - ROUNDTRIP-STEP topic rel target [{u}]
+                                  numerical fidelity oracle: AST Physics Eval vs LaTeX Derivation
    Never guess round line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
    When a test fails and the cause is not obvious from reading, TRACE before theorizing.
-6. Code output convention: When given permission to code, precede code blocks with
-   `FILE: path/to/file.ext`. To minimize noise, you do not need to repeat the `FILE:`
-   header for subsequent blocks targeting the same file; the parser assumes all
-   following diffs belong to the most recent header encountered.
+6. Code output convention: When given permission to code, precede single-file blocks
+   with `FILE: path/to/file.ext`. Only `FILE:` lines declare target files. Subsequent
+   `diff` blocks for the same file may omit `FILE:`, whereas a full-file drop-in
+   consumes its header. A `subst` block clears any sticky `FILE:` header.
 
-   Fencing: Use 3-backtick fences for every diff and drop-in block. Let N be the longest
-   run of backticks that appears at the start of a line inside the block (inline
-   mentions mid-line do not count). If N >= 3, wrap the entire block in N+1 backticks
-   to prevent parsing breaks.
+   Fencing: Use 3-backtick fences for every `diff`, `subst`, and drop-in block. Let N
+   be the longest run of backticks that appears at the start of a line inside the
+   block (inline mentions mid-line do not count). If N >= 3, wrap the entire block
+   in N+1 backticks so nothing inside can close it early.
 
-   Diffs: Use ```diff with 4-character markers (<<<< ==== >>>>) for partial updates.
-7. Run: npm test (or node --test test/run_test.js test/run_hygiene_test.js test/derivation_matrix_test.js)
+   Diffs: Use ```diff with 4-character markers (<<<< ==== >>>>) for partial updates
+   (or >= 5 matching chars when the body contains literal 4-char markers).
+
+   Batch substitutions: Use ```subst scope=<file|dir> expect=N with one literal
+   (<<<< ==== >>>>) hunk to replace all N exact matches atomically across a scope.
+7. Run: npm test (or the node --test command in section 10)
 8. Reply with: files changed.
 9. Remind the user to run the tests.
 ```
@@ -172,7 +197,7 @@ Software engineering in this repository is governed by physical/mathematical inv
 - **R24. Bug fixes ship with regression tests.** Tests that touch mastery use real mastery functions (`recordAttempt`, `getDecayedMastery`), not constant stubs.
 - **R25. Report honestly.** State files changed, test output, and anything that could not be verified.
 - **R26. Brainstorm mode by default.** Always operate in brainstorm mode first to analyze root causes, establish mathematical invariants, and verify alignment. Never write code or emit diffs until given explicit permission to proceed.
-- **R27. Canonical diff syntax & fence nesting.** When authorized to write code, precede blocks with `FILE: path/to/file.ext` and wrap in 3-backtick fences (```diff using `<<<< ==== >>>>` when the sum of all the diffs for that particular file is shorter than a full-file replacement). Only `diff` fences parse `<<<< ==== >>>>`. Let N be the longest backtick run that starts a line inside a block (inline mentions do not count); when N >= 3, wrap the block in N+1 backticks so that nothing inside can close it early. 
+- **R27. Canonical diff syntax & fence nesting.** When authorized to write code, precede single-file blocks with `FILE: path/to/file.ext` and wrap in 3-backtick fences (```diff using `<<<< ==== >>>>`, or >= 5 matching marker chars if the body has literal 4-char markers, when shorter than a full-file replacement). Only `diff` and `subst` fences parse hunk markers; `subst scope=<file|dir> expect=N` carries its own scope and requires an exact match count. Full-file drop-in blocks consume `FILE:`; sticky `FILE:` applies only to consecutive `diff` blocks and is cleared by `subst`. Let N be the longest backtick run that starts a line inside a block (inline mentions do not count); when N >= 3, wrap the block in N+1 backticks so that nothing inside can close it early. 
 
 ---
 
@@ -197,7 +222,7 @@ src/
     problem_gen.js           generateProblem: autonomous graph unrolling, neatness pass, statement builder
     unit_sampler.js          40/40/20 distribution, coupled variable coherence, inverse-token probability
     derivation.js            buildAlignedDerivation: no-comma spacing, additive unit factoring, factor-labels
-    dimensions.js            DIMENSIONS, fmtSigFig, formatGivenValue, cancelUnit, textUnit
+    dimensions.js            DIMENSIONS, fmtSigFig, formatGivenValue, targetLabel
     topic_mix.js             Tournament targeting over multi-topic review pools
   mastery/                   constants.js (phi, fib), engine.js, storage.js
   mcq/
@@ -216,11 +241,15 @@ src/
     index.js                 AUTO-GENERATED flat lazy registry (TOPIC_MANIFEST + loadTopic)
     <subject>/<topic>/       index.js, schema.js, relations.js, system.js (strict leaf slices)
 scripts/
+  apply_patch.js             Applies FILE:/diff/subst patch bundles (npm run apply, default tmp/patch.txt)
+  quiet_reporter.js          Errors-only node:test reporter emitting failing leaves + summary
   gen_registry.js            Auto-discovers leaf topics & MCQ sets -> emits src/topics/index.js & src/mcq/index.js
   repo_skeleton.js           Generates resolved import graph + symbol signatures
   fulfill_ctx.js             Fulfills READ/OUTLINE/GREP/TRACE context requests into tmp/ctx_res.txt
   trace_case.js              TRACE worker: re-runs one matrix case with push/fill hooks (spawned by fulfill_ctx.js)
   lib/
+    patch_parse.js           Strict FILE:/diff/subst/fence parser
+    patch_apply.js           Atomic in-memory diff/subst/file applier with LF normalization
     symbols.js               Top-level symbol extraction for READ #symbol / OUTLINE
     trace_parse.js           Parses a matrix case line into topic, system, relation, target, units, seed
     trace_hooks.js           recordNumericPushes: temporary Array.prototype.push/fill hooks, always restored
@@ -465,7 +494,7 @@ export const MY_TOPIC_VARS_DB = Object.freeze({
     name: "Specific Heat",
     symbol: "c_p",
     dimension: DIMENSIONS.SPECIFIC_ENERGY,
-    unit: "kJ/kg-K",
+    unit: "kJ/kg-ΔK",
     isConstant: true,                       // Tags physical constants for high-mastery recall mode
     display: 1.0062,                        // Tabulated textbook academic display
     aliases: ["Specific Heat at Constant Pressure", "c_p"]
@@ -623,20 +652,23 @@ src/mcq/<subject>/<set_name>/
 
 ## 10. Testing & Invariant Verification Suite
 
-Run everything (this is what `npm test` does after regenerating the registries):
+Run `npm test` (regenerates registries and executes all suites with the quiet reporter):
 
 ```bash
-node --test test/run_test.js test/run_hygiene_test.js test/derivation_matrix_test.js \
-  test/trace_test.js test/rate_parts_test.js test/section_d_test.js test/ctx_test.js
+node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/run_hygiene_test.js \
+  test/derivation_matrix_test.js test/rate_parts_test.js test/patch_test.js test/trace_test.js \
+  test/section_d_test.js test/ctx_test.js test/reporter_test.js
 ```
 
 | Suite | Invariant Verified |
 |---|---|
-| `test/run_test.js` | **Universal Round-Trip Invariant:** $u \to \text{base} \to u$ identity across all registered units. <br>**100-Problem Stress Invariant:** 100 randomized problems (SI, US, MIXED) verify physical conservation ($< 0.05\%$), valid boxed answers, and error-free KaTeX rendering. <br>**Alien Scale Factor Detector:** Queries `scales.js` (`isCanonicalScaleFactor`) to reject any lumped or unfamiliar conversion scalars without bespoke test lists. <br>**Direction-Agnostic Synthesis:** Dynamic longest-path generation at high mastery, natural step hiding, 4-row tower cap, and encompassing cancellations. |
+| `test/run_test.js` | **Universal Round-Trip Invariant:** $u \to \text{base} \to u$ identity across all registered units. <br>**Alien Scale Factor Detector:** Queries `scales.js` (`isCanonicalScaleFactor`) to reject any lumped or unfamiliar conversion scalars without bespoke test lists. <br>**Direction-Agnostic Synthesis:** Dynamic longest-path generation at high mastery, natural step hiding, 4-row tower cap, and encompassing cancellations. |
 | `test/run_hygiene_test.js` | Zero legacy shadows, exact $\phi$/Fibonacci progressions, zero schema orphan variables, zero duplicate formulas within topics, zero alias collisions across `varsDb`, cross-subject commonality rules, and native `°` symbols (no `\circ`). |
-| `test/derivation_matrix_test.js` | **Derivation Matrix:** for every topic x system x relation x solvable target, re-runs the step under a pairwise (2-wise) covering array of same-dimension unit assignments. Each case must match the AST physics oracle (`evaluatePhysicalAST`) and the printed derivation numerically (`latex_oracle.js`), and every `conversionScalars` entry from `solveUnitAlgebra` must pass `isCanonicalScaleFactor`. All failures are collected and grouped; each carries `seed=N` for `TRACE`. |
+| `test/derivation_matrix_test.js` | **Derivation Matrix:** Layer 1 re-runs every topic x system x relation x solvable target under pairwise (2-wise) unit coverage; Layer 2 runs seeded `generateProblem` trials across SI, US, and MIXED systems and mastery levels. Both verify `evaluatePhysicalAST`, `validateDerivationLatex`, numerical derivation match (`latex_oracle.js`), and `isCanonicalScaleFactor`. All failures are collected and grouped; each carries `seed=N` for `TRACE`. |
 | `test/rate_parts_test.js` | Parenthesised rate targets (`ft-lb_f/(lb_m)`, `kJ/(s)`) decompose into canonical numerator and denominator ratios; a `1/(...)` target is not split into a unit-less numerator. |
 | `test/section_d_test.js` | Atom-soup targets route to the per-atom compound builder; `Q_s / (Q_s + Q_l)` with `Btu/h` and `kW` yields only canonical scalars. |
+| `test/patch_test.js` | Patch parser & applier: `diff`, `subst` exact counts, atomicity, N+1 fences, headers |
+| `test/reporter_test.js` | Quiet test reporter: suppresses passing tests, prints leaf failures without suite wrapper duplication |
 | `test/trace_test.js` | Matrix case-line parsing, numeric push/fill recording, `Array.prototype` restoration after a throw, and rejection of malformed `TRACE` requests. |
 | `test/ctx_test.js` | `fulfill_ctx.js` and symbol extraction: exact ranges, symbol-addressed `READ`, range snapping, budget enforcement, large-file outlining, `GREP` context. |
 

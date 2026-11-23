@@ -34,7 +34,7 @@ export function createDryerSystem({ sys = "SI" } = {}) {
 
     t_a1 = 80.0;                                                 // °F
     t_a2 = [185.0, 200.0, 220.0][Math.floor(Math.random() * 3)]; // °F
-    c_pa = 0.24;                                                 // Btu/(lb-°F)
+    c_pa = 0.24;                                                 // Btu/(lb-Δ°F)
     Q_h = m_a * c_pa * (t_a2 - t_a1);                            // Btu/min
 
     h_fg = 1030.0;                                               // Btu/lb
@@ -45,7 +45,7 @@ export function createDryerSystem({ sys = "SI" } = {}) {
       m_f: "lb_m/min", m_p: "lb_m/min", m_s: "lb_m/min", m_w: "lb_m/min",
       M_w1: "%", M_w2: "%", X_1: "dimless", X_2: "dimless",
       m_a: "lb_m/min", W_1: "dimless", W_2: "dimless", v_1: "ft^3/lb_m", V_a: "cfm",
-      t_a1: "°F", t_a2: "°F", c_pa: "Btu/(lb_m*F)",
+      t_a1: "°F", t_a2: "°F", c_pa: "Btu/(lb_m*Δ°F)",
       Q_h: "Btu/min", h_fg: "Btu/lb_m", Q_evap: "Btu/min", eta_d: "%"
     };
   } else {
@@ -60,7 +60,7 @@ export function createDryerSystem({ sys = "SI" } = {}) {
 
     t_a1 = 28.0;                                                 // °C
     t_a2 = [85.0, 95.0, 105.0][Math.floor(Math.random() * 3)];   // °C
-    c_pa = 1.0062;                                               // kJ/kg-K
+    c_pa = 1.0062;                                               // kJ/kg-ΔK
     Q_h = m_a * c_pa * (t_a2 - t_a1);                            // kW
 
     h_fg = 2400.0;                                               // kJ/kg
@@ -71,7 +71,7 @@ export function createDryerSystem({ sys = "SI" } = {}) {
       m_f: "kg/s", m_p: "kg/s", m_s: "kg/s", m_w: "kg/s",
       M_w1: "%", M_w2: "%", X_1: "dimless", X_2: "dimless",
       m_a: "kg/s", W_1: "dimless", W_2: "dimless", v_1: "m^3/kg", V_a: "m^3/s",
-      t_a1: "°C", t_a2: "°C", c_pa: "kJ/kg-K",
+      t_a1: "°C", t_a2: "°C", c_pa: "kJ/kg-ΔK",
       Q_h: "kW", h_fg: "kJ/kg", Q_evap: "kW", eta_d: "%"
     };
   }

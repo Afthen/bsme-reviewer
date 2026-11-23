@@ -14,27 +14,48 @@ import { resolveCanonicalKey, isReservedMathToken } from "../cas/algebra.js";
 import { casToTex, astToLatex, toLatexSymbol } from "../cas/latex.js";
 import {
   solveUnitAlgebra,
+  analyzeTempAST,
   getUnitAtomBag,
   getUnitOffset,
+  getUnitKind,
   getAbsoluteCompanionUnit,
+  toDeltaUnit,
   isDimEqual,
   unitToTex,
   unitToCancelledTex,
+  formatPairConversion,
   fmtScale,
+  convertUnitValue,
   valueToCoherentBase,
   formatValueInUnit
 } from "../cas/units/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
-import { fmtSigFig, formatGivenValue, DIMENSIONS } from "./dimensions.js";
+import { fmtSigFig, formatGivenValue } from "./dimensions.js";
 
 function countConversionItems(analysis) {
   let count = analysis.globalConversionTex ? 1 : 0;
   for (const list of Object.values(analysis.tokenConversions || {})) {
-    if (Array.isArray(list)) {
-      count += list.filter(item => item !== "__AFFINE_CONVERTED__").length;
-    }
+    if (Array.isArray(list)) count += list.length;
   }
   return count;
+}
+
+function buildTempConversionExpr(rawVal, fromUnit, toUnit, dimension = null) {
+  const fromOff = getUnitOffset(fromUnit, dimension);
+  const toOff = getUnitOffset(toUnit, dimension);
+  const absFrom = getAbsoluteCompanionUnit(fromUnit);
+  const absTo = getAbsoluteCompanionUnit(toUnit);
+  const formattedRaw = fmtSigFig(rawVal, 6, true);
+  const scaleConv = absFrom !== absTo
+    ? formatPairConversion(absFrom, absTo, dimension, dimension, "whole")
+    : { tex: "" };
+  const hasScale = Boolean(scaleConv.tex);
+  const absFromTex = hasScale
+    ? unitToCancelledTex(absFrom, false, dimension, "whole")
+    : unitToTex(absFrom, false, dimension);
+  const lead = fromOff ? `(${formattedRaw} + ${fromOff}) \\, ${absFromTex}` : `${formattedRaw} \\, ${absFromTex}`;
+  const tail = toOff ? ` - ${toOff}` : "";
+  return `${lead}${scaleConv.tex}${tail}`;
 }
 
 export function buildAlignedDerivation(
@@ -70,6 +91,7 @@ export function buildAlignedDerivation(
   };
 
   let unitAnalysis;
+  let rowTargetUnit = targetUnit;
 
   if (requiredUnits && typeof requiredUnits === "object") {
     unitAnalysis = solveUnitAlgebra(formulaRhs, evalState, targetVar, targetUnit, workingVarsDb, requiredUnits);
@@ -82,44 +104,32 @@ export function buildAlignedDerivation(
         activeUnitMap[pc.canonicalKey] = convUnit;
       });
     }
+    const reqTargetU = requiredUnits[canonicalTarget] || requiredUnits[targetVar];
+    if (reqTargetU && targetUnit && reqTargetU !== targetUnit) {
+      rowTargetUnit = reqTargetU;
+    }
   } else {
-    // 1. Align mismatched additive groups (including affine temperatures like °R vs °F or K vs °C)
+    // 1. AST Temperature Typing & Unified Frame Alignment
     const alignLeafToUnit = (key, targetU) => {
       const currU = unitOfKey(key);
       const cKey = resolveCanonicalKey(key, workingVarsDb);
       const meta = workingVarsDb[cKey] || workingVarsDb[key] || {};
       if (!currU || !targetU || currU === targetU || alignedTokens.has(key)) return;
 
-      const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-      const currOffset = getUnitOffset(currU, meta.dimension);
-      const targetOffset = getUnitOffset(targetU, meta.dimension);
       const currBag = getUnitAtomBag(currU, meta.dimension);
       const targetBag = getUnitAtomBag(targetU, meta.dimension);
-      if (isDimEqual(currBag.dimMap, targetBag.dimMap) && Math.abs(currBag.scale - targetBag.scale) < 1e-9 && Math.abs(currOffset - targetOffset) < 1e-9) {
+      if (isDimEqual(currBag.dimMap, targetBag.dimMap) && Math.abs(currBag.scale - targetBag.scale) < 1e-9 && Math.abs(currBag.offset - targetBag.offset) < 1e-9) {
         return;
       }
 
       const rawVal = evalState[key];
-      const alignedVal = formatValueInUnit(
-        valueToCoherentBase(rawVal, currU, isDiff, meta.dimension),
-        targetU,
-        isDiff,
-        meta.dimension
-      );
+      const alignedVal = convertUnitValue(rawVal, currU, targetU, meta.dimension);
       const sym = S._displaySymbols?.[cKey] || S._displaySymbols?.[key] || toLatexSymbol(key, workingVarsDb);
       const formattedRaw = formatGivenValue(rawVal, meta, true, currU);
 
-      if (currOffset && !isDiff) {
-        const absUnit = getAbsoluteCompanionUnit(currU);
-        const absVal = formatValueInUnit(valueToCoherentBase(rawVal, currU, false, meta.dimension), absUnit, false, meta.dimension);
-        if (absUnit === targetU) {
-          prepLines.push(`${sym} &= (${formattedRaw} + ${currOffset}) \\, ${unitToTex(targetU, false, meta.dimension)} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
-        } else {
-          const singleConv = solveUnitAlgebra(key, { ...evalState, [key]: absVal, _u: { ...activeUnitMap, [key]: absUnit } }, key, targetU, workingVarsDb);
-          const convTex = (singleConv.tokenConversions?.[key]?.join("") || "") + (singleConv.globalConversionTex || "");
-          const absTex = convTex ? unitToCancelledTex(absUnit, false, meta.dimension, "whole") : unitToTex(absUnit, false, meta.dimension);
-          prepLines.push(`${sym} &= (${formattedRaw} + ${currOffset}) \\, ${absTex}${convTex} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
-        }
+      if (currBag.kind === "point" || targetBag.kind === "point") {
+        const exprTex = buildTempConversionExpr(rawVal, currU, targetU, meta.dimension);
+        prepLines.push(`${sym} &= ${exprTex} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
       } else {
         const singleConv = solveUnitAlgebra(key, { ...evalState, _u: { ...activeUnitMap, [key]: currU } }, key, targetU, workingVarsDb);
         const unitTex = singleConv.tokenMarkup?.[key] || unitToTex(currU, false, meta.dimension);
@@ -134,83 +144,104 @@ export function buildAlignedDerivation(
       activeUnitMap[cKey] = targetU;
     };
 
-    const hasOuterWrapper = rhsAst && rhsAst.type === "binary" && rhsAst.op !== "+" && rhsAst.op !== "-";
+    const tempInfo = analyzeTempAST(rhsAst, unitOfKey, workingVarsDb);
+    const targetKind = targetUnit ? getUnitKind(targetUnit, targetMeta.dimension) : "linear";
 
-    (function alignAdditiveGroups(node, isTop) {
+    // 1a. Lift affine points appearing in multiplicative/power/incompatible contexts to absolute frames
+    let absLiftTarget = "K";
+    if (targetKind === "point") {
+      absLiftTarget = getAbsoluteCompanionUnit(targetUnit);
+    } else if (tempInfo.liftTokens.size > 0) {
+      const counts = new Map();
+      for (const t of tempInfo.liftTokens) {
+        const a = getAbsoluteCompanionUnit(unitOfKey(t));
+        counts.set(a, (counts.get(a) || 0) + 1);
+      }
+      absLiftTarget = [...counts.entries()].sort((a, b) => (b[1] - a[1]) || (a[0] === "K" ? -1 : 1))[0][0];
+    }
+    for (const tok of tempInfo.liftTokens) {
+      if (typeof evalState[tok] === "number") {
+        alignLeafToUnit(tok, absLiftTarget);
+      }
+    }
+
+    // 1b. Align unlifted point-temperature groups that share tokens or have mixed units, plus non-point additive groups
+    const unliftedPoints = [...tempInfo.pointTokens].filter(t => !tempInfo.liftTokens.has(t) && typeof evalState[t] === "number");
+    let rowPointFrame = null;
+    if (unliftedPoints.length > 0) {
+      const pointUnits = unliftedPoints.map(t => unitOfKey(t));
+      const firstU = pointUnits[0];
+      const allSamePoint = pointUnits.every(u => u === firstU);
+      if (allSamePoint) {
+        rowPointFrame = firstU;
+      } else if (targetKind === "point") {
+        rowPointFrame = targetUnit;
+      } else {
+        const counts = new Map();
+        for (const u of pointUnits) counts.set(u, (counts.get(u) || 0) + 1);
+        rowPointFrame = [...counts.entries()].sort((a, b) => (b[1] - a[1]) || (getUnitOffset(a[0]) - getUnitOffset(b[0])))[0][0];
+      }
+      for (const tok of unliftedPoints) {
+        alignLeafToUnit(tok, rowPointFrame);
+      }
+    }
+
+    (function alignAdditiveGroups(node) {
       if (!node) return;
-      if (node.type === "group") { alignAdditiveGroups(node.expr, isTop); return; }
-      if (node.type === "call") { alignAdditiveGroups(node.arg, false); return; }
+      if (node.type === "group") { alignAdditiveGroups(node.expr); return; }
+      if (node.type === "call") { alignAdditiveGroups(node.arg); return; }
       if (node.type !== "binary") return;
 
       if (node.op === "+" || node.op === "-") {
         const leaves = [];
-        (function walk(n, sign) {
+        (function walk(n) {
           const u = n && n.type === "group" ? n.expr : n;
           if (u && u.type === "binary" && (u.op === "+" || u.op === "-")) {
-            walk(u.left, sign);
-            walk(u.right, u.op === "+" ? sign : -sign);
+            walk(u.left);
+            walk(u.right);
             return;
           }
           if (u && u.type === "id" && typeof evalState[u.name] === "number") {
-            leaves.push({ key: u.name, sign });
+            leaves.push({ key: u.name });
           }
-        })(node, 1);
+        })(node);
 
         if (leaves.length > 1) {
           const units = leaves.map(l => unitOfKey(l.key));
           const firstBag = getUnitAtomBag(units[0]);
-          const firstOff = getUnitOffset(units[0]);
           const allShareUnit = units.every(u => {
             if (!u && !units[0]) return true;
             if (!u || !units[0]) return false;
             const b = getUnitAtomBag(u);
             return isDimEqual(firstBag.dimMap, b.dimMap)
               && Math.abs(firstBag.scale - b.scale) < 1e-9
-              && Math.abs(firstOff - getUnitOffset(u)) < 1e-9;
+              && Math.abs(firstBag.offset - b.offset) < 1e-9;
           });
 
-          const isPureTemp = firstBag.dimMap && Object.keys(firstBag.dimMap).length === 1 && firstBag.dimMap.Th === 1;
-          const anyOffset = units.some(u => getUnitOffset(u) !== 0);
-
-          if (!allShareUnit || (isPureTemp && anyOffset && (!isTop || hasOuterWrapper))) {
-            let alignedUnit = null;
-            if (isPureTemp) {
-              const zeroOffLeaf = units.find(u => getUnitOffset(u) === 0);
-              if (targetUnit && getUnitAtomBag(targetUnit).dimMap?.Th === 1 && getUnitOffset(targetUnit) === 0) {
-                alignedUnit = targetUnit;
-              } else if (zeroOffLeaf) {
-                alignedUnit = zeroOffLeaf;
-              } else {
-                alignedUnit = getAbsoluteCompanionUnit(units[0]);
-              }
-            } else {
-              const targetBag = targetUnit ? getUnitAtomBag(targetUnit, targetMeta.dimension) : null;
-              alignedUnit = (targetBag && isDimEqual(firstBag.dimMap, targetBag.dimMap)) ? targetUnit : units[0];
+          if (!allShareUnit) {
+            const targetBag = targetUnit ? getUnitAtomBag(targetUnit, targetMeta.dimension) : null;
+            let alignedUnit = units[0];
+            if (targetBag && isDimEqual(firstBag.dimMap, targetBag.dimMap)) {
+              alignedUnit = (firstBag.kind === "delta" && targetBag.kind === "point")
+                ? toDeltaUnit(targetUnit)
+                : targetUnit;
             }
-
             leaves.forEach(l => alignLeafToUnit(l.key, alignedUnit));
             return;
           }
         }
       }
 
-      alignAdditiveGroups(node.left, false);
-      alignAdditiveGroups(node.right, false);
-    })(rhsAst, true);
+      alignAdditiveGroups(node.left);
+      alignAdditiveGroups(node.right);
+    })(rhsAst);
 
-    // Align non-additive affine temperature variables in compound/power expressions (e.g. T_2 = T_1 * r_k^(k-1))
-    if (rhsAst && rhsAst.type !== "id") {
-      const tokens = Array.from(new Set(getAstIdentifiers(rhsAst).filter(t => !isReservedMathToken(t))));
-      for (const tok of tokens) {
-        if (alignedTokens.has(tok) || typeof evalState[tok] !== "number") continue;
-        const currU = unitOfKey(tok);
-        const cKey = resolveCanonicalKey(tok, workingVarsDb);
-        const meta = workingVarsDb[cKey] || workingVarsDb[tok] || {};
-        const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
-        const currOffset = getUnitOffset(currU, meta.dimension);
-        if (currOffset && !isDiff && !(rhsAst.type === "binary" && (rhsAst.op === "+" || rhsAst.op === "-") && currU === targetUnit)) {
-          alignLeafToUnit(tok, getAbsoluteCompanionUnit(currU));
-        }
+    // 1c. Determine the frame in which the main numeric substitution row evaluates
+    if (targetKind === "point") {
+      if (tempInfo.tempState === "abs" || (tempInfo.liftTokens.size > 0 && unliftedPoints.length === 0)) {
+        rowTargetUnit = absLiftTarget;
+      } else if (rowPointFrame) {
+        rowTargetUnit = rowPointFrame;
       }
     }
 
@@ -237,14 +268,13 @@ export function buildAlignedDerivation(
 
         const units = leaves.map(l => unitOfKey(l.key));
         const firstBag = getUnitAtomBag(units[0]);
-        const firstOff = getUnitOffset(units[0]);
         const allShareUnit = leaves.length > 1 && units.every(u => {
           if (!u && !units[0]) return true;
           if (!u || !units[0]) return false;
           const b = getUnitAtomBag(u);
           return isDimEqual(firstBag.dimMap, b.dimMap)
             && Math.abs(firstBag.scale - b.scale) < 1e-9
-            && Math.abs(firstOff - getUnitOffset(u)) < 1e-9;
+            && Math.abs(firstBag.offset - b.offset) < 1e-9;
         });
 
         if (allShareUnit) {
@@ -260,15 +290,14 @@ export function buildAlignedDerivation(
 
           const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
           const sharedUnit = units[0];
-          // A mix of + and - over same-unit temperatures is a temperature DIFFERENCE:
-          // the offset cancels, so the factored group must not take the affine path.
-          const isDifferenceGroup = meta0.dimension === DIMENSIONS.TEMPERATURE
-            && leaves.some(l => l.sign < 0) && leaves.some(l => l.sign > 0);
-          const sharedDim = isDifferenceGroup ? DIMENSIONS.TEMPERATURE_DIFF : (meta0.dimension || null);
+          const groupTemp = analyzeTempAST(node, unitOfKey, workingVarsDb);
+          const factoredUnit = (groupTemp.tempState === "delta" && getUnitKind(sharedUnit, meta0.dimension) === "point")
+            ? toDeltaUnit(sharedUnit)
+            : sharedUnit;
 
-          factoredInfo[factoredId] = { inner, unit: sharedUnit, dimension: sharedDim };
-          activeUnitMap[factoredId] = sharedUnit;
-          workingVarsDb[factoredId] = { unit: sharedUnit, dimension: sharedDim };
+          factoredInfo[factoredId] = { inner, unit: factoredUnit, dimension: meta0.dimension || null };
+          activeUnitMap[factoredId] = factoredUnit;
+          workingVarsDb[factoredId] = { unit: factoredUnit, dimension: meta0.dimension || null };
 
           node.type = "id";
           node.name = factoredId;
@@ -283,8 +312,8 @@ export function buildAlignedDerivation(
       factorAdditiveGroups(node.right);
     })(rhsAst);
 
-    // 3. Unit Algebra & Constant System Equivalence Insight
-    unitAnalysis = solveUnitAlgebra(rhsAst, { ...evalState, _u: activeUnitMap }, targetVar, targetUnit, workingVarsDb);
+    // 3. Unit Algebra & Constant System Equivalence Insight (targeting rowTargetUnit)
+    unitAnalysis = solveUnitAlgebra(rhsAst, { ...evalState, _u: activeUnitMap }, targetVar, rowTargetUnit, workingVarsDb);
 
     const activeTokens = Array.from(new Set(getAstIdentifiers(rhsAst).filter(t => !isReservedMathToken(t) && !factoredInfo[t])));
     let baselineItems = countConversionItems(unitAnalysis);
@@ -309,16 +338,15 @@ export function buildAlignedDerivation(
         rhsAst,
         { ...evalState, _u: { ...activeUnitMap, [tok]: altU, [cKey]: altU } },
         targetVar,
-        targetUnit,
+        rowTargetUnit,
         workingVarsDb
       );
       const testItems = countConversionItems(testAnalysis);
       if (testItems < baselineItems) {
         const rawVal = evalState[tok];
         const altVal = formatValueInUnit(
-          valueToCoherentBase(rawVal, currU, false, constEntry.dimension),
+          valueToCoherentBase(rawVal, currU, constEntry.dimension),
           altU,
-          false,
           constEntry.dimension
         );
         const sym = S._displaySymbols?.[cKey] || S._displaySymbols?.[tok] || toLatexSymbol(tok, workingVarsDb);
@@ -350,9 +378,7 @@ export function buildAlignedDerivation(
       const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
       const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
 
-      if (inlineConv === "__AFFINE_CONVERTED__") {
-        subsMap[k] = unitMarkup;
-      } else if (unitMarkup !== "" || inlineConv !== "") {
+      if (unitMarkup !== "" || inlineConv !== "") {
         subsMap[k] = `${formattedNum} \\, ${unitMarkup}${inlineConv}`;
       } else {
         subsMap[k] = formattedNum;
@@ -364,8 +390,7 @@ export function buildAlignedDerivation(
     const uTex = unitAnalysis.tokenMarkup?.[factoredId] !== undefined
       ? unitAnalysis.tokenMarkup[factoredId]
       : unitToTex(info.unit, false, info.dimension);
-    const groupConv = (unitAnalysis.tokenConversions?.[factoredId] || [])
-      .filter(c => c !== "__AFFINE_CONVERTED__").join("");
+    const groupConv = (unitAnalysis.tokenConversions?.[factoredId] || []).join("");
     subsMap[factoredId] = uTex ? `(${info.inner})\\,${uTex}${groupConv}` : `(${info.inner})${groupConv}`;
   }
 
@@ -390,8 +415,17 @@ export function buildAlignedDerivation(
   const numTex = astToLatex(needsRootGroup ? { type: "group", expr: rhsAst } : rhsAst, subsMap, workingVarsDb)
     + (unitAnalysis.globalConversionTex || "");
 
+  // 6. Final Boxed Answer & Post-Conversion Row
+  const val = overrides[canonicalTarget] ?? step.expectedVal ?? S[canonicalTarget];
+  const formattedVal = typeof val === "number" ? fmtSigFig(val, 6, true) : val;
+  const tDim = targetMeta.dimension;
+  const needsPostConv = typeof val === "number"
+    && rowTargetUnit && targetUnit && rowTargetUnit !== targetUnit
+    && (getUnitOffset(rowTargetUnit, tDim) !== 0 || getUnitOffset(targetUnit, tDim) !== 0);
+
   const rows = [...prepLines];
   const shouldBreakVertical = prepLines.length > 0
+    || needsPostConv
     || numTex.includes("\\cfrac")
     || numTex.includes("\\cdot")
     || numTex.length > 45;
@@ -408,35 +442,11 @@ export function buildAlignedDerivation(
     rows.push(`${displayCanonical} \\;\\Rightarrow\\; ${targetSymbol} &= ${symRhs}`, `&= ${numTex}`);
   }
 
-  // 6. Final Boxed Answer
-  const val = overrides[canonicalTarget] ?? step.expectedVal ?? S[canonicalTarget];
-  const formattedVal = typeof val === "number" ? fmtSigFig(val, 6, true) : val;
-
-  // Empirical affine target (e.g. °C contract -> °R box): the numeric row is in the contract
-  // unit, so add the explicit offset/scale row that lands on the boxed unit (R8).
-  const reqTargetU = requiredUnits && typeof requiredUnits === "object"
-    ? (requiredUnits[canonicalTarget] || requiredUnits[targetVar]) : null;
-  const targetIsDiff = targetMeta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!targetMeta.isDifference;
-  if (typeof val === "number" && reqTargetU && targetUnit && reqTargetU !== targetUnit && !targetIsDiff) {
-    const tDim = targetMeta.dimension;
-    const reqOff = getUnitOffset(reqTargetU, tDim);
-    const tgtOff = getUnitOffset(targetUnit, tDim);
-    if (reqOff || tgtOff) {
-      const reqVal = formatValueInUnit(valueToCoherentBase(val, targetUnit, false, tDim), reqTargetU, false, tDim);
-      const absReq = getAbsoluteCompanionUnit(reqTargetU);
-      const absTarget = getAbsoluteCompanionUnit(targetUnit);
-      const absVal = formatValueInUnit(valueToCoherentBase(reqVal, reqTargetU, false, tDim), absReq, false, tDim);
-      const conv = solveUnitAlgebra(
-        targetVar,
-        { ...evalState, [targetVar]: absVal, [canonicalTarget]: absVal, _u: { ...activeUnitMap, [targetVar]: absReq, [canonicalTarget]: absReq } },
-        targetVar, absTarget, workingVarsDb
-      );
-      const convTex = (conv.tokenConversions?.[targetVar]?.join("") || "") + (conv.globalConversionTex || "");
-      const absTex = convTex ? unitToCancelledTex(absReq, false, tDim, "whole") : unitToTex(absReq, false, tDim);
-      const lead = reqOff ? `(${fmtSigFig(reqVal, 6, true)} + ${reqOff})` : fmtSigFig(reqVal, 6, true);
-      const tail = tgtOff ? ` - ${tgtOff} \\, ${unitToTex(absTarget, false, tDim)}` : "";
-      rows.push(`&= ${lead} \\, ${absTex}${convTex}${tail}`);
-    }
+  // Whenever the row evaluated in an affine/absolute frame differing from the boxed unit,
+  // append the explicit offset/scale row landing on the boxed unit (R8, R20).
+  if (needsPostConv) {
+    const rowVal = convertUnitValue(val, targetUnit, rowTargetUnit, tDim);
+    rows.push(`&= ${buildTempConversionExpr(rowVal, rowTargetUnit, targetUnit, tDim)}`);
   }
 
   let unitTex = "";

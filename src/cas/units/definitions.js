@@ -25,7 +25,7 @@ export const PREFIXES = Object.freeze({
  * SSOT: Unified Base Units and Dimensional Vectors.
  * This prevents "Dimensionless Orphans" by forcing every unit to declare its 7D vector.
  */
-export const BASE_UNITS = Object.freeze({
+const RAW_BASE_UNITS = {
   "gram":           { baseScale: 0.001, symbol: "g", dimMap: { M: 1 }, forceCompanion: "gram_force" },
   "gram_force":     { baseScale: 0.001 * 9.80665, symbol: "g_f", dimMap: { M: 1, L: 1, T: -2 }, massCompanion: "gram" },
   "pound_mass":     { baseScale: 0.45359237, symbol: "lb_m", dimMap: { M: 1 }, forceCompanion: "pound_force" },
@@ -36,8 +36,8 @@ export const BASE_UNITS = Object.freeze({
   "second":         { baseScale: 1.0, symbol: "s", dimMap: { T: 1 } },
   "percent":        { baseScale: 0.01, symbol: "%", dimMap: { Pct: 1 } },
   "Kelvin":         { baseScale: 1.0, symbol: "K", dimMap: { Th: 1 } },
-  "Celsius":        { baseScale: 1.0, symbol: "°C", dimMap: { Th: 1 }, offset: 273.15 },
-  "Fahrenheit":     { baseScale: 5/9, symbol: "°F", dimMap: { Th: 1 }, offset: 459.67 },
+  "Celsius":        { baseScale: 1.0, symbol: "°C", dimMap: { Th: 1 }, offset: 273.15, absCompanion: "Kelvin" },
+  "Fahrenheit":     { baseScale: 5/9, symbol: "°F", dimMap: { Th: 1 }, offset: 459.67, absCompanion: "Rankine" },
   "Rankine":        { baseScale: 5/9, symbol: "°R", dimMap: { Th: 1 } },
   "Btu":            { baseScale: 1055.056, symbol: "Btu", dimMap: { M: 1, L: 2, T: -2 } },
   "Joule":          { baseScale: 1.0, symbol: "J", dimMap: { M: 1, L: 2, T: -2 } },
@@ -61,7 +61,30 @@ export const BASE_UNITS = Object.freeze({
   "hertz":          { baseScale: 1.0, symbol: "Hz", dimMap: { T: -1 } },
   "cfm":            { baseScale: 0.3048**3 / 60, symbol: "cfm", dimMap: { L: 3, T: -1 } },
   "gpm":            { baseScale: 0.003785411784 / 60, symbol: "gpm", dimMap: { L: 3, T: -1 } }
-});
+};
+
+// Derive delta twins (zero offset, same linear scale) programmatically for every temperature scale
+const BUILT_UNITS = { ...RAW_BASE_UNITS };
+for (const [key, meta] of Object.entries(RAW_BASE_UNITS)) {
+  if (!meta.dimMap?.Th) continue;
+  const deltaKey = `${key}_delta`;
+  const absBase = meta.absCompanion || key;
+  BUILT_UNITS[key] = Object.freeze({
+    ...meta,
+    deltaCompanion: deltaKey,
+    absCompanion: absBase
+  });
+  BUILT_UNITS[deltaKey] = Object.freeze({
+    baseScale: meta.baseScale,
+    symbol: `Δ${meta.symbol}`,
+    dimMap: { ...meta.dimMap },
+    isDelta: true,
+    pointCompanion: key,
+    absCompanion: `${absBase}_delta`
+  });
+}
+
+export const BASE_UNITS = Object.freeze(BUILT_UNITS);
 
 export const SUBSTITUTION_GRAPH = Object.freeze({
   "Watt": { num: ["Joule"], den: ["second"] },
@@ -95,7 +118,7 @@ function resolveBaseStem(stem, dimension = null) {
   }
 
   const foundExact = Object.keys(BASE_UNITS).find(
-    bKey => bKey === stem || BASE_UNITS[bKey].symbol === stem
+    bKey => !BASE_UNITS[bKey].isDelta && (bKey === stem || BASE_UNITS[bKey].symbol === stem)
   );
   if (foundExact) return { prefix: null, base: foundExact };
 
@@ -107,7 +130,7 @@ function resolveBaseStem(stem, dimension = null) {
         return { prefix: pMeta.name, base: lbBase };
       }
       const foundBase = Object.keys(BASE_UNITS).find(
-        bKey => bKey === possibleBase || BASE_UNITS[bKey].symbol === possibleBase
+        bKey => !BASE_UNITS[bKey].isDelta && !BASE_UNITS[bKey].dimMap?.Th && (bKey === possibleBase || BASE_UNITS[bKey].symbol === possibleBase)
       );
       if (foundBase) return { prefix: pMeta.name, base: foundBase };
     }
@@ -116,13 +139,28 @@ function resolveBaseStem(stem, dimension = null) {
   return null;
 }
 
+function resolveTempAtom(body) {
+  if (body === "F" || body === "°F") return "Fahrenheit";
+  if (body === "C" || body === "°C") return "Celsius";
+  if (body === "R" || body === "°R") return "Rankine";
+  if (body === "K") return "Kelvin";
+  return null;
+}
+
 export function resolveUnitToken(tokenBody, dimension = null) {
   if (tokenBody === "%" || tokenBody === "\\%") return { prefix: null, base: "percent" };
   if (tokenBody === "°" || tokenBody === "deg") return { prefix: null, base: "deg" };
-  if (tokenBody === "F" || tokenBody === "°F") return { prefix: null, base: "Fahrenheit" };
-  if (tokenBody === "C" || tokenBody === "°C") return { prefix: null, base: "Celsius" };
-  if (tokenBody === "R" || tokenBody === "°R") return { prefix: null, base: "Rankine" };
-  if (tokenBody === "K") return { prefix: null, base: "Kelvin" };
+
+  if (tokenBody.startsWith("Δ")) {
+    const pointBase = resolveTempAtom(tokenBody.slice(1));
+    if (pointBase && BASE_UNITS[pointBase]?.deltaCompanion) {
+      return { prefix: null, base: BASE_UNITS[pointBase].deltaCompanion };
+    }
+    return { prefix: null, base: tokenBody };
+  }
+
+  const tempBase = resolveTempAtom(tokenBody);
+  if (tempBase) return { prefix: null, base: tempBase };
 
   // General _m / _f suffix + legacy compact gravitational aliases (lbm, lbf, kgf, gf, klbm, klbf)
   const suffixMatch = tokenBody.match(/^(.+)_(m|f)$/) || tokenBody.match(/^(lb|klb|kg|g)(m|f)$/);
@@ -160,25 +198,44 @@ export function parseUnitToSemanticAST(uName, dimension = null) {
 }
 
 export function getUnitOffset(uName, dimension = null) {
-  const ast = parseUnitToSemanticAST(uName, dimension);
-  if (ast.length === 1 && ast[0].power === 1) {
-    return BASE_UNITS[ast[0].base]?.offset || 0;
-  }
-  return 0;
+  return getUnitAtomBag(uName, dimension).offset;
+}
+
+export function getUnitKind(uName, dimension = null) {
+  return getUnitAtomBag(uName, dimension).kind;
 }
 
 export function getAbsoluteCompanionUnit(uName) {
   const ast = parseUnitToSemanticAST(uName);
-  if (ast.length !== 1) return uName;
+  if (ast.length !== 1 || ast[0].power !== 1) return uName;
   const meta = BASE_UNITS[ast[0].base];
-  if (!meta?.dimMap?.Th || !meta.offset) return uName;
+  if (!meta?.absCompanion) return uName;
+  return BASE_UNITS[meta.absCompanion]?.symbol || uName;
+}
 
-  for (const b of Object.values(BASE_UNITS)) {
-    if (b.dimMap?.Th && !b.offset && Math.abs(b.baseScale - meta.baseScale) < 1e-6) {
-      return b.symbol;
-    }
-  }
-  return "K";
+export function toDeltaUnit(uName) {
+  const ast = parseUnitToSemanticAST(uName);
+  if (ast.length !== 1 || ast[0].power !== 1) return uName;
+  const meta = BASE_UNITS[ast[0].base];
+  if (meta?.isDelta) return meta.symbol;
+  if (meta?.deltaCompanion) return BASE_UNITS[meta.deltaCompanion]?.symbol || uName;
+  return uName;
+}
+
+export function toPointUnit(uName) {
+  const ast = parseUnitToSemanticAST(uName);
+  if (ast.length !== 1 || ast[0].power !== 1) return uName;
+  const meta = BASE_UNITS[ast[0].base];
+  if (meta?.pointCompanion) return BASE_UNITS[meta.pointCompanion]?.symbol || uName;
+  return meta?.symbol || uName;
+}
+
+export function hasPointTempInCompound(uName, dimension = null) {
+  if (!uName || uName === "dimless" || uName === "ratio") return false;
+  const ast = parseUnitToSemanticAST(uName, dimension);
+  if (ast.length === 0) return false;
+  if (ast.length === 1 && Math.abs(ast[0].power) === 1) return false;
+  return ast.some(f => BASE_UNITS[f.base]?.dimMap?.Th && !BASE_UNITS[f.base]?.isDelta);
 }
 
 export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
@@ -214,6 +271,13 @@ export function semanticASTToTex(factors, inline = false, cancelMode = "none") {
     const symSuffixMatch = fullSym.match(/^(.+)_(m|f)$/);
     if (fullSym === "%") {
       termTex = cancelThis ? "\\cancel{\\text{\\%}}" : "\\text{\\%}";
+    } else if (bMeta?.isDelta) {
+      const pointSym = bMeta.pointCompanion ? BASE_UNITS[bMeta.pointCompanion].symbol : bSym.replace(/^Δ/, "");
+      if (pointSym.startsWith("°")) {
+        termTex = cancelThis ? `\\cancel{\\Delta${pointSym}${expStr}}` : `\\Delta${pointSym}${expStr}`;
+      } else {
+        termTex = cancelThis ? `\\cancel{\\Delta\\text{${pointSym}}}${expStr}` : `\\Delta\\text{${pointSym}}${expStr}`;
+      }
     } else if (fullSym.startsWith("°")) {
       termTex = cancelThis ? `\\cancel{${fullSym}${expStr}}` : `${fullSym}${expStr}`;
     } else if (symSuffixMatch) {
@@ -283,27 +347,43 @@ export function getUnitAtomBag(uName, dimension = null) {
       }
     }
   });
-  return { scale, dimMap, isDimensionless, isUnknown: !isDimensionless && isUnknown };
+
+  let kind = "linear";
+  let offset = 0;
+  if (ast.length === 1 && ast[0].power === 1 && BASE_UNITS[ast[0].base]?.dimMap?.Th) {
+    const bMeta = BASE_UNITS[ast[0].base];
+    kind = bMeta.isDelta ? "delta" : "point";
+    offset = bMeta.isDelta ? 0 : (bMeta.offset || 0);
+  }
+
+  return { scale, dimMap, kind, offset, isDimensionless, isUnknown: !isDimensionless && isUnknown };
 }
 
-export function formatValueInUnit(value, unitName = "", isDifference = false, dimension = null) {
-  if (!isDifference) {
-    if (unitName === "°C") return value - 273.15;
-    if (unitName === "°F") return (value * (9/5)) - 459.67;
-    if (unitName === "°R") return value * (9/5);
+export function formatValueInUnit(value, unitName = "", dimension = null) {
+  if (typeof dimension === "boolean") {
+    throw new TypeError("isDifference boolean parameter was removed; use Δ temperature units");
   }
-  const scale = getUnitAtomBag(unitName, dimension).scale;
-  return scale > 0 ? value / scale : value;
+  const { scale, offset } = getUnitAtomBag(unitName, dimension);
+  const scaled = scale > 0 ? value / scale : value;
+  return scaled - offset;
 }
 
-export function valueToCoherentBase(value, unitName = "", isDifference = false, dimension = null) {
-  if (!isDifference) {
-    if (unitName === "°C") return value + 273.15;
-    if (unitName === "°F") return (value + 459.67) * (5/9);
-    if (unitName === "°R") return value * (5/9);
+export function valueToCoherentBase(value, unitName = "", dimension = null) {
+  if (typeof dimension === "boolean") {
+    throw new TypeError("isDifference boolean parameter was removed; use Δ temperature units");
   }
-  const scale = getUnitAtomBag(unitName, dimension).scale;
-  return value * scale;
+  const { scale, offset } = getUnitAtomBag(unitName, dimension);
+  return scale * (value + offset);
+}
+
+export function convertUnitValue(value, fromUnit, toUnit, dimension = null) {
+  if (!toUnit || fromUnit === toUnit) return value;
+  const kFrom = getUnitKind(fromUnit, dimension);
+  const kTo = getUnitKind(toUnit, dimension);
+  if ((kFrom === "point" && kTo === "delta") || (kFrom === "delta" && kTo === "point")) {
+    throw new Error(`Cannot convert affine temperature "${fromUnit}" to/from temperature difference "${toUnit}"`);
+  }
+  return formatValueInUnit(valueToCoherentBase(value, fromUnit, dimension), toUnit, dimension);
 }
 
 export function isDimEqual(aMap = {}, bMap = {}) {

@@ -28,7 +28,7 @@ export function createDieselCycleSystem({ sys = "SI" } = {}) {
   const _u = {
     r_k: "dimless", r_c: "dimless", r_e: "dimless", k: "dimless",
     T_1: "K", T_2: "K", T_3: "K", T_4: "K",
-    c_p: "kJ/kg-K", c_v: "kJ/kg-K",
+    c_p: "kJ/kg-ΔK", c_v: "kJ/kg-ΔK",
     Q_A: "kJ/kg", Q_R: "kJ/kg", W_net: "kJ/kg", e_th: "dimless"
   };
   return { sys: "SI", r_k, r_c, r_e, k, T_1, T_2, T_3, T_4, c_p, c_v, Q_A, Q_R, W_net, e_th, _names, _u };

@@ -1,64 +1,44 @@
 /**
  * test/run_test.js
  * Comprehensive Headless CI Test Runner & Invariant Verification Suite.
- * Incorporates Universal Property-Based Testing:
- * - Round-trip physical invariance across all registered units
- * - Randomized 100-problem stress invariant across pure SI, US, and MIXED systems
- * - Coherent physical base projection for all relations
+ * Covers topic contracts, dual-system AST inversion, unit round-trips,
+ * graph synthesis, cognitive fading, UI smoke tests, and derivation regressions.
  */
 
-import { test as nodeTest, describe as nodeDescribe } from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-let totalFailed = 0;
-
-export function describe(name, fn) {
-  fn();
-}
-
-export function test(name, fn) {
-  try {
-    const res = fn();
-    if (res instanceof Promise) {
-      res.catch(err => {
-        totalFailed++;
-        nodeTest(name, () => { throw err; });
-      });
-    }
-  } catch (err) {
-    totalFailed++;
-    nodeTest(name, () => { throw err; });
-  }
-}
-
 import { TOPIC_MANIFEST, loadAllTopics } from "../src/topics/index.js";
-
-const ALL_TOPICS = await loadAllTopics();
-const TOPICS = Object.fromEntries(ALL_TOPICS.map(t => [t.id, t]));
 import { validateTopic } from "./validator.js";
+import { validateDerivationLatex, assertDerivationMatchesAnswer, evalLatexMathToNumber } from "./latex_oracle.js";
+import { withSeededRandom } from "./matrix_helpers.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
 import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor, formatPairConversion } from "../src/cas/units/index.js";
 import { parseMathAST } from "../src/cas/ast.js";
+import { isolateVariable } from "../src/cas/algebra.js";
 import { casToTex } from "../src/cas/latex.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
 import { pruneSolutionPath, solveDAG, canSolveTarget } from "../src/core/graph_solver.js";
-import { formatGivenValue, targetLabel } from "../src/core/dimensions.js";
+import { formatGivenValue, targetLabel, fmtSigFig } from "../src/core/dimensions.js";
 import {
   sampleSystemMode, sampleByInverseTokens, retainsSufficientSigFigs,
-  applyProblemUnitSampling, DIMENSION_TOKEN_PALETTES
+  applyProblemUnitSampling, snapClean, planProblemUnits
 } from "../src/core/unit_sampler.js";
-import { snapClean, planProblemUnits } from "../src/core/unit_sampler.js";
-import { fmtSigFig } from "../src/core/dimensions.js";
 import {
   getUnitAtomBag,
   unitToTex,
+  toDeltaUnit,
+  convertUnitValue,
   valueToCoherentBase,
   formatValueInUnit
 } from "../src/cas/units/definitions.js";
 import { getOklabMasteryColor } from "../src/ui/sidebar_view.js";
 import { runMcqTests } from "./mcq_test.js";
+
+const ALL_TOPICS = await loadAllTopics();
+const TOPICS = Object.fromEntries(ALL_TOPICS.map(t => [t.id, t]));
 
 // Enhanced Headless Browser Mock
 if (typeof globalThis.window === "undefined") globalThis.window = globalThis;
@@ -139,352 +119,7 @@ if (typeof globalThis.localStorage === "undefined") {
   };
 }
 
-let katex = null;
-try {
-  const mod = await import("katex");
-  katex = mod.default || mod;
-} catch (_) {
-  katex = null;
-}
 
-export function validateDerivationLatex(derivLatex) {
-  assert.ok(typeof derivLatex === "string" && derivLatex.length > 0, "Derivation LaTeX must be non-empty");
-  assert.ok(derivLatex.includes("\\boxed{"), "Derivation step missing boxed answer");
-  assert.ok(derivLatex.includes("="), "Derivation step missing equality");
-  assert.ok(!derivLatex.includes("\\cdot^"), `\\cdot cannot take a direct superscript in step: ${derivLatex}`);
-  assert.ok(!derivLatex.includes("\\cancel{}") && !derivLatex.includes("\\cancel{ }"), `Empty cancel bracket in step: ${derivLatex}`);
-  assert.ok(!derivLatex.includes("\\cfrac{\\cfrac{\\cfrac{"), `Illegal nested fraction tower (exceeds 2 levels) in step: ${derivLatex}`);
-  
-  let braceDepth = 0;
-  for (let i = 0; i < derivLatex.length; i++) {
-    const ch = derivLatex[i];
-    const prev = i > 0 ? derivLatex[i - 1] : "";
-    if (prev !== "\\") {
-      if (ch === "{") braceDepth++;
-      else if (ch === "}") braceDepth--;
-      assert.ok(braceDepth >= 0, `Unbalanced closing brace '}' in derivation: ${derivLatex}`);
-    }
-  }
-  assert.equal(braceDepth, 0, `Unbalanced opening brace '{' in derivation: ${derivLatex}`);
-
-  const beginAligned = derivLatex.split("\\begin{aligned}").length - 1;
-  const endAligned = derivLatex.split("\\end{aligned}").length - 1;
-  assert.equal(beginAligned, endAligned, `Mismatched aligned environment in: ${derivLatex}`);
-
-  if (katex && typeof katex.renderToString === "function") {
-    let raw = derivLatex.trim();
-    if (raw.startsWith("$$") && raw.endsWith("$$")) {
-      raw = raw.slice(2, -2).trim();
-    }
-    try {
-      katex.renderToString(raw, { displayMode: true, throwOnError: true });
-    } catch (err) {
-      assert.fail(`KaTeX rendering error: ${err.message} in derivation:\n${derivLatex}`);
-    }
-  }
-}
-
-function readBalancedGroup(str, openIdx, openCh = "{", closeCh = "}") {
-  if (str[openIdx] !== openCh) return { content: "", nextIdx: openIdx };
-  let depth = 0;
-  for (let i = openIdx; i < str.length; i++) {
-    if (str[i] === openCh) depth++;
-    else if (str[i] === closeCh) {
-      depth--;
-      if (depth === 0) {
-        return { content: str.slice(openIdx + 1, i), nextIdx: i + 1 };
-      }
-    }
-  }
-  return { content: str.slice(openIdx + 1), nextIdx: str.length };
-}
-
-function skipOptionalSubSuper(str, idx) {
-  let pos = idx;
-  while (pos < str.length) {
-    while (pos < str.length && str[pos] === " ") pos++;
-    if (str[pos] === "_" || str[pos] === "^") {
-      pos++;
-      if (str[pos] === "{") {
-        pos = readBalancedGroup(str, pos).nextIdx;
-      } else if (pos < str.length) {
-        pos++;
-      }
-    } else {
-      break;
-    }
-  }
-  return pos;
-}
-
-function evalLatexMathToNumber(tex, inTrigArg = false) {
-  const s = (tex || "").replace(/\{,\}/g, "").trim();
-  if (!s) return NaN;
-
-  const tokens = [];
-  let i = 0;
-  while (i < s.length) {
-    if (s[i] === " " || s[i] === "\t" || s[i] === "\n") {
-      i++;
-      continue;
-    }
-    if (s.startsWith("\\,", i) || s.startsWith("\\;", i)) {
-      i += 2;
-      continue;
-    }
-    if (s.startsWith("\\left(", i) || s.startsWith("\\left[", i)) {
-      tokens.push({ type: "op", val: "(" });
-      i += 6;
-      continue;
-    }
-    if (s.startsWith("\\right)", i) || s.startsWith("\\right]", i)) {
-      tokens.push({ type: "op", val: ")" });
-      i += 7;
-      continue;
-    }
-    if (s.startsWith("\\cdot", i) || s.startsWith("\\times", i)) {
-      tokens.push({ type: "op", val: "*" });
-      i += s.startsWith("\\cdot", i) ? 5 : 6;
-      continue;
-    }
-    if (s.startsWith("\\pi", i)) {
-      tokens.push({ type: "num", val: Math.PI });
-      i += 3;
-      continue;
-    }
-    if (s.startsWith("\\cancel{", i)) {
-      const grp = readBalancedGroup(s, i + 7);
-      i = skipOptionalSubSuper(s, grp.nextIdx);
-      tokens.push({ type: "unit", val: 1 });
-      continue;
-    }
-    if (s.startsWith("\\text{", i)) {
-      const grp = readBalancedGroup(s, i + 5);
-      if (grp.content === "abs" || grp.content === "log") {
-        tokens.push({ type: "fn", val: grp.content });
-        i = grp.nextIdx;
-      } else if (grp.content === "\\%" || grp.content === "%") {
-        i = skipOptionalSubSuper(s, grp.nextIdx);
-        tokens.push({ type: "unit", val: 0.01 });
-      } else {
-        i = skipOptionalSubSuper(s, grp.nextIdx);
-        tokens.push({ type: "unit", val: 1 });
-      }
-      continue;
-    }
-    if (s[i] === "°") {
-      i++;
-      if (i < s.length && (s[i] === "C" || s[i] === "F" || s[i] === "R" || s[i] === "K")) {
-        i++;
-      }
-      i = skipOptionalSubSuper(s, i);
-      tokens.push({ type: "unit", val: inTrigArg ? (Math.PI / 180) : 1 });
-      continue;
-    }
-    if (s.startsWith("\\cfrac{", i) || s.startsWith("\\tfrac{", i) || s.startsWith("\\frac{", i)) {
-      const cmdLen = s.startsWith("\\frac{", i) ? 5 : 6;
-      const numGrp = readBalancedGroup(s, i + cmdLen);
-      const denGrp = readBalancedGroup(s, numGrp.nextIdx);
-      i = denGrp.nextIdx;
-      const nVal = evalLatexMathToNumber(numGrp.content, false);
-      const dVal = evalLatexMathToNumber(denGrp.content, false);
-      tokens.push({ type: "num", val: (isNaN(nVal) ? 1 : nVal) / (isNaN(dVal) ? 1 : dVal) });
-      continue;
-    }
-    if (s.startsWith("\\sqrt{", i)) {
-      const grp = readBalancedGroup(s, i + 5);
-      i = grp.nextIdx;
-      tokens.push({ type: "num", val: Math.sqrt(evalLatexMathToNumber(grp.content, false)) });
-      continue;
-    }
-    if (s.startsWith("\\ln", i)) {
-      tokens.push({ type: "fn", val: "ln" });
-      i += 3;
-      continue;
-    }
-    const invTrig = ["\\sin^{-1}", "\\cos^{-1}", "\\tan^{-1}"].find(fn => s.startsWith(fn, i));
-    if (invTrig) {
-      tokens.push({ type: "fn", val: invTrig.slice(1, 4) + "inv" });
-      i += invTrig.length;
-      continue;
-    }
-    const trigMatch = ["\\sin", "\\cos", "\\tan"].find(fn => s.startsWith(fn, i));
-    if (trigMatch) {
-      i += trigMatch.length;
-      while (i < s.length && s[i] === " ") i++;
-      let pow = 1;
-      if (s[i] === "^") {
-        i++;
-        if (s[i] === "{") {
-          const pGrp = readBalancedGroup(s, i);
-          pow = evalLatexMathToNumber(pGrp.content, false);
-          i = pGrp.nextIdx;
-        } else {
-          pow = Number(s[i++]);
-        }
-      }
-      while (i < s.length && s[i] === " ") i++;
-      let argVal;
-      if (s.startsWith("\\left(", i)) {
-        const endIdx = s.indexOf("\\right)", i);
-        argVal = evalLatexMathToNumber(s.slice(i + 6, endIdx), true);
-        i = endIdx + 7;
-      } else if (s[i] === "(") {
-        const grp = readBalancedGroup(s, i, "(", ")");
-        argVal = evalLatexMathToNumber(grp.content, true);
-        i = grp.nextIdx;
-      } else {
-        const rest = s.slice(i);
-        const mNum = rest.match(/^[\d.]+(?:°)?/);
-        argVal = mNum ? evalLatexMathToNumber(mNum[0], true) : NaN;
-        i += mNum ? mNum[0].length : 0;
-      }
-      const fnName = trigMatch.slice(1);
-      const baseRes = Math[fnName](argVal);
-      tokens.push({ type: "num", val: Math.pow(baseRes, pow) });
-      continue;
-    }
-    if (s.startsWith("e^{", i)) {
-      const grp = readBalancedGroup(s, i + 2);
-      i = grp.nextIdx;
-      tokens.push({ type: "num", val: Math.exp(evalLatexMathToNumber(grp.content, false)) });
-      continue;
-    }
-    if (s[i] === "{") {
-      const grp = readBalancedGroup(s, i);
-      i = grp.nextIdx;
-      tokens.push({ type: "num", val: evalLatexMathToNumber(grp.content, inTrigArg) });
-      continue;
-    }
-    if (/[0-9.]/.test(s[i])) {
-      let numStr = "";
-      while (i < s.length && /[0-9.]/.test(s[i])) numStr += s[i++];
-      if (s[i] === "e" || s[i] === "E") {
-        if (/[+-0-9]/.test(s[i + 1] || "")) {
-          numStr += s[i++];
-          if (s[i] === "+" || s[i] === "-") numStr += s[i++];
-          while (i < s.length && /[0-9]/.test(s[i])) numStr += s[i++];
-        }
-      }
-      tokens.push({ type: "num", val: parseFloat(numStr) });
-      continue;
-    }
-    if ("+-*/^()".includes(s[i])) {
-      tokens.push({ type: "op", val: s[i] });
-      i++;
-      continue;
-    }
-    i++;
-  }
-
-  let pos = 0;
-  const peek = () => tokens[pos];
-  const next = () => tokens[pos++];
-
-  function parsePrimary() {
-    const t = peek();
-    if (!t) return NaN;
-    if (t.type === "op" && t.val === "-") {
-      next();
-      return -parsePower();
-    }
-    if (t.type === "op" && t.val === "+") {
-      next();
-      return parsePower();
-    }
-    if (t.type === "op" && t.val === "(") {
-      next();
-      const v = parseAdd();
-      if (peek()?.val === ")") next();
-      return v;
-    }
-    if (t.type === "fn") {
-      const fn = next().val;
-      const arg = parsePrimary();
-      if (fn === "ln") return Math.log(arg);
-      if (fn === "log") return Math.log10(arg);
-      if (fn === "abs") return Math.abs(arg);
-      // Inverse trig results are displayed in degrees (°), matching boxed answers.
-      if (fn === "sininv") return Math.asin(arg) * 180 / Math.PI;
-      if (fn === "cosinv") return Math.acos(arg) * 180 / Math.PI;
-      if (fn === "taninv") return Math.atan(arg) * 180 / Math.PI;
-      return NaN;
-    }
-    if (t.type === "num" || t.type === "unit") {
-      return next().val;
-    }
-    return NaN;
-  }
-
-  function parsePower() {
-    let left = parsePrimary();
-    while (peek()?.type === "op" && peek().val === "^") {
-      next();
-      const right = parsePower();
-      left = Math.pow(left, right);
-    }
-    return left;
-  }
-
-  function parseMul() {
-    let left = parsePower();
-    while (peek()) {
-      const t = peek();
-      if (t.type === "op" && (t.val === "*" || t.val === "/")) {
-        next();
-        const right = parsePower();
-        left = t.val === "*" ? left * right : left / right;
-      } else if (t.type === "unit" || t.type === "num" || t.type === "fn" || (t.type === "op" && t.val === "(")) {
-        const right = parsePower();
-        left = left * right;
-      } else {
-        break;
-      }
-    }
-    return left;
-  }
-
-  function parseAdd() {
-    let left = parseMul();
-    while (peek()?.type === "op" && (peek().val === "+" || peek().val === "-")) {
-      const op = next().val;
-      const right = parseMul();
-      left = op === "+" ? left + right : left - right;
-    }
-    return left;
-  }
-
-  return parseAdd();
-}
-
-export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "") {
-  const inner = derivLatex.trim().replace(/^\$\$\s*\\begin\{aligned\}/, "").replace(/\\end\{aligned\}\s*\$\$$/, "");
-  const rows = inner.split(/\\\\(?:\[\d+pt\])?/).map(r => r.trim()).filter(Boolean);
-  assert.ok(rows.length >= 2, `Expected >= 2 aligned rows in derivation (${ctx}):\n${derivLatex}`);
-
-  const finalRow = rows[rows.length - 1];
-  const boxMatch = finalRow.match(/\\boxed\{([\s\S]+)\}/);
-  assert.ok(boxMatch, `Missing \\boxed{} in final row (${ctx}): ${finalRow}`);
-  const boxedNumMatch = boxMatch[1].replace(/\{,\}|,/g, "").match(/^[+-]?[\d.]+(?:[eE][+-]?\d+)?/);
-  assert.ok(boxedNumMatch, `Could not parse boxed value from ${boxMatch[1]} (${ctx})`);
-  const boxedVal = parseFloat(boxedNumMatch[0]);
-
-  const numericRow = rows[rows.length - 2];
-  const ampIdx = numericRow.indexOf("&=");
-  const numTex = ampIdx >= 0 ? numericRow.slice(ampIdx + 2).trim() : numericRow;
-  const evaluated = evalLatexMathToNumber(numTex);
-
-  assert.ok(
-    Number.isFinite(evaluated),
-    `Derivation numeric expression evaluated to non-finite (${evaluated}) in ${ctx}:\n${numTex}`
-  );
-
-  const tol = Math.max(Math.abs(boxedVal) * 1e-3, 1e-3);
-  assert.ok(
-    Math.abs(evaluated - boxedVal) <= tol,
-    `Derivation numbers evaluate to ${evaluated}, which does not match boxed answer ${boxedVal} (${ctx}):\n${numTex}`
-  );
-}
 
 // ============================================================================
 // 1. TOPIC REGISTRY & ARCHITECTURE CONTRACT SUITE
@@ -540,18 +175,29 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
       "m", "mm", "cm", "in", "ft", "yd", "s", "min", "h",
       "N", "kN", "lb", "lb_m", "lb_f", "klb_m", "klb_f", "kips",
       "g", "kg", "g_m", "kg_m", "g_f", "kg_f",
-      "K", "°C", "°F", "°R",
+      "K", "°C", "°F", "°R", "ΔK", "Δ°C", "Δ°F", "Δ°R",
       "Btu", "J", "kJ", "W", "kW", "MPa", "kPa", "Pa", "psi", "psf", "ksi",
       "rpm", "cfm", "gpm", "%", "°"
     ];
 
-    for (const invalid of ["m_f", "m_m", "N_f", "N_m", "s_m", "J_f"]) {
-      assert.equal(getUnitAtomBag(invalid).isUnknown, true, `Invalid suffix unit '${invalid}' must be rejected as unknown`);
+    for (const invalid of ["m_f", "m_m", "N_f", "N_m", "s_m", "J_f", "Δm", "kΔK"]) {
+      assert.equal(getUnitAtomBag(invalid).isUnknown, true, `Invalid unit '${invalid}' must be rejected as unknown`);
+    }
+
+    assert.throws(() => getUnitAtomBag("kW$"), /Invalid character/);
+    assert.throws(() => convertUnitValue(20, "°C", "Δ°C"), /Cannot convert affine temperature/);
+    assert.throws(() => convertUnitValue(20, "Δ°F", "°F"), /Cannot convert affine temperature/);
+
+    for (const [pU, dU] of [["°C", "Δ°C"], ["°F", "Δ°F"], ["K", "ΔK"], ["°R", "Δ°R"]]) {
+      assert.equal(toDeltaUnit(pU), dU);
+      const diffBase = valueToCoherentBase(75, pU) - valueToCoherentBase(25, pU);
+      const deltaBase = valueToCoherentBase(75 - 25, dU);
+      assert.ok(Math.abs(diffBase - deltaBase) < 1e-9, `Affine homomorphism failed for ${pU}/${dU}`);
     }
 
     for (const u of testUnits) {
       let testVal = 42.5;
-      if (u === "°C" || u === "°F" || u === "°R" || u === "K") testVal = 20.0;
+      if (u.endsWith("C") || u.endsWith("F") || u.endsWith("R") || u.endsWith("K")) testVal = 20.0;
       if (u === "%") testVal = 75.0;
 
       const inBase = valueToCoherentBase(testVal, u);
@@ -566,60 +212,22 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
     }
   });
 
-  test("Property 2: Universal Invariant across 100 randomized problems (SI, US, MIXED)", () => {
-    const TRIALS = 100;
-    for (let i = 0; i < TRIALS; i++) {
-      const topic = ALL_TOPICS[i % ALL_TOPICS.length];
-      const problem = generateProblem(topic, () => Math.random());
-      assert.ok(problem, `generateProblem returned null for topic ${topic.id}`);
-
-      problem.givens.forEach(gVar => {
-        const val = problem.system[gVar];
-        const u = problem.system._u?.[gVar] || problem.varsDb[gVar]?.unit;
-        assert.ok(typeof val === "number" && !isNaN(val), `Given ${gVar} has NaN value in ${topic.id}`);
-        assert.ok(u, `Given ${gVar} missing unit in ${topic.id}`);
-
-        const baseVal = valueToCoherentBase(val, u);
-        assert.ok(isFinite(baseVal), `Coherent base value non-finite for ${gVar} in ${topic.id}`);
-      });
-
-      const activeSteps = problem.solution.filter(s => !s.isFaded);
-      activeSteps.forEach(step => {
-        const expected = step.expectedVal;
-        const targetUnit = problem.system._u?.[step.targetVar];
-
-        assert.ok(typeof expected === "number" && !isNaN(expected), `Step ${step.targetVar} has NaN expectedVal`);
-        assert.ok(isFinite(expected), `Step ${step.targetVar} has non-finite expectedVal: ${expected}`);
-
-        const stepBase = valueToCoherentBase(expected, targetUnit);
-        assert.ok(isFinite(stepBase), `Step base non-finite for ${step.targetVar}`);
-
-        const projected = formatValueInUnit(stepBase, targetUnit);
-        const relErr = Math.abs(projected - expected) / (Math.abs(expected) || 1);
-        assert.ok(relErr < 0.001, `Target unit projection failed on step ${step.targetVar}: expected ${expected}, got ${projected}`);
-      });
-
-      for (const step of problem.solution) {
-        const deriv = buildAlignedDerivation(
-          step, problem.system, problem.allSteps, problem.varsDb, topic.relations
-        );
-        validateDerivationLatex(deriv);
-
-        const targetMeta = problem.varsDb[step.targetVar] || {};
-        const targetUnit = problem.system._u?.[step.targetVar] || targetMeta.unit || "";
-        const targetIsAffine = (targetUnit === "°C" || targetUnit === "°F") && targetMeta.dimension === "Temperature";
-        if (!targetIsAffine) {
-          assertDerivationMatchesAnswer(deriv, step.expectedVal, `${topic.id}/${step.targetVar}`);
-        }
-
-        const formulaRhs = step.rhsExpr || (step.baseFormula?.includes("=") ? step.baseFormula.split("=")[1].trim() : step.baseFormula) || "";
-        const unitAnalysis = solveUnitAlgebra(formulaRhs, problem.system, step.targetVar, targetUnit, problem.varsDb, step.requiredUnits);
-
-        for (const scalar of (unitAnalysis.conversionScalars || [])) {
-          assert.ok(
-            isCanonicalScaleFactor(scalar),
-            `Alien scale factor detected in conversion [${topic.id}/${step.targetVar}]: [${scalar}]`
-          );
+  test("Regression: coupled-group deliverable unification keeps problem.system and problem.system._u synchronized", () => {
+    for (const [topicId, mode] of [["springs_series", "MIXED"], ["hvac_bypass_air", "MIXED"]]) {
+      const topic = TOPICS[topicId];
+      for (let seed = 1; seed <= 20; seed++) {
+        const problem = withSeededRandom(seed, () => generateProblem(topic, () => 0.9, { mode }));
+        for (const step of problem.solution) {
+          const tUnit = problem.system._u?.[step.targetVar] || problem.varsDb[step.targetVar]?.unit;
+          const rhsAst = parseMathAST(step.rhsExpr);
+          const { value } = evaluatePhysicalAST(rhsAst, problem.system, step.targetVar, problem.varsDb, step.requiredUnits);
+          const relErr = Math.abs(value - step.expectedVal) / (Math.abs(step.expectedVal) || 1);
+          assert.ok(relErr < 1e-3, `${topicId} seed=${seed} ${step.targetVar} (${tUnit}): expected ${step.expectedVal}, eval ${value}`);
+          assert.equal(problem.system[step.targetVar], step.expectedVal, `${topicId} seed=${seed} ${step.targetVar}: system value drifted from expectedVal`);
+          if (topicId === "springs_series") {
+            const deriv = buildAlignedDerivation(step, problem.system, problem.allSteps, problem.varsDb, topic.relations);
+            assertDerivationMatchesAnswer(deriv, step.expectedVal, `${topicId}/${step.targetVar} seed=${seed}`, problem.varsDb, tUnit);
+          }
         }
       }
     }
@@ -667,64 +275,19 @@ describe("Universal Physical Invariant & Round-Trip Property Suite", () => {
       m_cw: 600,
       cp_w: 4.187,
       dT_cw: 10,
-      _u: { m_cw: "kg/min", cp_w: "kJ/kg-K", dT_cw: "K", Q_cw: "kW" }
+      _u: { m_cw: "kg/min", cp_w: "kJ/kg-ΔK", dT_cw: "ΔK", Q_cw: "kW" }
     };
     const db_heat = {
       m_cw: { dimension: "Mass Flow Rate", unit: "kg/min" },
-      cp_w: { dimension: "Specific Energy / Enthalpy", unit: "kJ/kg-K" },
-      dT_cw: { dimension: "Temperature", unit: "K" },
+      cp_w: { dimension: "Specific Energy / Enthalpy", unit: "kJ/kg-ΔK" },
+      dT_cw: { dimension: "Temperature", unit: "ΔK" },
       Q_cw: { dimension: "Power", unit: "kW" }
     };
     const resHeat = evaluatePhysicalAST(heatNode, S_heat, "Q_cw", db_heat);
     assert.ok(Math.abs(resHeat.value - 418.7) < 0.1);
   });
 
-  test("Property 4: Universal KaTeX Syntax Invariant across all statements and derivations", () => {
-    const TRIALS = 100;
-    for (let i = 0; i < TRIALS; i++) {
-      const topic = ALL_TOPICS[i % ALL_TOPICS.length];
-      const problem = generateProblem(topic, () => Math.random());
 
-      const str = problem.statement;
-      let pos = 0;
-      while (pos < str.length) {
-        if (str.startsWith("$$", pos)) {
-          const end = str.indexOf("$$", pos + 2);
-          assert.ok(end !== -1, `Unclosed $$ in ${topic.id} statement: ${str}`);
-          const math = str.slice(pos + 2, end).trim();
-          if (katex) {
-            try {
-              katex.renderToString(math, { displayMode: true, throwOnError: true });
-            } catch (err) {
-              assert.fail(`KaTeX syntax error in $$ math block [${topic.id}]: ${err.message}\nLaTeX: ${math}`);
-            }
-          }
-          pos = end + 2;
-        } else if (str[pos] === "$") {
-          const end = str.indexOf("$", pos + 1);
-          assert.ok(end !== -1, `Unclosed $ in ${topic.id} statement: ${str}`);
-          const math = str.slice(pos + 1, end).trim();
-          if (katex) {
-            try {
-              katex.renderToString(math, { displayMode: false, throwOnError: true });
-            } catch (err) {
-              assert.fail(`KaTeX syntax error in inline $ block [${topic.id}]: ${err.message}\nLaTeX: ${math}`);
-            }
-          }
-          pos = end + 1;
-        } else {
-          pos++;
-        }
-      }
-
-      for (const step of problem.solution) {
-        const deriv = buildAlignedDerivation(
-          step, problem.system, problem.allSteps, problem.varsDb, topic.relations
-        );
-        validateDerivationLatex(deriv);
-      }
-    }
-  });
 });
 
 // ============================================================================
@@ -1271,7 +834,7 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
       T_4: 1425.07,
       c_v: 0.7186,
       Q_R: 151.908,
-      _u: { T_1: "°F", T_4: "°R", c_v: "kJ/kg-K", Q_R: "Btu/lb_m" }
+      _u: { T_1: "°F", T_4: "°R", c_v: "kJ/kg-ΔK", Q_R: "Btu/lb_m" }
     };
     const step = {
       targetVar: "Q_R",
@@ -1293,7 +856,7 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
     assert.ok(deriv.includes("0.171635"), `Expected c_v English constant equivalence (0.171635): ${deriv}`);
     assert.ok(!deriv.includes("\\cancel{\\text{Btu}}"), `Surviving Btu must not be cancelled: ${deriv}`);
     assert.ok(!deriv.includes("\\cancel{\\text{lb}_{m}}"), `Surviving lb_m must not be cancelled: ${deriv}`);
-    assert.ok(deriv.includes("\\cancel{°R}"), `Cancelling °R must be marked cancelled: ${deriv}`);
+    assert.ok(deriv.includes("\\cancel{\\Delta°R}"), `Cancelling Δ°R must be marked cancelled: ${deriv}`);
 
     // Must break vertically across multiple aligned rows
     assert.ok((deriv.match(/\\\\\[6pt\]/g) || []).length >= 4, `Expected vertical multi-row aligned layout: ${deriv}`);
@@ -1484,8 +1047,8 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
     assertDerivationMatchesAnswer(derivAir, 1401.62, "cooling_tower_m3_to_cfm");
   });
 
-  test("Regression: angle units render once in trig calls/powers and convert via standard unit pipeline", async () => {
-    const { assertDerivationMatchesAnswer: assertOracleMatches } = await import("./latex_oracle.js");
+  test("Regression: angle units render once in trig calls/powers and convert via standard unit pipeline", () => {
+    const assertOracleMatches = assertDerivationMatchesAnswer;
     const helicalTopic = ALL_TOPICS.find(t => t.id.includes("helical_gears"));
     assert.ok(helicalTopic, "helical_gears topic must exist");
     const hDb = helicalTopic.varsDb;
@@ -1563,8 +1126,8 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
     }
   });
 
-  test("Regression: compound rank unpacking, dimless targets, ^p branches, nested series sums, and acos/atan arg conversions", async () => {
-    const { assertDerivationMatchesAnswer: assertOracleMatches } = await import("./latex_oracle.js");
+  test("Regression: compound rank unpacking, dimless targets, ^p branches, nested series sums, and acos/atan arg conversions", () => {
+    const assertOracleMatches = assertDerivationMatchesAnswer;
 
     // 1. Canonical kW / (kg/s) -> kJ/kg must not emit spurious 1/1000
     const bypassDb = TOPICS.hvac_bypass_air.varsDb;
@@ -1641,12 +1204,115 @@ describe("Regression Invariants (Distractors & Constant Unit Coupling)", () => {
   });
 });
 
+describe("Linear-Rational CAS, Oracle Guards & Affine Frame Derivations", () => {
+  test("isolateVariable solves linear-rational denominators (t_adp, h_adp, Q_s, R_ct, M_w1, P_v) and rejects non-linear ones", () => {
+    const cases = [
+      ["BF = (t_s - t_adp) / (t_m - t_adp)", "t_adp", { BF: 0.2, t_s: 13.24, t_m: 26.2 }, 10],
+      ["BF = (h_s - h_adp) / (h_m - h_adp)", "h_adp", { BF: 0.2, h_s: 36, h_m: 60 }, 30],
+      ["SHR = Q_s / (Q_s + Q_l)", "Q_s", { SHR: 0.7, Q_l: 30 }, 70],
+      ["eta_ct = R_ct / (R_ct + A_ct)", "R_ct", { eta_ct: 0.6, A_ct: 8 }, 12],
+      ["X_1 = M_w1 / (1 - M_w1)", "M_w1", { X_1: 1.5 }, 0.6],
+      ["W = 0.622 * P_v / (P_t - P_v)", "P_v", { W: 0.01555, P_t: 101.325 }, 2.4713]
+    ];
+    for (const [formula, target, env, expected] of cases) {
+      const iso = isolateVariable(formula, target);
+      assert.equal(iso.success, true, `Expected isolateVariable to solve ${target} from ${formula}`);
+      const res = evaluatePhysicalAST(parseMathAST(iso.isolatedRhs), env, target, {});
+      assert.ok(Math.abs(res.value - expected) < 1e-2, `${formula} -> ${target}: got ${res.value}, expected ${expected}`);
+    }
+    assert.equal(isolateVariable("e_th = 1 - (1 / (r_k^(k - 1))) * ((r_c^k - 1) / (k * (r_c - 1)))", "r_c").success, false);
+  });
+
+  test("latex_oracle rejects standalone pureUnit operands while keeping Omit-1 unit fractions valid", () => {
+    assert.ok(Number.isNaN(evalLatexMathToNumber("6 + °C")));
+    assert.ok(Number.isNaN(evalLatexMathToNumber("\\cfrac{\\text{kg}}{\\text{s}}")));
+    assert.ok(Number.isNaN(evalLatexMathToNumber("°C")));
+    assert.equal(evalLatexMathToNumber("10 \\, \\cfrac{\\text{kg}}{\\text{s}}"), 10);
+    const conv = evalLatexMathToNumber("60 \\, \\cfrac{\\text{kg}}{2.20462 \\, \\cancel{\\text{lb}}}");
+    assert.ok(Math.abs(conv - 60 / 2.20462) < 1e-4);
+  });
+
+  test("Bypass air derivations: t_r offset row + consistent m_o cancellation, t_s delta frame, t_adp, and t_rh value preservation", () => {
+    const topic = TOPICS.hvac_bypass_air;
+    const db = topic.varsDb;
+    const S_base = withSeededRandom(1, () => topic.createSystem({ sys: "SI" }));
+    const S = { ...S_base, BF: 0.2, t_s: 13.24, t_rh: 19.24, q_rh: 60.372, _u: { ...S_base._u } };
+
+    // 1. t_r in canonical kg/s and restated kg/min vs kg/h: explicit K -> °C offset row + m_o cancelled
+    for (const _u of [
+      { ...S._u },
+      { ...S._u, m_m: "kg/min", m_o: "kg/min", m_r: "kg/h" }
+    ]) {
+      const S_r = _u.m_m === "kg/min"
+        ? { ...S, m_m: 600, m_o: 120, m_r: 28800, _u }
+        : { ...S, _u };
+      const stepR = {
+        targetVar: "t_r",
+        baseFormula: "m_m * t_m = m_o * t_o + m_r * t_r",
+        rhsExpr: "(m_m * t_m - m_o * t_o) / m_r",
+        expectedVal: 24
+      };
+      const dR = buildAlignedDerivation(stepR, S_r, [stepR], db, topic.relations);
+      validateDerivationLatex(dR);
+      assertDerivationMatchesAnswer(dR, 24, "bypass_tr", db, "°C");
+      assert.ok(dR.includes("297.15 \\, \\text{K} - 273.15"), `Expected K -> °C offset row in t_r:\n${dR}`);
+      const rhsRow = dR.split(/\\\\(?:\[\d+pt\])?/)[3] || "";
+      assert.ok(!rhsRow.includes("2 \\, \\cfrac{\\text{kg}}{\\text{s}}") && !rhsRow.includes("120 \\, \\cfrac{\\text{kg}}{\\text{min}}"), `Expected m_o units cancelled in numerator:\n${rhsRow}`);
+    }
+
+    // 2. t_s = BF * (t_m - t_adp) + t_adp stays in °C without a K detour
+    const stepS = {
+      targetVar: "t_s",
+      baseFormula: "BF = (t_s - t_adp) / (t_m - t_adp)",
+      rhsExpr: "BF * (t_m - t_adp) + t_adp",
+      expectedVal: 13.24
+    };
+    const dS = buildAlignedDerivation(stepS, S, [stepS], db, topic.relations);
+    validateDerivationLatex(dS);
+    assertDerivationMatchesAnswer(dS, 13.24, "bypass_ts", db, "°C");
+    assert.ok(!dS.includes("273.15"), `t_s should not take a K detour when staying in °C:\n${dS}`);
+    assert.ok(dS.includes("\\Delta°C"), `Expected Δ°C on (t_m - t_adp):\n${dS}`);
+
+    // 3. t_adp = (t_s - BF * t_m) / (1 - BF) evaluates in K and ends with K -> °C conversion row
+    const stepAdp = {
+      targetVar: "t_adp",
+      baseFormula: "BF = (t_s - t_adp) / (t_m - t_adp)",
+      rhsExpr: "(t_s - BF * t_m) / (1 - BF)",
+      expectedVal: 10
+    };
+    const dAdp = buildAlignedDerivation(stepAdp, S, [stepAdp], db, topic.relations);
+    validateDerivationLatex(dAdp);
+    assertDerivationMatchesAnswer(dAdp, 10, "bypass_tadp", db, "°C");
+    assert.ok(dAdp.includes("283.15 \\, \\text{K} - 273.15"), `Expected K -> °C offset row in t_adp:\n${dAdp}`);
+
+    // 4. t_rh = q_rh / (m_m * c_pa) + t_s preserves 13.24 °C and uses ΔK
+    const stepRh = {
+      targetVar: "t_rh",
+      baseFormula: "q_rh = m_m * c_pa * (t_rh - t_s)",
+      rhsExpr: "q_rh / (m_m * c_pa) + t_s",
+      expectedVal: 19.24
+    };
+    const dRh = buildAlignedDerivation(stepRh, S, [stepRh], db, topic.relations);
+    validateDerivationLatex(dRh);
+    assertDerivationMatchesAnswer(dRh, 19.24, "bypass_trh", db, "°C");
+    assert.ok(dRh.includes("+ 13.24 \\, °C"), `Expected numeric t_s value preserved:\n${dRh}`);
+    assert.ok(dRh.includes("\\Delta\\text{K}"), `Expected ΔK in c_pa:\n${dRh}`);
+  });
+
+  test("Cooling tower Range converts Δ°C -> Δ°F linearly without an absolute K detour", () => {
+    const db = TOPICS.hvac_cooling_tower.varsDb;
+    const S = { t_w1: 36, t_w2: 29, R_ct: 12.6, _u: { t_w1: "°C", t_w2: "°C", R_ct: "Δ°F" } };
+    const step = { targetVar: "R_ct", baseFormula: "R_ct = t_w1 - t_w2", rhsExpr: "t_w1 - t_w2", expectedVal: 12.6 };
+    const deriv = buildAlignedDerivation(step, S, [step], db, []);
+    validateDerivationLatex(deriv);
+    assertDerivationMatchesAnswer(deriv, 12.6, "ct_range_delta_f", db, "Δ°F");
+    assert.ok(!deriv.includes("273.15"), `Delta conversion must not add 273.15:\n${deriv}`);
+    assert.ok(deriv.includes("1.8"), `Expected 1.8 Δ°F/Δ°C scale:\n${deriv}`);
+  });
+});
+
 describe("MCQ Mode, Registry, Adaptive Grid & ZIP Unpacker", () => {
   test("Verify MCQ set registry, option sampling, adaptive grid, and ZIP unpacking", async () => {
     await runMcqTests();
   });
-});
-
-nodeTest("Test Suite Summary", () => {
-  assert.equal(totalFailed, 0, `${totalFailed} test(s) failed.`);
 });

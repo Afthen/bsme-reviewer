@@ -1,22 +1,25 @@
 /**
  * test/derivation_matrix_test.js
- * Deterministic step-level derivation matrix. For every topic x system x relation x
- * solvable target it builds the step the way solveDAG does, then re-runs it under a
- * pairwise (2-wise) covering array of unit assignments. Each case is checked against
- * the AST physics oracle (evaluatePhysicalAST) AND the printed derivation. All failures
- * are collected and reported grouped by layer; nothing stops at the first one.
+ * Deterministic derivation matrix across two layers:
+ * 1. Pairwise step matrix: every topic x system x relation x solvable target under
+ *    2-wise unit coverage.
+ * 2. Seeded problem-generator matrix: every topic x mode (SI/US/MIXED) x seed x mastery,
+ *    checking statement LaTeX, finite/coherent givens & active steps, coupled-group
+ *    coherence, derivation LaTeX, numerical oracle match, and canonical scale factors.
+ * All failures are collected and reported grouped by layer; nothing stops at the first one.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadAllTopics } from "../src/topics/index.js";
 import { parseMathAST } from "../src/cas/ast.js";
-import { buildAlignedDerivation } from "../src/core/derivation.js";
-import { DIMENSIONS } from "../src/core/dimensions.js";
-import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor } from "../src/cas/units/index.js";
-import { assertDerivationMatchesAnswer } from "./latex_oracle.js";
-import { SEEDS, mulberry32, withSeededRandom, unitLevels, coveringRows, restate, collectSteps } from "./matrix_helpers.js";
-
+import { generateProblem } from "../src/core/problem_gen.js";
+import { valueToCoherentBase, formatValueInUnit } from "../src/cas/units/index.js";
+import { validateStatementLatex } from "./latex_oracle.js";
+import {
+  SEEDS, GEN_SEEDS, mulberry32, withSeededRandom,
+  unitLevels, coveringRows, restate, collectSteps, checkStep
+} from "./matrix_helpers.js";
 
 function collectCalls(n, acc = new Set()) {
   if (!n) return acc;
@@ -38,13 +41,13 @@ function tagsOf(step, tUnit, varsDb) {
   return tags;
 }
 
-
-test("Derivation matrix: every topic x system x relation x target under pairwise unit coverage", async () => {
+test("Derivation matrix: pairwise step coverage and seeded problem-generator invariants", async () => {
   const loaded = await loadAllTopics();
   const topics = Array.isArray(loaded) ? loaded : Object.values(loaded);
   const failures = [];
-  let cases = 0, affineUnchecked = 0;
+  let cases = 0;
 
+  // Layer 1: Pairwise step-level covering matrix
   for (const topic of topics) {
     for (const sys of ["SI", "US"]) {
       for (const seed of SEEDS) {
@@ -72,78 +75,133 @@ test("Derivation matrix: every topic x system x relation x target under pairwise
             const S2 = restate(S, tokens, unitsByTok, topic.varsDb, sys);
             const cur = { ...step, expectedVal: S2[step.targetVar] };
             const tUnit = S2._u?.[step.targetVar] || topic.varsDb[step.targetVar].unit;
-            const rhsAst = parseMathAST(step.rhsExpr);
+            const changed = tokens.filter(k => unitsByTok[k] !== (S._u?.[k] || topic.varsDb[k].unit)).length;
 
-            try {
-              const { value } = evaluatePhysicalAST(rhsAst, S2, step.targetVar, topic.varsDb, step.requiredUnits);
-              const err = Math.abs(value - cur.expectedVal) / (Math.abs(cur.expectedVal) || 1);
-              if (!(err < 1e-3)) failures.push({ layer: "oracle-eval", where, msg: `computed ${value}, expected ${cur.expectedVal}` });
-            } catch (e) { failures.push({ layer: "oracle-eval", where, msg: e.message }); continue; }
-
-            let deriv;
-            try { deriv = buildAlignedDerivation(cur, S2, [cur], topic.varsDb, topic.relations); }
-            catch (e) { failures.push({ layer: "derivation-throw", where, msg: e.message }); continue; }
-
-            const meta = topic.varsDb[step.targetVar];
-            const affine = meta.dimension === DIMENSIONS.TEMPERATURE && (tUnit === "°C" || tUnit === "°F");
-            if (affine) affineUnchecked++;
-            else {
-              try { assertDerivationMatchesAnswer(deriv, cur.expectedVal, where, topic.varsDb, tUnit); }
-              catch (e) {
-                const changed = tokens.filter(k => unitsByTok[k] !== (S._u?.[k] || topic.varsDb[k].unit)).length;
-                failures.push({
-                  layer: "derivation-numeric", where, msg: e.message.split("\n")[0],
-                  topic: `${topic.id}[${sys}]`, tags: tagsOf(step, tUnit, topic.varsDb),
-                  changed, row: e.message.split("\n").slice(1).join(" ").trim()
-                });
-              }
-            }
-
-            try {
-              const ua = solveUnitAlgebra(step.rhsExpr, S2, step.targetVar, tUnit, topic.varsDb, step.requiredUnits);
-              for (const s of ua.conversionScalars || []) {
-                if (!isCanonicalScaleFactor(s)) failures.push({ layer: "alien-scalar", where, msg: `scalar ${s}` });
-              }
-            } catch (e) { failures.push({ layer: "unit-analysis-throw", where, msg: e.message }); }
+            const res = checkStep({
+              step: cur,
+              S: S2,
+              varsDb: topic.varsDb,
+              relations: topic.relations,
+              where,
+              topicTag: `${topic.id}[${sys}]`,
+              tags: tagsOf(step, tUnit, topic.varsDb),
+              changed
+            });
+            failures.push(...res.failures);
           }
         }
       }
     }
   }
 
-  // De-duplicate by (layer, topic, relation, target) and print a grouped summary.
-  const groups = new Map();
-  for (const f of failures) {
-    const k = `${f.layer} | ${f.where.split(" {")[0]}`;
-    if (!groups.has(k)) groups.set(k, { n: 0, example: f });
-    groups.get(k).n++;
+  // Layer 2: Seeded problem-generator matrix (SI, US, MIXED across low/mid/high mastery)
+  for (const topic of topics) {
+    for (const mode of ["SI", "US", "MIXED"]) {
+      for (const seed of GEN_SEEDS) {
+        const mastery = seed % 3 === 0 ? 0 : (seed % 3 === 1 ? 0.5 : 0.9);
+        const genWhere = `${topic.id}[gen:${mode}] seed=${seed}`;
+        let problem;
+        try {
+          problem = withSeededRandom(seed, () => generateProblem(topic, () => mastery, { mode }));
+        } catch (e) {
+          failures.push({ layer: "generateProblem", where: genWhere, topic: `${topic.id}[${mode}]`, msg: e.message });
+          continue;
+        }
+        if (!problem) {
+          failures.push({ layer: "generateProblem", where: genWhere, topic: `${topic.id}[${mode}]`, msg: "returned null" });
+          continue;
+        }
+
+        try {
+          validateStatementLatex(problem.statement, genWhere);
+        } catch (e) {
+          failures.push({ layer: "statement-latex", where: genWhere, topic: `${topic.id}[${mode}]`, msg: e.message });
+        }
+
+        for (const gVar of problem.givens) {
+          const val = problem.system[gVar];
+          const meta = problem.varsDb[gVar] || {};
+          const u = problem.system._u?.[gVar] || meta.unit;
+          if (typeof val !== "number" || isNaN(val) || !u) {
+            failures.push({ layer: "given-invalid", where: `${genWhere} given=${gVar}`, topic: `${topic.id}[${mode}]`, msg: `val=${val}, unit=${u}` });
+            continue;
+          }
+          const baseVal = valueToCoherentBase(val, u, meta.dimension);
+          if (!Number.isFinite(baseVal)) {
+            failures.push({ layer: "given-nonfinite", where: `${genWhere} given=${gVar}`, topic: `${topic.id}[${mode}]`, msg: `baseVal=${baseVal}` });
+          }
+        }
+
+        for (const step of problem.solution) {
+          cases++;
+          const meta = problem.varsDb[step.targetVar] || {};
+          const tUnit = problem.system._u?.[step.targetVar] || meta.unit || "";
+          const where = `${topic.id}[gen:${mode}] ${step.id || step.eqId} -> ${step.targetVar} seed=${seed}`;
+
+          if (!step.isFaded) {
+            if (typeof step.expectedVal !== "number" || !Number.isFinite(step.expectedVal)) {
+              failures.push({ layer: "step-nonfinite", where, topic: `${topic.id}[${mode}]`, msg: `expectedVal=${step.expectedVal}` });
+              continue;
+            }
+            const baseVal = valueToCoherentBase(step.expectedVal, tUnit, meta.dimension);
+            const projected = formatValueInUnit(baseVal, tUnit, meta.dimension);
+            const relErr = Math.abs(projected - step.expectedVal) / (Math.abs(step.expectedVal) || 1);
+            if (!Number.isFinite(baseVal) || !(relErr < 1e-3)) {
+              failures.push({ layer: "step-roundtrip", where, topic: `${topic.id}[${mode}]`, msg: `expected ${step.expectedVal}, projected ${projected}` });
+            }
+          }
+
+          const res = checkStep({
+            step,
+            S: problem.system,
+            varsDb: problem.varsDb,
+            relations: topic.relations,
+            allSteps: problem.allSteps,
+            where,
+            topicTag: `${topic.id}[gen:${mode}]`,
+            tags: tagsOf(step, tUnit, problem.varsDb),
+            changed: 0
+          });
+          failures.push(...res.failures);
+        }
+      }
+    }
   }
-  const byLayer = {};
-  for (const f of failures) byLayer[f.layer] = (byLayer[f.layer] || 0) + 1;
-  console.log(`\n[matrix] ${cases} cases, ${failures.length} failures, ${affineUnchecked} affine-target derivations numerically unchecked`);
-  console.log("[matrix] failures by layer:", byLayer);
-  const count = (keyFn) => {
-    const m = new Map();
-    for (const f of failures) for (const k of [].concat(keyFn(f) ?? [])) m.set(k, (m.get(k) || 0) + 1);
-    return [...m].sort((a, b) => b[1] - a[1]);
-  };
-  console.log("[matrix] by topic:", count(f => f.topic));
-  console.log("[matrix] by tag:", count(f => f.tags));
-  const nonDim = f => (f.tags || []).filter(t => !t.startsWith("dim:")).sort().join(" + ") || "(none)";
-  console.log("[matrix] by structural class (top 15):", count(nonDim).slice(0, 15));
-  console.log("[matrix] failures with all tokens in canonical units:", failures.filter(f => f.changed === 0).length);
-  const minimal = new Map();
-  for (const f of failures) {
-    if (f.layer !== "derivation-numeric") continue;
-    const k = f.where.split(" {")[0];
-    if (!minimal.has(k) || f.changed < minimal.get(k).changed) minimal.set(k, f);
+
+  if (failures.length > 0) {
+    const groups = new Map();
+    for (const f of failures) {
+      const k = `${f.layer} | ${f.where.split(" {")[0]}`;
+      if (!groups.has(k)) groups.set(k, { n: 0, example: f });
+      groups.get(k).n++;
+    }
+    const byLayer = {};
+    for (const f of failures) byLayer[f.layer] = (byLayer[f.layer] || 0) + 1;
+    console.log(`\n[matrix] ${cases} cases, ${failures.length} failures`);
+    console.log("[matrix] failures by layer:", byLayer);
+    const count = (keyFn) => {
+      const m = new Map();
+      for (const f of failures) for (const k of [].concat(keyFn(f) ?? [])) m.set(k, (m.get(k) || 0) + 1);
+      return [...m].sort((a, b) => b[1] - a[1]);
+    };
+    console.log("[matrix] by topic:", count(f => f.topic));
+    console.log("[matrix] by tag:", count(f => f.tags));
+    const nonDim = f => (f.tags || []).filter(t => !t.startsWith("dim:")).sort().join(" + ") || "(none)";
+    console.log("[matrix] by structural class (top 15):", count(nonDim).slice(0, 15));
+    console.log("[matrix] failures with all tokens in canonical units:", failures.filter(f => f.changed === 0).length);
+    const minimal = new Map();
+    for (const f of failures) {
+      if (f.layer !== "derivation-numeric") continue;
+      const k = f.where.split(" {")[0];
+      if (!minimal.has(k) || f.changed < minimal.get(k).changed) minimal.set(k, f);
+    }
+    const mins = [...minimal.values()].sort((a, b) => a.changed - b.changed);
+    console.log(`[matrix] distinct failing (relation,target): ${mins.length}`);
+    for (const f of mins.slice(0, 40)) {
+      console.log(`[matrix] MIN changed=${f.changed} ${f.where} | ${f.msg.slice(0, 120)} | ROW: ${(f.row || "").slice(0, 260)}`);
+    }
+    for (const [k, g] of groups) console.log(`  ${k}  x${g.n}\n      e.g. ${g.example.where}\n      ${g.example.msg}`);
   }
-  const mins = [...minimal.values()].sort((a, b) => a.changed - b.changed);
-  console.log(`[matrix] distinct failing (relation,target): ${mins.length}`);
-  for (const f of mins.slice(0, 40)) {
-    console.log(`[matrix] MIN changed=${f.changed} ${f.where} | ${f.msg.slice(0, 120)} | ROW: ${f.row.slice(0, 260)}`);
-  }
-  for (const [k, g] of groups) console.log(`  ${k}  x${g.n}\n      e.g. ${g.example.where}\n      ${g.example.msg}`);
 
   assert.equal(failures.length, 0, `${failures.length} matrix failures (see summary above)`);
 });

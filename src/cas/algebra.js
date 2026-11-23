@@ -99,9 +99,52 @@ export function flattenFractions(node) {
  * Collects all terms containing the target variable into a standardized (A * x = B) form.
  * NULL-SAFE: If any branch is non-linear, the entire result is null.
  */
+const isZeroNode = n => {
+  const u = unwrapGroup(n);
+  return u?.type === "num" && u.val === "0";
+};
+
+const isOneNode = n => {
+  const u = unwrapGroup(n);
+  return u?.type === "num" && u.val === "1";
+};
+
+const isNegZeroSub = n => {
+  const u = unwrapGroup(n);
+  return u?.type === "binary" && u.op === "-" && isZeroNode(u.left);
+};
+
+const wrapBinary = n => (n && n.type === "binary" ? { type: "group", expr: n } : n);
+
+const wrapAddSub = n => {
+  const u = unwrapGroup(n);
+  return u && u.type === "binary" && (u.op === "+" || u.op === "-") ? { type: "group", expr: u } : n;
+};
+
+function addNodes(A, B) {
+  if (!A || !B) return A || B;
+  if (isZeroNode(A)) return B;
+  if (isZeroNode(B)) return A;
+  if (isNegZeroSub(B)) return subNodes(A, unwrapGroup(B).right);
+  if (isNegZeroSub(A)) return subNodes(B, unwrapGroup(A).right);
+  return { type: "binary", op: "+", left: wrapAddSub(A), right: wrapAddSub(B) };
+}
+
+function subNodes(A, B) {
+  if (!A || !B) return A || B;
+  if (isZeroNode(B)) return A;
+  if (isZeroNode(A)) return negateNode(B);
+  if (isNegZeroSub(B)) return addNodes(A, unwrapGroup(B).right);
+  return { type: "binary", op: "-", left: wrapAddSub(A), right: wrapAddSub(B) };
+}
+
 function collectTerms(node, targetVar) {
   if (!node) return null;
   const n = unwrapGroup(node);
+
+  if (n.type === "num") {
+    return { coeff: { type: "num", val: "0" }, constant: n };
+  }
 
   if (n.type === "id") {
     if (n.name === targetVar) return { coeff: { type: "num", val: "1" }, constant: { type: "num", val: "0" } };
@@ -112,37 +155,14 @@ function collectTerms(node, targetVar) {
     if (n.op === "+" || n.op === "-") {
       const L = collectTerms(n.left, targetVar);
       const R = collectTerms(n.right, targetVar);
-      
+
       // If either branch is non-linear (null), the whole sum is non-linear
       if (L === null || R === null) return null;
 
       const isSub = n.op === "-";
-      
-      const mergeCoeff = (a, b, sub) => {
-        if (a.coeff.val === "0" && a.coeff.type === "num") return sub ? negateNode(b.coeff) : b.coeff;
-        if (b.coeff.val === "0" && b.coeff.type === "num") return a.coeff;
-        return {
-          type: "binary",
-          op: sub ? "-" : "+",
-          left: { type: "group", expr: a.coeff },
-          right: { type: "group", expr: b.coeff }
-        };
-      };
-
-      const mergeConst = (a, b, sub) => {
-        if (a.constant.val === "0" && a.constant.type === "num") return sub ? negateNode(b.constant) : b.constant;
-        if (b.constant.val === "0" && b.constant.type === "num") return a.constant;
-        return {
-          type: "binary",
-          op: sub ? "-" : "+",
-          left: { type: "group", expr: a.constant },
-          right: { type: "group", expr: b.constant }
-        };
-      };
-
       return {
-        coeff: mergeCoeff(L, R, isSub),
-        constant: mergeConst(L, R, isSub)
+        coeff: isSub ? subNodes(L.coeff, R.coeff) : addNodes(L.coeff, R.coeff),
+        constant: isSub ? subNodes(L.constant, R.constant) : addNodes(L.constant, R.constant)
       };
     }
 
@@ -162,11 +182,11 @@ function collectTerms(node, targetVar) {
     }
 
     if (n.op === "/") {
-      // Only support targetVar in numerator for linear rational collection
+      // Only support targetVar in numerator for direct linear collection
       if (astHasVariable(n.right, targetVar)) return null;
       const sub = collectTerms(n.left, targetVar);
       if (!sub) return null;
-      const invB = { type: "binary", op: "^", left: { type: "group", expr: n.right }, right: { type: "num", val: "-1" } };
+      const invB = { type: "binary", op: "^", left: wrapBinary(n.right), right: { type: "num", val: "-1" } };
       return {
         coeff: multiplyNode(sub.coeff, invB),
         constant: multiplyNode(sub.constant, invB)
@@ -250,79 +270,118 @@ export function invertEquationAST(lhsNode, rhsNode, targetVar) {
     }
   }
 
-  // TIER 2 & 3: Multi-occurrence / Linear-Rational
-  const diffNode = { type: "binary", op: "-", left: lhsNode, right: rhsNode };
+  // TIER 2: Direct linear collection (no targetVar in denominator)
+  const diffNode = subNodes(lhsNode, rhsNode);
   const lin = collectTerms(diffNode, targetVar);
 
-  if (!lin || (lin.coeff && lin.coeff.type === "num" && lin.coeff.val === "0")) {
-    return { success: false, reason: "Non-linear or non-invertible equation" };
+  if (lin && !isZeroNode(lin.coeff)) {
+    let numerator = negateNode(lin.constant);
+    let denominator = lin.coeff;
+    if (isNegZeroSub(numerator)) {
+      numerator = unwrapGroup(numerator).right;
+      denominator = negateNode(denominator);
+    }
+    const rawAst = isOneNode(denominator)
+      ? numerator
+      : { type: "binary", op: "/", left: wrapBinary(numerator), right: wrapBinary(denominator) };
+    return { success: true, isolatedAST: flattenFractions(rawAst) };
   }
 
-  const numerator = negateNode(lin.constant);
-  const denominator = lin.coeff;
-
-  return {
-    success: true,
-    isolatedAST: flattenFractions({
-      type: "binary",
-      op: "/",
-      left: { type: "group", expr: numerator },
-      right: { type: "group", expr: denominator }
-    })
-  };
+  // TIER 3: Linear-rational cross-multiplication (e.g. BF = (t_s - t_adp) / (t_m - t_adp))
+  return solveLinearRationalAST(lhsNode, rhsNode, targetVar);
 }
 
 function multiplyNode(A, B) {
   if (!A || !B) return null;
-  if (A.val === "0") return { type: "num", val: "0" };
-  if (A.val === "1") return B;
-  return { type: "binary", op: "*", left: { type: "group", expr: A }, right: { type: "group", expr: B } };
+  if (isZeroNode(A) || isZeroNode(B)) return { type: "num", val: "0" };
+  if (isOneNode(A)) return B;
+  if (isOneNode(B)) return A;
+  const uA = unwrapGroup(A);
+  const uB = unwrapGroup(B);
+  if (isNegZeroSub(uA) && isOneNode(uA.right)) return negateNode(B);
+  if (isNegZeroSub(uB) && isOneNode(uB.right)) return negateNode(A);
+  return { type: "binary", op: "*", left: wrapBinary(A), right: wrapBinary(B) };
 }
 
 function divideNode(A, B) {
   if (!A || !B) return null;
-  if (A.val === "0") return { type: "num", val: "0" };
-  return { type: "binary", op: "/", left: { type: "group", expr: A }, right: { type: "group", expr: B } };
+  if (isZeroNode(A)) return { type: "num", val: "0" };
+  if (isOneNode(B)) return A;
+  return { type: "binary", op: "/", left: wrapBinary(A), right: wrapBinary(B) };
 }
 
 function negateNode(A) {
   if (!A) return null;
-  if (A.val === "0") return A;
-  return { type: "binary", op: "-", left: { type: "num", val: "0" }, right: { type: "group", expr: A } };
+  const u = unwrapGroup(A);
+  if (isZeroNode(u)) return u;
+  if (u.type === "binary" && u.op === "-") {
+    if (isZeroNode(u.left)) return u.right;
+    return { type: "binary", op: "-", left: wrapAddSub(u.right), right: wrapAddSub(u.left) };
+  }
+  return { type: "binary", op: "-", left: { type: "num", val: "0" }, right: wrapAddSub(u) };
+}
+
+function toRational(node, targetVar) {
+  if (!node) return null;
+  const u = unwrapGroup(node);
+  if (!astHasVariable(u, targetVar) || u.type === "id") {
+    return { num: u, den: { type: "num", val: "1" } };
+  }
+  if (u.type === "binary") {
+    if (u.op === "/") {
+      const L = toRational(u.left, targetVar);
+      const R = toRational(u.right, targetVar);
+      if (!L || !R) return null;
+      return { num: multiplyNode(L.num, R.den), den: multiplyNode(L.den, R.num) };
+    }
+    if (u.op === "*") {
+      const L = toRational(u.left, targetVar);
+      const R = toRational(u.right, targetVar);
+      if (!L || !R) return null;
+      return { num: multiplyNode(L.num, R.num), den: multiplyNode(L.den, R.den) };
+    }
+    if (u.op === "+" || u.op === "-") {
+      const L = toRational(u.left, targetVar);
+      const R = toRational(u.right, targetVar);
+      if (!L || !R) return null;
+      if (isOneNode(L.den) && isOneNode(R.den)) {
+        return { num: u.op === "+" ? addNodes(L.num, R.num) : subNodes(L.num, R.num), den: { type: "num", val: "1" } };
+      }
+      const crossL = multiplyNode(L.num, R.den);
+      const crossR = multiplyNode(R.num, L.den);
+      return {
+        num: u.op === "+" ? addNodes(crossL, crossR) : subNodes(crossL, crossR),
+        den: multiplyNode(L.den, R.den)
+      };
+    }
+  }
+  return null;
 }
 
 export function solveLinearRationalAST(lhsNode, rhsNode, targetVar) {
-  let N_L = lhsNode, D_L = { type: "num", val: "1" };
-  let N_R = rhsNode, D_R = { type: "num", val: "1" };
+  const L = toRational(lhsNode, targetVar);
+  const R = toRational(rhsNode, targetVar);
+  if (!L || !R) return { success: false, reason: "Non-linear or non-rational equation" };
 
-  const uL = unwrapGroup(lhsNode);
-  const uR = unwrapGroup(rhsNode);
-
-  if (uL && uL.type === "binary" && uL.op === "/") { N_L = uL.left; D_L = uL.right; }
-  if (uR && uR.type === "binary" && uR.op === "/") { N_R = uR.left; D_R = uR.right; }
-
-  const term1 = (D_R.val === "1") ? N_L : { type: "binary", op: "*", left: { type: "group", expr: N_L }, right: { type: "group", expr: D_R } };
-  const term2 = (D_L.val === "1") ? N_R : { type: "binary", op: "*", left: { type: "group", expr: N_R }, right: { type: "group", expr: D_L } };
-
-  const diffNode = { type: "binary", op: "-", left: { type: "group", expr: term1 }, right: { type: "group", expr: term2 } };
-
+  const diffNode = subNodes(multiplyNode(L.num, R.den), multiplyNode(R.num, L.den));
   const lin = collectTerms(diffNode, targetVar);
-  if (!lin || (lin.coeff && lin.coeff.type === "num" && lin.coeff.val === "0")) return { success: false, reason: "Non-linear equation" };
+  if (!lin || isZeroNode(lin.coeff)) return { success: false, reason: "Non-linear equation" };
 
   let numerator = negateNode(lin.constant);
   let denominator = lin.coeff;
 
-  if (numerator && numerator.type === "binary" && numerator.op === "-" && numerator.left.val === "0") {
-    numerator = unwrapGroup(numerator.right);
+  if (isNegZeroSub(numerator)) {
+    numerator = unwrapGroup(numerator).right;
     denominator = negateNode(denominator);
   }
 
-  const isolatedAST = flattenFractions({
-    type: "binary",
-    op: "/",
-    left: { type: "group", expr: numerator },
-    right: { type: "group", expr: denominator }
-  });
+  const rawAst = isOneNode(denominator)
+    ? numerator
+    : divideNode(numerator, denominator);
+  const isolatedAST = flattenFractions(rawAst);
+  if (astHasVariable(isolatedAST, targetVar)) {
+    return { success: false, reason: "Non-linear or non-invertible equation" };
+  }
 
   return { success: true, isolatedAST };
 }

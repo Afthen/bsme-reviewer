@@ -31,7 +31,6 @@ export const DIMENSIONS = Object.freeze({
   HEAT_TRANSFER_COEFF: "Heat Transfer Coefficient",
   SPECIFIC_CONSUMPTION: "Specific Fuel Consumption",
   TEMPERATURE: "Temperature",
-  TEMPERATURE_DIFF: "Temperature Difference",
   PERCENTAGE: "Percentage",
   DIMENSIONLESS: "Dimensionless"
 });
@@ -108,23 +107,6 @@ export function formatGivenValue(value, meta = {}, isLatex = true, activeUnit = 
     return fmtSigFig(value, 6, isLatex);
   }
   return fmtSigFig(value, 6, isLatex);
-}
-
-export function cancelUnit(unitStr) {
-  if (!unitStr) return "";
-  if (unitStr === "%" || unitStr === "\\%") return "\\cancel{\\text{\\%}}";
-  const m = unitStr.match(/^(.+)_(m|f)$/);
-  if (m) return `\\cancel{\\text{${m[1]}}_{${m[2]}}}`;
-  return `\\cancel{\\text{${unitStr}}}`;
-}
-
-export function textUnit(unitStr) {
-  if (!unitStr) return "";
-  if (unitStr === "%" || unitStr === "\\%") return "\\text{\\%}";
-  if (unitStr.startsWith("°")) return unitStr;
-  const m = unitStr.match(/^(.+)_(m|f)$/);
-  if (m) return `\\text{${m[1]}}_{${m[2]}}`;
-  return `\\text{${unitStr}}`;
 }
 
 export function targetLabel(name, token, unit, unitTex = null) {
