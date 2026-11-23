@@ -9,7 +9,7 @@
     "skeleton": "node scripts/repo_skeleton.js",
     "ctx": "node scripts/fulfill_ctx.js",
     "clean:mcqs": "node scripts/clean_mcqs.js",
-    "test": "npm run clean:mcqs && npm run gen:registry && node --test test/run_test.js test/run_hygiene_test.js test/derivation_matrix_test.js > tmp/test_out.txt 2>&1 || (cat tmp/test_out.txt && exit 1)",
+    "test": "npm run clean:mcqs && npm run gen:registry && node --test test/run_test.js test/run_hygiene_test.js test/derivation_matrix_test.js test/rate_parts_test.js > tmp/test_out.txt 2>&1 || (cat tmp/test_out.txt && exit 1)",
     "audit:duplicates": "npx jscpd src/ styles/",
     "audit:dead-code": "npx knip",
     "audit": "npm test && npm run audit:duplicates && npm run audit:dead-code"

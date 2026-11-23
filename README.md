@@ -4,8 +4,9 @@ A graph-based engineering problem generator, symbolic solver, and spaced-repetit
 
 - **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage` (and `IndexedDB` for custom uploaded MCQ sets).
 - **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
-- **Test:** `npm test` (regenerates `src/topics/index.js` + `src/mcq/index.js` and runs `test/run_test.js` + `test/run_hygiene_test.js` in Node 22).
+- **Test:** `npm test` (regenerates `src/topics/index.js` + `src/mcq/index.js` and runs `test/run_test.js`, `test/run_hygiene_test.js`, `test/derivation_matrix_test.js` and the regression suites in Node 22).
 - **Repo Map:** `npm run skeleton` (prints resolved import graph + function/object signatures for AI context).
+- **Context Loop:** `npm run ctx` (fulfills `READ` / `OUTLINE` / `GREP` / `TRACE` requests from `tmp/ctx_req.txt` into `tmp/ctx_res.txt`).
 
 ---
 
@@ -32,18 +33,26 @@ You are modifying the BSME Reviewer repository.
    - READ path                    whole file (only if <= 400 lines; otherwise you get an outline)
    - OUTLINE path                 exact symbol line ranges for one file
    - GREP [-C n] [-i] term [@ path[:a-b]]   literal search with context lines and scope
+   - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
+                                  re-runs one derivation-matrix case through solveUnitAlgebra and
+                                  reports every non-canonical scalar with the stack frames that
+                                  created it. Paste the failing line from the matrix output
+                                  verbatim; without seed= both matrix seeds are tried. Output is
+                                  capped at 80 lines and counts against the 700-line budget.
    Never guess round line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
+   When a test fails and the cause is not obvious from reading, TRACE before theorizing.
 6. Code output convention: When given permission to code, precede code blocks with
    `FILE: path/to/file.ext`. To minimize noise, you do not need to repeat the `FILE:`
-   header for subsequent blocks targeting the same file; the parser assumes all 
+   header for subsequent blocks targeting the same file; the parser assumes all
    following diffs belong to the most recent header encountered.
-   
-   Fencing: Use 3-backtick fences (```) by default. If the content within a block 
-   contains code fences of N-backticks, wrap the entire block in N+1 backticks 
+
+   Fencing: Use 3-backtick fences for every diff and drop-in block. Let N be the longest
+   run of backticks that appears at the start of a line inside the block (inline
+   mentions mid-line do not count). If N >= 3, wrap the entire block in N+1 backticks
    to prevent parsing breaks.
-   
+
    Diffs: Use ```diff with 4-character markers (<<<< ==== >>>>) for partial updates.
-7. Run: node --test test/run_test.js test/run_hygiene_test.js
+7. Run: npm test (or node --test test/run_test.js test/run_hygiene_test.js test/derivation_matrix_test.js)
 8. Reply with: files changed.
 9. Remind the user to run the tests.
 ```
@@ -54,6 +63,7 @@ You are modifying the BSME Reviewer repository.
 ```text
 READ app.js:1-60
 GREP parseZipArchive
+TRACE hvac_air_properties[SI] eq_shr -> SHR {SHR:dimless, Q_s:Btu/h, Q_l:kW} seed=2
 ```
 
 **Code Diffs (one `FILE:` header per file):**
@@ -91,7 +101,7 @@ Software engineering in this repository is governed by physical/mathematical inv
    Adding a new topic or subject must require **zero** edits to central routing, UI, or parent barrel files. Every topic is a self-contained leaf slice discovered automatically into a flat lazy registry (`src/topics/index.js`). Boot cost remains $O(1)$ regardless of curriculum size—only selected topics are fetched on demand.
 
 1. **Fix Root Causes, Never Patch Symptoms (Anti-Whack-a-Mole):**
-   When an unexpected value appears, identify the mathematical breakdown at the foundational layer. Never apply per-variable scalar patches, hardcoded string comparison branches, or localized `if (key === '...')` overrides.
+   When an unexpected value appears, identify the mathematical breakdown at the foundational layer. Never apply per-variable scalar patches, hardcoded string comparison branches, or localized `if (key === '...')` overrides. When the cause is not obvious, measure it (`TRACE`) instead of guessing.
 2. **Design for General Invariants (Branchless Mathematics):**
    Prefer abstract mathematical representations over nested `if` statements. Units are affine metric spaces $(s, o)$ with 7D dimensional vectors. Scale parity, companion resolutions, and factor-label decompositions must fall out naturally from continuous equations, not system-specific switches.
 3. **Avoid Tunnel Vision:**
@@ -103,6 +113,7 @@ Software engineering in this repository is governed by physical/mathematical inv
    - **No regex-based syntax assertions on math strings:** Tests must validate structural ASTs, balance, and KaTeX rendering. Do not write catch-all regexes like `!/,/.test()` that falsely reject valid math subscripts like $c_{p,w}$ or $m_{m,w}$.
    - **No fragmentation of coupled state points:** Thermodynamic states of the same working fluid must never be split across incompatible units.
    - **No bespoke solvers:** If an equation cannot be solved by `solveDAG` and `isolateVariable`, fix the algebraic graph, never write a hardcoded solver.
+   - **No grammar mismatches between producer and consumer:** Any function that emits a unit string must emit a form that every consumer of unit strings parses (see section 6.2).
 
 ---
 
@@ -152,6 +163,7 @@ Software engineering in this repository is governed by physical/mathematical inv
   - **The "Omit 1" Rule:** Never write a coefficient of $1$ before a unit token ($\cfrac{\text{kg}}{2.20462 \, \cancel{\text{lb}}}$, $\cfrac{\text{kW}}{1{,}000 \, \cancel{\text{W}}}$, $\cfrac{\cancel{\text{h}}}{60 \, \cancel{\text{min}}}$).
   - **Scalar Multiplier Placement:** Scalar multipliers sit outside the unit fraction: $60 \, \cfrac{\cancel{\text{h}}}{\cancel{\text{min}}}$, never $\cfrac{60 \, \cancel{\text{h}}}{\cancel{\text{min}}}$.
   - **Cancellation Hierarchy:** Wrap the highest possible AST node with `\cancel{}`. Whole-unit cancellation ($\cancel{\cfrac{\text{kJ}}{\text{s}}}$) is canonical; component-level cancellation ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}}$) is used only as fallback when components cancel in separate places.
+  - **No Fused Scalars:** Every displayed conversion scalar is a decade or a single registered same-dimension atom ratio (optionally raised to an integer power as `(root)^p`). A product of different ratios (e.g. $737.562 \times 0.453592 = 334.553$, or $1000 \times 3600^3$) is never emitted as one number; it is factored per atom pair.
 - **R21. Specific Energy Notation.** Quantities per unit mass ($\text{kJ/kg}$, $\text{Btu/lb}$) strictly use lowercase symbols ($q_A, q_R, w_{net}, h$), reserving uppercase ($Q, W, P$) for total energy or power.
 - **R22. Number formatting.** Measured values pass through `fmtSigFig` (up to 6 significant figures, max 3 decimal places). Unit conversion scale factors pass through `fmtScale` (6 significant figures without the 3-decimal-place truncation cap).
 
@@ -160,7 +172,7 @@ Software engineering in this repository is governed by physical/mathematical inv
 - **R24. Bug fixes ship with regression tests.** Tests that touch mastery use real mastery functions (`recordAttempt`, `getDecayedMastery`), not constant stubs.
 - **R25. Report honestly.** State files changed, test output, and anything that could not be verified.
 - **R26. Brainstorm mode by default.** Always operate in brainstorm mode first to analyze root causes, establish mathematical invariants, and verify alignment. Never write code or emit diffs until given explicit permission to proceed.
-- **R27. Canonical diff syntax & fence nesting.** When authorized to write code, precede blocks with `FILE: path/to/file.ext` and wrap in 4-backtick fences (````diff using `<<<< ==== >>>>` when shorter than a full-file replacement). Only `diff` fences parse `<<<< ==== >>>>`. When a file's content contains `N`-backtick fences (e.g., `README.md`), wrap the drop-in replacement in `N+1` backticks. `README.md` edits are always returned as full drop-in replacements.
+- **R27. Canonical diff syntax & fence nesting.** When authorized to write code, precede blocks with `FILE: path/to/file.ext` and wrap in 3-backtick fences (```diff using `<<<< ==== >>>>` when the sum of all the diffs for that particular file is shorter than a full-file replacement). Only `diff` fences parse `<<<< ==== >>>>`. Let N be the longest backtick run that starts a line inside a block (inline mentions do not count); when N >= 3, wrap the block in N+1 backticks so that nothing inside can close it early. 
 
 ---
 
@@ -206,12 +218,24 @@ src/
 scripts/
   gen_registry.js            Auto-discovers leaf topics & MCQ sets -> emits src/topics/index.js & src/mcq/index.js
   repo_skeleton.js           Generates resolved import graph + symbol signatures
-  fulfill_ctx.js             Fulfills READ/GREP context requests into tmp/ctx_res.txt
+  fulfill_ctx.js             Fulfills READ/OUTLINE/GREP/TRACE context requests into tmp/ctx_res.txt
+  trace_case.js              TRACE worker: re-runs one matrix case with push/fill hooks (spawned by fulfill_ctx.js)
+  lib/
+    symbols.js               Top-level symbol extraction for READ #symbol / OUTLINE
+    trace_parse.js           Parses a matrix case line into topic, system, relation, target, units, seed
+    trace_hooks.js           recordNumericPushes: temporary Array.prototype.push/fill hooks, always restored
 test/
   validator.js               Topic schema, dual-system AST inversion, and numerical fidelity harness
   run_test.js                Universal property invariants, alien scale detector, derivation rendering
   run_hygiene_test.js        In-tree dead code, invariants, schema orphans, duplicates, alias collisions
+  derivation_matrix_test.js  Every topic x system x relation x target under pairwise unit coverage
+  matrix_helpers.js          Shared seeded RNG, unit levels, covering rows, restate, collectSteps
+  latex_oracle.js            Derivation LaTeX evaluated numerically against the boxed answer
   mcq_test.js                MCQ registry, image asset existence, grid classifier, and ZIP unpacker tests
+  ctx_test.js                fulfill_ctx.js and symbol extraction regressions
+  trace_test.js              TRACE parsing, hook restoration, malformed-request rejection
+  rate_parts_test.js         Parenthesised rate targets decompose into canonical per-part ratios
+  section_d_test.js          Atom-soup targets route to the per-atom compound builder
 ```
 
 ---
@@ -324,6 +348,8 @@ $$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
   $$BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}$$
 - **Compound Ratio Decomposition:** Compound unit conversions (e.g. $\frac{\text{lb/min}}{\text{Btu/h}} \to \frac{\text{kg}}{\text{kWh}}$) are never lumped into unfamiliar decimals (like $92{,}863.4$). `scales.js` decomposes them into atomic dimension pairs (`60`, `2.20462`, `3,412.14`) applied in-situ.
 - **AST-Driven Mismatches:** Ratios with differing unit scales (e.g. $\text{Btu/h}$ vs $\text{Btu/min}$) extract the exact differing atomic pair from the unit AST.
+- **Rate Grammar (`n/(d)`):** `splitRateParts` splits a unit at its single top-level `/` and strips one pair of wrapping parentheses per side, so `kJ/kg`, `ft-lb_f/(lb_m)` and `Btu/(h)` all decompose into a numerator ratio and a denominator ratio. `unitForSubExpr` in `analysis.js` emits sibling-term target units in this form; producer and consumer must stay in agreement. Strings with no top-level `/`, several, unbalanced parentheses, or a unit-less `1/(...)` numerator are not split.
+- **Pairwise Shortcut Gate:** Section D of `solveUnitAlgebra` converts same-dimension tokens by one pairwise `formatPairConversion` only when every resulting scalar passes `isCanonicalScaleFactor`. Otherwise (for example a `kg*m*m/(h*h^2)` atom-soup target, where kW needs $1000 \times 3600^3$) the branch routes to `buildCompoundTokenConversions`, which factors per atom pair.
 
 ### 6.3 Factor-Label Derivations & The 4-Row Cap
 Derivations default to **in-situ conversions** placed directly beside the converted token.
@@ -532,7 +558,8 @@ export function createMyTopicSystem({ sys = "SI" } = {}) {
 ### 9.5 Automatic Discovery & Verification
 
 1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` or `src/mcq/index.js` manually.
-2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` (and `src/mcq/` `.json` sets) and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, and zero barrel leaks.
+2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` (and `src/mcq/` `.json` sets) and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, zero barrel leaks, and the derivation matrix (every relation and target under pairwise unit coverage, with only canonical conversion scalars).
+3. If the matrix reports failures, each line ends in `seed=N`; paste it into a `TRACE` directive (section 0) to see where the offending scalar is created.
 
 ### 9.6 Authoring MCQ Sets (`src/mcq/`)
 
@@ -596,31 +623,37 @@ src/mcq/<subject>/<set_name>/
 
 ## 10. Testing & Invariant Verification Suite
 
-Run both test suites:
+Run everything (this is what `npm test` does after regenerating the registries):
 
 ```bash
-node --test test/run_test.js test/run_hygiene_test.js
+node --test test/run_test.js test/run_hygiene_test.js test/derivation_matrix_test.js \
+  test/trace_test.js test/rate_parts_test.js test/section_d_test.js test/ctx_test.js
 ```
 
 | Suite | Invariant Verified |
 |---|---|
 | `test/run_test.js` | **Universal Round-Trip Invariant:** $u \to \text{base} \to u$ identity across all registered units. <br>**100-Problem Stress Invariant:** 100 randomized problems (SI, US, MIXED) verify physical conservation ($< 0.05\%$), valid boxed answers, and error-free KaTeX rendering. <br>**Alien Scale Factor Detector:** Queries `scales.js` (`isCanonicalScaleFactor`) to reject any lumped or unfamiliar conversion scalars without bespoke test lists. <br>**Direction-Agnostic Synthesis:** Dynamic longest-path generation at high mastery, natural step hiding, 4-row tower cap, and encompassing cancellations. |
 | `test/run_hygiene_test.js` | Zero legacy shadows, exact $\phi$/Fibonacci progressions, zero schema orphan variables, zero duplicate formulas within topics, zero alias collisions across `varsDb`, cross-subject commonality rules, and native `°` symbols (no `\circ`). |
+| `test/derivation_matrix_test.js` | **Derivation Matrix:** for every topic x system x relation x solvable target, re-runs the step under a pairwise (2-wise) covering array of same-dimension unit assignments. Each case must match the AST physics oracle (`evaluatePhysicalAST`) and the printed derivation numerically (`latex_oracle.js`), and every `conversionScalars` entry from `solveUnitAlgebra` must pass `isCanonicalScaleFactor`. All failures are collected and grouped; each carries `seed=N` for `TRACE`. |
+| `test/rate_parts_test.js` | Parenthesised rate targets (`ft-lb_f/(lb_m)`, `kJ/(s)`) decompose into canonical numerator and denominator ratios; a `1/(...)` target is not split into a unit-less numerator. |
+| `test/section_d_test.js` | Atom-soup targets route to the per-atom compound builder; `Q_s / (Q_s + Q_l)` with `Btu/h` and `kW` yields only canonical scalars. |
+| `test/trace_test.js` | Matrix case-line parsing, numeric push/fill recording, `Array.prototype` restoration after a throw, and rejection of malformed `TRACE` requests. |
+| `test/ctx_test.js` | `fulfill_ctx.js` and symbol extraction: exact ranges, symbol-addressed `READ`, range snapping, budget enforcement, large-file outlining, `GREP` context. |
 
 ---
 
 ## 11. Definition of Done (Checklist before submitting code)
 
 - [ ] Stayed in brainstorm mode until explicit permission to code was granted.
-- [ ] Addressed the root cause rather than patching a symptom.
+- [ ] Addressed the root cause rather than patching a symptom (measured with `TRACE` when the cause was not obvious).
 - [ ] No Hard Rules in Section 2 are violated.
 - [ ] Any new unit is registered in `definitions.js` with consistent atomic base scales and 7D dimensional vectors.
 - [ ] New formulas are pure physics; empirical exceptions declare `requiredUnits`.
 - [ ] `system.js` is independent of the solver and honors `{ sys }`.
-- [ ] Unit conversions default to in-situ, respect the 4-row fraction tower cap, omit coefficients of 1, keep scalars outside unit ratios, and use canonical encompassing `\cancel`.
+- [ ] Unit conversions default to in-situ, respect the 4-row fraction tower cap, omit coefficients of 1, keep scalars outside unit ratios, emit no fused scalars, and use canonical encompassing `\cancel`.
 - [ ] Percentages render as `\text{\%}` and degree symbols use native `°`.
-- [ ] Code changes use `FILE: path/to/file.ext` with 4-backtick `diff` (`<<<< ==== >>>>`) fences unless shorter as a drop-in replacement; `README.md` edits use `N+1`-backtick full drop-in replacements.
-- [ ] `node --test test/run_test.js test/run_hygiene_test.js` was run and passed with 0 failures.
+- [ ] Code changes use `FILE: path/to/file.ext` with 4-backtick `diff` (`<<<< ==== >>>>`) fences unless shorter as a drop-in replacement.
+- [ ] `npm test` (or `node --test` over every suite listed in section 10) was run and passed with 0 failures.
 - [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
 - [ ] No tests were renamed, skipped, loosened, or deleted.
 - [ ] LF line endings, header comment on every new file, no dead code, no new duplication.

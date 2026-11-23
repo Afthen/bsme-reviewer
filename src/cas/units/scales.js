@@ -33,11 +33,41 @@ export function fmtScale(n, isLatex = true) {
   return addSeparators(str, isLatex);
 }
 
+// Removes parentheses that wrap an entire side, e.g. "(lb_m*s)" -> "lb_m*s"; leaves "(a)*(b)" intact.
+function stripWrappingParens(s) {
+  let t = s.trim();
+  while (t.startsWith("(") && t.endsWith(")")) {
+    let depth = 0;
+    let wraps = true;
+    for (let i = 0; i < t.length - 1; i++) {
+      if (t[i] === "(") depth++;
+      else if (t[i] === ")") depth--;
+      if (depth === 0) { wraps = false; break; }
+    }
+    if (!wraps) break;
+    t = t.slice(1, -1).trim();
+  }
+  return t;
+}
+
+// Splits "A/B" or "A/(B)" at its single top-level "/". Returns null for anything else
+// (no top-level "/", several, unbalanced parentheses, or a "1/(...)" form with no unit numerator).
 function splitRateParts(unitStr) {
-  if (!unitStr || unitStr.includes("(")) return null;
-  const parts = unitStr.split("/");
-  if (parts.length !== 2) return null;
-  return { num: parts[0].trim(), den: parts[1].trim() };
+  if (!unitStr) return null;
+  let depth = 0;
+  const cuts = [];
+  for (let i = 0; i < unitStr.length; i++) {
+    const c = unitStr[i];
+    if (c === "(") depth++;
+    else if (c === ")") { depth--; if (depth < 0) return null; }
+    else if (c === "/" && depth === 0) cuts.push(i);
+  }
+  if (depth !== 0 || cuts.length !== 1) return null;
+  const num = stripWrappingParens(unitStr.slice(0, cuts[0]));
+  const den = stripWrappingParens(unitStr.slice(cuts[0] + 1));
+  if (!num || !den) return null;
+  if (unitStr.includes("(") && num === "1") return null;
+  return { num, den };
 }
 
 function expandNamedRate(unitStr) {

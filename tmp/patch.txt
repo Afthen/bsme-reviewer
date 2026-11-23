@@ -1,101 +1,19 @@
+I've done the two cleanup items I can do safely and haven't run anything.
+
 FILE: src/cas/units/analysis.js
-````diff
+````diff 1
 <<<<
-    const tokenBags = {};
-    for (const tok of branchTokens) {
-      if (exps[tok] === undefined || Math.abs(exps[tok]) < 1e-6) continue;
-      const cKey = resolveCanonicalKey(tok, varsDb);
-      const meta = varsDb[cKey] || varsDb[tok] || {};
-      const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-      if (!uName || uName === "dimless" || uName === "ratio" || uName === "%" || uName === "\\%") continue;
-      tokenBags[tok] = { uName, dim: meta.dimension, exp: exps[tok], bag: getUnitAtomBag(uName, meta.dimension) };
-    }
+  formatComponentMismatch,
 ====
-    const tokenBags = {};
-    for (const tok of branchTokens) {
-      if (exps[tok] === undefined) continue;
-      const cKey = resolveCanonicalKey(tok, varsDb);
-      const meta = varsDb[cKey] || varsDb[tok] || {};
-      const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-      if (!uName || uName === "dimless" || uName === "ratio" || uName === "%" || uName === "\\%") continue;
-      tokenBags[tok] = { uName, dim: meta.dimension, exp: exps[tok], bag: getUnitAtomBag(uName, meta.dimension) };
-    }
+  formatComponentMismatch,
+  isCanonicalScaleFactor,
 >>>>
 ````
-````diff
+````diff 2
 <<<<
-      if (uName === "%" || uName === "\\%" || exps[tok] === undefined || Math.abs(exps[tok]) < 1e-6) {
-        tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
-        continue;
-      }
+} from "./scales.js";
+import { isCanonicalScaleFactor } from "./scales.js";
 ====
-      if (uName === "%" || uName === "\\%" || exps[tok] === undefined) {
-        tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
-        continue;
-      }
+} from "./scales.js";
 >>>>
 ````
-````diff
-<<<<
-    const prefixSymbols = { pico: "p", nano: "n", micro: "u", milli: "m", centi: "c", deci: "d", kilo: "k", mega: "M", giga: "G" };
-    const unitForSubExpr = (exprNode) => {
-      if (exprNode && exprNode.type === "id") {
-        const cK = resolveCanonicalKey(exprNode.name, varsDb);
-        return S._u?.[cK] || S._u?.[exprNode.name] || varsDb[cK]?.unit || varsDb[exprNode.name]?.unit || "dimless";
-      }
-      if (exprNode && exprNode.type === "group") {
-        return unitForSubExpr(exprNode.expr);
-      }
-      const subExps = collectTokenExponents(exprNode, 1, {});
-      const numParts = [];
-      const denParts = [];
-      for (const [t, p] of Object.entries(subExps)) {
-        const cK = resolveCanonicalKey(t, varsDb);
-        const m = varsDb[cK] || varsDb[t] || {};
-        const u = S._u?.[cK] || S._u?.[t] || m.unit || "";
-        if (!u || u === "dimless" || u === "ratio") continue;
-        for (const f of parseUnitToSemanticAST(u, m.dimension)) {
-          const netP = f.power * p;
-          if (Math.abs(netP) < 1e-9) continue;
-          const bSym = BASE_UNITS[f.base]?.symbol || f.base;
-          const pSym = f.prefix ? (prefixSymbols[f.prefix] || f.prefix) : "";
-          const absP = Math.abs(netP);
-          const uStr = absP === 1 ? `${pSym}${bSym}` : `${pSym}${bSym}^${absP}`;
-          if (netP > 0) numParts.push(uStr);
-          else denParts.push(uStr);
-        }
-      }
-      const n = numParts.join("*");
-      const d = denParts.length > 1 ? `(${denParts.join("*")})` : (denParts[0] || "");
-      return d ? `${n || "1"}/${d}` : (n || "dimless");
-    };
-====
-    const prefixSymbols = { pico: "p", nano: "n", micro: "u", milli: "m", centi: "c", deci: "d", kilo: "k", mega: "M", giga: "G" };
-    const unitForSubExpr = (exprNode) => {
-      const subExps = collectTokenExponents(exprNode, 1, {});
-      const numParts = [];
-      const denParts = [];
-      for (const [t, p] of Object.entries(subExps)) {
-        const cK = resolveCanonicalKey(t, varsDb);
-        const m = varsDb[cK] || varsDb[t] || {};
-        const u = resolvedUnitByTok[t] || S._u?.[cK] || S._u?.[t] || m.unit || "";
-        if (!u || u === "dimless" || u === "ratio") continue;
-        for (const f of parseUnitToSemanticAST(u, m.dimension)) {
-          const netP = f.power * p;
-          if (Math.abs(netP) < 1e-9) continue;
-          const bSym = BASE_UNITS[f.base]?.symbol || f.base;
-          const pSym = f.prefix ? (prefixSymbols[f.prefix] || f.prefix) : "";
-          const absP = Math.abs(netP);
-          const uStr = absP === 1 ? `${pSym}${bSym}` : `${pSym}${bSym}^${absP}`;
-          if (netP > 0) numParts.push(uStr);
-          else denParts.push(uStr);
-        }
-      }
-      const n = numParts.join("*");
-      const d = denParts.join("*");
-      return d ? `${n || "1"}/(${d})` : (n || "dimless");
-    };
->>>>
-```````text
-READ src/cas/units/analysis.js:155-242
-```

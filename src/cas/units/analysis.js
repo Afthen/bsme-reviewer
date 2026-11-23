@@ -22,6 +22,7 @@ import {
   fmtScale,
   formatPairConversion,
   formatComponentMismatch,
+  isCanonicalScaleFactor,
   buildCompoundTokenConversions
 } from "./scales.js";
 
@@ -357,7 +358,15 @@ export function solveUnitAlgebra(exprOrAST, S, targetVar, targetUnit, varsDb = {
       const isSingleDimRemaining = !!branchTargetBag
         && remainingTokens.every(tok => isDimEqual(tokenBags[tok].bag.dimMap, branchTargetBag.dimMap));
 
-      if (hasExplicitTarget && isSingleDimRemaining) {
+      // The pairwise shortcut is valid only when every token converts by registered ratios.
+      // Atom-soup targets (e.g. kg*m*m/(h*h^2)) fall through to the per-atom compound builder.
+      const pairwiseIsCanonical = hasExplicitTarget && isSingleDimRemaining
+        && remainingTokens.every(tok => {
+          const { uName, dim } = tokenBags[tok];
+          return formatPairConversion(uName, targetUnit, dim, targetDim, "whole").scalars.every(isCanonicalScaleFactor);
+        });
+
+      if (pairwiseIsCanonical) {
         const mismatchingCount = remainingTokens.filter(tok =>
           Math.abs(tokenBags[tok].bag.scale / branchTargetBag.scale - 1) >= 1e-6
         ).length;

@@ -10,12 +10,15 @@
  *   READ path#sym[,sym2]    exact symbol bodies, no line numbers needed
  *   OUTLINE path            exact symbol ranges for one file
  *   GREP [-C n] [-i] term [@ path[:a-b]]   literal search, optional context/scope
- */
+ *   TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
+ *                           re-run one matrix case; report where non-canonical scalars are born */
 
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { extractSymbols, findEnclosing } from "./lib/symbols.js";
+import { parseCase } from "./lib/trace_parse.js";
 
 export const LIMITS = Object.freeze({
   MAX_DIRECTIVES: 8,
@@ -25,7 +28,9 @@ export const LIMITS = Object.freeze({
   MAX_GREP_HITS: 40,
   MAX_GREP_CONTEXT: 10,
   MAX_OUTLINE_ENTRIES: 150,
-  MAX_LINE_CHARS: 200
+  MAX_LINE_CHARS: 200,
+  MAX_TRACE_LINES: 80,
+  TRACE_TIMEOUT_MS: 120000
 });
 
 const SEARCH_ROOTS = ["app.js", "index.html", "package.json", "src", "styles", "test", "scripts"];
@@ -278,8 +283,24 @@ function handleGrep(arg, { root, remaining }) {
   };
 }
 
-const HANDLERS = { READ: handleRead, OUTLINE: handleOutline, GREP: handleGrep };
-const USAGE = "Valid: READ path[#symbol|:a-b|:-N], OUTLINE path, GREP [-C n] [-i] term [@ path[:a-b]]";
+const TRACE_SCRIPT = fileURLToPath(new URL("./trace_case.js", import.meta.url));
+
+function handleTrace(arg, { remaining }) {
+  if (!parseCase(arg)) {
+    return { text: "[ERROR: TRACE needs a matrix case: topic[SI|US] relation -> target {tok:unit, ...} [seed=N]]\n", lines: 1 };
+  }
+  const r = spawnSync(process.execPath, [TRACE_SCRIPT, arg], {
+    encoding: "utf8", timeout: LIMITS.TRACE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024
+  });
+  const raw = `${r.stdout || ""}${r.stderr ? `\n[stderr]\n${r.stderr}` : ""}`.trim();
+  const all = [...(r.error ? [`[TRACE failed: ${r.error.message}]`] : []), ...raw.split("\n").map(clip)];
+  const cap = Math.min(remaining, LIMITS.MAX_TRACE_LINES);
+  const shown = all.length > cap ? [...all.slice(0, Math.max(0, cap - 1)), `[output truncated at ${cap} lines]`] : all;
+  return { text: fenced(`TRACE: ${arg}`, shown.join("\n")), lines: shown.length };
+}
+
+const HANDLERS = { READ: handleRead, OUTLINE: handleOutline, GREP: handleGrep, TRACE: handleTrace };
+const USAGE = "Valid: READ path[#symbol|:a-b|:-N], OUTLINE path, GREP [-C n] [-i] term [@ path[:a-b]], TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]";
 
 export function parseDirectives(raw) {
   return raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith(FENCE));
@@ -297,7 +318,7 @@ export function fulfill(raw, { root = process.cwd() } = {}) {
 
   for (const line of run) {
     const remaining = Math.max(0, LIMITS.MAX_OUTPUT_LINES - used);
-    const m = line.match(/^(READ|OUTLINE|GREP)\s+(.+)$/);
+    const m = line.match(/^(READ|OUTLINE|GREP|TRACE)\s+(.+)$/);
     const r = m ? HANDLERS[m[1]](m[2].trim(), { root, remaining }) : { text: `[UNRECOGNIZED: ${line}]\n${USAGE}\n`, lines: 1 };
     parts.push(r.text);
     used += r.lines;
@@ -320,7 +341,7 @@ if (isMain) {
   }
   const text = fulfill(fs.readFileSync(REQ_FILE, "utf8"));
   if (!text) {
-    console.error("No READ, OUTLINE, or GREP directives found in tmp/ctx_req.txt.");
+    console.error("No READ, OUTLINE, GREP, or TRACE directives found in tmp/ctx_req.txt.");
     process.exit(1);
   }
   fs.mkdirSync(path.dirname(RES_FILE), { recursive: true });
