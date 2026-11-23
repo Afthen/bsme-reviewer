@@ -97,13 +97,47 @@ if (operations.length === 0) {
 }
 
 const fileMap = new Map();
+const originalFileMap = new Map();
+
 function getFile(rel) {
   if (!fileMap.has(rel)) {
     const full = path.resolve(rel);
-    fileMap.set(rel, fs.existsSync(full) ? fs.readFileSync(full, "utf8").replace(/\r\n/g, "\n") : null);
+    const content = fs.existsSync(full) ? fs.readFileSync(full, "utf8").replace(/\r\n/g, "\n") : null;
+    fileMap.set(rel, content);
+    originalFileMap.set(rel, content);
   }
   return fileMap.get(rel);
 }
+
+function findReplaceRanges(str, replace) {
+  if (!replace) return [];
+  const ranges = [];
+  let pos = 0;
+  while ((pos = str.indexOf(replace, pos)) !== -1) {
+    ranges.push([pos, pos + replace.length]);
+    pos += replace.length || 1;
+  }
+  return ranges;
+}
+
+function findOutsideSearchIndices(str, search, replaceRanges) {
+  if (!search) return [];
+  const indices = [];
+  let pos = 0;
+  while ((pos = str.indexOf(search, pos)) !== -1) {
+    const sStart = pos;
+    const sEnd = pos + search.length;
+    const isInsideReplace = replaceRanges.some(([rStart, rEnd]) => sStart >= rStart && sEnd <= rEnd);
+    if (!isInsideReplace) {
+      indices.push(sStart);
+    }
+    pos += 1;
+  }
+  return indices;
+}
+
+let appliedHunksCount = 0;
+let skippedHunksCount = 0;
 
 for (const op of operations) {
   if (op.isDiff) {
@@ -113,32 +147,68 @@ for (const op of operations) {
       process.exit(1);
     }
     const hunks = parseHunks(op.content);
-    for (const { search, replace } of hunks) {
-      if (!text.includes(search)) {
+    hunks.forEach(({ search, replace }, hunkIdx) => {
+      const hunkLabel = hunks.length > 1 ? `Hunk #${hunkIdx + 1}` : "Diff hunk";
+      const replaceRanges = findReplaceRanges(text, replace);
+      const outsideSearches = findOutsideSearchIndices(text, search, replaceRanges);
+
+      if (outsideSearches.length === 0) {
+        if (replaceRanges.length > 0) {
+          console.log(`[info] ${hunkLabel} in "${op.file}" already applied, skipping.`);
+          skippedHunksCount++;
+          return;
+        }
         console.error(`Error: Search block not found in "${op.file}":\n---\n${search.slice(0, 160)}...\n---`);
         process.exit(1);
       }
-      const firstIdx = text.indexOf(search);
-      const lastIdx = text.lastIndexOf(search);
-      if (firstIdx !== lastIdx) {
+
+      if (outsideSearches.length > 1) {
         console.error(`Error: Search block matched multiple times in "${op.file}".`);
         process.exit(1);
       }
-      text = text.slice(0, firstIdx) + replace + text.slice(firstIdx + search.length);
-    }
+
+      const targetIdx = outsideSearches[0];
+      text = text.slice(0, targetIdx) + replace + text.slice(targetIdx + search.length);
+      appliedHunksCount++;
+    });
     fileMap.set(op.file, text);
   } else {
-    fileMap.set(op.file, op.content.endsWith("\n") ? op.content : op.content + "\n");
+    const current = getFile(op.file);
+    const target = op.content.endsWith("\n") ? op.content : op.content + "\n";
+    if (current === target) {
+      console.log(`[info] File "${op.file}" already up to date, skipping.`);
+      skippedHunksCount++;
+    } else {
+      fileMap.set(op.file, target);
+      appliedHunksCount++;
+    }
   }
+}
+
+const modifiedFiles = [];
+for (const [relPath, text] of fileMap.entries()) {
+  const original = originalFileMap.get(relPath);
+  if (text !== original) {
+    modifiedFiles.push(relPath);
+  }
+}
+
+if (modifiedFiles.length === 0) {
+  console.log(`\nAll proposed changes are already applied across ${fileMap.size} file(s). Nothing to do.`);
+  process.exit(0);
 }
 
 let shouldWrite = !dryRun;
 
 if (dryRun) {
   for (const relPath of fileMap.keys()) {
-    console.log(`[dry-run] Would write: ${relPath}`);
+    if (modifiedFiles.includes(relPath)) {
+      console.log(`[dry-run] Would write: ${relPath}`);
+    } else {
+      console.log(`[dry-run] No changes needed (already applied): ${relPath}`);
+    }
   }
-  console.log(`\nDry-run successful! (${operations.length} blocks across ${fileMap.size} files)`);
+  console.log(`\nDry-run successful! (${appliedHunksCount} to apply, ${skippedHunksCount} already applied across ${fileMap.size} files)`);
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const ans = (await rl.question("Proceed with applying? (y/N): ")).trim().toLowerCase();
   rl.close();
@@ -149,14 +219,15 @@ if (dryRun) {
   }
 }
 
-for (const [relPath, text] of fileMap.entries()) {
+for (const relPath of modifiedFiles) {
+  const text = fileMap.get(relPath);
   fs.mkdirSync(path.dirname(path.resolve(relPath)), { recursive: true });
   fs.writeFileSync(path.resolve(relPath), text, "utf8");
   console.log(`Updated: ${relPath}`);
 }
 
-if (Array.from(fileMap.keys()).some(p => p.startsWith("src/topics/"))) {
+if (modifiedFiles.some(p => p.startsWith("src/topics/"))) {
   execFileSync(process.execPath, ["scripts/gen_registry.js"], { stdio: "inherit" });
 }
 
-console.log(`\nAll changes applied successfully! (${operations.length} blocks across ${fileMap.size} files)`);
+console.log(`\nAll changes applied successfully! (${appliedHunksCount} applied, ${skippedHunksCount} skipped across ${modifiedFiles.length} file(s))`);

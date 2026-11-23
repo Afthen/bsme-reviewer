@@ -11,7 +11,7 @@ import { isolateVariable } from "../cas/algebra.js";
 import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
-import { applyProblemUnitSampling, sampleSystemMode, findCoupledGroup } from "./unit_sampler.js";
+import { applyProblemUnitSampling, planProblemUnits, sampleSystemMode, findCoupledGroup } from "./unit_sampler.js";
 import { fmtSigFig, formatGivenValue, DIMENSIONS } from "./dimensions.js";
 import { valueToCoherentBase, formatValueInUnit, unitToTex } from "../cas/units/definitions.js";
 
@@ -261,8 +261,9 @@ export function generateProblem(topic, getMastery = () => 0) {
   }
 
   const targetMode = sampleSystemMode();
-  let S_truth = createSystem({ sys: targetMode === "MIXED" ? "SI" : targetMode });
-  S_truth = applyProblemUnitSampling(S_truth, varsDb, targetMode);
+  const unitPlan = planProblemUnits(varsDb, targetMode);
+  let S_truth = createSystem({ sys: targetMode === "MIXED" ? "SI" : targetMode, unitPlan });
+  S_truth = applyProblemUnitSampling(S_truth, varsDb, targetMode, unitPlan);
 
   const path = generateAutonomousProblem(relations, S_truth, varsDb, getMastery);
   const targetRel = relations.find(r => r.id === path.targetEqId) || relations[relations.length - 1];

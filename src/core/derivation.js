@@ -9,7 +9,7 @@
  * ============================================================================
  */
 
-import { parseMathAST, getAstIdentifiers } from "../cas/ast.js";
+import { parseMathAST, getAstIdentifiers, unwrapGroup } from "../cas/ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../cas/algebra.js";
 import { casToTex, astToLatex, toLatexSymbol } from "../cas/latex.js";
 import {
@@ -260,7 +260,11 @@ export function buildAlignedDerivation(
 
           const factoredId = `__factored_${leaves.map(l => l.key).join("_")}`;
           const sharedUnit = units[0];
-          const sharedDim = meta0.dimension || null;
+          // A mix of + and - over same-unit temperatures is a temperature DIFFERENCE:
+          // the offset cancels, so the factored group must not take the affine path.
+          const isDifferenceGroup = meta0.dimension === DIMENSIONS.TEMPERATURE
+            && leaves.some(l => l.sign < 0) && leaves.some(l => l.sign > 0);
+          const sharedDim = isDifferenceGroup ? DIMENSIONS.TEMPERATURE_DIFF : (meta0.dimension || null);
 
           factoredInfo[factoredId] = { inner, unit: sharedUnit, dimension: sharedDim };
           activeUnitMap[factoredId] = sharedUnit;
@@ -360,7 +364,8 @@ export function buildAlignedDerivation(
     const uTex = unitAnalysis.tokenMarkup?.[factoredId] !== undefined
       ? unitAnalysis.tokenMarkup[factoredId]
       : unitToTex(info.unit, false, info.dimension);
-    const groupConv = unitAnalysis.tokenConversions?.[factoredId]?.join("") || "";
+    const groupConv = (unitAnalysis.tokenConversions?.[factoredId] || [])
+      .filter(c => c !== "__AFFINE_CONVERTED__").join("");
     subsMap[factoredId] = uTex ? `(${info.inner})\\,${uTex}${groupConv}` : `(${info.inner})${groupConv}`;
   }
 
@@ -376,7 +381,13 @@ export function buildAlignedDerivation(
     resolveCanonicalKey(formulaLhs, varsDb) === canonicalTarget
   );
 
-  const numTex = astToLatex(rhsAst, subsMap, workingVarsDb)
+  // A trailing conversion factor is a multiplier: it must bind the whole RHS,
+  // so an additive root (a ± b) is grouped before the factor is attached.
+  const rootNode = unwrapGroup(rhsAst);
+  const needsRootGroup = !!unitAnalysis.globalConversionTex
+    && rootNode?.type === "binary"
+    && (rootNode.op === "+" || rootNode.op === "-");
+  const numTex = astToLatex(needsRootGroup ? { type: "group", expr: rhsAst } : rhsAst, subsMap, workingVarsDb)
     + (unitAnalysis.globalConversionTex || "");
 
   const rows = [...prepLines];
@@ -399,7 +410,34 @@ export function buildAlignedDerivation(
 
   // 6. Final Boxed Answer
   const val = overrides[canonicalTarget] ?? step.expectedVal ?? S[canonicalTarget];
-  const formattedVal = typeof val === "number" ? fmtSigFig(val, 6) : val;
+  const formattedVal = typeof val === "number" ? fmtSigFig(val, 6, true) : val;
+
+  // Empirical affine target (e.g. °C contract -> °R box): the numeric row is in the contract
+  // unit, so add the explicit offset/scale row that lands on the boxed unit (R8).
+  const reqTargetU = requiredUnits && typeof requiredUnits === "object"
+    ? (requiredUnits[canonicalTarget] || requiredUnits[targetVar]) : null;
+  const targetIsDiff = targetMeta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!targetMeta.isDifference;
+  if (typeof val === "number" && reqTargetU && targetUnit && reqTargetU !== targetUnit && !targetIsDiff) {
+    const tDim = targetMeta.dimension;
+    const reqOff = getUnitOffset(reqTargetU, tDim);
+    const tgtOff = getUnitOffset(targetUnit, tDim);
+    if (reqOff || tgtOff) {
+      const reqVal = formatValueInUnit(valueToCoherentBase(val, targetUnit, false, tDim), reqTargetU, false, tDim);
+      const absReq = getAbsoluteCompanionUnit(reqTargetU);
+      const absTarget = getAbsoluteCompanionUnit(targetUnit);
+      const absVal = formatValueInUnit(valueToCoherentBase(reqVal, reqTargetU, false, tDim), absReq, false, tDim);
+      const conv = solveUnitAlgebra(
+        targetVar,
+        { ...evalState, [targetVar]: absVal, [canonicalTarget]: absVal, _u: { ...activeUnitMap, [targetVar]: absReq, [canonicalTarget]: absReq } },
+        targetVar, absTarget, workingVarsDb
+      );
+      const convTex = (conv.tokenConversions?.[targetVar]?.join("") || "") + (conv.globalConversionTex || "");
+      const absTex = convTex ? unitToCancelledTex(absReq, false, tDim, "whole") : unitToTex(absReq, false, tDim);
+      const lead = reqOff ? `(${fmtSigFig(reqVal, 6, true)} + ${reqOff})` : fmtSigFig(reqVal, 6, true);
+      const tail = tgtOff ? ` - ${tgtOff} \\, ${unitToTex(absTarget, false, tDim)}` : "";
+      rows.push(`&= ${lead} \\, ${absTex}${convTex}${tail}`);
+    }
+  }
 
   let unitTex = "";
   if (targetUnit && targetUnit !== "dimless" && targetUnit !== "ratio") {

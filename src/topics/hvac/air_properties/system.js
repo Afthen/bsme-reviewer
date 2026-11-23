@@ -1,13 +1,17 @@
 /**
  * src/topics/hvac/air_properties/system.js
  * Deterministic psychrometric ground truth generator.
+ * Roots are drawn clean in their planned display unit (see makeDraw); every
+ * derived value is computed by hand from them (R9).
  */
 
 import { AIR_PROPERTIES_VARS_DB } from "./schema.js";
+import { makeDraw } from "../../../core/unit_sampler.js";
 
-export function createAirPropertiesSystem({ sys = "SI" } = {}) {
-  const t_db = [30.0, 32.0, 35.0, 38.0][Math.floor(Math.random() * 4)];
-  const t_wb = [22.0, 24.0, 25.0, 27.0][Math.floor(Math.random() * 4)];
+export function createAirPropertiesSystem({ sys = "SI", unitPlan = {} } = {}) {
+  const draw = makeDraw(unitPlan, AIR_PROPERTIES_VARS_DB);
+  const t_db = draw("t_db");
+  const t_wb = draw("t_wb", { hi: t_db - 3 });
   const P_t = 101.325; // kPa standard atmospheric
 
   // Liley equation at t_db and t_wb
@@ -26,8 +30,8 @@ export function createAirPropertiesSystem({ sys = "SI" } = {}) {
   const P_a = P_t - P_v;
   const v = (0.287 * (t_db + 273.15)) / (P_t - P_v);
 
-  const Q_s = [20.0, 25.0, 30.0][Math.floor(Math.random() * 3)];
-  const Q_l = [8.0, 10.0, 12.0][Math.floor(Math.random() * 3)];
+  const Q_s = draw("Q_s");
+  const Q_l = draw("Q_l");
   const Q_t = Q_s + Q_l;
   const SHR = Q_s / Q_t;
 

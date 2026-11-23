@@ -58,21 +58,15 @@ export function fmtSigFig(n, sigFigs = 6, isLatex = false) {
 
   if (Number.isInteger(num)) return addSeparators(num.toString(), isLatex);
 
-  // 1. Apply significant figures precision first
-  let formatted = parseFloat(num.toPrecision(sigFigs));
-
-  // 2. Enforce maximum of 3 decimal places across the entire repository
-  if (Math.abs(formatted) < 1e-4) return "0";
-
-  const str = formatted.toString();
-  if (str.includes(".")) {
-    const parts = str.split(".");
-    if (parts[1].length > 3) {
-      formatted = Number(formatted.toFixed(3));
-    }
-  }
-
-  return addSeparators(formatted.toString(), isLatex);
+  // Round to sigFigs significant figures, print positionally (never exponent
+  // notation), and trim trailing zeros. Neatness of givens is a generation-time
+  // concern (snapClean in unit_sampler.js), not a display-time one.
+  const rounded = Number(num.toPrecision(sigFigs));
+  if (rounded === 0) return "0";
+  const decimals = Math.min(100, Math.max(0, sigFigs - 1 - Math.floor(Math.log10(Math.abs(rounded)))));
+  const fixed = rounded.toFixed(decimals);
+  const trimmed = fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
+  return addSeparators(trimmed, isLatex);
 }
 
 export function fmt(n) {
@@ -90,9 +84,26 @@ export function formatGivenValue(value, meta = {}, isLatex = true, activeUnit = 
   if (meta.isConstant) {
     const unitMatches = !activeUnit || !meta.unit || activeUnit === meta.unit;
     if (unitMatches) {
-      if (typeof meta.display === "number") return addSeparators(String(meta.display), isLatex);
-      if (typeof meta.display === "string") return meta.display;
-      return addSeparators(String(value), isLatex);
+      const display = meta.display;
+      const numericDisplay = typeof display === "number"
+        ? display
+        : typeof display === "string" && display.trim() !== ""
+          ? Number(display.replace(/,/g, ""))
+          : NaN;
+      const numericValue = Number(value);
+      const displayMatchesValue = Number.isFinite(numericDisplay) &&
+        Number.isFinite(numericValue) &&
+        Math.abs(numericDisplay - numericValue) <=
+          Math.max(1, Math.abs(numericDisplay), Math.abs(numericValue)) * 1e-12;
+
+      if (displayMatchesValue) {
+        if (typeof display === "number") return addSeparators(String(display), isLatex);
+        return display;
+      }
+      if (display !== undefined && display !== null &&
+          typeof display === "string" && !Number.isFinite(numericDisplay)) {
+        return display;
+      }
     }
     return fmtSigFig(value, 6, isLatex);
   }

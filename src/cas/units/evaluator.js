@@ -14,7 +14,7 @@
 import { evalAST, getAstIdentifiers } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { solveUnitAlgebra } from "./analysis.js";
-import { valueToCoherentBase, formatValueInUnit } from "./definitions.js";
+import { getUnitAtomBag, valueToCoherentBase, formatValueInUnit } from "./definitions.js";
 import { DIMENSIONS } from "../../core/dimensions.js";
 
 export function isExpressionInDegrees(node, S, varsDb) {
@@ -22,7 +22,9 @@ export function isExpressionInDegrees(node, S, varsDb) {
   if (node.type === "id") {
     const cKey = resolveCanonicalKey(node.name, varsDb);
     const u = S._u?.[cKey] || S._u?.[node.name] || varsDb[cKey]?.unit || varsDb[node.name]?.unit;
-    return u === "deg" || u === "°";
+    const dim = varsDb[cKey]?.dimension || varsDb[node.name]?.dimension || DIMENSIONS.ANGLE;
+    const bag = u ? getUnitAtomBag(u, dim) : null;
+    return !!(bag?.dimMap?.Ang === 1 && Math.abs(bag.scale - Math.PI / 180) < 1e-9);
   }
   if (node.type === "group") return isExpressionInDegrees(node.expr, S, varsDb);
   if (node.type === "binary") {
@@ -54,7 +56,8 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
       });
     }
 
-    const unitResolver = (argNode) => isExpressionInDegrees(argNode, S, varsDb);
+    const effectiveUnits = { ...(S._u || {}), ...requiredUnits };
+    const unitResolver = (argNode) => isExpressionInDegrees(argNode, { ...evalState, _u: effectiveUnits }, varsDb);
     const rawNum = evalAST(node, evalState, unitResolver);
     if (isNaN(rawNum)) return { value: NaN, unitAnalysis };
 

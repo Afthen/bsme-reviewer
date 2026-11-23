@@ -73,7 +73,7 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
     );
     const innerTex = stripOuterParens(astToLatex(argInner, substituteMap, varsDb));
 
-    // Parens only added when substituted with numeric values e.g. \cos(30^\circ)
+    // Parens only added when substituted with numeric values e.g. \cos(30 \, °)
     // Symbolic forms omit parens for standard Greek/variable names e.g. \cos\psi
     const needsParens = isSubstitutedNum || argInner.type === "binary";
     const wrappedArg = needsParens ? `(${innerTex})` : ` ${innerTex}`;

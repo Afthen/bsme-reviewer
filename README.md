@@ -23,10 +23,16 @@ You are modifying the BSME Reviewer repository.
    will touch, (c) which tests will prove the change works.
 4. Obey the Engineering Philosophy (section 1): fix root causes, write general invariants,
    avoid tunnel vision, and never patch symptoms.
-5. Context requests: You only see the Repo Skeleton by default. Whenever you need
-   to read files or search the codebase, output a single fenced `text` block with one
-   directive per line (`READ path/to/file.js`, `READ path/to/file.js:10-80`, or
-   `GREP term`) and stop. No XML tags; never ask for files in prose.
+5. Context requests: You only see the Repo Skeleton by default. Request context with a
+   single fenced `text` block, one directive per line, then stop. No XML tags; never
+   ask in prose. Each request has a budget of 8 directives and 700 output lines, so
+   plan everything you need up front and batch it.
+   - READ path#symbol[,symbol2]   exact function/const bodies (preferred; no line math)
+   - READ path:a-b | path:-N      line range (snaps to enclosing symbol) | last N lines
+   - READ path                    whole file (only if <= 400 lines; otherwise you get an outline)
+   - OUTLINE path                 exact symbol line ranges for one file
+   - GREP [-C n] [-i] term [@ path[:a-b]]   literal search with context lines and scope
+   Never guess round line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
 6. Code output convention: When given permission to code, precede code blocks with
    `FILE: path/to/file.ext`. To minimize noise, you do not need to repeat the `FILE:`
    header for subsequent blocks targeting the same file; the parser assumes all 

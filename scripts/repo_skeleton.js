@@ -1,14 +1,21 @@
 /**
  * scripts/repo_skeleton.js
  * Zero-dependency Repo Skeleton & Resolved Import Graph Generator.
- * Usage: node scripts/repo_skeleton.js [path-substring-filter]
+ * Usage: node scripts/repo_skeleton.js [--full | --authoring] [path-substring-filter]
+ *   (default)    slim skeleton (one line per file, topic leaves collapsed)
+ *                + README sections 0-3 and 10-12
+ *   --authoring  slim skeleton + full README (adds sections 4-9)
+ *   --full       full skeleton (signatures + line ranges) + full README
+ *   <filter>     full-detail entries for matching files only (drill-down)
  */
 
 import fs from "node:fs";
 import path from "node:path";
 
 const ROOTS = ["app.js", "src", "scripts", "test"];
-const FILTER = process.argv[2] || "";
+const ARGS = process.argv.slice(2);
+const MODE = ARGS.includes("--full") ? "full" : ARGS.includes("--authoring") ? "authoring" : "slim";
+const FILTER = ARGS.find(a => !a.startsWith("--")) || "";
 
 function collectJsFiles(target, acc = []) {
   const full = path.resolve(target);
@@ -213,19 +220,119 @@ function analyzeFile(absPath) {
     symbols.push(`reexport * -> ${resolveImportEdge(absPath, m[1])} ${range}`);
   }
 
-  return { rel, imports: Array.from(new Set(imports)), symbols };
+  const lineCount = raw.replace(/\n$/, "").split("\n").length;
+  return { rel, lines: lineCount, imports: Array.from(new Set(imports)), symbols };
 }
 
 const files = ROOTS.flatMap(r => collectJsFiles(r))
   .map(analyzeFile)
   .filter(f => !FILTER || f.rel.includes(FILTER));
 
-const skelLines = [];
-for (const f of files) {
-  skelLines.push(`FILE: ${f.rel}`);
-  if (f.imports.length) skelLines.push(`  imports: ${f.imports.join(", ")}`);
-  for (const s of f.symbols) skelLines.push(`  ${s}`);
+const SLIM_EXPORT_CAP = 8;
+const SLIM_LOCAL_CAP = 40;
+const TOPIC_LEAF_FILES = ["index.js", "schema.js", "relations.js", "system.js"];
+const README_ALWAYS = new Set([0, 1, 2, 3, 10, 11, 12]);
+const SLIM_HEADER =
+  "# SLIM SKELETON: one line per file. Signatures and line ranges are omitted; " +
+  "use `OUTLINE path` or `READ path#symbol`. Topic leaves are collapsed to one line.";
+
+const shortPath = p => p.replace(/^src\//, "").replace(/\.js$/, "");
+const capNames = (names, cap) =>
+  names.length > cap ? [...names.slice(0, cap), `+${names.length - cap}`] : names;
+
+function symbolNames(f) {
+  const exports = [];
+  const locals = [];
+  for (const s of f.symbols) {
+    let m = s.match(/^export fn ([A-Za-z0-9_]+)/) || s.match(/^export const ([A-Za-z0-9_]+)/);
+    if (m) { exports.push(m[1]); continue; }
+    m = s.match(/^reexport \* -> (\S+)/);
+    if (m) { exports.push(`*${shortPath(m[1])}`); continue; }
+    m = s.match(/^local fn ([A-Za-z0-9_]+)/);
+    if (m) locals.push(m[1]);
+  }
+  return { exports, locals };
 }
+
+function slimLine(f) {
+  const { exports, locals } = symbolNames(f);
+  const parts = [`${f.rel} (${f.lines} lines)`];
+  if (exports.length) parts.push(`exports: ${capNames(exports, SLIM_EXPORT_CAP).join(", ")}`);
+  if (locals.length) parts.push(`locals: ${capNames(locals, SLIM_LOCAL_CAP).join(", ")}`);
+  if (f.imports.length) parts.push(`imports: ${f.imports.map(shortPath).join(", ")}`);
+  return parts.join(" | ");
+}
+
+function leafLine(dir, members) {
+  const byName = new Map(members.map(f => [path.posix.basename(f.rel), f]));
+  const { exports } = symbolNames(byName.get("index.js"));
+  const external = new Set();
+  for (const f of members) {
+    for (const imp of f.imports) if (!imp.startsWith(`${dir}/`)) external.add(shortPath(imp));
+  }
+  const extras = [...byName.keys()].filter(n => !TOPIC_LEAF_FILES.includes(n));
+  const missing = TOPIC_LEAF_FILES.filter(n => !byName.has(n));
+  const parts = [shortPath(dir), `export: ${exports.join(", ") || "(none)"}`];
+  if (external.size) parts.push(`external imports: ${[...external].join(", ")}`);
+  if (extras.length) parts.push(`extra files: ${extras.join(", ")}`);
+  if (missing.length) parts.push(`missing: ${missing.join(", ")}`);
+  return parts.join(" | ");
+}
+
+function slimSkeleton(list) {
+  const leafDirs = new Set(
+    list
+      .filter(f => f.rel.startsWith("src/topics/") && path.posix.basename(f.rel) === "index.js")
+      .map(f => path.posix.dirname(f.rel))
+      .filter(d => d !== "src/topics")
+  );
+  const out = [SLIM_HEADER];
+  const emitted = new Set();
+  for (const f of list) {
+    const dir = path.posix.dirname(f.rel);
+    if (!leafDirs.has(dir)) { out.push(slimLine(f)); continue; }
+    if (emitted.has(dir)) continue;
+    emitted.add(dir);
+    out.push(leafLine(dir, list.filter(g => path.posix.dirname(g.rel) === dir)));
+  }
+  return out;
+}
+
+function fullSkeleton(list) {
+  const out = [];
+  for (const f of list) {
+    out.push(`FILE: ${f.rel}`);
+    if (f.imports.length) out.push(`  imports: ${f.imports.join(", ")}`);
+    for (const s of f.symbols) out.push(`  ${s}`);
+  }
+  return out;
+}
+
+function trimReadme(body) {
+  const heads = [...body.matchAll(/^## (\d+)\. .*$/gm)].map(m => ({
+    n: Number(m[1]),
+    title: m[0].slice(3),
+    idx: m.index
+  }));
+  if (!heads.length) return body;
+  const omitted = heads.filter(h => !README_ALWAYS.has(h.n)).map(h => h.title);
+  const stub =
+    `## ${heads.find(h => !README_ALWAYS.has(h.n))?.n ?? ""}+. Omitted in slim mode\n\n` +
+    `Not included to save tokens: ${omitted.join("; ")}.\n` +
+    "Ask the user to regenerate with `npm run skeleton -- --authoring` when adding a topic " +
+    "or MCQ set, or when working on units, formula language, or derivation typesetting.\n\n";
+
+  let out = body.slice(0, heads[0].idx);
+  let stubbed = false;
+  heads.forEach((h, i) => {
+    const end = i + 1 < heads.length ? heads[i + 1].idx : body.length;
+    if (README_ALWAYS.has(h.n)) out += body.slice(h.idx, end);
+    else if (!stubbed) { out += stub; stubbed = true; }
+  });
+  return out;
+}
+
+const skelLines = MODE === "full" || FILTER ? fullSkeleton(files) : slimSkeleton(files);
 
 const outBlocks = [
   "```repo-skeleton\n" + skelLines.join("\n") + "\n```"
@@ -234,10 +341,14 @@ const outBlocks = [
 const readmePath = path.resolve("README.md");
 if (fs.existsSync(readmePath)) {
   const readmeBody = fs.readFileSync(readmePath, "utf8").replace(/\r\n/g, "\n").trimEnd();
-  outBlocks.push("`````README.md\n" + readmeBody + "\n`````");
+  const shown = MODE === "slim" ? trimReadme(readmeBody) : readmeBody;
+  outBlocks.push("`````README.md\n" + shown + "\n`````");
 }
 
+const outText = outBlocks.join("\n\n") + "\n";
 const outPath = path.resolve("tmp/skeleton.txt");
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
-fs.writeFileSync(outPath, outBlocks.join("\n\n") + "\n", "utf8");
-console.log(`Wrote tmp/skeleton.txt (${files.length} files, ${skelLines.length} skeleton lines).`);
+fs.writeFileSync(outPath, outText, "utf8");
+console.log(
+  `Wrote tmp/skeleton.txt (${MODE}, ${files.length} files, ${skelLines.length} skeleton lines, ~${Math.round(outText.length / 4)} tokens).`
+);

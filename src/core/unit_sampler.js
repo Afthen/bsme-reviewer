@@ -254,6 +254,72 @@ export function retainsSufficientSigFigs(convertedValue) {
   return abs >= 0.0995 && abs <= 9.99e6;
 }
 
+/**
+ * Cleanliness grid: at most 2 significant digits, or 3 when the last is 5
+ * (step = leading-decade / 20). Idempotent; snapClean(snapClean(x)) === snapClean(x).
+ */
+export function snapClean(x) {
+  if (!Number.isFinite(x) || x === 0) return x;
+  const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(x))));
+  const step = mag / 20;
+  return Number((Math.round(x / step) * step).toPrecision(3));
+}
+
+/**
+ * Plans display units for every root variable (varsDb entries declaring
+ * `typical: [lo, hi]` in their canonical `unit`) BEFORE createSystem runs.
+ * A candidate unit is accepted when the typical-range midpoint stays readable
+ * in it; otherwise the canonical unit is kept.
+ */
+export function planProblemUnits(varsDb = {}, forcedMode = null) {
+  const mode = sampleSystemMode(forcedMode);
+  const roots = Object.keys(varsDb).filter(k => {
+    const m = varsDb[k] || {};
+    return Array.isArray(m.typical) && m.unit && m.dimension &&
+      m.dimension !== DIMENSIONS.DIMENSIONLESS && !m.isAbstract;
+  });
+  const shuffled = [...roots].sort(() => Math.random() - 0.5);
+  const usCount = mode === "US" ? shuffled.length
+    : mode === "MIXED" ? shuffled.length - Math.floor(shuffled.length / 2) : 0;
+  const plan = {};
+  shuffled.forEach((k, i) => {
+    const meta = varsDb[k];
+    const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
+    const canonBag = getUnitAtomBag(meta.unit, meta.dimension);
+    const mid = valueToCoherentBase((meta.typical[0] + meta.typical[1]) / 2, meta.unit, isDiff, meta.dimension);
+    const palette = DIMENSION_TOKEN_PALETTES[i < usCount ? "US" : "SI"]?.[meta.dimension] || [];
+    const chosen = [...palette]
+      .filter(p => isDimEqual(canonBag.dimMap, getUnitAtomBag(p.unit, meta.dimension).dimMap))
+      .sort(() => Math.random() - 0.5)
+      .find(p => retainsSufficientSigFigs(formatValueInUnit(mid, p.unit, isDiff, meta.dimension)));
+    plan[k] = chosen ? chosen.unit : meta.unit;
+  });
+  return plan;
+}
+
+/**
+ * Clean-number draw for system.js. Samples the variable's typical range in its
+ * PLANNED display unit, snaps to the cleanliness grid, and returns the value in
+ * the canonical unit, so display and ground truth can never diverge.
+ * bounds {lo, hi} (canonical units) narrow the range, e.g. t_wb below t_db.
+ */
+export function makeDraw(unitPlan = {}, varsDb = {}, rng = Math.random) {
+  return function draw(key, bounds = {}) {
+    const meta = varsDb[key] || {};
+    if (!Array.isArray(meta.typical)) throw new Error(`draw(${key}): varsDb entry needs typical: [lo, hi]`);
+    const lo = bounds.lo ?? meta.typical[0];
+    const hi = bounds.hi ?? meta.typical[1];
+    if (!(hi > lo)) throw new Error(`draw(${key}): empty range [${lo}, ${hi}]`);
+    const isDiff = meta.dimension === DIMENSIONS.TEMPERATURE_DIFF || !!meta.isDifference;
+    const shown = unitPlan[key] || meta.unit;
+    const toShown = v => formatValueInUnit(valueToCoherentBase(v, meta.unit, isDiff, meta.dimension), shown, isDiff, meta.dimension);
+    const toCanon = v => formatValueInUnit(valueToCoherentBase(v, shown, isDiff, meta.dimension), meta.unit, isDiff, meta.dimension);
+    const [a, b] = [toShown(lo), toShown(hi)].sort((x, y) => x - y);
+    const clean = Math.min(snapClean(b), Math.max(snapClean(a), snapClean(a + rng() * (b - a))));
+    return toCanon(clean);
+  };
+}
+
 export function sampleConstantUnit(varKey, sys = "SI") {
   const meta = CONSTANTS_DB[varKey];
   if (!meta) return null;
@@ -302,7 +368,7 @@ export function findCoupledGroup(varKey) {
  * Guarantees exact affine offsets and 3-sig-fig retention.
  * Deliberately removes constraints to allow "givens" to roll any valid physical unit.
  */
-export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
+export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null, unitPlan = {}) {
   if (!S || !S._u) return S;
 
   const mode = sampleSystemMode(forcedMode);
@@ -352,6 +418,14 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null) {
     const canonBag = getUnitAtomBag(canonUnit, meta.dimension);
     const canonVal = S[k];
     const coherentVal = valueToCoherentBase(canonVal, canonUnit, isDiff, meta.dimension);
+
+    // Root variables drawn clean in their planned unit: convert, never re-choose.
+    const plannedUnit = unitPlan[k];
+    if (plannedUnit) {
+      S[k] = formatValueInUnit(coherentVal, plannedUnit, isDiff, meta.dimension);
+      S._u[k] = plannedUnit;
+      return;
+    }
 
     const palette = DIMENSION_TOKEN_PALETTES[targetSys]?.[meta.dimension] || [];
 
