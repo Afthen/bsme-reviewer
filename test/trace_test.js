@@ -9,7 +9,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { parseCase } from "../scripts/lib/trace_parse.js";
 import { recordNumericPushes } from "../scripts/lib/trace_hooks.js";
-import { fulfill } from "../scripts/fulfill_ctx.js";
+import { fulfill, LIMITS } from "../scripts/fulfill_ctx.js";
 
 describe("trace_parse.parseCase", () => {
   test("parses a matrix line with and without seed", () => {
@@ -59,6 +59,6 @@ describe("fulfill TRACE", () => {
   test("malformed TRACE is rejected with usage, not executed", async () => {
     const out = await fulfill("TRACE not a case");
     assert.match(out, /TRACE needs a matrix case/);
-    assert.match(out, /1\/8 directives used/);
+    assert.ok(out.includes(`1/${LIMITS.MAX_DIRECTIVES} directives used`));
   });
 });

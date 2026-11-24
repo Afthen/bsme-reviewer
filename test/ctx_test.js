@@ -39,7 +39,7 @@ function bigSource() {
   const out = [];
   for (let k = 0; k < 3; k++) {
     out.push(`export function f${k}() {`);
-    for (let i = 0; i < 208; i++) out.push("  // pad");
+    for (let i = 0; i < 260; i++) out.push("  // pad");
     out.push("}");
   }
   return out.join("\n");
@@ -108,7 +108,7 @@ describe("fulfill_ctx", () => {
 
   test("range cutting a huge symbol is not snapped but is reported", async () => {
     const out = await run("READ big.js:50-60");
-    assert.match(out, /lines 50-60 of 630/);
+    assert.match(out, /lines 50-60 of 786/);
     assert.match(out, /too large to snap/);
   });
 
@@ -313,11 +313,16 @@ describe("context delivery cache", () => {
 
   test("symbol movement to a new line range is delivered again", async () => {
     await runCached("READ lib.js#K");
-    fs.writeFileSync(path.join(root, "lib.js"), `// inserted line\n${SAMPLE}`);
 
-    const second = await runCached("READ lib.js#K");
-    assert.match(second, /lines 12-15 of 19/);
-    assert.match(second, /12: export const K/);
+    try {
+      fs.writeFileSync(path.join(root, "lib.js"), `// inserted line\n${SAMPLE}`);
+
+      const second = await runCached("READ lib.js#K");
+      assert.match(second, /lines 12-15 of 19/);
+      assert.match(second, /12: export const K/);
+    } finally {
+      fs.writeFileSync(path.join(root, "lib.js"), SAMPLE);
+    }
   });
 
   test("a GREP excerpt does not suppress a later full READ", async () => {

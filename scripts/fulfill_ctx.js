@@ -467,22 +467,35 @@ function analyzeSourceResult(res, cache) {
     groups.get(group).push(item);
   }
 
+  const markers = new Map();
+  const removed = new Set();
+
   for (const [group, items] of groups) {
     items.sort((a, b) => a.ref.outputIndex - b.ref.outputIndex);
     const indexes = items.map((item) => item.ref.outputIndex);
     const deliveries = [...new Set(items.map((item) => item.seq).filter(Number.isInteger))];
-    const deliveryText = deliveries.length ? ` (earlier delivery${deliveries.length > 1 ? "ies" : ""}: ${deliveries.join(", ")})` : "";
-    const first = indexes[0];
+    const deliveryText = deliveries.length
+      ? ` (earlier delivery${deliveries.length > 1 ? "ies" : ""}: ${deliveries.join(", ")})`
+      : "";
 
-    lines[first] =
-      `[CACHED: ${items.length} source line(s) already included${deliveryText}]`;
-    for (const index of indexes.slice(1)) lines[index] = "";
+    markers.set(
+      indexes[0],
+      `[CACHED: ${items.length} source line(s) already included${deliveryText}]`
+    );
+
+    for (const index of indexes.slice(1)) removed.add(index);
+  }
+
+  const compactLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (markers.has(i)) compactLines.push(markers.get(i));
+    else if (!removed.has(i)) compactLines.push(lines[i]);
   }
 
   return {
     res: {
       ...res,
-      text: lines.join("\n"),
+      text: compactLines.join("\n"),
       lines: Math.max(1, res.lines - cached.length + groups.size),
       sourceRefs: newRefs
     },
