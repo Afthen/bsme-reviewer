@@ -20,6 +20,17 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { extractSymbols, findEnclosing } from "./lib/symbols.js";
 import { parseCase } from "./lib/trace_parse.js";
 import {
+  allocateCacheSequence,
+  findLineDelivery,
+  findOutputDelivery,
+  hashText,
+  loadContextCache,
+  recordLineDelivery,
+  recordOutputDelivery,
+  resetContextCache,
+  saveContextCache
+} from "./lib/ctx_cache.js";
+import {
   handleGraph,
   handleTopic,
   handleUnit,
@@ -58,6 +69,20 @@ const FENCE = "`".repeat(3);
 const fenced = (header, body) => `${header}\n${FENCE}\n${body}\n${FENCE}\n`;
 const clip = (s) => (s.length > LIMITS.MAX_LINE_CHARS ? `${s.slice(0, LIMITS.MAX_LINE_CHARS)}…` : s);
 const numbered = (lines, a, b) => lines.slice(a - 1, b).map((l, i) => `${a + i}: ${l}`).join("\n");
+
+function sourceBlock(rel, header, lines, a, b, { complete = true, group = 0 } = {}) {
+  const text = fenced(header, numbered(lines, a, b));
+  const sourceRefs = lines.slice(a - 1, b).map((raw, i) => ({
+    rel,
+    line: a + i,
+    raw,
+    complete,
+    display: `${a + i}: ${raw}`,
+    outputIndex: i + 2,
+    group
+  }));
+  return { text, lines: b - a + 1, sourceRefs };
+}
 
 function resolveInRoot(root, rel) {
   const abs = path.resolve(root, rel);
@@ -98,7 +123,11 @@ function outlineRows(syms) {
   return rows.length ? rows.join("\n") : "(no top-level symbols; use a line range)";
 }
 
-const errorBlock = (rel, msg) => ({ text: `FILE: ${rel}\n[ERROR: ${msg}]\n`, lines: 1 });
+const errorBlock = (rel, msg) => ({
+  text: `FILE: ${rel}\n[ERROR: ${msg}]\n`,
+  lines: 1,
+  cacheable: false
+});
 
 function handleOutline(arg, { root }) {
   const f = loadFile(root, arg);
@@ -114,7 +143,8 @@ function refuse(rel, f, needed, remaining) {
       `FILE: ${rel}\n[SKIPPED: would return ${needed} lines but only ${remaining} remain in this request's budget. ` +
       `Use READ ${rel}#symbol or a narrower range from the outline below.]\n` +
       fenced(`OUTLINE: ${rel} (${f.lines.length} lines)`, body),
-    lines: body.split("\n").length
+    lines: body.split("\n").length,
+    cacheable: false
   };
 }
 
@@ -130,12 +160,38 @@ function readSymbols(rel, f, names, remaining) {
       blocks.push(`FILE: ${rel}#${name}\n[ERROR: symbol not found. ${near.length ? "Similar" : "Available"}: ${pool.join(", ") || "(none)"}]\n`);
     } else picked.push(...hits);
   }
-  const needed = picked.reduce((n, s) => n + (s.end - s.start + 1), 0);
+  const invalidCount = blocks.length;
+  const uniquePicked = [...new Map(
+    picked.map((s) => [`${s.name}:${s.start}:${s.end}`, s])
+  ).values()];
+  const needed = uniquePicked.reduce((n, s) => n + (s.end - s.start + 1), 0);
   if (needed > remaining) return refuse(rel, f, needed, remaining);
-  for (const s of picked) {
-    blocks.push(fenced(`FILE: ${rel}#${s.name} (lines ${s.start}-${s.end} of ${f.lines.length})`, numbered(f.lines, s.start, s.end)));
+
+  const refs = [];
+  let offset = blocks.reduce((n, block) => n + block.split("\n").length, 0);
+  for (let i = 0; i < uniquePicked.length; i++) {
+    const s = uniquePicked[i];
+    const block = sourceBlock(
+      rel,
+      `FILE: ${rel}#${s.name} (lines ${s.start}-${s.end} of ${f.lines.length})`,
+      f.lines,
+      s.start,
+      s.end,
+      { group: i }
+    );
+    refs.push(...block.sourceRefs.map((ref) => ({
+      ...ref,
+      outputIndex: ref.outputIndex + offset
+    })));
+    blocks.push(block.text);
+    offset += block.text.split("\n").length;
   }
-  return { text: blocks.join("\n"), lines: needed + (blocks.length - picked.length) };
+
+  return {
+    text: blocks.join("\n"),
+    lines: needed + invalidCount,
+    sourceRefs: refs
+  };
 }
 
 function snapRange(syms, a0, b0) {
@@ -175,11 +231,12 @@ function handleRead(arg, { root, remaining }) {
           `FILE: ${rel}\n[Bare READ skipped: file has ${N} lines, which exceeds ${LIMITS.FULL_READ_MAX}. ` +
           `Request READ ${rel}#symbol or READ ${rel}:a-b using the outline below.]\n` +
           fenced(`OUTLINE: ${rel} (${N} lines)`, body),
-        lines: body.split("\n").length
+        lines: body.split("\n").length,
+        cacheable: false
       };
     }
     if (N > remaining) return refuse(rel, f, N, remaining);
-    return { text: fenced(`FILE: ${rel} (${N} lines)`, numbered(f.lines, 1, N)), lines: N };
+    return sourceBlock(rel, `FILE: ${rel} (${N} lines)`, f.lines, 1, N);
   }
 
   const notes = [];
@@ -205,7 +262,13 @@ function handleRead(arg, { root, remaining }) {
   const needed = b - a + 1;
   if (needed > remaining) return refuse(rel, f, needed, remaining);
   const noteText = notes.length ? `\n[${notes.join("; ")}]` : "";
-  return { text: fenced(`FILE: ${rel} (lines ${a}-${b} of ${N})${noteText}`, numbered(f.lines, a, b)), lines: needed };
+  return sourceBlock(
+    rel,
+    `FILE: ${rel} (lines ${a}-${b} of ${N})${noteText}`,
+    f.lines,
+    a,
+    b
+  );
 }
 
 function parseGrepArgs(arg) {
@@ -239,7 +302,7 @@ function mergeWindows(indices, ctx, total) {
 
 function handleGrep(arg, { root, remaining }) {
   const { ctx, ci, scope, term } = parseGrepArgs(arg);
-  if (!term) return { text: "[ERROR: GREP needs a search term]\n", lines: 1 };
+  if (!term) return { text: "[ERROR: GREP needs a search term]\n", lines: 1, cacheable: false };
 
   let range = null;
   let files;
@@ -247,7 +310,11 @@ function handleGrep(arg, { root, remaining }) {
     const sm = scope.match(/^(.+?)(?::(\d+)-(\d+))?$/);
     if (sm[2]) range = [Number(sm[2]), Number(sm[3])];
     const abs = resolveInRoot(root, sm[1]);
-    if (!abs) return { text: `[ERROR: scope ${sm[1]} escapes repository root]\n`, lines: 1 };
+    if (!abs) return {
+      text: `[ERROR: scope ${sm[1]} escapes repository root]\n`,
+      lines: 1,
+      cacheable: false
+    };
     files = collectFiles(abs);
   } else {
     files = SEARCH_ROOTS.flatMap((r) => collectFiles(path.resolve(root, r)));
@@ -274,6 +341,7 @@ function handleGrep(arg, { root, remaining }) {
   }
 
   const out = [];
+  const sourceRefs = [];
   let truncated = false;
   for (const [rel, { lines, hits }] of byFile) {
     const syms = rel.endsWith(".js") ? extractSymbols(lines.join("\n")) : [];
@@ -283,10 +351,22 @@ function handleGrep(arg, { root, remaining }) {
       if (ctx > 0 && out.length) out.push("--");
       for (let k = windows[w][0]; k <= windows[w][1]; k++) {
         if (out.length >= remaining) { truncated = true; break; }
-        if (hitSet.has(k)) {
-          const sym = findEnclosing(syms, k + 1);
-          out.push(`${rel}:${k + 1}${sym ? ` [${sym.name}]` : ""}: ${clip(lines[k].trim())}`);
-        } else out.push(`${rel}-${k + 1}- ${clip(lines[k].trim())}`);
+        const isHit = hitSet.has(k);
+        const sym = isHit ? findEnclosing(syms, k + 1) : null;
+        const display = isHit
+          ? `${rel}:${k + 1}${sym ? ` [${sym.name}]` : ""}: ${clip(lines[k].trim())}`
+          : `${rel}-${k + 1}- ${clip(lines[k].trim())}`;
+        const outputIndex = out.length + 2;
+        out.push(display);
+        sourceRefs.push({
+          rel,
+          line: k + 1,
+          raw: lines[k],
+          complete: false,
+          display,
+          outputIndex,
+          group: 0
+        });
       }
     }
     if (truncated) break;
@@ -297,7 +377,8 @@ function handleGrep(arg, { root, remaining }) {
   const trunc = truncated ? "\n[output truncated by line budget; narrow with @ path]" : "";
   return {
     text: fenced(`GREP: "${term}" (${total} matches${cap}${where})`, (out.join("\n") || "(no matches)") + trunc),
-    lines: Math.max(1, out.length)
+    lines: Math.max(1, out.length),
+    sourceRefs
   };
 }
 
@@ -345,11 +426,84 @@ export function parseDirectives(raw) {
   return raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith(FENCE));
 }
 
-/** Fulfills a raw request; returns the response text ("" when no directives). */
-export async function fulfill(raw, { root = process.cwd() } = {}) {
-  const directives = parseDirectives(raw);
-  if (directives.length === 0) return "";
+function analyzeSourceResult(res, cache) {
+  const refs = res.sourceRefs || [];
+  if (!refs.length) {
+    return { res, cachedCount: 0, markerCount: 0, newRefs: [] };
+  }
 
+  const cached = [];
+  const newRefs = [];
+  const seen = new Set();
+
+  for (const ref of refs) {
+    const key = `${ref.rel}\0${ref.line}`;
+    const previous = findLineDelivery(cache, ref);
+
+    if (previous) {
+      cached.push({ ref, seq: previous.seq });
+    } else if (seen.has(key)) {
+      cached.push({ ref, seq: null });
+    } else {
+      seen.add(key);
+      newRefs.push(ref);
+    }
+  }
+
+  if (!cached.length) {
+    return {
+      res: { ...res, sourceRefs: newRefs },
+      cachedCount: 0,
+      markerCount: 0,
+      newRefs
+    };
+  }
+
+  const lines = res.text.split("\n");
+  const groups = new Map();
+  for (const item of cached) {
+    const group = item.ref.group ?? 0;
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(item);
+  }
+
+  for (const [group, items] of groups) {
+    items.sort((a, b) => a.ref.outputIndex - b.ref.outputIndex);
+    const indexes = items.map((item) => item.ref.outputIndex);
+    const deliveries = [...new Set(items.map((item) => item.seq).filter(Number.isInteger))];
+    const deliveryText = deliveries.length ? ` (earlier delivery${deliveries.length > 1 ? "ies" : ""}: ${deliveries.join(", ")})` : "";
+    const first = indexes[0];
+
+    lines[first] =
+      `[CACHED: ${items.length} source line(s) already included${deliveryText}]`;
+    for (const index of indexes.slice(1)) lines[index] = "";
+  }
+
+  return {
+    res: {
+      ...res,
+      text: lines.join("\n"),
+      lines: Math.max(1, res.lines - cached.length + groups.size),
+      sourceRefs: newRefs
+    },
+    cachedCount: cached.length,
+    markerCount: groups.size,
+    newRefs
+  };
+}
+
+/**
+ * Prepares a response and a deferred ledger commit.
+ * The caller commits only after its response file has been written successfully.
+ */
+export async function prepareFulfillment(raw, {
+  root = process.cwd(),
+  cache: useCache = false
+} = {}) {
+  const directives = parseDirectives(raw);
+  if (directives.length === 0) return { text: "", commit() {} };
+
+  const cache = useCache ? loadContextCache(root) : null;
   const run = directives.slice(0, LIMITS.MAX_DIRECTIVES);
   const dropped = directives.slice(LIMITS.MAX_DIRECTIVES);
   const parts = [];
@@ -360,18 +514,61 @@ export async function fulfill(raw, { root = process.cwd() } = {}) {
     const remaining = Math.max(0, LIMITS.MAX_OUTPUT_LINES - used);
     const m = line.match(DIRECTIVE_RE);
     let r;
+
     if (m) {
       const verb = m[1];
       const arg = (m[2] || "").trim();
+
       try {
-        const res = HANDLERS[verb](arg, { root, remaining });
-        r = res instanceof Promise ? await res : res;
+        if (cache && (verb === "READ" || verb === "GREP")) {
+          let res = HANDLERS[verb](arg, { root, remaining: Number.MAX_SAFE_INTEGER });
+          let analyzed = analyzeSourceResult(res, cache);
+
+          if (analyzed.res.lines > remaining && (res.sourceRefs || []).length) {
+            const overhead = Math.max(0, res.lines - res.sourceRefs.length);
+            const retryRemaining = Math.max(
+              0,
+              remaining + analyzed.cachedCount - analyzed.markerCount - overhead
+            );
+            res = HANDLERS[verb](arg, { root, remaining: retryRemaining });
+            analyzed = analyzeSourceResult(res, cache);
+          }
+
+          r = analyzed.res;
+
+          if (analyzed.newRefs.length) {
+            const seq = allocateCacheSequence(cache);
+            for (const ref of analyzed.newRefs) {
+              recordLineDelivery(cache, ref, seq);
+            }
+          }
+        } else {
+          const result = HANDLERS[verb](arg, { root, remaining });
+          r = result instanceof Promise ? await result : result;
+
+          if (cache && verb !== "READ" && verb !== "GREP" &&
+              r.cacheable !== false && r.text) {
+            const outputHash = hashText(r.text);
+            const previous = findOutputDelivery(cache, outputHash);
+
+            if (previous) {
+              r = {
+                text: `[CACHED: identical ${verb} result already delivered in context delivery #${previous.seq}]\n`,
+                lines: 1
+              };
+            } else {
+              const seq = allocateCacheSequence(cache);
+              recordOutputDelivery(cache, outputHash, seq);
+            }
+          }
+        }
       } catch (err) {
-        r = { text: `[${verb} ERROR: ${err.message}]\n`, lines: 1 };
+        r = { text: `[${verb} ERROR: ${err.message}]\n`, lines: 1, cacheable: false };
       }
     } else {
-      r = { text: `[UNRECOGNIZED: ${line}]\n${USAGE}\n`, lines: 1 };
+      r = { text: `[UNRECOGNIZED: ${line}]\n${USAGE}\n`, lines: 1, cacheable: false };
     }
+
     parts.push(r.text);
     used += r.lines;
   }
@@ -380,23 +577,51 @@ export async function fulfill(raw, { root = process.cwd() } = {}) {
   if (dropped.length) {
     header += `\nNOT RUN (over the ${LIMITS.MAX_DIRECTIVES}-directive limit; prioritize and resend):\n${dropped.join("\n")}`;
   }
-  return `${header}\n\n${parts.join("\n")}`;
+
+  return {
+    text: `${header}\n\n${parts.join("\n")}`,
+    commit() {
+      if (cache) saveContextCache(cache);
+    }
+  };
+}
+
+/** Fulfills a raw request; caching is opt-in for programmatic callers. */
+export async function fulfill(raw, options = {}) {
+  const prepared = await prepareFulfillment(raw, options);
+  prepared.commit();
+  return prepared.text;
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (isMain) {
   const REQ_FILE = path.resolve("tmp/ctx_req.txt");
   const RES_FILE = path.resolve("tmp/ctx_res.txt");
+  const args = process.argv.slice(2);
+
+  if (args.includes("--reset")) {
+    resetContextCache();
+    if (args.length === 1) {
+      console.log("Reset tmp/ctx_cache.txt.");
+      process.exit(0);
+    }
+  }
+
   if (!fs.existsSync(REQ_FILE)) {
     console.error("Missing tmp/ctx_req.txt: paste the model's directive block there first.");
     process.exit(1);
   }
-  const text = await fulfill(fs.readFileSync(REQ_FILE, "utf8"));
-  if (!text) {
+
+  const prepared = await prepareFulfillment(fs.readFileSync(REQ_FILE, "utf8"), { cache: true });
+  if (!prepared.text) {
     console.error("No READ, OUTLINE, GREP, or TRACE directives found in tmp/ctx_req.txt.");
     process.exit(1);
   }
+
   fs.mkdirSync(path.dirname(RES_FILE), { recursive: true });
-  fs.writeFileSync(RES_FILE, text, "utf8");
-  console.log(`Wrote tmp/ctx_res.txt (${text.split("\n")[0]})`);
+  const tempFile = `${RES_FILE}.tmp-${process.pid}`;
+  fs.writeFileSync(tempFile, prepared.text, "utf8");
+  fs.renameSync(tempFile, RES_FILE);
+  prepared.commit();
+  console.log(`Wrote tmp/ctx_res.txt (${prepared.text.split("\n")[0]})`);
 }

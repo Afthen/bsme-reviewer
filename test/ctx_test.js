@@ -7,6 +7,7 @@
 
 import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -118,7 +119,7 @@ describe("fulfill_ctx", () => {
 
   test("bare READ of a large file returns an outline, not the dump", async () => {
     const out = await run("READ big.js");
-    assert.match(out, /exceeds 400/);
+    assert.match(out, /exceeds 512/);
     assert.match(out, /export fn f1/);
     assert.doesNotMatch(out, /\/\/ pad/);
   });
@@ -253,5 +254,107 @@ describe("fulfill new context tools", () => {
     const out = await fulfill("ROUNDTRIP-STEP diesel_cycle eq_diesel_t2 T_2");
     assert.match(out, /Roundtrip Identity Test/);
     assert.match(out, /Roundtrip Status:/);
+  });
+});
+
+describe("context delivery cache", () => {
+  let root;
+
+  before(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "ctx-cache-"));
+    fs.mkdirSync(path.join(root, "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(root, "lib.js"), SAMPLE);
+    fs.writeFileSync(
+      path.join(root, "plain.txt"),
+      Array.from({ length: 10 }, (_, i) => `line ${i + 1}`).join("\n")
+    );
+  });
+
+  after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const runCached = (request) => fulfill(request, { root, cache: true });
+  const cachePath = () => path.join(root, "tmp", "ctx_cache.txt");
+
+  test("exact duplicate READ is replaced by a marker and ledger contains no source text", async () => {
+    const first = await runCached("READ lib.js#K");
+    assert.match(first, /11: export const K/);
+
+    const second = await runCached("READ lib.js#K");
+    assert.match(second, /CACHED: 4 source line/);
+    assert.doesNotMatch(second, /11: export const K/);
+
+    const ledger = fs.readFileSync(cachePath(), "utf8");
+    assert.doesNotMatch(ledger, /export const K/);
+    assert.match(ledger, /^# ctx-cache-v1/m);
+  });
+
+  test("partial overlap sends only unseen source lines", async () => {
+    await runCached("READ plain.txt:1-5");
+    const second = await runCached("READ plain.txt:4-8");
+
+    assert.match(second, /CACHED: 2 source line/);
+    assert.doesNotMatch(second, /4: line 4/);
+    assert.doesNotMatch(second, /5: line 5/);
+    assert.match(second, /6: line 6/);
+    assert.match(second, /8: line 8/);
+  });
+
+  test("changed source line is delivered again", async () => {
+    await runCached("READ plain.txt:1-3");
+
+    fs.writeFileSync(
+      path.join(root, "plain.txt"),
+      ["line 1", "line 2 changed", "line 3", ...Array.from({ length: 7 }, (_, i) => `line ${i + 4}`)].join("\n")
+    );
+
+    const second = await runCached("READ plain.txt:1-3");
+    assert.match(second, /2: line 2 changed/);
+  });
+
+  test("symbol movement to a new line range is delivered again", async () => {
+    await runCached("READ lib.js#K");
+    fs.writeFileSync(path.join(root, "lib.js"), `// inserted line\n${SAMPLE}`);
+
+    const second = await runCached("READ lib.js#K");
+    assert.match(second, /lines 12-15 of 19/);
+    assert.match(second, /12: export const K/);
+  });
+
+  test("a GREP excerpt does not suppress a later full READ", async () => {
+    await runCached("GREP export function @ lib.js");
+    const second = await runCached("READ lib.js:5-9");
+
+    assert.match(second, /5: export function add/);
+    assert.match(second, /8:   return/);
+  });
+
+  test("computed directives rerun and deduplicate by exact output", async () => {
+    const first = await runCached("OUTLINE lib.js");
+    assert.match(first, /OUTLINE: lib.js/);
+
+    const second = await runCached("OUTLINE lib.js");
+    assert.match(second, /CACHED: identical OUTLINE result/);
+    assert.doesNotMatch(second, /export fn add/);
+  });
+
+  test("--reset clears the ledger even when no request file exists", async () => {
+    await runCached("READ plain.txt:1-2");
+    assert.equal(fs.existsSync(cachePath()), true);
+
+    const script = path.resolve("scripts/fulfill_ctx.js");
+    execFileSync(process.execPath, [script, "--reset"], { cwd: root });
+
+    assert.equal(fs.existsSync(cachePath()), false);
+  });
+
+  test("generating a new skeleton clears the previous context ledger", async () => {
+    await runCached("READ plain.txt:1-2");
+    assert.equal(fs.existsSync(cachePath()), true);
+
+    const script = path.resolve("scripts/repo_skeleton.js");
+    execFileSync(process.execPath, [script], { cwd: root });
+
+    assert.equal(fs.existsSync(cachePath()), false);
+    assert.equal(fs.existsSync(path.join(root, "tmp", "skeleton.txt")), true);
   });
 });

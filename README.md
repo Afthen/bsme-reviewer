@@ -6,7 +6,7 @@ A graph-based engineering problem generator, symbolic solver, and spaced-repetit
 - **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
 - **Test:** `npm test` (regenerates `src/topics/index.js` + `src/mcq/index.js` and runs `test/run_test.js`, `test/run_hygiene_test.js`, `test/derivation_matrix_test.js` and the regression suites in Node 22).
 - **Repo Map:** `npm run skeleton` (prints resolved import graph + function/object signatures for AI context).
-- **Context Loop:** `npm run ctx` (fulfills `READ` / `OUTLINE` / `GREP` / `TRACE` requests from `tmp/ctx_req.txt` into `tmp/ctx_res.txt`).
+- **Context Loop:** `npm run ctx` (fulfills `READ` / `OUTLINE` / `GREP` / `TRACE` requests from `tmp/ctx_req.txt` into `tmp/ctx_res.txt`; tracks delivered context in `tmp/ctx_cache.txt`).
 
 ---
 
@@ -79,6 +79,9 @@ You are modifying the BSME Reviewer repository.
      suspected failure.
    - Never guess line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
    - Avoid requesting context already provided in the conversation.
+   - `npm run ctx` records source-line fingerprints and exact computed-output fingerprints in `tmp/ctx_cache.txt`. Repeated requests return a short cache marker; partially overlapping source requests return only unseen lines.
+   - The ledger stores hashes and delivery metadata, never source text. Full READs satisfy later excerpts, but GREP excerpts do not satisfy later full READs. Changed lines and lines moved to different positions are sent again.
+   - `npm run ctx -- --reset` clears the ledger. Running `npm run skeleton` also clears it because the skeleton starts a new context boundary.
    - When a test fails and the cause is not obvious from reading, investigate before
      proposing a fix; use TRACE for numerical derivation failures.
 6. Code output convention: When given permission to code, precede single-file blocks

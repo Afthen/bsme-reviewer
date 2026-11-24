@@ -11,6 +11,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { resetContextCache } from "./lib/ctx_cache.js";
 
 const ROOTS = ["app.js", "src", "scripts", "test"];
 const ARGS = process.argv.slice(2);
@@ -349,6 +350,7 @@ const outText = outBlocks.join("\n\n") + "\n";
 const outPath = path.resolve("tmp/skeleton.txt");
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, outText, "utf8");
+resetContextCache(process.cwd());
 console.log(
   `Wrote tmp/skeleton.txt (${MODE}, ${files.length} files, ${skelLines.length} skeleton lines, ~${Math.round(outText.length / 4)} tokens).`
 );

@@ -1,101 +1,861 @@
-FILE: README.md
-````diff
+FILE: scripts/lib/ctx_cache.js
+```
+/**
+ * scripts/lib/ctx_cache.js
+ * Metadata-only ledger of source lines and computed outputs delivered to a model.
+ * Source text is never written to the ledger.
+ */
+
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+
+const CACHE_RELATIVE = path.join("tmp", "ctx_cache.txt");
+const HEADER = "# ctx-cache-v1";
+const MAX_LINE_RECORDS = 20000;
+const MAX_OUTPUT_RECORDS = 256;
+
+export function hashText(text) {
+  return crypto.createHash("sha256").update(String(text), "utf8").digest("hex");
+}
+
+function lineKey(rel, line) {
+  return `${rel}\0${line}`;
+}
+
+function trimOldest(map, limit) {
+  if (map.size <= limit) return;
+  const rows = [...map.entries()].sort((a, b) => a[1].seq - b[1].seq);
+  for (const [key] of rows.slice(0, map.size - limit)) map.delete(key);
+}
+
+export function loadContextCache(root = process.cwd()) {
+  const file = path.resolve(root, CACHE_RELATIVE);
+  const cache = {
+    file,
+    nextSeq: 1,
+    lines: new Map(),
+    outputs: new Map(),
+    dirty: false
+  };
+
+  if (!fs.existsSync(file)) return cache;
+
+  const rows = fs.readFileSync(file, "utf8").split(/\r?\n/);
+  if (rows[0] !== HEADER) return cache;
+
+  for (const row of rows.slice(1)) {
+    if (!row) continue;
+    const fields = row.split("\t");
+
+    try {
+      if (fields[0] === "L" && fields.length === 7) {
+        const seq = Number(fields[1]);
+        const rel = Buffer.from(fields[2], "base64url").toString("utf8");
+        const line = Number(fields[3]);
+        const contentHash = fields[4];
+        const complete = fields[5] === "1";
+        const displayHash = fields[6];
+
+        if (!Number.isSafeInteger(seq) || seq < 1 ||
+            !Number.isSafeInteger(line) || line < 1 ||
+            !rel || !/^[a-f0-9]{64}$/.test(contentHash) ||
+            !/^[a-f0-9]{64}$/.test(displayHash)) continue;
+
+        cache.lines.set(lineKey(rel, line), {
+          seq, rel, line, contentHash, complete, displayHash
+        });
+        cache.nextSeq = Math.max(cache.nextSeq, seq + 1);
+      } else if (fields[0] === "O" && fields.length === 3) {
+        const seq = Number(fields[1]);
+        const outputHash = fields[2];
+
+        if (!Number.isSafeInteger(seq) || seq < 1 ||
+            !/^[a-f0-9]{64}$/.test(outputHash)) continue;
+
+        cache.outputs.set(outputHash, { seq, outputHash });
+        cache.nextSeq = Math.max(cache.nextSeq, seq + 1);
+      }
+    } catch {
+      // Ignore malformed rows; valid rows remain usable.
+    }
+  }
+
+  trimOldest(cache.lines, MAX_LINE_RECORDS);
+  trimOldest(cache.outputs, MAX_OUTPUT_RECORDS);
+  return cache;
+}
+
+export function allocateCacheSequence(cache) {
+  const seq = cache.nextSeq++;
+  cache.dirty = true;
+  return seq;
+}
+
+/**
+ * A complete READ satisfies later READs and GREP excerpts.
+ * A partial GREP excerpt only satisfies the same displayed excerpt; it must
+ * never suppress a later complete READ of that line.
+ */
+export function findLineDelivery(cache, ref) {
+  const rel = String(ref.rel).replace(/\\/g, "/");
+  const previous = cache.lines.get(lineKey(rel, ref.line));
+  if (!previous || previous.contentHash !== hashText(ref.raw)) return null;
+  if (previous.complete) return previous;
+
+  if (!ref.complete && previous.displayHash === hashText(ref.display)) {
+    return previous;
+  }
+  return null;
+}
+
+export function recordLineDelivery(cache, ref, seq) {
+  const rel = String(ref.rel).replace(/\\/g, "/");
+  cache.lines.set(lineKey(rel, ref.line), {
+    seq,
+    rel,
+    line: ref.line,
+    contentHash: hashText(ref.raw),
+    complete: Boolean(ref.complete),
+    displayHash: hashText(ref.display)
+  });
+  cache.dirty = true;
+  trimOldest(cache.lines, MAX_LINE_RECORDS);
+}
+
+export function findOutputDelivery(cache, outputHash) {
+  return cache.outputs.get(outputHash) || null;
+}
+
+export function recordOutputDelivery(cache, outputHash, seq) {
+  cache.outputs.set(outputHash, { seq, outputHash });
+  cache.dirty = true;
+  trimOldest(cache.outputs, MAX_OUTPUT_RECORDS);
+}
+
+export function saveContextCache(cache) {
+  if (!cache.dirty) return;
+
+  const rows = [HEADER];
+  const lineRows = [...cache.lines.values()].sort((a, b) => a.seq - b.seq);
+  const outputRows = [...cache.outputs.values()].sort((a, b) => a.seq - b.seq);
+
+  for (const item of lineRows) {
+    const encodedPath = Buffer.from(item.rel, "utf8").toString("base64url");
+    rows.push([
+      "L",
+      item.seq,
+      encodedPath,
+      item.line,
+      item.contentHash,
+      item.complete ? "1" : "0",
+      item.displayHash
+    ].join("\t"));
+  }
+
+  for (const item of outputRows) {
+    rows.push(["O", item.seq, item.outputHash].join("\t"));
+  }
+
+  fs.mkdirSync(path.dirname(cache.file), { recursive: true });
+  const temp = `${cache.file}.tmp-${process.pid}`;
+  fs.writeFileSync(temp, `${rows.join("\n")}\n`, "utf8");
+  fs.renameSync(temp, cache.file);
+  cache.dirty = false;
+}
+
+export function resetContextCache(root = process.cwd()) {
+  const dir = path.resolve(root, "tmp");
+  const file = path.join(dir, "ctx_cache.txt");
+
+  if (fs.existsSync(file)) fs.rmSync(file, { force: true });
+  if (!fs.existsSync(dir)) return;
+
+  for (const name of fs.readdirSync(dir)) {
+    if (name.startsWith("ctx_cache.txt.tmp-")) {
+      fs.rmSync(path.join(dir, name), { force: true });
+    }
+  }
+}
+```
+
+FILE: scripts/fulfill_ctx.js
+```diff
 <<<<
-5. Context requests: You only see the Repo Skeleton by default. Request context with a
-   single fenced `text` block, one directive per line, then stop. No XML tags; never
-   ask in prose. Each request has a budget of 16 directives and 1024 output lines, so
-   plan everything you need up front and batch it.
-   - READ path#symbol[,symbol2]   exact function/const bodies (preferred; no line math)
-   - READ path:a-b | path:-N      line range (snaps to enclosing symbol) | last N lines
-   - READ path                    whole file (only if <= 512 lines; otherwise you get an outline)
-   - OUTLINE path                 exact symbol line ranges for one file
-   - GREP [-C n] [-i] term [@ path[:a-b]]   literal search with context lines and scope
-   - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
-                                  re-runs one derivation-matrix case through solveUnitAlgebra and
-                                  reports every non-canonical scalar with the stack frames that
-                                  created it. Paste the failing line from the matrix output
-                                  verbatim; without seed= both matrix seeds are tried. Output is
-                                  capped at 128 lines and counts against the 1024-line budget.
-   - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
-                                  renders bipartite reachability, degrees of freedom, and unrolled DAG
-   - TOPIC topic                  one-page summary of varsDb, dimensions, relations, and contracts
-   - UNIT expr                    7D dimensional vector, base scale factor, offset, and companion
-   - CONVERT unitA -> unitB       factor-label decomposition and canonical scale factor verification
-   - SOLVE "formula" target       tests CAS variable isolation (isolateVariable) and isolated LaTeX
-   - HYGIENE [topic|all]          fast-path static schema validator (orphans, collisions, native °)
-   - FAILURES [topic]             clusters derivation matrix failures by root cause
-   - DERIVE topic rel target [{u}] [sys=SI|US]
-                                  single-step derivation with 4-row tower height and oracle verification
-   - AUDIT-LATEX [topic|"tex"]    KaTeX visual formatting linter (spacing, commas, %, °)
-   - AUDIT-STEP topic rel target [{u}] [sys=SI|US]
-                                  AST-native structural derivation linter (tower height, omit 1, spacing)
-   - RENDER-STEP topic rel target visual wireframe & phase-by-phase layout progression
-   - PROBLEM-STEPS topic [sys=SI|US] [seed=N]
-                                  full multi-step problem progression with cognitive fading status
-   - STEP-AST topic rel target    dual representation: AST node hierarchy side-by-side with KaTeX
-   - DIFF-STEP topic rel t1 vs t2 AST-level structural diff between two isolated formulas or targets
-   - DIFF-DERIVE topic rel target line-by-line LaTeX derivation comparison (SI vs US)
-   - ROUNDTRIP-STEP topic rel target [{u}]
-                                  numerical fidelity oracle: AST Physics Eval vs LaTeX Derivation
-   Never guess round line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
-   When a test fails and the cause is not obvious from reading, TRACE before theorizing.
+import { extractSymbols, findEnclosing } from "./lib/symbols.js";
+import { parseCase } from "./lib/trace_parse.js";
 ====
-5. Context requests: You only see the Repo Skeleton by default. Request context with a
-   single fenced `text` block, one directive per line, then stop. No XML tags; never
-   ask in prose. Each request has a budget of 16 directives and 1024 output lines.
-   Batch related requests instead of repeatedly requesting context you already have.
-
-   **Everyday navigation (preferred):**
-   - READ path#symbol[,symbol2]   exact function/const bodies; prefer this over line numbers
-   - OUTLINE path                 exact symbol line ranges for one file
-   - GREP [-C n] [-i] term [@ path[:a-b]]
-                                  literal search with context lines and optional scope
-
-   **Domain inspection:**
-   - TOPIC topic                  one-page summary of varsDb, dimensions, relations, and contracts
-   - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
-                                  bipartite reachability, degrees of freedom, and unrolled DAG
-   - DERIVE topic rel target [{u}] [sys=SI|US]
-                                  single-step derivation with 4-row tower height and oracle verification
-
-   **Failure investigation:**
-   - FAILURES [topic]             clusters derivation matrix failures by root cause
-   - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
-                                  re-runs one derivation-matrix case through solveUnitAlgebra and
-                                  reports non-canonical scalars with their creating stack frames.
-                                  Paste the failing matrix line verbatim; without seed= both matrix
-                                  seeds are tried. Output is capped at 128 lines.
-
-   **Specialized diagnostics (use when relevant):**
-   - READ path:a-b | path:-N      line range (snaps to enclosing symbol) | last N lines
-   - READ path                    whole file (only if <= 512 lines; otherwise you get an outline)
-   - UNIT expr                    7D dimensional vector, base scale, offset, and companion
-   - CONVERT unitA -> unitB       factor-label decomposition and canonical scale verification
-   - SOLVE "formula" target       tests CAS variable isolation and isolated LaTeX
-   - HYGIENE [topic|all]          static schema validator (orphans, collisions, native °)
-   - AUDIT-LATEX [topic|"tex"]    KaTeX formatting linter (spacing, commas, %, °)
-   - AUDIT-STEP topic rel target [{u}] [sys=SI|US]
-                                  AST-native structural derivation linter
-   - RENDER-STEP topic rel target visual wireframe and phase-by-phase layout progression
-   - PROBLEM-STEPS topic [sys=SI|US] [seed=N]
-                                  full multi-step problem progression with cognitive fading
-   - STEP-AST topic rel target    AST hierarchy alongside rendered KaTeX
-   - DIFF-STEP topic rel t1 vs t2 structural comparison of isolated formulas or targets
-   - DIFF-DERIVE topic rel target SI-versus-US derivation comparison
-   - ROUNDTRIP-STEP topic rel target [{u}]
-                                  numerical fidelity: AST Physics Eval versus LaTeX Derivation
-
-   **Usage strategy:**
-   - Start with OUTLINE or GREP when the relevant implementation location is unknown.
-   - Prefer READ #symbol over manually calculated line ranges.
-   - For derivation matrix failures, use FAILURES to identify patterns and TRACE to
-     inspect representative failures before theorizing.
-   - Use TOPIC for domain/schema understanding and DERIVE for a specific equation.
-   - Use specialized diagnostics only when their output directly addresses the
-     suspected failure.
-   - Never guess line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
-   - Avoid requesting context already provided in the conversation.
-   - When a test fails and the cause is not obvious from reading, investigate before
-     proposing a fix; use TRACE for numerical derivation failures.
+import { extractSymbols, findEnclosing } from "./lib/symbols.js";
+import { parseCase } from "./lib/trace_parse.js";
+import {
+  allocateCacheSequence,
+  findLineDelivery,
+  findOutputDelivery,
+  hashText,
+  loadContextCache,
+  recordLineDelivery,
+  recordOutputDelivery,
+  resetContextCache,
+  saveContextCache
+} from "./lib/ctx_cache.js";
 >>>>
-````
+```
+```diff
+<<<<
+const numbered = (lines, a, b) => lines.slice(a - 1, b).map((l, i) => `${a + i}: ${l}`).join("\n");
+
+function resolveInRoot(root, rel) {
+====
+const numbered = (lines, a, b) => lines.slice(a - 1, b).map((l, i) => `${a + i}: ${l}`).join("\n");
+
+function sourceBlock(rel, header, lines, a, b, { complete = true, group = 0 } = {}) {
+  const text = fenced(header, numbered(lines, a, b));
+  const sourceRefs = lines.slice(a - 1, b).map((raw, i) => ({
+    rel,
+    line: a + i,
+    raw,
+    complete,
+    display: `${a + i}: ${raw}`,
+    outputIndex: i + 2,
+    group
+  }));
+  return { text, lines: b - a + 1, sourceRefs };
+}
+
+function resolveInRoot(root, rel) {
+>>>>
+```
+```diff
+<<<<
+const errorBlock = (rel, msg) => ({ text: `FILE: ${rel}\n[ERROR: ${msg}]\n`, lines: 1 });
+====
+const errorBlock = (rel, msg) => ({
+  text: `FILE: ${rel}\n[ERROR: ${msg}]\n`,
+  lines: 1,
+  cacheable: false
+});
+>>>>
+```
+```diff
+<<<<
+    text:
+      `FILE: ${rel}\n[SKIPPED: would return ${needed} lines but only ${remaining} remain in this request's budget. ` +
+      `Use READ ${rel}#symbol or a narrower range from the outline below.]\n` +
+      fenced(`OUTLINE: ${rel} (${f.lines.length} lines)`, body),
+    lines: body.split("\n").length
+  };
+}
+
+function readSymbols(rel, f, names, remaining) {
+====
+    text:
+      `FILE: ${rel}\n[SKIPPED: would return ${needed} lines but only ${remaining} remain in this request's budget. ` +
+      `Use READ ${rel}#symbol or a narrower range from the outline below.]\n` +
+      fenced(`OUTLINE: ${rel} (${f.lines.length} lines)`, body),
+    lines: body.split("\n").length,
+    cacheable: false
+  };
+}
+
+function readSymbols(rel, f, names, remaining) {
+>>>>
+```
+```diff
+<<<<
+  const needed = picked.reduce((n, s) => n + (s.end - s.start + 1), 0);
+  if (needed > remaining) return refuse(rel, f, needed, remaining);
+  for (const s of picked) {
+    blocks.push(fenced(`FILE: ${rel}#${s.name} (lines ${s.start}-${s.end} of ${f.lines.length})`, numbered(f.lines, s.start, s.end)));
+  }
+  return { text: blocks.join("\n"), lines: needed + (blocks.length - picked.length) };
+====
+  const invalidCount = blocks.length;
+  const uniquePicked = [...new Map(
+    picked.map((s) => [`${s.name}:${s.start}:${s.end}`, s])
+  ).values()];
+  const needed = uniquePicked.reduce((n, s) => n + (s.end - s.start + 1), 0);
+  if (needed > remaining) return refuse(rel, f, needed, remaining);
+
+  const refs = [];
+  let offset = blocks.reduce((n, block) => n + block.split("\n").length, 0);
+  for (let i = 0; i < uniquePicked.length; i++) {
+    const s = uniquePicked[i];
+    const block = sourceBlock(
+      rel,
+      `FILE: ${rel}#${s.name} (lines ${s.start}-${s.end} of ${f.lines.length})`,
+      f.lines,
+      s.start,
+      s.end,
+      { group: i }
+    );
+    refs.push(...block.sourceRefs.map((ref) => ({
+      ...ref,
+      outputIndex: ref.outputIndex + offset
+    })));
+    blocks.push(block.text);
+    offset += block.text.split("\n").length;
+  }
+
+  return {
+    text: blocks.join("\n"),
+    lines: needed + invalidCount,
+    sourceRefs: refs
+  };
+>>>>
+```
+```diff
+<<<<
+      return {
+        text:
+          `FILE: ${rel}\n[Bare READ skipped: file has ${N} lines, which exceeds ${LIMITS.FULL_READ_MAX}. ` +
+          `Request READ ${rel}#symbol or READ ${rel}:a-b using the outline below.]\n` +
+          fenced(`OUTLINE: ${rel} (${N} lines)`, body),
+        lines: body.split("\n").length
+      };
+    }
+    if (N > remaining) return refuse(rel, f, N, remaining);
+    return { text: fenced(`FILE: ${rel} (${N} lines)`, numbered(f.lines, 1, N)), lines: N };
+====
+      return {
+        text:
+          `FILE: ${rel}\n[Bare READ skipped: file has ${N} lines, which exceeds ${LIMITS.FULL_READ_MAX}. ` +
+          `Request READ ${rel}#symbol or READ ${rel}:a-b using the outline below.]\n` +
+          fenced(`OUTLINE: ${rel} (${N} lines)`, body),
+        lines: body.split("\n").length,
+        cacheable: false
+      };
+    }
+    if (N > remaining) return refuse(rel, f, N, remaining);
+    return sourceBlock(rel, `FILE: ${rel} (${N} lines)`, f.lines, 1, N);
+>>>>
+```
+```diff
+<<<<
+  const noteText = notes.length ? `\n[${notes.join("; ")}]` : "";
+  return { text: fenced(`FILE: ${rel} (lines ${a}-${b} of ${N})${noteText}`, numbered(f.lines, a, b)), lines: needed };
+}
+====
+  const noteText = notes.length ? `\n[${notes.join("; ")}]` : "";
+  return sourceBlock(
+    rel,
+    `FILE: ${rel} (lines ${a}-${b} of ${N})${noteText}`,
+    f.lines,
+    a,
+    b
+  );
+}
+>>>>
+```
+```diff
+<<<<
+function handleGrep(arg, { root, remaining }) {
+  const { ctx, ci, scope, term } = parseGrepArgs(arg);
+  if (!term) return { text: "[ERROR: GREP needs a search term]\n", lines: 1 };
+====
+function handleGrep(arg, { root, remaining }) {
+  const { ctx, ci, scope, term } = parseGrepArgs(arg);
+  if (!term) return { text: "[ERROR: GREP needs a search term]\n", lines: 1, cacheable: false };
+>>>>
+```
+```diff
+<<<<
+    const abs = resolveInRoot(root, sm[1]);
+    if (!abs) return { text: `[ERROR: scope ${sm[1]} escapes repository root]\n`, lines: 1 };
+====
+    const abs = resolveInRoot(root, sm[1]);
+    if (!abs) return {
+      text: `[ERROR: scope ${sm[1]} escapes repository root]\n`,
+      lines: 1,
+      cacheable: false
+    };
+>>>>
+```
+```diff
+<<<<
+  const out = [];
+  let truncated = false;
+====
+  const out = [];
+  const sourceRefs = [];
+  let truncated = false;
+>>>>
+```
+```diff
+<<<<
+        if (hitSet.has(k)) {
+          const sym = findEnclosing(syms, k + 1);
+          out.push(`${rel}:${k + 1}${sym ? ` [${sym.name}]` : ""}: ${clip(lines[k].trim())}`);
+        } else out.push(`${rel}-${k + 1}- ${clip(lines[k].trim())}`);
+====
+        const isHit = hitSet.has(k);
+        const sym = isHit ? findEnclosing(syms, k + 1) : null;
+        const display = isHit
+          ? `${rel}:${k + 1}${sym ? ` [${sym.name}]` : ""}: ${clip(lines[k].trim())}`
+          : `${rel}-${k + 1}- ${clip(lines[k].trim())}`;
+        const outputIndex = out.length + 2;
+        out.push(display);
+        sourceRefs.push({
+          rel,
+          line: k + 1,
+          raw: lines[k],
+          complete: false,
+          display,
+          outputIndex,
+          group: 0
+        });
+>>>>
+```
+```diff
+<<<<
+  return {
+    text: fenced(`GREP: "${term}" (${total} matches${cap}${where})`, (out.join("\n") || "(no matches)") + trunc),
+    lines: Math.max(1, out.length)
+  };
+}
+====
+  return {
+    text: fenced(`GREP: "${term}" (${total} matches${cap}${where})`, (out.join("\n") || "(no matches)") + trunc),
+    lines: Math.max(1, out.length),
+    sourceRefs
+  };
+}
+>>>>
+```
+```diff
+<<<<
+/** Fulfills a raw request; returns the response text ("" when no directives). */
+export async function fulfill(raw, { root = process.cwd() } = {}) {
+  const directives = parseDirectives(raw);
+  if (directives.length === 0) return "";
+
+  const run = directives.slice(0, LIMITS.MAX_DIRECTIVES);
+  const dropped = directives.slice(LIMITS.MAX_DIRECTIVES);
+  const parts = [];
+  let used = 0;
+  const DIRECTIVE_RE = /^(READ|OUTLINE|GREP|TRACE|GRAPH|TOPIC|UNIT|CONVERT|SOLVE|HYGIENE|FAILURES|DERIVE|AUDIT-LATEX|AUDIT-STEP|RENDER-STEP|PROBLEM-STEPS|STEP-AST|DIFF-STEP|DIFF-DERIVE|ROUNDTRIP-STEP)(?:\s+(.*))?$/;
+
+  for (const line of run) {
+    const remaining = Math.max(0, LIMITS.MAX_OUTPUT_LINES - used);
+    const m = line.match(DIRECTIVE_RE);
+    let r;
+    if (m) {
+      const verb = m[1];
+      const arg = (m[2] || "").trim();
+      try {
+        const res = HANDLERS[verb](arg, { root, remaining });
+        r = res instanceof Promise ? await res : res;
+      } catch (err) {
+        r = { text: `[${verb} ERROR: ${err.message}]\n`, lines: 1 };
+      }
+    } else {
+      r = { text: `[UNRECOGNIZED: ${line}]\n${USAGE}\n`, lines: 1 };
+    }
+    parts.push(r.text);
+    used += r.lines;
+  }
+
+  let header = `BUDGET: ${used}/${LIMITS.MAX_OUTPUT_LINES} output lines, ${run.length}/${LIMITS.MAX_DIRECTIVES} directives used.`;
+  if (dropped.length) {
+    header += `\nNOT RUN (over the ${LIMITS.MAX_DIRECTIVES}-directive limit; prioritize and resend):\n${dropped.join("\n")}`;
+  }
+  return `${header}\n\n${parts.join("\n")}`;
+}
+
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isMain) {
+  const REQ_FILE = path.resolve("tmp/ctx_req.txt");
+  const RES_FILE = path.resolve("tmp/ctx_res.txt");
+  if (!fs.existsSync(REQ_FILE)) {
+    console.error("Missing tmp/ctx_req.txt: paste the model's directive block there first.");
+    process.exit(1);
+  }
+  const text = await fulfill(fs.readFileSync(REQ_FILE, "utf8"));
+  if (!text) {
+    console.error("No READ, OUTLINE, GREP, or TRACE directives found in tmp/ctx_req.txt.");
+    process.exit(1);
+  }
+  fs.mkdirSync(path.dirname(RES_FILE), { recursive: true });
+  fs.writeFileSync(RES_FILE, text, "utf8");
+  console.log(`Wrote tmp/ctx_res.txt (${text.split("\n")[0]})`);
+}
+====
+function analyzeSourceResult(res, cache) {
+  const refs = res.sourceRefs || [];
+  if (!refs.length) {
+    return { res, cachedCount: 0, markerCount: 0, newRefs: [] };
+  }
+
+  const cached = [];
+  const newRefs = [];
+  const seen = new Set();
+
+  for (const ref of refs) {
+    const key = `${ref.rel}\0${ref.line}`;
+    const previous = findLineDelivery(cache, ref);
+
+    if (previous) {
+      cached.push({ ref, seq: previous.seq });
+    } else if (seen.has(key)) {
+      cached.push({ ref, seq: null });
+    } else {
+      seen.add(key);
+      newRefs.push(ref);
+    }
+  }
+
+  if (!cached.length) {
+    return {
+      res: { ...res, sourceRefs: newRefs },
+      cachedCount: 0,
+      markerCount: 0,
+      newRefs
+    };
+  }
+
+  const lines = res.text.split("\n");
+  const groups = new Map();
+  for (const item of cached) {
+    const group = item.ref.group ?? 0;
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(item);
+  }
+
+  for (const [group, items] of groups) {
+    items.sort((a, b) => a.ref.outputIndex - b.ref.outputIndex);
+    const indexes = items.map((item) => item.ref.outputIndex);
+    const deliveries = [...new Set(items.map((item) => item.seq).filter(Number.isInteger))];
+    const deliveryText = deliveries.length ? ` (earlier delivery${deliveries.length > 1 ? "ies" : ""}: ${deliveries.join(", ")})` : "";
+    const first = indexes[0];
+
+    lines[first] =
+      `[CACHED: ${items.length} source line(s) already included${deliveryText}]`;
+    for (const index of indexes.slice(1)) lines[index] = "";
+  }
+
+  return {
+    res: {
+      ...res,
+      text: lines.join("\n"),
+      lines: Math.max(1, res.lines - cached.length + groups.size),
+      sourceRefs: newRefs
+    },
+    cachedCount: cached.length,
+    markerCount: groups.size,
+    newRefs
+  };
+}
+
+/**
+ * Prepares a response and a deferred ledger commit.
+ * The caller commits only after its response file has been written successfully.
+ */
+export async function prepareFulfillment(raw, {
+  root = process.cwd(),
+  cache: useCache = false
+} = {}) {
+  const directives = parseDirectives(raw);
+  if (directives.length === 0) return { text: "", commit() {} };
+
+  const cache = useCache ? loadContextCache(root) : null;
+  const run = directives.slice(0, LIMITS.MAX_DIRECTIVES);
+  const dropped = directives.slice(LIMITS.MAX_DIRECTIVES);
+  const parts = [];
+  let used = 0;
+  const DIRECTIVE_RE = /^(READ|OUTLINE|GREP|TRACE|GRAPH|TOPIC|UNIT|CONVERT|SOLVE|HYGIENE|FAILURES|DERIVE|AUDIT-LATEX|AUDIT-STEP|RENDER-STEP|PROBLEM-STEPS|STEP-AST|DIFF-STEP|DIFF-DERIVE|ROUNDTRIP-STEP)(?:\s+(.*))?$/;
+
+  for (const line of run) {
+    const remaining = Math.max(0, LIMITS.MAX_OUTPUT_LINES - used);
+    const m = line.match(DIRECTIVE_RE);
+    let r;
+
+    if (m) {
+      const verb = m[1];
+      const arg = (m[2] || "").trim();
+
+      try {
+        if (cache && (verb === "READ" || verb === "GREP")) {
+          let res = HANDLERS[verb](arg, { root, remaining: Number.MAX_SAFE_INTEGER });
+          let analyzed = analyzeSourceResult(res, cache);
+
+          if (analyzed.res.lines > remaining && (res.sourceRefs || []).length) {
+            const overhead = Math.max(0, res.lines - res.sourceRefs.length);
+            const retryRemaining = Math.max(
+              0,
+              remaining + analyzed.cachedCount - analyzed.markerCount - overhead
+            );
+            res = HANDLERS[verb](arg, { root, remaining: retryRemaining });
+            analyzed = analyzeSourceResult(res, cache);
+          }
+
+          r = analyzed.res;
+
+          if (analyzed.newRefs.length) {
+            const seq = allocateCacheSequence(cache);
+            for (const ref of analyzed.newRefs) {
+              recordLineDelivery(cache, ref, seq);
+            }
+          }
+        } else {
+          const result = HANDLERS[verb](arg, { root, remaining });
+          r = result instanceof Promise ? await result : result;
+
+          if (cache && verb !== "READ" && verb !== "GREP" &&
+              r.cacheable !== false && r.text) {
+            const outputHash = hashText(r.text);
+            const previous = findOutputDelivery(cache, outputHash);
+
+            if (previous) {
+              r = {
+                text: `[CACHED: identical ${verb} result already delivered in context delivery #${previous.seq}]\n`,
+                lines: 1
+              };
+            } else {
+              const seq = allocateCacheSequence(cache);
+              recordOutputDelivery(cache, outputHash, seq);
+            }
+          }
+        }
+      } catch (err) {
+        r = { text: `[${verb} ERROR: ${err.message}]\n`, lines: 1, cacheable: false };
+      }
+    } else {
+      r = { text: `[UNRECOGNIZED: ${line}]\n${USAGE}\n`, lines: 1, cacheable: false };
+    }
+
+    parts.push(r.text);
+    used += r.lines;
+  }
+
+  let header = `BUDGET: ${used}/${LIMITS.MAX_OUTPUT_LINES} output lines, ${run.length}/${LIMITS.MAX_DIRECTIVES} directives used.`;
+  if (dropped.length) {
+    header += `\nNOT RUN (over the ${LIMITS.MAX_DIRECTIVES}-directive limit; prioritize and resend):\n${dropped.join("\n")}`;
+  }
+
+  return {
+    text: `${header}\n\n${parts.join("\n")}`,
+    commit() {
+      if (cache) saveContextCache(cache);
+    }
+  };
+}
+
+/** Fulfills a raw request; caching is opt-in for programmatic callers. */
+export async function fulfill(raw, options = {}) {
+  const prepared = await prepareFulfillment(raw, options);
+  prepared.commit();
+  return prepared.text;
+}
+
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isMain) {
+  const REQ_FILE = path.resolve("tmp/ctx_req.txt");
+  const RES_FILE = path.resolve("tmp/ctx_res.txt");
+  const args = process.argv.slice(2);
+
+  if (args.includes("--reset")) {
+    resetContextCache();
+    if (args.length === 1) {
+      console.log("Reset tmp/ctx_cache.txt.");
+      process.exit(0);
+    }
+  }
+
+  if (!fs.existsSync(REQ_FILE)) {
+    console.error("Missing tmp/ctx_req.txt: paste the model's directive block there first.");
+    process.exit(1);
+  }
+
+  const prepared = await prepareFulfillment(fs.readFileSync(REQ_FILE, "utf8"), { cache: true });
+  if (!prepared.text) {
+    console.error("No READ, OUTLINE, GREP, or TRACE directives found in tmp/ctx_req.txt.");
+    process.exit(1);
+  }
+
+  fs.mkdirSync(path.dirname(RES_FILE), { recursive: true });
+  const tempFile = `${RES_FILE}.tmp-${process.pid}`;
+  fs.writeFileSync(tempFile, prepared.text, "utf8");
+  fs.renameSync(tempFile, RES_FILE);
+  prepared.commit();
+  console.log(`Wrote tmp/ctx_res.txt (${prepared.text.split("\n")[0]})`);
+}
+>>>>
+```
+
+FILE: scripts/repo_skeleton.js
+```diff
+<<<<
+import fs from "node:fs";
+import path from "node:path";
+====
+import fs from "node:fs";
+import path from "node:path";
+import { resetContextCache } from "./lib/ctx_cache.js";
+>>>>
+```
+```diff
+<<<<
+fs.writeFileSync(outPath, outText, "utf8");
+console.log(
+====
+fs.writeFileSync(outPath, outText, "utf8");
+resetContextCache(process.cwd());
+console.log(
+>>>>
+```
+
+FILE: README.md
+```diff
+<<<<
+- **Context Loop:** `npm run ctx` (fulfills `READ` / `OUTLINE` / `GREP` / `TRACE` requests from `tmp/ctx_req.txt` into `tmp/ctx_res.txt`).
+====
+- **Context Loop:** `npm run ctx` (fulfills `READ` / `OUTLINE` / `GREP` / `TRACE` requests from `tmp/ctx_req.txt` into `tmp/ctx_res.txt`; tracks delivered context in `tmp/ctx_cache.txt`).
+>>>>
+```
+```diff
+<<<<
+   - Avoid requesting context already provided in the conversation.
+====
+   - Avoid requesting context already provided in the conversation.
+   - `npm run ctx` records source-line fingerprints and exact computed-output fingerprints in `tmp/ctx_cache.txt`. Repeated requests return a short cache marker; partially overlapping source requests return only unseen lines.
+   - The ledger stores hashes and delivery metadata, never source text. Full READs satisfy later excerpts, but GREP excerpts do not satisfy later full READs. Changed lines and lines moved to different positions are sent again.
+   - `npm run ctx -- --reset` clears the ledger. Running `npm run skeleton` also clears it because the skeleton starts a new context boundary.
+>>>>
+```
+
+FILE: test/ctx_test.js
+```diff
+<<<<
+    assert.match(out, /exceeds 400/);
+====
+    assert.match(out, /exceeds 512/);
+>>>>
+```
+```diff
+<<<<
+  test("ROUNDTRIP-STEP verifies exact identity between AST physics and LaTeX derivation", async () => {
+    const out = await fulfill("ROUNDTRIP-STEP diesel_cycle eq_diesel_t2 T_2");
+    assert.match(out, /Roundtrip Identity Test/);
+    assert.match(out, /Roundtrip Status:/);
+  });
+});
+====
+  test("ROUNDTRIP-STEP verifies exact identity between AST physics and LaTeX derivation", async () => {
+    const out = await fulfill("ROUNDTRIP-STEP diesel_cycle eq_diesel_t2 T_2");
+    assert.match(out, /Roundtrip Identity Test/);
+    assert.match(out, /Roundtrip Status:/);
+  });
+});
+
+describe("context delivery cache", () => {
+  let root;
+
+  before(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "ctx-cache-"));
+    fs.mkdirSync(path.join(root, "tmp"), { recursive: true });
+    fs.writeFileSync(path.join(root, "lib.js"), SAMPLE);
+    fs.writeFileSync(
+      path.join(root, "plain.txt"),
+      Array.from({ length: 10 }, (_, i) => `line ${i + 1}`).join("\n")
+    );
+  });
+
+  after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const runCached = (request) => fulfill(request, { root, cache: true });
+  const cachePath = () => path.join(root, "tmp", "ctx_cache.txt");
+
+  test("exact duplicate READ is replaced by a marker and ledger contains no source text", async () => {
+    const first = await runCached("READ lib.js#K");
+    assert.match(first, /11: export const K/);
+
+    const second = await runCached("READ lib.js#K");
+    assert.match(second, /CACHED: 4 source line/);
+    assert.doesNotMatch(second, /11: export const K/);
+
+    const ledger = fs.readFileSync(cachePath(), "utf8");
+    assert.doesNotMatch(ledger, /export const K/);
+    assert.match(ledger, /^# ctx-cache-v1/m);
+  });
+
+  test("partial overlap sends only unseen source lines", async () => {
+    await runCached("READ plain.txt:1-5");
+    const second = await runCached("READ plain.txt:4-8");
+
+    assert.match(second, /CACHED: 2 source line/);
+    assert.doesNotMatch(second, /4: line 4/);
+    assert.doesNotMatch(second, /5: line 5/);
+    assert.match(second, /6: line 6/);
+    assert.match(second, /8: line 8/);
+  });
+
+  test("changed source line is delivered again", async () => {
+    await runCached("READ plain.txt:1-3");
+
+    fs.writeFileSync(
+      path.join(root, "plain.txt"),
+      ["line 1", "line 2 changed", "line 3", ...Array.from({ length: 7 }, (_, i) => `line ${i + 4}`)].join("\n")
+    );
+
+    const second = await runCached("READ plain.txt:1-3");
+    assert.match(second, /2: line 2 changed/);
+  });
+
+  test("symbol movement to a new line range is delivered again", async () => {
+    await runCached("READ lib.js#K");
+    fs.writeFileSync(path.join(root, "lib.js"), `// inserted line\n${SAMPLE}`);
+
+    const second = await runCached("READ lib.js#K");
+    assert.match(second, /lines 12-15 of 19/);
+    assert.match(second, /12: export const K/);
+  });
+
+  test("a GREP excerpt does not suppress a later full READ", async () => {
+    await runCached("GREP export function @ lib.js");
+    const second = await runCached("READ lib.js:5-9");
+
+    assert.match(second, /5: export function add/);
+    assert.match(second, /8:   return/);
+  });
+
+  test("computed directives rerun and deduplicate by exact output", async () => {
+    const first = await runCached("OUTLINE lib.js");
+    assert.match(first, /OUTLINE: lib.js/);
+
+    const second = await runCached("OUTLINE lib.js");
+    assert.match(second, /CACHED: identical OUTLINE result/);
+    assert.doesNotMatch(second, /export fn add/);
+  });
+
+  test("--reset clears the ledger even when no request file exists", async () => {
+    await runCached("READ plain.txt:1-2");
+    assert.equal(fs.existsSync(cachePath()), true);
+
+    const script = path.resolve("scripts/fulfill_ctx.js");
+    execFileSync(process.execPath, [script, "--reset"], { cwd: root });
+
+    assert.equal(fs.existsSync(cachePath()), false);
+  });
+
+  test("generating a new skeleton clears the previous context ledger", async () => {
+    await runCached("READ plain.txt:1-2");
+    assert.equal(fs.existsSync(cachePath()), true);
+
+    const script = path.resolve("scripts/repo_skeleton.js");
+    execFileSync(process.execPath, [script], { cwd: root });
+
+    assert.equal(fs.existsSync(cachePath()), false);
+    assert.equal(fs.existsSync(path.join(root, "tmp", "skeleton.txt")), true);
+  });
+});
+>>>>
+```
+```diff
+<<<<
+import { describe, test, before, after } from "node:test";
+import assert from "node:assert/strict";
+====
+import { describe, test, before, after } from "node:test";
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+>>>>
+```
