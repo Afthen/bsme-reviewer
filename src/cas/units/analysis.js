@@ -192,6 +192,9 @@ export function solveUnitAlgebra(
 ) {
   const ast = typeof exprOrAST === "string" ? parseMathAST(exprOrAST) : exprOrAST;
   const tokenMarkup = {};
+  // Tokens outside a branch's exponent map get plain markup only as a placeholder;
+  // a sibling-term analysis is authoritative for them (see mergeSubAnalysis).
+  const placeholderMarkup = new Set();
   const tokenConversions = {};
   const preConversions = [];
   const conversionScalars = [];
@@ -395,6 +398,7 @@ export function solveUnitAlgebra(
 
       if (uName === "%" || uName === "\\%" || exps[tok] === undefined) {
         tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
+        if (exps[tok] === undefined && uName !== "%" && uName !== "\\%") placeholderMarkup.add(tok);
         continue;
       }
 
@@ -611,9 +615,10 @@ export function solveUnitAlgebra(
 
     const mergeSubAnalysis = (sub) => {
       for (const [k, m] of Object.entries(sub.tokenMarkup || {})) {
-        if (tokenMarkup[k] !== undefined) continue;
+        if (tokenMarkup[k] !== undefined && !placeholderMarkup.has(k)) continue;
         const kDepth = getFormulaFractionDepth(branchAst, k) || 0;
         tokenMarkup[k] = kDepth >= 2 ? m.replaceAll("\\cfrac", "\\tfrac") : m;
+        placeholderMarkup.delete(k);
       }
       for (const [k, list] of Object.entries(sub.tokenConversions || {})) {
         if (tokenConversions[k]) continue;

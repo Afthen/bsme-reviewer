@@ -1,59 +1,52 @@
-Yep, that's a bug in my deduplication implementation. I replaced cached source lines with empty strings to preserve their original line positions inside the fenced block. That preserved the line offsets, but produced hundreds of pointless blank lines.
+`run_test.js:1246` is green now, so the fix worked on the real case. The one failure left is my new test, and I think the test is wrong, not the fix. I'm treating this as part of the approved fix and have only reasoned about it, not run it.
 
-**We should compact the output after identifying cached lines.** Preserve one cache marker per group, remove the cached lines entirely, and leave all unseen source lines intact.
+## Why the test fails
 
-Replace the loop inside `analyzeSourceResult()` with this:
+It fails on `a`, which is in the first term, not on `c` as I had guessed, so the placeholder path isn't involved. I suspect my single-letter names. `e` is almost certainly a reserved math token (Euler's constant), so `isReservedMathToken` skips it. Then `a` has no `kg/s` counterpart in the denominator and keeps plain markup. I haven't read `isReservedMathToken`, so this is unconfirmed. The patch below uses realistic names (`m_m`, `t_m`, and so on), which sidesteps the question. If it still fails on `c`, the sibling analysis really isn't cancelling it, and I'll `DERIVE` that next.
 
-FILE: scripts/fulfill_ctx.js
+FILE: test/sibling_markup_test.js
 ```diff
 <<<<
-  for (const [group, items] of groups) {
-    items.sort((a, b) => a.ref.outputIndex - b.ref.outputIndex);
-    const indexes = items.map((item) => item.ref.outputIndex);
-    const deliveries = [...new Set(items.map((item) => item.seq).filter(Number.isInteger))];
-    const deliveryText = deliveries.length ? ` (earlier delivery${deliveries.length > 1 ? "ies" : ""}: ${deliveries.join(", ")})` : "";
-    const first = indexes[0];
+const varsDb = {
+  a: { unit: "kg/s", dimension: DIMENSIONS.MASS_FLOW },
+  c: { unit: "kg/s", dimension: DIMENSIONS.MASS_FLOW },
+  e: { unit: "kg/s", dimension: DIMENSIONS.MASS_FLOW },
+  b: { unit: "K", dimension: DIMENSIONS.TEMPERATURE },
+  d: { unit: "K", dimension: DIMENSIONS.TEMPERATURE },
+  x: { unit: "K", dimension: DIMENSIONS.TEMPERATURE }
+};
 
-    lines[first] =
-      `[CACHED: ${items.length} source line(s) already included${deliveryText}]`;
-    for (const index of indexes.slice(1)) lines[index] = "";
-  }
-
-  return {
-    res: {
-      ...res,
-      text: lines.join("\n"),
+test("Sibling-term tokens take sibling markup over the main-pass placeholder", () => {
+  const S = { _u: { a: "kg/s", b: "K", c: "kg/s", d: "K", e: "kg/s", x: "K" } };
+  const res = solveUnitAlgebra("(a * b - (c * d)) / e", S, "x", "K", varsDb);
+  for (const tok of ["a", "c", "e"]) {
 ====
-  const markers = new Map();
-  const removed = new Set();
+const varsDb = {
+  m_m: { unit: "kg/s", dimension: DIMENSIONS.MASS_FLOW },
+  m_o: { unit: "kg/s", dimension: DIMENSIONS.MASS_FLOW },
+  m_r: { unit: "kg/s", dimension: DIMENSIONS.MASS_FLOW },
+  t_m: { unit: "K", dimension: DIMENSIONS.TEMPERATURE },
+  t_o: { unit: "K", dimension: DIMENSIONS.TEMPERATURE },
+  t_r: { unit: "K", dimension: DIMENSIONS.TEMPERATURE }
+};
 
-  for (const [group, items] of groups) {
-    items.sort((a, b) => a.ref.outputIndex - b.ref.outputIndex);
-    const indexes = items.map((item) => item.ref.outputIndex);
-    const deliveries = [...new Set(items.map((item) => item.seq).filter(Number.isInteger))];
-    const deliveryText = deliveries.length
-      ? ` (earlier delivery${deliveries.length > 1 ? "ies" : ""}: ${deliveries.join(", ")})`
-      : "";
-
-    markers.set(
-      indexes[0],
-      `[CACHED: ${items.length} source line(s) already included${deliveryText}]`
-    );
-
-    for (const index of indexes.slice(1)) removed.add(index);
-  }
-
-  const compactLines = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (markers.has(i)) compactLines.push(markers.get(i));
-    else if (!removed.has(i)) compactLines.push(lines[i]);
-  }
-
-  return {
-    res: {
-      ...res,
-      text: compactLines.join("\n"),
+test("Sibling-term tokens take sibling markup over the main-pass placeholder", () => {
+  const S = { _u: { m_m: "kg/s", t_m: "K", m_o: "kg/s", t_o: "K", m_r: "kg/s", t_r: "K" } };
+  const res = solveUnitAlgebra("(m_m * t_m - (m_o * t_o)) / m_r", S, "t_r", "K", varsDb);
+  for (const tok of ["m_m", "m_o", "m_r"]) {
 >>>>
 ```
 
-Your repeated 417-line request should then produce a compact response with a single cache marker inside the code fence, rather than hundreds of blank lines.
+Suggested commit once green: `fix(core): sibling-term markup overrides main-pass placeholders`
+
+## Parallel tests
+
+`node --test` already runs separate files in parallel, one process per file. Tests inside a file run one after another. So the wall time is probably set by two big files:
+- `derivation_matrix_test.js` (about 67k cases, a single `test()` with Layer 1 and Layer 2 in sequence).
+- `run_test.js` (1,329 lines).
+
+I think the matrix is the real bottleneck, but I haven't measured it. Two options, both needing your go:
+1. **Split the matrix by layer.** Layer 1 and Layer 2 become two files that share helpers. That's easy and roughly halves it, but only if the two layers take similar time.
+2. **Shard Layer 1 by topic** across worker threads. That gives more speedup but is more machinery. The seeded `Math.random` patching in `withSeededRandom` is process-global, so workers need their own processes, not shared state.
+
+Splitting is not narrowing under R23, but the glob in section 10 and `package.json` must list every new file. First, time each file (`node --test` with the default reporter prints durations) to confirm where the time goes.

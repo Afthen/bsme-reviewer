@@ -679,7 +679,7 @@ Run `npm test` (regenerates registries and executes all suites with the quiet re
 ```bash
 node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/run_hygiene_test.js \
   test/derivation_matrix_test.js test/rate_parts_test.js test/patch_test.js test/trace_test.js \
-  test/section_d_test.js test/ctx_test.js test/reporter_test.js
+  test/section_d_test.js test/sibling_markup_test.js test/ctx_test.js test/reporter_test.js
 ```
 
 | Suite | Invariant Verified |
@@ -689,6 +689,7 @@ node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/ru
 | `test/derivation_matrix_test.js` | **Derivation Matrix:** Layer 1 re-runs every topic x system x relation x solvable target under pairwise (2-wise) unit coverage; Layer 2 runs seeded `generateProblem` trials across SI, US, and MIXED systems and mastery levels. Both verify `evaluatePhysicalAST`, `validateDerivationLatex`, numerical derivation match (`latex_oracle.js`), and `isCanonicalScaleFactor`. All failures are collected and grouped; each carries `seed=N` for `TRACE`. |
 | `test/rate_parts_test.js` | Parenthesised rate targets (`ft-lb_f/(lb_m)`, `kJ/(s)`) decompose into canonical numerator and denominator ratios; a `1/(...)` target is not split into a unit-less numerator. |
 | `test/section_d_test.js` | Atom-soup targets route to the per-atom compound builder; `Q_s / (Q_s + Q_l)` with `Btu/h` and `kW` yields only canonical scalars. |
+| `test/sibling_markup_test.js` | Tokens appearing only in later terms of a sum receive the sibling analysis's cancelled markup, not the main-pass placeholder. |
 | `test/patch_test.js` | Patch parser & applier: `diff`, `subst` exact counts, atomicity, N+1 fences, headers |
 | `test/reporter_test.js` | Quiet test reporter: suppresses passing tests, prints leaf failures without suite wrapper duplication |
 | `test/trace_test.js` | Matrix case-line parsing, numeric push/fill recording, `Array.prototype` restoration after a throw, and rejection of malformed `TRACE` requests. |
