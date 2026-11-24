@@ -39,16 +39,16 @@ import {
 } from "./lib/ctx_tools.js";
 
 export const LIMITS = Object.freeze({
-  MAX_DIRECTIVES: 8,
-  MAX_OUTPUT_LINES: 700,
-  FULL_READ_MAX: 400,
-  SNAP_MAX: 200,
-  MAX_GREP_HITS: 40,
-  MAX_GREP_CONTEXT: 10,
-  MAX_OUTLINE_ENTRIES: 150,
-  MAX_LINE_CHARS: 200,
-  MAX_TRACE_LINES: 80,
-  TRACE_TIMEOUT_MS: 120000
+  MAX_DIRECTIVES: 16,
+  MAX_OUTPUT_LINES: 1024,
+  FULL_READ_MAX: 512,
+  SNAP_MAX: 256,
+  MAX_GREP_HITS: 64,
+  MAX_GREP_CONTEXT: 16,
+  MAX_OUTLINE_ENTRIES: 256,
+  MAX_LINE_CHARS: 256,
+  MAX_TRACE_LINES: 128,
+  TRACE_TIMEOUT_MS: 180000
 });
 
 const SEARCH_ROOTS = ["app.js", "index.html", "package.json", "src", "styles", "test", "scripts"];

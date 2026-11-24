@@ -1,223 +1,101 @@
-Approved, so here is the code. It covers the floor, the retry guard, and the matrix filter with its output cleanup. I left out the species-unit registry (`kg_v/kg_da`, grains). It touches the parser, the tex layer, the analysis rule for zero-vector targets, and every W/X schema and `system.js`, and I haven't read the `analysis.js` pieces, or W/X in `system.js` outside cooling_tower, in full. I'll treat that as a second patch.
-
-**Decision applied:** the hard floor is `MIN_DISPLAY_FLOOR = 1e-3`, derived from the 6-decimal cap and the oracle tolerance. I'm reading "R23 OK" plus no objection to my oracle argument as acceptance that the oracle stays unchanged.
-
-**Assumptions the applier may reject (it fails atomically):**
-- `latex_oracle.js` contains the exact line `import assert from "node:assert/strict";`.
-- `matrix_helpers.js` and `run_test.js` match my earlier hunks.
-
-FILE: src/core/dimensions.js
-```diff
-<<<<
-export const MIN_DISPLAY_MAGNITUDE = 0.0995;
-====
-export const MIN_DISPLAY_MAGNITUDE = 0.0995;
-
-// Oracle tolerance (test/latex_oracle.js) lives here so the display floor derives from it.
-export const ORACLE_REL_TOLERANCE = 1e-3;
-export const ORACLE_ABS_TOLERANCE = 1e-3;
-
-// Hard floor: display rounding (half a unit in the last decimal) must stay within
-// half the oracle's relative tolerance. 0.5 * 10^-6 / v <= 0.5 * 1e-3  =>  v >= 1e-3.
-export const MIN_DISPLAY_FLOOR = Number((Math.pow(10, -DISPLAY_MAX_DECIMALS) / ORACLE_REL_TOLERANCE).toPrecision(6));
-
-export function displayFloorOk(v) {
-  return typeof v === "number" && Number.isFinite(v) && (v === 0 || Math.abs(v) >= MIN_DISPLAY_FLOOR);
-}
->>>>
-```
-
-FILE: test/latex_oracle.js
-```diff
-<<<<
-import assert from "node:assert/strict";
-====
-import assert from "node:assert/strict";
-import { ORACLE_REL_TOLERANCE, ORACLE_ABS_TOLERANCE } from "../src/core/dimensions.js";
->>>>
-```
-```diff
-<<<<
-  const tol = Math.max(Math.abs(boxedVal) * 1e-3, 1e-3);
-====
-  const tol = Math.max(Math.abs(boxedVal) * ORACLE_REL_TOLERANCE, ORACLE_ABS_TOLERANCE);
->>>>
-```
-```diff
-<<<<
-      const prevTol = Math.max(Math.abs(prevEval) * 1e-3, 1e-3);
-====
-      const prevTol = Math.max(Math.abs(prevEval) * ORACLE_REL_TOLERANCE, ORACLE_ABS_TOLERANCE);
->>>>
-```
-
-FILE: src/core/problem_gen.js
-```diff
-<<<<
-import { fmtSigFig, formatGivenValue, DIMENSIONS } from "./dimensions.js";
-====
-import { fmtSigFig, formatGivenValue, DIMENSIONS, displayFloorOk } from "./dimensions.js";
->>>>
-```
-```diff
-<<<<
-export function generateProblem(topic, getMastery = () => 0, options = {}) {
-  let { title, varsDb, relations, createSystem } = topic;
-====
-const MAX_DRAW_ATTEMPTS = 20;
-
-/** First displayed non-constant value (given or active answer) below the display floor, or null. */
-function firstFloorViolation(problem) {
-  const { system, varsDb, givens, solution } = problem;
-  for (const g of givens) {
-    const meta = varsDb[g] || CONSTANTS_DB[g] || {};
-    if (meta.isConstant) continue;
-    if (typeof system[g] === "number" && !displayFloorOk(system[g])) return `given ${g}=${system[g]} ${system._u?.[g] || ""}`;
-  }
-  for (const s of solution) {
-    if (s.isFaded) continue;
-    const meta = varsDb[s.targetVar] || {};
-    if (meta.isConstant) continue;
-    if (typeof s.expectedVal === "number" && !displayFloorOk(s.expectedVal)) {
-      return `answer ${s.targetVar}=${s.expectedVal} ${system._u?.[s.targetVar] || ""}`;
-    }
-  }
-  return null;
-}
-
-export function generateProblem(topic, getMastery = () => 0, options = {}) {
-  let violation = null;
-  for (let i = 0; i < MAX_DRAW_ATTEMPTS; i++) {
-    const problem = buildProblemOnce(topic, getMastery, options);
-    violation = firstFloorViolation(problem);
-    if (!violation) return problem;
-  }
-  throw new Error(`Display floor unmet after ${MAX_DRAW_ATTEMPTS} draws (${topic.id}): ${violation}; its unit is wrong or the topic data is out of range`);
-}
-
-function buildProblemOnce(topic, getMastery = () => 0, options = {}) {
-  let { title, varsDb, relations, createSystem } = topic;
->>>>
-```
-
-FILE: test/matrix_helpers.js
-```diff
-<<<<
-import { DIMENSIONS } from "../src/core/dimensions.js";
-====
-import { DIMENSIONS, displayFloorOk } from "../src/core/dimensions.js";
->>>>
-```
-```diff
-<<<<
-export function unitLevels(canonUnit, meta, rng) {
-====
-export const levelStats = { skipped: 0 };
-
-export function unitLevels(canonUnit, meta, rng, canonVal = null) {
->>>>
-```
-```diff
-<<<<
-  pool.delete(canonUnit);
-====
-  pool.delete(canonUnit);
-  // Display floor: drop levels where the restated value would be shown below the floor.
-  // The canonical level is always kept.
-  if (typeof canonVal === "number" && !meta.isConstant) {
-    for (const u of [...pool]) {
-      if (!displayFloorOk(convertUnitValue(canonVal, canonUnit, u, meta.dimension))) {
-        pool.delete(u);
-        levelStats.skipped++;
-      }
-    }
-  }
->>>>
-```
-
-FILE: test/derivation_matrix_test.js
-```diff
-<<<<
-  unitLevels, coveringRows, restate, collectSteps, checkStep
-====
-  unitLevels, coveringRows, restate, collectSteps, checkStep, levelStats
->>>>
-```
-```diff
-<<<<
-          const levels = tokens.map(k => unitLevels(S._u?.[k] || topic.varsDb[k].unit, topic.varsDb[k], rng));
-====
-          const levels = tokens.map(k => unitLevels(S._u?.[k] || topic.varsDb[k].unit, topic.varsDb[k], rng, S[k]));
->>>>
-```
-```diff
-<<<<
-  if (failures.length > 0) {
-    const groups = new Map();
-====
-  if (levelStats.skipped > 0) console.log(`[matrix] skipped ${levelStats.skipped} unit levels below the display floor`);
-  if (failures.length > 0) {
-    const groups = new Map();
->>>>
-```
-```diff
-<<<<
-    const nonDim = f => (f.tags || []).filter(t => !t.startsWith("dim:")).sort().join(" + ") || "(none)";
-    console.log("[matrix] by structural class (top 15):", count(nonDim).slice(0, 15));
-====
->>>>
-```
-```diff
-<<<<
-    for (const f of mins.slice(0, 40)) {
-      console.log(`[matrix] MIN changed=${f.changed} ${f.where} | ${f.msg.slice(0, 120)} | ROW: ${(f.row || "").slice(0, 260)}`);
-    }
-    for (const [k, g] of groups) console.log(`  ${k}  x${g.n}\n      e.g. ${g.example.where}\n      ${g.example.msg}`);
-====
-    for (const f of mins.slice(0, 10)) {
-      console.log(`[matrix] MIN changed=${f.changed} ${f.where} | ROW: ${(f.row || "").slice(0, 160)}`);
-    }
-    for (const [k, g] of groups) {
-      const ex = g.example.where;
-      const brace = ex.indexOf(" {");
-      console.log(`  ${k} x${g.n} | ${brace >= 0 ? ex.slice(brace + 1) : ""} | ${g.example.msg.split(" (")[0]}`);
-    }
->>>>
-```
-
-FILE: test/run_test.js
-```diff
-<<<<
-import { formatGivenValue, targetLabel, fmtSigFig } from "../src/core/dimensions.js";
-====
-import { formatGivenValue, targetLabel, fmtSigFig, displayFloorOk, MIN_DISPLAY_FLOOR } from "../src/core/dimensions.js";
->>>>
-```
-```diff
-<<<<
-    assert.equal(fmtSigFig(123456.789, 6), "123,457");
-====
-    assert.equal(fmtSigFig(123456.789, 6), "123,457");
-    assert.equal(MIN_DISPLAY_FLOOR, 0.001);
-    assert.equal(displayFloorOk(0), true);
-    assert.equal(displayFloorOk(0.02), true);
-    assert.equal(displayFloorOk(0.0004), false);
->>>>
-```
-
 FILE: README.md
-```diff
+````diff
 <<<<
-Every displayed non-constant value must satisfy `|v| >= MIN_DISPLAY_MAGNITUDE` (0.0995) so it keeps at least 3 trimmed significant figures; a value that fails means its unit was chosen wrongly.
+5. Context requests: You only see the Repo Skeleton by default. Request context with a
+   single fenced `text` block, one directive per line, then stop. No XML tags; never
+   ask in prose. Each request has a budget of 16 directives and 1024 output lines, so
+   plan everything you need up front and batch it.
+   - READ path#symbol[,symbol2]   exact function/const bodies (preferred; no line math)
+   - READ path:a-b | path:-N      line range (snaps to enclosing symbol) | last N lines
+   - READ path                    whole file (only if <= 512 lines; otherwise you get an outline)
+   - OUTLINE path                 exact symbol line ranges for one file
+   - GREP [-C n] [-i] term [@ path[:a-b]]   literal search with context lines and scope
+   - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
+                                  re-runs one derivation-matrix case through solveUnitAlgebra and
+                                  reports every non-canonical scalar with the stack frames that
+                                  created it. Paste the failing line from the matrix output
+                                  verbatim; without seed= both matrix seeds are tried. Output is
+                                  capped at 128 lines and counts against the 1024-line budget.
+   - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
+                                  renders bipartite reachability, degrees of freedom, and unrolled DAG
+   - TOPIC topic                  one-page summary of varsDb, dimensions, relations, and contracts
+   - UNIT expr                    7D dimensional vector, base scale factor, offset, and companion
+   - CONVERT unitA -> unitB       factor-label decomposition and canonical scale factor verification
+   - SOLVE "formula" target       tests CAS variable isolation (isolateVariable) and isolated LaTeX
+   - HYGIENE [topic|all]          fast-path static schema validator (orphans, collisions, native °)
+   - FAILURES [topic]             clusters derivation matrix failures by root cause
+   - DERIVE topic rel target [{u}] [sys=SI|US]
+                                  single-step derivation with 4-row tower height and oracle verification
+   - AUDIT-LATEX [topic|"tex"]    KaTeX visual formatting linter (spacing, commas, %, °)
+   - AUDIT-STEP topic rel target [{u}] [sys=SI|US]
+                                  AST-native structural derivation linter (tower height, omit 1, spacing)
+   - RENDER-STEP topic rel target visual wireframe & phase-by-phase layout progression
+   - PROBLEM-STEPS topic [sys=SI|US] [seed=N]
+                                  full multi-step problem progression with cognitive fading status
+   - STEP-AST topic rel target    dual representation: AST node hierarchy side-by-side with KaTeX
+   - DIFF-STEP topic rel t1 vs t2 AST-level structural diff between two isolated formulas or targets
+   - DIFF-DERIVE topic rel target line-by-line LaTeX derivation comparison (SI vs US)
+   - ROUNDTRIP-STEP topic rel target [{u}]
+                                  numerical fidelity oracle: AST Physics Eval vs LaTeX Derivation
+   Never guess round line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
+   When a test fails and the cause is not obvious from reading, TRACE before theorizing.
 ====
-Every displayed non-constant value must satisfy `displayFloorOk` (`|v| >= MIN_DISPLAY_FLOOR`, derived from the 6-decimal cap and the oracle tolerance, 0.001) so display rounding stays inside the oracle tolerance. The sampler additionally prefers `MIN_DISPLAY_MAGNITUDE` (0.0995) when choosing among units. `generateProblem` redraws up to 20 times and then throws; a value that fails means its unit was chosen wrongly or the topic data is out of range.
+5. Context requests: You only see the Repo Skeleton by default. Request context with a
+   single fenced `text` block, one directive per line, then stop. No XML tags; never
+   ask in prose. Each request has a budget of 16 directives and 1024 output lines.
+   Batch related requests instead of repeatedly requesting context you already have.
+
+   **Everyday navigation (preferred):**
+   - READ path#symbol[,symbol2]   exact function/const bodies; prefer this over line numbers
+   - OUTLINE path                 exact symbol line ranges for one file
+   - GREP [-C n] [-i] term [@ path[:a-b]]
+                                  literal search with context lines and optional scope
+
+   **Domain inspection:**
+   - TOPIC topic                  one-page summary of varsDb, dimensions, relations, and contracts
+   - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
+                                  bipartite reachability, degrees of freedom, and unrolled DAG
+   - DERIVE topic rel target [{u}] [sys=SI|US]
+                                  single-step derivation with 4-row tower height and oracle verification
+
+   **Failure investigation:**
+   - FAILURES [topic]             clusters derivation matrix failures by root cause
+   - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
+                                  re-runs one derivation-matrix case through solveUnitAlgebra and
+                                  reports non-canonical scalars with their creating stack frames.
+                                  Paste the failing matrix line verbatim; without seed= both matrix
+                                  seeds are tried. Output is capped at 128 lines.
+
+   **Specialized diagnostics (use when relevant):**
+   - READ path:a-b | path:-N      line range (snaps to enclosing symbol) | last N lines
+   - READ path                    whole file (only if <= 512 lines; otherwise you get an outline)
+   - UNIT expr                    7D dimensional vector, base scale, offset, and companion
+   - CONVERT unitA -> unitB       factor-label decomposition and canonical scale verification
+   - SOLVE "formula" target       tests CAS variable isolation and isolated LaTeX
+   - HYGIENE [topic|all]          static schema validator (orphans, collisions, native °)
+   - AUDIT-LATEX [topic|"tex"]    KaTeX formatting linter (spacing, commas, %, °)
+   - AUDIT-STEP topic rel target [{u}] [sys=SI|US]
+                                  AST-native structural derivation linter
+   - RENDER-STEP topic rel target visual wireframe and phase-by-phase layout progression
+   - PROBLEM-STEPS topic [sys=SI|US] [seed=N]
+                                  full multi-step problem progression with cognitive fading
+   - STEP-AST topic rel target    AST hierarchy alongside rendered KaTeX
+   - DIFF-STEP topic rel t1 vs t2 structural comparison of isolated formulas or targets
+   - DIFF-DERIVE topic rel target SI-versus-US derivation comparison
+   - ROUNDTRIP-STEP topic rel target [{u}]
+                                  numerical fidelity: AST Physics Eval versus LaTeX Derivation
+
+   **Usage strategy:**
+   - Start with OUTLINE or GREP when the relevant implementation location is unknown.
+   - Prefer READ #symbol over manually calculated line ranges.
+   - For derivation matrix failures, use FAILURES to identify patterns and TRACE to
+     inspect representative failures before theorizing.
+   - Use TOPIC for domain/schema understanding and DERIVE for a specific equation.
+   - Use specialized diagnostics only when their output directly addresses the
+     suspected failure.
+   - Never guess line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
+   - Avoid requesting context already provided in the conversation.
+   - When a test fails and the cause is not obvious from reading, investigate before
+     proposing a fix; use TRACE for numerical derivation failures.
 >>>>
-```
-
-**Files changed:** `dimensions.js`, `latex_oracle.js`, `problem_gen.js`, `matrix_helpers.js`, `derivation_matrix_test.js`, `run_test.js`, `README.md`.
-
-**What to expect**
-- **Matrix:** the `SPE:kWh` and `P_v:ksi` cases from the 86 should vanish, because those levels fall under 1e-3 and are skipped. The run prints the skipped count.
-- **Runtime:** `generateProblem` now throws if 20 redraws all violate the floor. If Layer 2 reports that for a topic, the topic data or the unit palette is wrong. That is the intended signal, not a regression.
-- **Output:** one line per failure class, `MIN` capped at 10 lines with 160-character rows, and the structural-class summary removed.
-- **Still open:** `run_test.js:1242` (the uncancelled `m_o`). My `DERIVE` of that case passed, so the failing path is the test's restated-unit variant. I want the `DERIVE` output for `kg/min` and `kg/h` before touching it.
+````

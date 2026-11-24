@@ -26,42 +26,61 @@ You are modifying the BSME Reviewer repository.
    avoid tunnel vision, and never patch symptoms.
 5. Context requests: You only see the Repo Skeleton by default. Request context with a
    single fenced `text` block, one directive per line, then stop. No XML tags; never
-   ask in prose. Each request has a budget of 8 directives and 700 output lines, so
-   plan everything you need up front and batch it.
-   - READ path#symbol[,symbol2]   exact function/const bodies (preferred; no line math)
-   - READ path:a-b | path:-N      line range (snaps to enclosing symbol) | last N lines
-   - READ path                    whole file (only if <= 400 lines; otherwise you get an outline)
+   ask in prose. Each request has a budget of 16 directives and 1024 output lines.
+   Batch related requests instead of repeatedly requesting context you already have.
+
+   **Everyday navigation (preferred):**
+   - READ path#symbol[,symbol2]   exact function/const bodies; prefer this over line numbers
    - OUTLINE path                 exact symbol line ranges for one file
-   - GREP [-C n] [-i] term [@ path[:a-b]]   literal search with context lines and scope
-   - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
-                                  re-runs one derivation-matrix case through solveUnitAlgebra and
-                                  reports every non-canonical scalar with the stack frames that
-                                  created it. Paste the failing line from the matrix output
-                                  verbatim; without seed= both matrix seeds are tried. Output is
-                                  capped at 80 lines and counts against the 700-line budget.
-   - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
-                                  renders bipartite reachability, degrees of freedom, and unrolled DAG
+   - GREP [-C n] [-i] term [@ path[:a-b]]
+                                  literal search with context lines and optional scope
+
+   **Domain inspection:**
    - TOPIC topic                  one-page summary of varsDb, dimensions, relations, and contracts
-   - UNIT expr                    7D dimensional vector, base scale factor, offset, and companion
-   - CONVERT unitA -> unitB       factor-label decomposition and canonical scale factor verification
-   - SOLVE "formula" target       tests CAS variable isolation (isolateVariable) and isolated LaTeX
-   - HYGIENE [topic|all]          fast-path static schema validator (orphans, collisions, native °)
-   - FAILURES [topic]             clusters derivation matrix failures by root cause
+   - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
+                                  bipartite reachability, degrees of freedom, and unrolled DAG
    - DERIVE topic rel target [{u}] [sys=SI|US]
                                   single-step derivation with 4-row tower height and oracle verification
-   - AUDIT-LATEX [topic|"tex"]    KaTeX visual formatting linter (spacing, commas, %, °)
+
+   **Failure investigation:**
+   - FAILURES [topic]             clusters derivation matrix failures by root cause
+   - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
+                                  re-runs one derivation-matrix case through solveUnitAlgebra and
+                                  reports non-canonical scalars with their creating stack frames.
+                                  Paste the failing matrix line verbatim; without seed= both matrix
+                                  seeds are tried. Output is capped at 128 lines.
+
+   **Specialized diagnostics (use when relevant):**
+   - READ path:a-b | path:-N      line range (snaps to enclosing symbol) | last N lines
+   - READ path                    whole file (only if <= 512 lines; otherwise you get an outline)
+   - UNIT expr                    7D dimensional vector, base scale, offset, and companion
+   - CONVERT unitA -> unitB       factor-label decomposition and canonical scale verification
+   - SOLVE "formula" target       tests CAS variable isolation and isolated LaTeX
+   - HYGIENE [topic|all]          static schema validator (orphans, collisions, native °)
+   - AUDIT-LATEX [topic|"tex"]    KaTeX formatting linter (spacing, commas, %, °)
    - AUDIT-STEP topic rel target [{u}] [sys=SI|US]
-                                  AST-native structural derivation linter (tower height, omit 1, spacing)
-   - RENDER-STEP topic rel target visual wireframe & phase-by-phase layout progression
+                                  AST-native structural derivation linter
+   - RENDER-STEP topic rel target visual wireframe and phase-by-phase layout progression
    - PROBLEM-STEPS topic [sys=SI|US] [seed=N]
-                                  full multi-step problem progression with cognitive fading status
-   - STEP-AST topic rel target    dual representation: AST node hierarchy side-by-side with KaTeX
-   - DIFF-STEP topic rel t1 vs t2 AST-level structural diff between two isolated formulas or targets
-   - DIFF-DERIVE topic rel target line-by-line LaTeX derivation comparison (SI vs US)
+                                  full multi-step problem progression with cognitive fading
+   - STEP-AST topic rel target    AST hierarchy alongside rendered KaTeX
+   - DIFF-STEP topic rel t1 vs t2 structural comparison of isolated formulas or targets
+   - DIFF-DERIVE topic rel target SI-versus-US derivation comparison
    - ROUNDTRIP-STEP topic rel target [{u}]
-                                  numerical fidelity oracle: AST Physics Eval vs LaTeX Derivation
-   Never guess round line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
-   When a test fails and the cause is not obvious from reading, TRACE before theorizing.
+                                  numerical fidelity: AST Physics Eval versus LaTeX Derivation
+
+   **Usage strategy:**
+   - Start with OUTLINE or GREP when the relevant implementation location is unknown.
+   - Prefer READ #symbol over manually calculated line ranges.
+   - For derivation matrix failures, use FAILURES to identify patterns and TRACE to
+     inspect representative failures before theorizing.
+   - Use TOPIC for domain/schema understanding and DERIVE for a specific equation.
+   - Use specialized diagnostics only when their output directly addresses the
+     suspected failure.
+   - Never guess line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
+   - Avoid requesting context already provided in the conversation.
+   - When a test fails and the cause is not obvious from reading, investigate before
+     proposing a fix; use TRACE for numerical derivation failures.
 6. Code output convention: When given permission to code, precede single-file blocks
    with `FILE: path/to/file.ext`. Only `FILE:` lines declare target files. Subsequent
    `diff` blocks for the same file may omit `FILE:`, whereas a full-file drop-in
