@@ -475,7 +475,7 @@ function analyzeSourceResult(res, cache) {
     const indexes = items.map((item) => item.ref.outputIndex);
     const deliveries = [...new Set(items.map((item) => item.seq).filter(Number.isInteger))];
     const deliveryText = deliveries.length
-      ? ` (earlier delivery${deliveries.length > 1 ? "ies" : ""}: ${deliveries.join(", ")})`
+      ? ` (earlier ${deliveries.length > 1 ? "deliveries" : "delivery"}: ${deliveries.join(", ")})`
       : "";
 
     markers.set(

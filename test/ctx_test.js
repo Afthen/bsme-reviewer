@@ -342,6 +342,19 @@ describe("context delivery cache", () => {
     assert.doesNotMatch(second, /export fn add/);
   });
 
+  test("marker says 'delivery' for one earlier delivery and 'deliveries' for several", async () => {
+    fs.writeFileSync(path.join(root, "pl.txt"), Array.from({ length: 6 }, (_, i) => `pl ${i + 1}`).join("\n"));
+
+    await runCached("READ pl.txt:1-2");
+    const single = await runCached("READ pl.txt:1-2");
+    assert.match(single, /earlier delivery: \d+\]/);
+    assert.doesNotMatch(single, /deliver(y)?ies/);
+
+    await runCached("READ pl.txt:3-4");
+    const multi = await runCached("READ pl.txt:1-4");
+    assert.match(multi, /earlier deliveries: \d+, \d+\]/);
+  });
+
   test("--reset clears the ledger even when no request file exists", async () => {
     await runCached("READ plain.txt:1-2");
     assert.equal(fs.existsSync(cachePath()), true);

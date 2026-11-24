@@ -1,3 +1,4 @@
 .aider*
 tmp/
 migrate_relations.js
+tmp/

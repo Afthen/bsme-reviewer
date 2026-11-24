@@ -7,13 +7,10 @@
 import assert from "node:assert/strict";
 import { ORACLE_REL_TOLERANCE, ORACLE_ABS_TOLERANCE } from "../src/core/dimensions.js";
 
-let katex = null;
-try {
-  const mod = await import("katex");
-  katex = mod.default || mod;
-} catch (_) {
-  katex = null;
-}
+// KaTeX must be installed: a missing module would silently turn every render check into a no-op.
+const katexModule = await import("katex");
+const katex = katexModule.default || katexModule;
+assert.equal(typeof katex.renderToString, "function", "katex.renderToString is unavailable");
 
 export function validateDerivationLatex(derivLatex) {
   assert.ok(typeof derivLatex === "string" && derivLatex.length > 0, "Derivation LaTeX must be non-empty");

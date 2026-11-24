@@ -13,5 +13,8 @@
     "audit:duplicates": "npx jscpd src/ styles/",
     "audit:dead-code": "npx knip",
     "audit": "npm test && npm run audit:duplicates && npm run audit:dead-code"
+  },
+  "devDependencies": {
+    "katex": "0.16.47"
   }
 }
