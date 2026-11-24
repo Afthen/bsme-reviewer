@@ -221,7 +221,7 @@ Software engineering in this repository is governed by physical/mathematical inv
 - **R24. Bug fixes ship with regression tests.** Tests that touch mastery use real mastery functions (`recordAttempt`, `getDecayedMastery`), not constant stubs.
 - **R25. Report honestly.** State files changed, test output, and anything that could not be verified.
 - **R26. Brainstorm mode by default.** Always operate in brainstorm mode first to analyze root causes, establish mathematical invariants, and verify alignment. Never write code or emit diffs until given explicit permission to proceed.
-- **R27. Canonical diff syntax & fence nesting.** When authorized to write code, precede single-file blocks with `FILE: path/to/file.ext` and wrap in 3-backtick fences (```diff using `<<<< ==== >>>>`, or >= 5 matching marker chars if the body has literal 4-char markers, when shorter than a full-file replacement). Only `diff` and `subst` fences parse hunk markers; `subst scope=<file|dir> expect=N` carries its own scope and requires an exact match count. Full-file drop-in blocks consume `FILE:`; sticky `FILE:` applies only to consecutive `diff` blocks and is cleared by `subst`. Let N be the longest backtick run that starts a line inside a block (inline mentions do not count); when N >= 3, wrap the block in N+1 backticks so that nothing inside can close it early. 
+- **R27. Canonical diff syntax & fence nesting.** When authorized to write code, put the target path in each fence info string (```diff path/to/file.ext, or ```javascript path/to/new_file.js for a full file; many hunks per block, `expect=N` on a hunk opener) and wrap in 3-backtick fences (```diff using `<<<< ==== >>>>`, or >= 5 matching marker chars if the body has literal 4-char markers, when shorter than a full-file replacement). Only `diff` and `subst` fences parse hunk markers; `subst scope=<file|dir> expect=N` carries its own scope and requires an exact match count. Full-file drop-in blocks consume `FILE:`; sticky `FILE:` applies only to consecutive `diff` blocks and is cleared by `subst`. Let N be the longest backtick run that starts a line inside a block (inline mentions do not count); when N >= 3, wrap the block in N+1 backticks so that nothing inside can close it early. 
 
 ---
 
@@ -713,7 +713,7 @@ node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/ru
 - [ ] `system.js` is independent of the solver and honors `{ sys }`.
 - [ ] Unit conversions default to in-situ, respect the 4-row fraction tower cap, omit coefficients of 1, keep scalars outside unit ratios, emit no fused scalars, and use canonical encompassing `\cancel`.
 - [ ] Percentages render as `\text{\%}` and degree symbols use native `°`.
-- [ ] Code changes use `FILE: path/to/file.ext` with 4-backtick `diff` (`<<<< ==== >>>>`) fences unless shorter as a drop-in replacement.
+- [ ] Code changes use ```diff path/to/file.ext blocks (`<<<< ==== >>>>`, optional `expect=N`) unless shorter as a drop-in replacement.
 - [ ] `npm test` (or `node --test` over every suite listed in section 10) was run and passed with 0 failures.
 - [ ] Derivation output passes KaTeX rendering and contains no literal commas before units.
 - [ ] No tests were renamed, skipped, loosened, or deleted.
