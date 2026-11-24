@@ -1081,6 +1081,20 @@ function getRegisteredPairwiseRatios() {
     ratios.add(parseFloat((1 / gc).toPrecision(6)));
   });
 
+  // Every same-dimension pair of registry units, derived from BASE_UNITS so a newly
+  // registered unit is canonical against its dimensional peers without editing a list.
+  const peers = Object.values(BASE_UNITS).map(m => getUnitAtomBag(m.symbol));
+  for (let i = 0; i < peers.length; i++) {
+    for (let j = i + 1; j < peers.length; j++) {
+      if (!isDimEqual(peers[i].dimMap, peers[j].dimMap)) continue;
+      const r = peers[i].scale / peers[j].scale;
+      if (r > 0 && Number.isFinite(r)) {
+        ratios.add(parseFloat(r.toPrecision(6)));
+        ratios.add(parseFloat((1 / r).toPrecision(6)));
+      }
+    }
+  }
+
   cachedRatios = Array.from(ratios);
   return cachedRatios;
 }

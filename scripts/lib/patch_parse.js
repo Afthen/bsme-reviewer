@@ -45,6 +45,7 @@ export function parseHunks(content, openLine = 1) {
   const hunks = [];
   let state = "idle";
   let markerLen = 4;
+  let hunkExpect = null;
   let search = [];
   let replace = [];
 
@@ -55,11 +56,12 @@ export function parseHunks(content, openLine = 1) {
 
     if (state === "idle") {
       if (trimmed === "") continue;
-      const m = trimmed.match(/^(<{4,})$/);
+      const m = trimmed.match(/^(<{4,})(?:\s+expect=([1-9]\d*))?$/);
       if (!m) {
         throw new Error(`Unexpected text outside hunk markers at line ${lineNo}: ${trimmed.slice(0, 60)}`);
       }
       markerLen = m[1].length;
+      hunkExpect = m[2] ? Number(m[2]) : null;
       state = "search";
       search = [];
       replace = [];
@@ -75,7 +77,7 @@ export function parseHunks(content, openLine = 1) {
         if (!searchStr) {
           throw new Error(`Empty search block in hunk ending at line ${lineNo}`);
         }
-        hunks.push({ search: searchStr, replace: replace.join("\n") });
+        hunks.push({ search: searchStr, replace: replace.join("\n"), ...(hunkExpect ? { expect: hunkExpect } : {}) });
         state = "idle";
       } else {
         replace.push(line);
@@ -134,8 +136,20 @@ export function parsePatch(raw) {
         const content = fenceBuf.join("\n");
         const tokens = openInfo ? openInfo.split(/\s+/) : [];
         const kind = tokens[0] || "";
+        const pathTok = tokens[1] && !tokens[1].includes("=") && !/^\d+$/.test(tokens[1]) ? tokens[1] : null;
 
-        if (kind === "subst") {
+        if (kind !== "subst" && pathTok) {
+          if (freshFile) {
+            throw new Error(`FILE: "${stickyFile}" has no following block before "${pathTok}" at line ${openLine}`);
+          }
+          if (kind === "diff") {
+            const hunks = parseHunks(content, openLine);
+            if (hunks.length === 0) throw new Error(`diff block at line ${openLine} for "${pathTok}" contains no hunks`);
+            operations.push({ type: "diff", file: pathTok, hunks, line: openLine });
+          } else {
+            operations.push({ type: "file", file: pathTok, content, line: openLine });
+          }
+        } else if (kind === "subst") {
           if (freshFile) {
             throw new Error(`FILE: "${stickyFile}" has no following block before subst at line ${openLine}`);
           }

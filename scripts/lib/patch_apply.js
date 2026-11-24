@@ -116,6 +116,29 @@ function lineInfoAt(text, idx) {
   return { lineNo, lineText: text.slice(lineStart, lineEnd).trim().slice(0, 140) };
 }
 
+// A diff hunk with expect=N (N > 1) or aimed at a directory runs through the exact-count
+// substitution path; plain single-file expect=1 hunks keep the diff path. Order is preserved.
+function expandOps(operations, rootDir) {
+  const isPlain = (file, hunk) => {
+    if ((hunk.expect ?? 1) !== 1) return false;
+    const abs = resolveScopeInRoot(rootDir, file);
+    return !(abs && fs.existsSync(abs) && fs.statSync(abs).isDirectory());
+  };
+  const out = [];
+  for (const op of operations) {
+    if (op.type !== "diff") { out.push(op); continue; }
+    let run = [];
+    const flush = () => { if (run.length) out.push({ ...op, hunks: run }); run = []; };
+    for (const hunk of op.hunks) {
+      if (isPlain(op.file, hunk)) { run.push(hunk); continue; }
+      flush();
+      out.push({ type: "subst", scope: op.file, expect: hunk.expect ?? 1, hunk, line: op.line });
+    }
+    flush();
+  }
+  return out;
+}
+
 export function applyPatch(raw, { root = process.cwd(), dryRun = true } = {}) {
   const rootDir = path.resolve(root);
   const operations = parsePatch(raw);
@@ -137,7 +160,7 @@ export function applyPatch(raw, { root = process.cwd(), dryRun = true } = {}) {
     return { normRel, text: fileMap.get(normRel) };
   }
 
-  for (const op of operations) {
+  for (const op of expandOps(operations, rootDir)) {
     if (op.type === "diff") {
       let { normRel, text } = getFile(op.file);
       if (text === null) {

@@ -17,6 +17,7 @@ import {
   incrementTopicTick, phi
 } from "../mastery/index.js";
 import { attachTooltips } from "./carousel_view.js";
+import { attachUnitClicks } from "./unit_click_view.js";
 import { MASTERY_CHANGED_EVENT } from "./sidebar_view.js";
 
 function resolveMeta(varKey, varsDb = {}) {
@@ -56,7 +57,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     const unitTex = unit && unit !== "dimless" && unit !== "ratio"
       ? unitToTex(unit, true, meta.dimension)
       : null;
-    const labelText = targetLabel(activeProblem.system._displayNames?.[step.targetVar] || meta.name, symSpan, unit, unitTex);
+    const labelText = targetLabel(activeProblem.system._displayNames?.[step.targetVar] || meta.name, symSpan, unit, unitTex, step.targetVar);
 
     const targetSpan = document.createElement("span");
     targetSpan.innerHTML = `Step ${idx + 1}: ${labelText}`;
@@ -84,7 +85,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     });
 
     summary.addEventListener("click", e => {
-      if (e.target === input || e.target.closest(".interactive-var")) return;
+      if (e.target === input || e.target.closest(".interactive-var, .interactive-unit")) return;
       if (!item.classList.contains("open") && !step.isAnswered) {
         revealStepAnswer(idx, input, activeProblem, relations);
       } else {
@@ -128,6 +129,7 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
   }
 
   attachTooltips(activeProblem, relations);
+  attachUnitClicks(activeProblem);
 }
 
 function refreshStepDerivations(activeProblem, relations) {

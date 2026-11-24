@@ -57,7 +57,7 @@ const RAW_BASE_UNITS = {
   "bar":            { baseScale: 100000.0, symbol: "bar", dimMap: { M: 1, L: -1, T: -2 } },
   "litre":          { baseScale: 0.001, symbol: "L", dimMap: { L: 3 } },
   "gallon":         { baseScale: 0.003785411784, symbol: "gal", dimMap: { L: 3 } },
-  "rpm":            { baseScale: 1/60, symbol: "rpm", dimMap: { T: -1 } },
+  "rpm":            { baseScale: 1/60, symbol: "rpm", dimMap: { C: 1, T: -1 } },
   "hertz":          { baseScale: 1.0, symbol: "Hz", dimMap: { T: -1 } },
   "cfm":            { baseScale: 0.3048**3 / 60, symbol: "cfm", dimMap: { L: 3, T: -1 } },
   "gpm":            { baseScale: 0.003785411784 / 60, symbol: "gpm", dimMap: { L: 3, T: -1 } }

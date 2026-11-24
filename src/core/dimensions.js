@@ -127,12 +127,14 @@ export function formatGivenValue(value, meta = {}, isLatex = true, activeUnit = 
   return fmtSigFig(value, 6, isLatex);
 }
 
-export function targetLabel(name, token, unit, unitTex = null) {
+export function targetLabel(name, token, unit, unitTex = null, unitVar = null) {
   if (!unit || unit === "dimless" || unit === "ratio") {
     return `${name} (${token})`;
   }
   if (unitTex) {
-    return `${name} (${token}) in $${unitTex}$`;
+    return unitVar
+      ? `${name} (${token}) in <span class="interactive-unit" data-var="${unitVar}">$${unitTex}$</span>`
+      : `${name} (${token}) in $${unitTex}$`;
   }
   if (unit === "deg" || unit === "°") {
     return `${name} (${token}) in °`;

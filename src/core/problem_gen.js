@@ -201,6 +201,8 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   S._displayNames = S._displayNames || {};
   S._displaySymbols = S._displaySymbols || {};
 
+  const unitSpan = (varKey, tex) => `<span class="interactive-unit" data-var="${varKey}">$${tex}$</span>`;
+
   function getPolymorphicMeta(v) {
     const meta = varsDb[v] || CONSTANTS_DB[v] || {};
     if (!S._displayNames[v]) {
@@ -223,9 +225,9 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     let valWithUnit = `$${formattedVal}$`;
     if (u && u !== "dimless" && u !== "ratio") {
       const uTex = unitToTex(u, true, meta.dimension);
-      if (u === "%") valWithUnit = `$${formattedVal}\\%$`;
-      else if (u.startsWith("°")) valWithUnit = `$${formattedVal}${uTex}$`;
-      else valWithUnit = `$${formattedVal}\\,${uTex}$`;
+      if (u === "%") valWithUnit = `$${formattedVal}$${unitSpan(v, "\\%")}`;
+      else if (u.startsWith("°")) valWithUnit = `$${formattedVal}$${unitSpan(v, uTex)}`;
+      else valWithUnit = `$${formattedVal}$${unitSpan(v, `\\,${uTex}`)}`;
     }
     return `${poly.name}&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${v}">$${poly.symbol}$</span> = ${valWithUnit})</span>`;
   });
@@ -235,7 +237,7 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
     const gMeta = varsDb[gVar] || CONSTANTS_DB[gVar] || {};
     const u = S._u?.[gVar] || gMeta.unit || "";
     let uStr = "";
-    if (u && u !== "dimless" && u !== "ratio") uStr = ` in $${unitToTex(u, true, gMeta.dimension)}$`;
+    if (u && u !== "dimless" && u !== "ratio") uStr = ` in ${unitSpan(gVar, unitToTex(u, true, gMeta.dimension))}`;
     const prefix = visibleGoals.length > 1 ? `(${idx + 1}) ` : "";
     return `${prefix}<strong>${poly.name}</strong>&nbsp;<span class="math-token">(<span class="interactive-var" data-var="${gVar}">$${poly.symbol}$</span>)</span>${uStr}`;
   });

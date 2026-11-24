@@ -97,6 +97,8 @@ You are modifying the BSME Reviewer repository.
    Diffs: Use ```diff with 4-character markers (<<<< ==== >>>>) for partial updates
    (or >= 5 matching chars when the body contains literal 4-char markers).
 
+   Preferred format: put the path in the fence info string (```diff path/to/file.ext, or ```javascript path/to/new_file.js for a full file). One block may hold many hunks; a hunk opener may carry `expect=N` (`<<<< expect=3`, default 1), and a directory path applies the hunk across that scope. A hunk whose replacement is already present is a no-op. The FILE: and subst forms below stay accepted.
+
    Batch substitutions: Use ```subst scope=<file|dir> expect=N with one literal
    (<<<< ==== >>>>) hunk to replace all N exact matches atomically across a scope.
 7. Run: npm test (or the node --test command in section 10)
@@ -679,7 +681,7 @@ Run `npm test` (regenerates registries and executes all suites with the quiet re
 ```bash
 node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/run_hygiene_test.js \
   test/derivation_matrix_test.js test/rate_parts_test.js test/patch_test.js test/trace_test.js \
-  test/section_d_test.js test/sibling_markup_test.js test/memo_equivalence_test.js test/ctx_test.js test/reporter_test.js
+  test/section_d_test.js test/sibling_markup_test.js test/memo_equivalence_test.js test/unit_catalog_test.js test/xmb_model_test.js test/patch_format_test.js test/ctx_test.js test/reporter_test.js
 ```
 
 | Suite | Invariant Verified |
@@ -689,8 +691,11 @@ node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/ru
 | `test/derivation_matrix_test.js` | **Derivation Matrix:** Layer 1 re-runs every topic x system x relation x solvable target under pairwise (2-wise) unit coverage; Layer 2 runs seeded `generateProblem` trials across SI, US, and MIXED systems and mastery levels. Both verify `evaluatePhysicalAST`, `validateDerivationLatex`, numerical derivation match (`latex_oracle.js`), and `isCanonicalScaleFactor`. All failures are collected and grouped; each carries `seed=N` for `TRACE`. |
 | `test/rate_parts_test.js` | Parenthesised rate targets (`ft-lb_f/(lb_m)`, `kJ/(s)`) decompose into canonical numerator and denominator ratios; a `1/(...)` target is not split into a unit-less numerator. |
 | `test/section_d_test.js` | Atom-soup targets route to the per-atom compound builder; `Q_s / (Q_s + Q_l)` with `Btu/h` and `kW` yields only canonical scalars. |
+| `test/unit_catalog_test.js` | Unit catalog derived from the registry (one category per base unit, chip round-trips), canonical factor trains checked by the LaTeX oracle, affine and refusal cases, interactive-unit statement spans. |
+| `test/xmb_model_test.js` | XMB motion model: simultaneous two-axis drag, continuity, per-column memory, settling on integers, frame-rate independence, wheel, keys, reduced motion. |
 | `test/memo_equivalence_test.js` | Cached `isolateVariable` and `resolveUnitToken` equal their uncached computations; unit lookup tables match the legacy first-match scans; cached values are frozen. |
 | `test/sibling_markup_test.js` | Tokens appearing only in later terms of a sum receive the sibling analysis's cancelled markup, not the main-pass placeholder. |
+| `test/patch_format_test.js` | Unified patch format: path in the fence info string, many hunks per block, per-hunk `expect=N`, directory paths, legacy forms, dry-run staging, failure atomicity. |
 | `test/patch_test.js` | Patch parser & applier: `diff`, `subst` exact counts, atomicity, N+1 fences, headers |
 | `test/reporter_test.js` | Quiet test reporter: suppresses passing tests, prints leaf failures without suite wrapper duplication |
 | `test/trace_test.js` | Matrix case-line parsing, numeric push/fill recording, `Array.prototype` restoration after a throw, and rejection of malformed `TRACE` requests. |

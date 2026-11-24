@@ -48,7 +48,7 @@ function isTempFrameChange(fromUnit, toUnit, dimension = null) {
   return Math.abs(a.scale - b.scale) > 1e-9 || Math.abs(a.offset - b.offset) > 1e-9;
 }
 
-function buildTempConversionExpr(rawVal, fromUnit, toUnit, dimension = null) {
+export function buildTempConversionExpr(rawVal, fromUnit, toUnit, dimension = null) {
   const fromOff = getUnitOffset(fromUnit, dimension);
   const toOff = getUnitOffset(toUnit, dimension);
   const absFrom = getAbsoluteCompanionUnit(fromUnit);
