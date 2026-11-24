@@ -97,6 +97,21 @@ export const SUBSTITUTION_GRAPH = Object.freeze({
   "ksi": { num: ["kilo-pound_force"], den: ["inch", "inch"] }
 });
 
+// First-match lookup tables over the frozen BASE_UNITS (same precedence as a linear find).
+const EXACT_BASE_BY_NAME = new Map();
+const PREFIXED_BASE_BY_NAME = new Map();
+for (const bKey of Object.keys(BASE_UNITS)) {
+  const meta = BASE_UNITS[bKey];
+  if (meta.isDelta) continue;
+  for (const name of [bKey, meta.symbol]) {
+    if (!EXACT_BASE_BY_NAME.has(name)) EXACT_BASE_BY_NAME.set(name, bKey);
+    if (!meta.dimMap?.Th && !PREFIXED_BASE_BY_NAME.has(name)) PREFIXED_BASE_BY_NAME.set(name, bKey);
+  }
+}
+
+export const findExactBase = name => EXACT_BASE_BY_NAME.get(name);
+export const findPrefixedBase = name => PREFIXED_BASE_BY_NAME.get(name);
+
 function resolveBaseStem(stem, dimension = null) {
   if (stem === "hr") return { prefix: null, base: "hour" };
   if (stem === "kip" || stem === "kips" || stem === "klb") return { prefix: "kilo", base: "pound_force" };
@@ -117,9 +132,7 @@ function resolveBaseStem(stem, dimension = null) {
     return { prefix: null, base: "pound_force" };
   }
 
-  const foundExact = Object.keys(BASE_UNITS).find(
-    bKey => !BASE_UNITS[bKey].isDelta && (bKey === stem || BASE_UNITS[bKey].symbol === stem)
-  );
+  const foundExact = EXACT_BASE_BY_NAME.get(stem);
   if (foundExact) return { prefix: null, base: foundExact };
 
   for (const [pCode, pMeta] of Object.entries(PREFIXES)) {
@@ -129,9 +142,7 @@ function resolveBaseStem(stem, dimension = null) {
         const lbBase = dimension === DIMENSIONS.MASS ? "pound_mass" : "pound_force";
         return { prefix: pMeta.name, base: lbBase };
       }
-      const foundBase = Object.keys(BASE_UNITS).find(
-        bKey => !BASE_UNITS[bKey].isDelta && !BASE_UNITS[bKey].dimMap?.Th && (bKey === possibleBase || BASE_UNITS[bKey].symbol === possibleBase)
-      );
+      const foundBase = PREFIXED_BASE_BY_NAME.get(possibleBase);
       if (foundBase) return { prefix: pMeta.name, base: foundBase };
     }
   }
@@ -147,7 +158,19 @@ function resolveTempAtom(body) {
   return null;
 }
 
+const UNIT_TOKEN_CACHE = new Map();
+
 export function resolveUnitToken(tokenBody, dimension = null) {
+  const key = `${dimension}|${tokenBody}`;
+  let hit = UNIT_TOKEN_CACHE.get(key);
+  if (!hit) {
+    hit = Object.freeze({ ...resolveUnitTokenUncached(tokenBody, dimension) });
+    UNIT_TOKEN_CACHE.set(key, hit);
+  }
+  return hit;
+}
+
+export function resolveUnitTokenUncached(tokenBody, dimension = null) {
   if (tokenBody === "%" || tokenBody === "\\%") return { prefix: null, base: "percent" };
   if (tokenBody === "°" || tokenBody === "deg") return { prefix: null, base: "deg" };
 

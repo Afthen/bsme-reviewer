@@ -386,7 +386,29 @@ export function solveLinearRationalAST(lhsNode, rhsNode, targetVar) {
   return { success: true, isolatedAST };
 }
 
+// Isolation depends on varsDb only through resolveCanonicalKey (target and LHS fallback),
+// so results are cached by content and shared between real-varsDb and empty-varsDb callers.
+const ISOLATION_CACHE = new Map();
+
+function deepFreeze(node) {
+  if (!node || typeof node !== "object" || Object.isFrozen(node)) return node;
+  Object.values(node).forEach(deepFreeze);
+  return Object.freeze(node);
+}
+
 export function isolateVariable(eqStr, targetVar, varsDb = {}) {
+  const [rawLhs = ""] = eqStr.split("=").map(s => s.trim());
+  const lhsIsTarget = resolveCanonicalKey(rawLhs, varsDb) === resolveCanonicalKey(targetVar, varsDb);
+  const key = `${eqStr}\0${targetVar}\0${lhsIsTarget ? 1 : 0}`;
+  let hit = ISOLATION_CACHE.get(key);
+  if (!hit) {
+    hit = deepFreeze(isolateVariableUncached(eqStr, targetVar, varsDb));
+    ISOLATION_CACHE.set(key, hit);
+  }
+  return hit;
+}
+
+export function isolateVariableUncached(eqStr, targetVar, varsDb = {}) {
   const [rawLhs = "", rawRhs = ""] = eqStr.split("=").map(s => s.trim());
   const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
   const lhsAst = parseMathAST(rawLhs);
