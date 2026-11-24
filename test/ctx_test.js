@@ -347,12 +347,12 @@ describe("context delivery cache", () => {
 
     await runCached("READ pl.txt:1-2");
     const single = await runCached("READ pl.txt:1-2");
-    assert.match(single, /earlier delivery: \d+\]/);
+    assert.match(single, /earlier delivery: \d+\)/);
     assert.doesNotMatch(single, /deliver(y)?ies/);
 
     await runCached("READ pl.txt:3-4");
     const multi = await runCached("READ pl.txt:1-4");
-    assert.match(multi, /earlier deliveries: \d+, \d+\]/);
+    assert.match(multi, /earlier deliveries: \d+, \d+\)/);
   });
 
   test("--reset clears the ledger even when no request file exists", async () => {

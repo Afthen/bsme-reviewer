@@ -2,3 +2,5 @@
 tmp/
 migrate_relations.js
 tmp/
+tmp/
+*.cpuprofile
