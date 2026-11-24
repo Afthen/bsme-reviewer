@@ -12,7 +12,7 @@ import { evaluatePhysicalAST } from "../cas/units/index.js";
 import { phi, fib, FADING_THRESHOLD } from "../mastery/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
 import { applyProblemUnitSampling, planProblemUnits, sampleSystemMode, findCoupledGroup } from "./unit_sampler.js";
-import { fmtSigFig, formatGivenValue, DIMENSIONS } from "./dimensions.js";
+import { fmtSigFig, formatGivenValue, DIMENSIONS, displayFloorOk } from "./dimensions.js";
 import { getUnitKind, toDeltaUnit, toPointUnit, convertUnitValue, unitToTex } from "../cas/units/definitions.js";
 
 export function relationWeaknessWeight(mastery = 0) {
@@ -249,7 +249,38 @@ export function buildProblemStatement(givens, visibleGoals, S, varsDb = {}, topi
   return `${article} ${systemNoun} operates with the following specifications: ${parts.join(", ")}. Determine: ${goalsFormatted}.`;
 }
 
+const MAX_DRAW_ATTEMPTS = 20;
+
+/** First displayed non-constant value (given or active answer) below the display floor, or null. */
+function firstFloorViolation(problem) {
+  const { system, varsDb, givens, solution } = problem;
+  for (const g of givens) {
+    const meta = varsDb[g] || CONSTANTS_DB[g] || {};
+    if (meta.isConstant) continue;
+    if (typeof system[g] === "number" && !displayFloorOk(system[g])) return `given ${g}=${system[g]} ${system._u?.[g] || ""}`;
+  }
+  for (const s of solution) {
+    if (s.isFaded) continue;
+    const meta = varsDb[s.targetVar] || {};
+    if (meta.isConstant) continue;
+    if (typeof s.expectedVal === "number" && !displayFloorOk(s.expectedVal)) {
+      return `answer ${s.targetVar}=${s.expectedVal} ${system._u?.[s.targetVar] || ""}`;
+    }
+  }
+  return null;
+}
+
 export function generateProblem(topic, getMastery = () => 0, options = {}) {
+  let violation = null;
+  for (let i = 0; i < MAX_DRAW_ATTEMPTS; i++) {
+    const problem = buildProblemOnce(topic, getMastery, options);
+    violation = firstFloorViolation(problem);
+    if (!violation) return problem;
+  }
+  throw new Error(`Display floor unmet after ${MAX_DRAW_ATTEMPTS} draws (${topic.id}): ${violation}; its unit is wrong or the topic data is out of range`);
+}
+
+function buildProblemOnce(topic, getMastery = () => 0, options = {}) {
   let { title, varsDb, relations, createSystem } = topic;
   if (typeof topic.instantiate === "function" && Array.isArray(topic.countRange)) {
     const [minN, maxN] = topic.countRange;

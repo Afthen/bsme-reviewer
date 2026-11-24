@@ -242,11 +242,13 @@ export function sampleByInverseTokens(candidateList = []) {
   return candidateList[candidateList.length - 1].unit;
 }
 
+import { MIN_DISPLAY_MAGNITUDE } from "./dimensions.js";
+
 export function retainsSufficientSigFigs(convertedValue) {
   if (typeof convertedValue !== "number" || isNaN(convertedValue)) return false;
   const abs = Math.abs(convertedValue);
   if (abs === 0) return true;
-  return abs >= 0.0995 && abs <= 9.99e6;
+  return abs >= MIN_DISPLAY_MAGNITUDE && abs <= 9.99e6;
 }
 
 /**

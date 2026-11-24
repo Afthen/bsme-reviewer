@@ -37,9 +37,27 @@ export const DIMENSIONS = Object.freeze({
 
 /**
  * Universal Number Formatter:
- * Enforces up to 6 significant figures, with a strict maximum of 3 decimal places.
+ * Display: up to 6 significant figures with a strict maximum of 6 decimal places.
+ * Computation is never rounded by the decimal cap.
  * Formats numbers with thousand separators. Trims trailing zeroes to the right of the decimal.
  */
+
+export const DISPLAY_SIG_FIGS = 6;
+export const DISPLAY_MAX_DECIMALS = 6;
+// Smallest displayed magnitude of a non-constant value that still keeps 3 trimmed significant figures.
+export const MIN_DISPLAY_MAGNITUDE = 0.0995;
+
+// Oracle tolerance (test/latex_oracle.js) lives here so the display floor derives from it.
+export const ORACLE_REL_TOLERANCE = 1e-3;
+export const ORACLE_ABS_TOLERANCE = 1e-3;
+
+// Hard floor: display rounding (half a unit in the last decimal) must stay within
+// half the oracle's relative tolerance. 0.5 * 10^-6 / v <= 0.5 * 1e-3  =>  v >= 1e-3.
+export const MIN_DISPLAY_FLOOR = Number((Math.pow(10, -DISPLAY_MAX_DECIMALS) / ORACLE_REL_TOLERANCE).toPrecision(6));
+
+export function displayFloorOk(v) {
+  return typeof v === "number" && Number.isFinite(v) && (v === 0 || Math.abs(v) >= MIN_DISPLAY_FLOOR);
+}
 
 export function addSeparators(valStr, isLatex = false) {
   if (valStr === undefined || valStr === null) return "";
@@ -62,8 +80,8 @@ export function fmtSigFig(n, sigFigs = 6, isLatex = false) {
   // concern (snapClean in unit_sampler.js), not a display-time one.
   const rounded = Number(num.toPrecision(sigFigs));
   if (rounded === 0) return "0";
-  const decimals = Math.min(100, Math.max(0, sigFigs - 1 - Math.floor(Math.log10(Math.abs(rounded)))));
-  const fixed = rounded.toFixed(decimals);
+  const decimals = Math.min(DISPLAY_MAX_DECIMALS, Math.max(0, sigFigs - 1 - Math.floor(Math.log10(Math.abs(rounded)))));
+  const fixed = num.toFixed(decimals);
   const trimmed = fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
   return addSeparators(trimmed, isLatex);
 }

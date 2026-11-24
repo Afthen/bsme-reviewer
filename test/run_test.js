@@ -21,7 +21,7 @@ import { casToTex } from "../src/cas/latex.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
 import { pruneSolutionPath, solveDAG, canSolveTarget } from "../src/core/graph_solver.js";
-import { formatGivenValue, targetLabel, fmtSigFig } from "../src/core/dimensions.js";
+import { formatGivenValue, targetLabel, fmtSigFig, displayFloorOk, MIN_DISPLAY_FLOOR } from "../src/core/dimensions.js";
 import {
   sampleSystemMode, sampleByInverseTokens, retainsSufficientSigFigs,
   applyProblemUnitSampling, snapClean, planProblemUnits
@@ -548,6 +548,17 @@ describe("Unit Sampler: 40-40-20, Inverse-Token Compound Weights & Sig-Fig Reten
     assert.equal(retainsSufficientSigFigs(0.06), false);
     assert.equal(retainsSufficientSigFigs(6.0), true);
     assert.equal(retainsSufficientSigFigs(2.362), true);
+    assert.equal(retainsSufficientSigFigs(0.0004), false);
+  });
+
+  test("Display cap: 6 s.f. with a 6-decimal cap, rounded once from the raw value", () => {
+    assert.equal(fmtSigFig(0.00123456789, 6), "0.001235");
+    assert.equal(fmtSigFig(0.0000123456, 6), "0.000012");
+    assert.equal(fmtSigFig(123456.789, 6), "123,457");
+    assert.equal(MIN_DISPLAY_FLOOR, 0.001);
+    assert.equal(displayFloorOk(0), true);
+    assert.equal(displayFloorOk(0.02), true);
+    assert.equal(displayFloorOk(0.0004), false);
   });
 });
 

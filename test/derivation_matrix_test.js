@@ -18,7 +18,7 @@ import { valueToCoherentBase, formatValueInUnit } from "../src/cas/units/index.j
 import { validateStatementLatex } from "./latex_oracle.js";
 import {
   SEEDS, GEN_SEEDS, mulberry32, withSeededRandom,
-  unitLevels, coveringRows, restate, collectSteps, checkStep
+  unitLevels, coveringRows, restate, collectSteps, checkStep, levelStats
 } from "./matrix_helpers.js";
 
 function collectCalls(n, acc = new Set()) {
@@ -58,7 +58,7 @@ test("Derivation matrix: pairwise step coverage and seeded problem-generator inv
         for (const step of collectSteps(topic, sys, S)) {
           const rng = mulberry32(seed * 7919 + step.targetVar.length);
           const tokens = [...new Set([...step.nodes, step.targetVar])].filter(k => topic.varsDb[k]);
-          const levels = tokens.map(k => unitLevels(S._u?.[k] || topic.varsDb[k].unit, topic.varsDb[k], rng));
+          const levels = tokens.map(k => unitLevels(S._u?.[k] || topic.varsDb[k].unit, topic.varsDb[k], rng, S[k]));
           const rows = coveringRows(levels.map(l => l.length), rng);
 
           // Extra row: every token in the target's unit where dimensions agree.
@@ -168,6 +168,7 @@ test("Derivation matrix: pairwise step coverage and seeded problem-generator inv
     }
   }
 
+  if (levelStats.skipped > 0) console.log(`[matrix] skipped ${levelStats.skipped} unit levels below the display floor`);
   if (failures.length > 0) {
     const groups = new Map();
     for (const f of failures) {
@@ -186,8 +187,7 @@ test("Derivation matrix: pairwise step coverage and seeded problem-generator inv
     };
     console.log("[matrix] by topic:", count(f => f.topic));
     console.log("[matrix] by tag:", count(f => f.tags));
-    const nonDim = f => (f.tags || []).filter(t => !t.startsWith("dim:")).sort().join(" + ") || "(none)";
-    console.log("[matrix] by structural class (top 15):", count(nonDim).slice(0, 15));
+
     console.log("[matrix] failures with all tokens in canonical units:", failures.filter(f => f.changed === 0).length);
     const minimal = new Map();
     for (const f of failures) {
@@ -197,10 +197,14 @@ test("Derivation matrix: pairwise step coverage and seeded problem-generator inv
     }
     const mins = [...minimal.values()].sort((a, b) => a.changed - b.changed);
     console.log(`[matrix] distinct failing (relation,target): ${mins.length}`);
-    for (const f of mins.slice(0, 40)) {
-      console.log(`[matrix] MIN changed=${f.changed} ${f.where} | ${f.msg.slice(0, 120)} | ROW: ${(f.row || "").slice(0, 260)}`);
+    for (const f of mins.slice(0, 10)) {
+      console.log(`[matrix] MIN changed=${f.changed} ${f.where} | ROW: ${(f.row || "").slice(0, 160)}`);
     }
-    for (const [k, g] of groups) console.log(`  ${k}  x${g.n}\n      e.g. ${g.example.where}\n      ${g.example.msg}`);
+    for (const [k, g] of groups) {
+      const ex = g.example.where;
+      const brace = ex.indexOf(" {");
+      console.log(`  ${k} x${g.n} | ${brace >= 0 ? ex.slice(brace + 1) : ""} | ${g.example.msg.split(" (")[0]}`);
+    }
   }
 
   assert.equal(failures.length, 0, `${failures.length} matrix failures (see summary above)`);

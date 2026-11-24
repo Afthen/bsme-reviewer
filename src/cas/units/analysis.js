@@ -160,7 +160,7 @@ export function analyzeTempAST(node, unitOfKey, varsDb = {}) {
         const hasAbs = L.hasAbs || R.hasAbs || L.tempState === "point" || R.tempState === "point" || L.tempState === "abs" || R.tempState === "abs";
         const dimMap = combineDimMaps(L.dimMap, R.dimMap, n.op === "*" ? 1 : -1);
         const tempState = isPureThDim(dimMap) ? (hasAbs ? "abs" : "delta") : "none";
-        return { dimMap, tempState, hasAbs, liftTokens, pointTokens: new Set() };
+        return { dimMap, tempState, hasAbs, liftTokens, pointTokens: new Set([...L.pointTokens, ...R.pointTokens]) };
       }
 
       if (n.op === "^") {
@@ -170,7 +170,7 @@ export function analyzeTempAST(node, unitOfKey, varsDb = {}) {
         const p = evalAST(n.right, {});
         const dimMap = Number.isFinite(p) ? scaleDimMapLocal(L.dimMap, p) : {};
         const tempState = isPureThDim(dimMap) ? (hasAbs ? "abs" : "delta") : "none";
-        return { dimMap, tempState, hasAbs, liftTokens, pointTokens: new Set() };
+        return { dimMap, tempState, hasAbs, liftTokens, pointTokens: new Set(L.pointTokens) };
       }
     }
 

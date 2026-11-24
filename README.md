@@ -190,7 +190,7 @@ Software engineering in this repository is governed by physical/mathematical inv
   - **Cancellation Hierarchy:** Wrap the highest possible AST node with `\cancel{}`. Whole-unit cancellation ($\cancel{\cfrac{\text{kJ}}{\text{s}}}$) is canonical; component-level cancellation ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}}$) is used only as fallback when components cancel in separate places.
   - **No Fused Scalars:** Every displayed conversion scalar is a decade or a single registered same-dimension atom ratio (optionally raised to an integer power as `(root)^p`). A product of different ratios (e.g. $737.562 \times 0.453592 = 334.553$, or $1000 \times 3600^3$) is never emitted as one number; it is factored per atom pair.
 - **R21. Specific Energy Notation.** Quantities per unit mass ($\text{kJ/kg}$, $\text{Btu/lb}$) strictly use lowercase symbols ($q_A, q_R, w_{net}, h$), reserving uppercase ($Q, W, P$) for total energy or power.
-- **R22. Number formatting.** Measured values pass through `fmtSigFig` (up to 6 significant figures, max 3 decimal places). Unit conversion scale factors pass through `fmtScale` (6 significant figures without the 3-decimal-place truncation cap).
+- **R22. Number formatting.** Displayed values pass through `fmtSigFig` (up to 6 significant figures, max 6 decimal places); `fmtScale` delegates to it. Computation is never capped: scalars stay at 6 significant figures with no decimal cap. Every displayed non-constant value must satisfy `displayFloorOk` (`|v| >= MIN_DISPLAY_FLOOR`, derived from the 6-decimal cap and the oracle tolerance, 0.001) so display rounding stays inside the oracle tolerance. The sampler additionally prefers `MIN_DISPLAY_MAGNITUDE` (0.0995) when choosing among units. `generateProblem` redraws up to 20 times and then throws; a value that fails means its unit was chosen wrongly or the topic data is out of range.
 
 ### AI Collaboration, Testing & Process
 - **R23. Never make a red test invisible.** No renaming, skipping, narrowing globs, loosening tolerances, or deleting tests. Fix the root cause.
@@ -372,7 +372,7 @@ $$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
 - **Empirical Target Scaling:** When a relation specifies `requiredUnits`, the formula evaluates in those required units; the result then scales to `targetUnit` via `numericConversionFactor = scale(reqTargetU) / scale(targetUnit)`.
 
 ### 6.2 `scales.js`: Single Source of Truth & 6-Sig-Fig Precision
-`src/cas/units/scales.js` computes all conversion scalars directly from `BASE_UNITS` and `PREFIXES` in `definitions.js` using `fmtScale` (6 significant figures without the 3-decimal truncation cap):
+`src/cas/units/scales.js` computes all conversion scalars directly from `BASE_UNITS` and `PREFIXES` in `definitions.js` using `fmtScale` (6 significant figures, 6-decimal display cap; scalars themselves are uncapped):
 - **Single-Dimension Scaling (Option B):** When an expression evaluates to a single dimension differing from `targetUnit` (e.g. $\text{hp} \to \text{ft}\cdot\text{lb/s}$), `scales.js` preserves the target unit intact on the main line:
   $$BP = \cfrac{EP}{\eta_g} = \cfrac{1{,}850.61 \, \cancel{\text{hp}}}{0.92} \cdot 550 \, \cfrac{\cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}{\cancel{\text{hp}}} = \boxed{1{,}106{,}340 \, \cfrac{\text{ft}\cdot\text{lb}}{\text{s}}}$$
 - **Compound Ratio Decomposition:** Compound unit conversions (e.g. $\frac{\text{lb/min}}{\text{Btu/h}} \to \frac{\text{kg}}{\text{kWh}}$) are never lumped into unfamiliar decimals (like $92{,}863.4$). `scales.js` decomposes them into atomic dimension pairs (`60`, `2.20462`, `3,412.14`) applied in-situ.
@@ -394,7 +394,7 @@ $$\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{B
 ### 6.4 Multi-System Sampling & Coupled State Coherence
 - **Problem Distribution:** 40% Pure SI / 40% Pure US / 20% MIXED.
 - **Coupled Variable Coherence:** State deliverables of the same fluid or cycle share an identical unit when requested as outputs; boundary givens roll freely to test multi-unit fluency.
-- **Significant Figure Retention:** Conversions to alternative units must retain $\ge 3$ significant figures under the 3-decimal-place limit ($|v| \ge 0.100$).
+- **Significant Figure Retention:** Conversions to alternative units must retain $\ge 3$ significant figures under the 6-decimal display cap ($|v| \ge 0.0995$, `MIN_DISPLAY_MAGNITUDE`).
 - **Compound Decomposition:** Decomposed unit options (e.g. $\text{W} \to \text{J/s} \to \text{N}\cdot\text{m/s} \to \text{kg}\cdot\text{m}^2/\text{s}^3$) are sampled with probability inversely proportional to token count: $w_i = 1/t_i$.
 
 ---

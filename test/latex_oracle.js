@@ -5,6 +5,7 @@
  */
 
 import assert from "node:assert/strict";
+import { ORACLE_REL_TOLERANCE, ORACLE_ABS_TOLERANCE } from "../src/core/dimensions.js";
 
 let katex = null;
 try {
@@ -440,7 +441,7 @@ export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "",
     `Derivation numeric expression evaluated to non-finite (${evaluated}) in ${ctx}:\n${numTex}`
   );
 
-  const tol = Math.max(Math.abs(boxedVal) * 1e-3, 1e-3);
+  const tol = Math.max(Math.abs(boxedVal) * ORACLE_REL_TOLERANCE, ORACLE_ABS_TOLERANCE);
   assert.ok(
     Math.abs(evaluated - boxedVal) <= tol,
     `Derivation evaluates to ${evaluated}, boxed is ${boxedVal} (${ctx}):\n${numTex}`
@@ -456,7 +457,7 @@ export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "",
       const leadMatch = numTex.replace(/\{,\}|,/g, "").match(/^[(\s]*([+-]?[\d.]+(?:[eE][+-]?\d+)?)/);
       assert.ok(leadMatch, `Expected numeric lead in conversion row (${ctx}): ${numTex}`);
       const leadVal = parseFloat(leadMatch[1]);
-      const prevTol = Math.max(Math.abs(prevEval) * 1e-3, 1e-3);
+      const prevTol = Math.max(Math.abs(prevEval) * ORACLE_REL_TOLERANCE, ORACLE_ABS_TOLERANCE);
       assert.ok(
         Math.abs(prevEval - leadVal) <= prevTol,
         `Formula row evaluated to ${prevEval}, but conversion row starts with ${leadVal} (${ctx}):\n${prevTex}`

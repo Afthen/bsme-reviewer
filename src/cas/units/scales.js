@@ -1,7 +1,7 @@
 /**
  * src/cas/units/scales.js
  * Single Source of Truth for canonical unit conversion factors, 6-sig-fig
- * scale formatting (without 3-decimal cap), and factor-label decomposition.
+ * scale formatting (6 s.f., 6-decimal display cap), and factor-label decomposition.
  */
 
 import {
@@ -15,22 +15,16 @@ import {
 } from "./definitions.js";
 import { addSeparators, DIMENSIONS } from "../../core/dimensions.js";
 
+import { fmtSigFig, DISPLAY_SIG_FIGS } from "../../core/dimensions.js";
+
 /**
- * Formats scale conversion factors to 6 significant figures without the
- * 3-decimal-place truncation cap used by measured variables.
+ * Formats scale conversion factors for display through the shared display
+ * primitive (6 significant figures, 6-decimal cap). Computation of the
+ * scalars themselves stays at 6 s.f. with no decimal cap.
  */
 export function fmtScale(n, isLatex = true) {
   if (n === undefined || n === null || isNaN(n)) return "";
-  if (Number.isInteger(n)) return addSeparators(n.toString(), isLatex);
-
-  const val = parseFloat(n.toPrecision(6));
-  if (Number.isInteger(val)) return addSeparators(val.toString(), isLatex);
-
-  const str = Math.abs(val) < 1e-4 && Math.abs(val) > 0
-    ? val.toFixed(10).replace(/0+$/, "").replace(/\.$/, "")
-    : val.toString();
-
-  return addSeparators(str, isLatex);
+  return fmtSigFig(n, DISPLAY_SIG_FIGS, isLatex);
 }
 
 // Removes parentheses that wrap an entire side, e.g. "(lb_m*s)" -> "lb_m*s"; leaves "(a)*(b)" intact.

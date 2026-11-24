@@ -8,7 +8,7 @@
 import { parseMathAST } from "../src/cas/ast.js";
 import { isolateVariable } from "../src/cas/algebra.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
-import { DIMENSIONS } from "../src/core/dimensions.js";
+import { DIMENSIONS, displayFloorOk } from "../src/core/dimensions.js";
 import { candidateUnitsFor } from "../src/core/unit_sampler.js";
 import {
   convertUnitValue, getUnitAtomBag, isDimEqual,
@@ -36,7 +36,9 @@ export function withSeededRandom(seed, fn) {
 }
 
 /** Same-dimension, kind-compatible unit levels for one variable: canonical first, then a seeded sample. */
-export function unitLevels(canonUnit, meta, rng) {
+export const levelStats = { skipped: 0 };
+
+export function unitLevels(canonUnit, meta, rng, canonVal = null) {
   if (!canonUnit || !meta.dimension || canonUnit === "dimless" || canonUnit === "ratio") return [canonUnit];
   const canonBag = getUnitAtomBag(canonUnit, meta.dimension);
   const pool = new Set();
@@ -46,6 +48,16 @@ export function unitLevels(canonUnit, meta, rng) {
     }
   }
   pool.delete(canonUnit);
+  // Display floor: drop levels where the restated value would be shown below the floor.
+  // The canonical level is always kept.
+  if (typeof canonVal === "number" && !meta.isConstant) {
+    for (const u of [...pool]) {
+      if (!displayFloorOk(convertUnitValue(canonVal, canonUnit, u, meta.dimension))) {
+        pool.delete(u);
+        levelStats.skipped++;
+      }
+    }
+  }
   const rest = [...pool].sort(() => rng() - 0.5).slice(0, MAX_LEVELS - 1);
   return [canonUnit, ...rest];
 }

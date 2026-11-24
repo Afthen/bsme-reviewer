@@ -15,6 +15,7 @@ import { casToTex, astToLatex, toLatexSymbol } from "../cas/latex.js";
 import {
   solveUnitAlgebra,
   analyzeTempAST,
+  toPointUnit,
   getUnitAtomBag,
   getUnitOffset,
   getUnitKind,
@@ -38,6 +39,13 @@ function countConversionItems(analysis) {
     if (Array.isArray(list)) count += list.length;
   }
   return count;
+}
+
+function isTempFrameChange(fromUnit, toUnit, dimension = null) {
+  const a = getUnitAtomBag(fromUnit, dimension);
+  const b = getUnitAtomBag(toUnit, dimension);
+  if (a.kind === "linear" && b.kind === "linear") return false;
+  return Math.abs(a.scale - b.scale) > 1e-9 || Math.abs(a.offset - b.offset) > 1e-9;
 }
 
 function buildTempConversionExpr(rawVal, fromUnit, toUnit, dimension = null) {
@@ -210,6 +218,7 @@ export function buildAlignedDerivation(
           const units = leaves.map(l => unitOfKey(l.key));
           const firstBag = getUnitAtomBag(units[0]);
           const allShareUnit = units.every(u => {
+            if (u && units[0] && getUnitAtomBag(u).kind !== firstBag.kind) return false;
             if (!u && !units[0]) return true;
             if (!u || !units[0]) return false;
             const b = getUnitAtomBag(u);
@@ -220,13 +229,18 @@ export function buildAlignedDerivation(
 
           if (!allShareUnit) {
             const targetBag = targetUnit ? getUnitAtomBag(targetUnit, targetMeta.dimension) : null;
-            let alignedUnit = units[0];
-            if (targetBag && isDimEqual(firstBag.dimMap, targetBag.dimMap)) {
-              alignedUnit = (firstBag.kind === "delta" && targetBag.kind === "point")
-                ? toDeltaUnit(targetUnit)
-                : targetUnit;
-            }
-            leaves.forEach(l => alignLeafToUnit(l.key, alignedUnit));
+            const leafBags = units.map(u => getUnitAtomBag(u));
+            const sameDimAsTarget = !!targetBag && isDimEqual(firstBag.dimMap, targetBag.dimMap);
+            const firstPointUnit = units.find((u, i) => leafBags[i].kind === "point");
+            const pointFrame = sameDimAsTarget ? toPointUnit(targetUnit) : firstPointUnit;
+            const deltaFrame = toDeltaUnit(pointFrame || units[0]);
+            leaves.forEach((l, i) => {
+              const kind = leafBags[i].kind;
+              const frame = kind === "point" ? pointFrame
+                : kind === "delta" ? deltaFrame
+                : (sameDimAsTarget ? targetUnit : units[0]);
+              alignLeafToUnit(l.key, frame);
+            });
             return;
           }
         }
@@ -240,8 +254,8 @@ export function buildAlignedDerivation(
     if (targetKind === "point") {
       if (tempInfo.tempState === "abs" || (tempInfo.liftTokens.size > 0 && unliftedPoints.length === 0)) {
         rowTargetUnit = absLiftTarget;
-      } else if (rowPointFrame) {
-        rowTargetUnit = rowPointFrame;
+      } else if (unliftedPoints.length > 0) {
+        rowTargetUnit = unitOfKey(unliftedPoints[0]);
       }
     }
 
@@ -269,6 +283,7 @@ export function buildAlignedDerivation(
         const units = leaves.map(l => unitOfKey(l.key));
         const firstBag = getUnitAtomBag(units[0]);
         const allShareUnit = leaves.length > 1 && units.every(u => {
+          if (u && units[0] && getUnitAtomBag(u).kind !== firstBag.kind) return false;
           if (!u && !units[0]) return true;
           if (!u || !units[0]) return false;
           const b = getUnitAtomBag(u);
@@ -421,7 +436,7 @@ export function buildAlignedDerivation(
   const tDim = targetMeta.dimension;
   const needsPostConv = typeof val === "number"
     && rowTargetUnit && targetUnit && rowTargetUnit !== targetUnit
-    && (getUnitOffset(rowTargetUnit, tDim) !== 0 || getUnitOffset(targetUnit, tDim) !== 0);
+    && isTempFrameChange(rowTargetUnit, targetUnit, tDim);
 
   const rows = [...prepLines];
   const shouldBreakVertical = prepLines.length > 0
