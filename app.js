@@ -350,7 +350,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyAppMode(appMode);
 });
 
-function setupTopicSelector() {
+function setupTreeDropdown({
+  items,
+  defaultSubject = "General",
+  pluralNoun = "items",
+  dataAttr = "id",
+  isItemSelected,
+  setItemSelected,
+  onCommit,
+  getItemTitle,
+  getToggleLabel,
+  renderLeafExtra,
+  extraFooterButtons = []
+}) {
   const container = document.getElementById("topic-dropdown-container");
   if (!container) return;
 
@@ -359,16 +371,16 @@ function setupTopicSelector() {
   const menu = document.getElementById("topic-dropdown-menu");
 
   const subjects = {};
-  TOPIC_MANIFEST.forEach(topic => {
-    const subj = topic.subject || "General Engineering";
+  items.forEach(item => {
+    const subj = item.subject || defaultSubject;
     if (!subjects[subj]) subjects[subj] = { categories: {}, standalone: [] };
-    if (topic.category) {
-      if (!subjects[subj].categories[topic.category]) {
-        subjects[subj].categories[topic.category] = [];
+    if (item.category) {
+      if (!subjects[subj].categories[item.category]) {
+        subjects[subj].categories[item.category] = [];
       }
-      subjects[subj].categories[topic.category].push(topic);
+      subjects[subj].categories[item.category].push(item);
     } else {
-      subjects[subj].standalone.push(topic);
+      subjects[subj].standalone.push(item);
     }
   });
 
@@ -380,18 +392,20 @@ function setupTopicSelector() {
   const hasChecked = root => root.querySelector(".topic-checkbox:checked") !== null;
 
   function updateDropdownLabel() {
-    const topics = getSelectedManifests();
-    if (topics.length === 0) {
-      label.textContent = "Select topics…";
-    } else if (topics.length === 1) {
-      const t = topics[0];
-      label.textContent = t.category ? `${t.category}: ${t.title}` : t.title;
+    const selected = items.filter(it => isItemSelected(it.id));
+    if (getToggleLabel) {
+      label.textContent = getToggleLabel(selected);
+    } else if (selected.length === 0) {
+      label.textContent = `Select ${pluralNoun}…`;
+    } else if (selected.length === 1) {
+      const it = selected[0];
+      label.textContent = it.category ? `${it.category}: ${it.title}` : it.title;
     } else {
-      label.textContent = `${topics.length} topics selected`;
+      label.textContent = `${selected.length} ${pluralNoun} selected`;
     }
-    toggleBtn.title = topics.map(t => t.title).join(", ");
+    toggleBtn.title = selected.map(it => it.title).join(", ");
     if (footerCount) {
-      footerCount.textContent = `${topics.length} of ${TOPIC_MANIFEST.length} topics in review set`;
+      footerCount.textContent = `${selected.length} of ${items.length} ${pluralNoun} in review set`;
     }
   }
 
@@ -412,47 +426,37 @@ function setupTopicSelector() {
   async function commitSelection() {
     syncGroupBoxes();
     updateDropdownLabel();
-    if (selectedTopicIds.length === 0) {
-      selectionSeq++;
-      currentTopic = null;
-      currentProblem = null;
-      renderSelectionPrompt();
-    } else if (!currentTopic || !selectedTopicIds.includes(currentTopic.id)) {
-      await generateNewProblem();
-    } else {
-      const seq = ++selectionSeq;
-      const allRels = await getAllSelectedRelations();
-      if (seq !== selectionSeq || !currentTopic) return;
-      updateSidebarRelations(
-        currentTopic.relations,
-        allRels,
-        masteryFor(currentTopic),
-        { currentLabel: "Current Problem", allLabel: "All Selected" }
-      );
-    }
+    if (onCommit) await onCommit();
   }
 
-  function createTopicLeaf(t, levelClass) {
+  function createLeaf(item, levelClass) {
     const leaf = document.createElement("label");
     leaf.className = `topic-item topic-leaf ${levelClass}`;
-    leaf.dataset.topicId = t.id;
+    leaf.dataset[dataAttr] = item.id;
+    leaf.dataset.id = item.id;
 
     const box = document.createElement("input");
     box.type = "checkbox";
     box.className = "topic-checkbox";
-    box.dataset.topicId = t.id;
-    box.checked = isTopicSelected(t.id);
+    box.dataset[dataAttr] = item.id;
+    box.dataset.id = item.id;
+    box.checked = isItemSelected(item.id);
 
     const title = document.createElement("span");
     title.className = "topic-leaf-title";
-    title.textContent = t.title;
+    title.textContent = getItemTitle ? getItemTitle(item) : item.title;
 
     leaf.append(box, title);
+
+    if (renderLeafExtra) {
+      renderLeafExtra(item, leaf);
+    }
+
     leaf.classList.toggle("checked", box.checked);
     leafBoxes.push(box);
 
     box.addEventListener("change", () => {
-      setTopicSelected(t.id, box.checked);
+      setItemSelected(item.id, box.checked);
       leaf.classList.toggle("checked", box.checked);
       commitSelection();
     });
@@ -470,7 +474,7 @@ function setupTopicSelector() {
       leaves.forEach(b => {
         b.checked = box.checked;
         b.closest(".topic-leaf")?.classList.toggle("checked", box.checked);
-        setTopicSelected(b.dataset.topicId, box.checked);
+        setItemSelected(b.dataset.id, box.checked);
       });
       commitSelection();
     });
@@ -502,7 +506,7 @@ function setupTopicSelector() {
     const subjectList = document.createElement("div");
     subjectList.className = "topic-list";
 
-    for (const [catName, catTopics] of Object.entries(categories)) {
+    for (const [catName, catItems] of Object.entries(categories)) {
       const catGroup = document.createElement("div");
       catGroup.className = "category-group";
 
@@ -524,20 +528,20 @@ function setupTopicSelector() {
 
       const catList = document.createElement("div");
       catList.className = "category-list";
-      catTopics.forEach(t => catList.appendChild(createTopicLeaf(t, "level-3")));
+      catItems.forEach(it => catList.appendChild(createLeaf(it, "level-3")));
 
       catGroup.append(catHeader, catList);
       if (hasChecked(catGroup)) catGroup.classList.add("open");
       subjectList.appendChild(catGroup);
     }
 
-    standalone.forEach(t => subjectList.appendChild(createTopicLeaf(t, "level-2")));
+    standalone.forEach(it => subjectList.appendChild(createLeaf(it, "level-2")));
     subjectGroup.append(subjectHeader, subjectList);
     if (hasChecked(subjectGroup)) subjectGroup.classList.add("open");
     menu.appendChild(subjectGroup);
   }
 
-  // Footer: live count, Select all & Deselect all buttons
+  // Footer: live count, extra buttons, Select all & Deselect all buttons
   const footer = document.createElement("div");
   footer.className = "topic-menu-footer";
   footerCount = document.createElement("span");
@@ -546,6 +550,18 @@ function setupTopicSelector() {
   const btnWrap = document.createElement("div");
   btnWrap.style.display = "flex";
   btnWrap.style.gap = "0.35rem";
+  btnWrap.style.alignItems = "center";
+  btnWrap.style.flexWrap = "wrap";
+  btnWrap.style.justifyContent = "flex-end";
+
+  extraFooterButtons.forEach(btnConfig => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "menu-mini-btn";
+    btn.textContent = btnConfig.text;
+    btn.addEventListener("click", btnConfig.onClick);
+    btnWrap.appendChild(btn);
+  });
 
   const selectAllBtn = document.createElement("button");
   selectAllBtn.type = "button";
@@ -556,7 +572,7 @@ function setupTopicSelector() {
     leafBoxes.forEach(b => {
       b.checked = true;
       b.closest(".topic-leaf")?.classList.add("checked");
-      setTopicSelected(b.dataset.topicId, true);
+      setItemSelected(b.dataset.id, true);
     });
     commitSelection();
   });
@@ -570,7 +586,7 @@ function setupTopicSelector() {
     leafBoxes.forEach(b => {
       b.checked = false;
       b.closest(".topic-leaf")?.classList.remove("checked");
-      setTopicSelected(b.dataset.topicId, false);
+      setItemSelected(b.dataset.id, false);
     });
     commitSelection();
   });
@@ -583,150 +599,95 @@ function setupTopicSelector() {
   updateDropdownLabel();
 }
 
+function setupTopicSelector() {
+  setupTreeDropdown({
+    items: TOPIC_MANIFEST,
+    defaultSubject: "General Engineering",
+    pluralNoun: "topics",
+    dataAttr: "topicId",
+    isItemSelected: isTopicSelected,
+    setItemSelected: setTopicSelected,
+    getToggleLabel: (selected) => {
+      if (selected.length === 0) return "Select topics…";
+      if (selected.length === 1) {
+        const t = selected[0];
+        return t.category ? `${t.category}: ${t.title}` : t.title;
+      }
+      return `${selected.length} topics selected`;
+    },
+    onCommit: async () => {
+      if (selectedTopicIds.length === 0) {
+        selectionSeq++;
+        currentTopic = null;
+        currentProblem = null;
+        renderSelectionPrompt();
+      } else if (!currentTopic || !selectedTopicIds.includes(currentTopic.id)) {
+        await generateNewProblem();
+      } else {
+        const seq = ++selectionSeq;
+        const allRels = await getAllSelectedRelations();
+        if (seq !== selectionSeq || !currentTopic) return;
+        updateSidebarRelations(
+          currentTopic.relations,
+          allRels,
+          masteryFor(currentTopic),
+          { currentLabel: "Current Problem", allLabel: "All Selected" }
+        );
+      }
+    }
+  });
+}
+
 function setupMcqSelector() {
-  const container = document.getElementById("topic-dropdown-container");
-  if (!container) return;
-  const toggleBtn = document.getElementById("topic-dropdown-toggle");
-  const label = document.getElementById("topic-dropdown-label");
-  const menu = document.getElementById("topic-dropdown-menu");
-
   const manifests = getAllMcqManifests();
-  const subjects = {};
-  manifests.forEach(m => {
-    const subj = m.subject || "General";
-    if (!subjects[subj]) subjects[subj] = { categories: {}, standalone: [] };
-    if (m.category) {
-      if (!subjects[subj].categories[m.category]) subjects[subj].categories[m.category] = [];
-      subjects[subj].categories[m.category].push(m);
-    } else {
-      subjects[subj].standalone.push(m);
-    }
-  });
-
-  menu.innerHTML = "";
-  const leafBoxes = [];
-
-  function updateLabel() {
-    const selected = getAllMcqManifests().filter(m => selectedMcqIds.includes(m.id));
-    if (selected.length === 0) label.textContent = "Select quiz sets…";
-    else if (selected.length === 1) label.textContent = selected[0].title;
-    else label.textContent = `${selected.length} quiz sets selected`;
-    toggleBtn.title = selected.map(s => s.title).join(", ");
-  }
-
-  function createMcqLeaf(m, levelClass) {
-    const leaf = document.createElement("label");
-    leaf.className = `topic-item topic-leaf ${levelClass}`;
-    const box = document.createElement("input");
-    box.type = "checkbox";
-    box.className = "topic-checkbox";
-    box.dataset.mcqId = m.id;
-    box.checked = selectedMcqIds.includes(m.id);
-
-    const count = liveMcqCounts.get(m.id) ?? m.count;
-    const title = document.createElement("span");
-    title.className = "topic-leaf-title";
-    title.textContent = `${m.title} (${count})`;
-
-    leaf.append(box, title);
-    if (m.isCustom) {
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "menu-mini-btn";
-      del.textContent = "✕";
-      del.style.marginLeft = "auto";
-      del.addEventListener("click", async e => {
-        e.preventDefault();
-        e.stopPropagation();
-        await deleteCustomSet(m.id);
-        setMcqSelected(m.id, false);
-        customMcqManifests = await listCustomManifests();
-        setupMcqSelector();
-        refreshMcqMode();
-      });
-      leaf.appendChild(del);
-    }
-
-    leaf.classList.toggle("checked", box.checked);
-    leafBoxes.push(box);
-
-    box.addEventListener("change", () => {
-      setMcqSelected(m.id, box.checked);
-      leaf.classList.toggle("checked", box.checked);
-      updateLabel();
+  setupTreeDropdown({
+    items: manifests,
+    defaultSubject: "General",
+    pluralNoun: "quiz sets",
+    dataAttr: "mcqId",
+    isItemSelected: (id) => selectedMcqIds.includes(id),
+    setItemSelected: setMcqSelected,
+    getItemTitle: (m) => {
+      const count = liveMcqCounts.get(m.id) ?? m.count;
+      return `${m.title} (${count})`;
+    },
+    getToggleLabel: (selected) => {
+      if (selected.length === 0) return "Select quiz sets…";
+      if (selected.length === 1) return selected[0].title;
+      return `${selected.length} quiz sets selected`;
+    },
+    renderLeafExtra: (m, leaf) => {
+      if (m.isCustom) {
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "menu-mini-btn";
+        del.textContent = "✕";
+        del.style.marginLeft = "auto";
+        del.addEventListener("click", async e => {
+          e.preventDefault();
+          e.stopPropagation();
+          await deleteCustomSet(m.id);
+          setMcqSelected(m.id, false);
+          customMcqManifests = await listCustomManifests();
+          setupMcqSelector();
+          refreshMcqMode();
+        });
+        leaf.appendChild(del);
+      }
+    },
+    extraFooterButtons: [
+      {
+        text: "+ Add Quiz (.json / .zip)",
+        onClick: (e) => {
+          e.stopPropagation();
+          document.getElementById("mcq-file-input")?.click();
+        }
+      }
+    ],
+    onCommit: async () => {
       refreshMcqMode();
-    });
-
-    return leaf;
-  }
-
-  for (const [subjName, { categories, standalone }] of Object.entries(subjects)) {
-    const group = document.createElement("div");
-    group.className = "subject-group open";
-    const header = document.createElement("div");
-    header.className = "subject-header";
-    const chev = document.createElement("span");
-    chev.className = "subject-chevron";
-    chev.textContent = "▶";
-    const name = document.createElement("span");
-    name.textContent = subjName;
-    header.append(chev, name);
-    header.addEventListener("click", e => { e.stopPropagation(); group.classList.toggle("open"); });
-
-    const list = document.createElement("div");
-    list.className = "topic-list";
-    for (const [catName, items] of Object.entries(categories)) {
-      const catGroup = document.createElement("div");
-      catGroup.className = "category-group open";
-      const catHeader = document.createElement("div");
-      catHeader.className = "category-header";
-      const catChev = document.createElement("span");
-      catChev.className = "category-chevron";
-      catChev.textContent = "▶";
-      const catSpan = document.createElement("span");
-      catSpan.textContent = catName;
-      catHeader.append(catChev, catSpan);
-      catHeader.addEventListener("click", e => { e.stopPropagation(); catGroup.classList.toggle("open"); });
-      const catList = document.createElement("div");
-      catList.className = "category-list";
-      items.forEach(m => catList.appendChild(createMcqLeaf(m, "level-3")));
-      catGroup.append(catHeader, catList);
-      list.appendChild(catGroup);
     }
-    standalone.forEach(m => list.appendChild(createMcqLeaf(m, "level-2")));
-    group.append(header, list);
-    menu.appendChild(group);
-  }
-
-  const footer = document.createElement("div");
-  footer.className = "topic-menu-footer";
-  const addBtn = document.createElement("button");
-  addBtn.type = "button";
-  addBtn.className = "menu-mini-btn";
-  addBtn.textContent = "+ Add Quiz (.json / .zip)";
-  addBtn.addEventListener("click", e => {
-    e.stopPropagation();
-    document.getElementById("mcq-file-input")?.click();
   });
-
-  const clearBtn = document.createElement("button");
-  clearBtn.type = "button";
-  clearBtn.className = "menu-mini-btn";
-  clearBtn.textContent = "Deselect all";
-  clearBtn.addEventListener("click", e => {
-    e.stopPropagation();
-    leafBoxes.forEach(b => {
-      b.checked = false;
-      b.closest(".topic-leaf")?.classList.remove("checked");
-      setMcqSelected(b.dataset.mcqId, false);
-    });
-    updateLabel();
-    refreshMcqMode();
-  });
-
-  footer.append(addBtn, clearBtn);
-  menu.appendChild(footer);
-  updateLabel();
 }
 
 function setupHeaderActions() {

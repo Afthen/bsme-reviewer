@@ -375,4 +375,9 @@ describe("context delivery cache", () => {
     assert.equal(fs.existsSync(cachePath()), false);
     assert.equal(fs.existsSync(path.join(root, "tmp", "skeleton.txt")), true);
   });
+
+  test("shows delivery sequence number at the start of output when cached", async () => {
+    const out = await runCached("READ plain.txt:1-2");
+    assert.match(out, /^DELIVERY: \d+ \| BUDGET: /);
+  });
 });

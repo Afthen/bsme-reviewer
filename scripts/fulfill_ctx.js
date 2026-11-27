@@ -517,6 +517,7 @@ export async function prepareFulfillment(raw, {
   if (directives.length === 0) return { text: "", commit() {} };
 
   const cache = useCache ? loadContextCache(root) : null;
+  const deliverySeq = cache ? allocateCacheSequence(cache) : null;
   const run = directives.slice(0, LIMITS.MAX_DIRECTIVES);
   const dropped = directives.slice(LIMITS.MAX_DIRECTIVES);
   const parts = [];
@@ -550,9 +551,8 @@ export async function prepareFulfillment(raw, {
           r = analyzed.res;
 
           if (analyzed.newRefs.length) {
-            const seq = allocateCacheSequence(cache);
             for (const ref of analyzed.newRefs) {
-              recordLineDelivery(cache, ref, seq);
+              recordLineDelivery(cache, ref, deliverySeq);
             }
           }
         } else {
@@ -566,12 +566,11 @@ export async function prepareFulfillment(raw, {
 
             if (previous) {
               r = {
-                text: `[CACHED: identical ${verb} result already delivered in context delivery #${previous.seq}]\n`,
+                text: `[CACHED: identical ${verb} result already delivered in context delivery ${previous.seq}]\n`,
                 lines: 1
               };
             } else {
-              const seq = allocateCacheSequence(cache);
-              recordOutputDelivery(cache, outputHash, seq);
+              recordOutputDelivery(cache, outputHash, deliverySeq);
             }
           }
         }
@@ -586,7 +585,8 @@ export async function prepareFulfillment(raw, {
     used += r.lines;
   }
 
-  let header = `BUDGET: ${used}/${LIMITS.MAX_OUTPUT_LINES} output lines, ${run.length}/${LIMITS.MAX_DIRECTIVES} directives used.`;
+  const budgetText = `BUDGET: ${used}/${LIMITS.MAX_OUTPUT_LINES} output lines, ${run.length}/${LIMITS.MAX_DIRECTIVES} directives used.`;
+  let header = deliverySeq !== null ? `DELIVERY: ${deliverySeq} | ${budgetText}` : budgetText;
   if (dropped.length) {
     header += `\nNOT RUN (over the ${LIMITS.MAX_DIRECTIVES}-directive limit; prioritize and resend):\n${dropped.join("\n")}`;
   }

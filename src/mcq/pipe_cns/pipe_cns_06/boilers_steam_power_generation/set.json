@@ -70,7 +70,11 @@
       ],
       "answer": "Temperature and pressure",
       "shuffle": [
-        [0, 1, 2]
+        [
+          0,
+          1,
+          2
+        ]
       ]
     },
     {
@@ -117,7 +121,11 @@
       ],
       "answer": "Blow-down line",
       "shuffle": [
-        [0, 1, 2]
+        [
+          0,
+          1,
+          2
+        ]
       ]
     },
     {

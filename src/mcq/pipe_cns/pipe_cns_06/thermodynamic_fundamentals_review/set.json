@@ -48,7 +48,11 @@
       ],
       "answer": "Constant-pressure process",
       "shuffle": [
-        [0, 1, 2]
+        [
+          0,
+          1,
+          2
+        ]
       ]
     },
     {
@@ -62,7 +66,11 @@
       ],
       "answer": "No work interaction ($W = 0$)",
       "shuffle": [
-        [0, 1, 2]
+        [
+          0,
+          1,
+          2
+        ]
       ]
     },
     {
@@ -87,7 +95,11 @@
       ],
       "answer": "Perpetual motion machine of the second kind",
       "shuffle": [
-        [0, 1, 2]
+        [
+          0,
+          1,
+          2
+        ]
       ]
     },
     {
@@ -101,7 +113,11 @@
       ],
       "answer": "Externally reversible",
       "shuffle": [
-        [0, 1, 2]
+        [
+          0,
+          1,
+          2
+        ]
       ]
     },
     {
@@ -126,7 +142,11 @@
       ],
       "answer": "Are the same",
       "shuffle": [
-        [0, 1, 2]
+        [
+          0,
+          1,
+          2
+        ]
       ]
     },
     {
@@ -316,7 +336,11 @@
       ],
       "answer": "All of the above",
       "shuffle": [
-        [0, 1, 2]
+        [
+          0,
+          1,
+          2
+        ]
       ]
     },
     {
