@@ -395,15 +395,14 @@ export function solveUnitAlgebra(
 
     const findCounterpart = (tok, sameAdditiveOnly = false) => {
       const myInfo = tokenBags[tok];
-      if (!myInfo || Math.abs(myInfo.exp) !== 1) return null;
+      if (!myInfo || myInfo.exp === 0) return null;
       const myInAdd = isTokenInAdditiveSubtree(branchAst, tok);
       let fallback = null;
       for (const [otherTok, otherInfo] of Object.entries(tokenBags)) {
         if (
           otherTok === tok ||
           pairedInSectionC.has(otherTok) ||
-          Math.abs(otherInfo.exp) !== 1 ||
-          otherInfo.exp * myInfo.exp >= 0 ||
+          otherInfo.exp !== -myInfo.exp ||
           !isDimEqual(myInfo.bag.dimMap, otherInfo.bag.dimMap) ||
           (sameAdditiveOnly && isTokenInAdditiveSubtree(branchAst, otherTok) !== myInAdd)
         ) {

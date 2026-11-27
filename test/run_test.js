@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { TOPIC_MANIFEST, loadAllTopics } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
 import { validateDerivationLatex, assertDerivationMatchesAnswer, evalLatexMathToNumber } from "./latex_oracle.js";
-import { withSeededRandom } from "./matrix_helpers.js";
+import { withSeededRandom, unitLevels, mulberry32 } from "./matrix_helpers.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";
 import { evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor, formatPairConversion } from "../src/cas/units/index.js";
@@ -1319,6 +1319,27 @@ describe("Linear-Rational CAS, Oracle Guards & Affine Frame Derivations", () => 
     assertDerivationMatchesAnswer(deriv, 12.6, "ct_range_delta_f", db, "Δ°F");
     assert.ok(!deriv.includes("273.15"), `Delta conversion must not add 273.15:\n${deriv}`);
     assert.ok(deriv.includes("1.8"), `Expected 1.8 Δ°F/Δ°C scale:\n${deriv}`);
+  });
+
+  test("Idea B unit filtering keeps yd for large lengths while switching small deformations away from yd", () => {
+    const topic = TOPICS.pv_thin_walled_cylinders;
+    const S = topic.createSystem({ sys: "SI" });
+    const metaDelta = topic.varsDb.delta_D;
+    const metaDiam = topic.varsDb.D_i;
+
+    const deltaLevels = unitLevels("mm", metaDelta, mulberry32(1), S.delta_D);
+    assert.ok(!deltaLevels.includes("yd"), `delta_D (${S.delta_D} mm) should not restate to yd: ${deltaLevels}`);
+    assert.ok(deltaLevels.includes("mm") && deltaLevels.includes("cm"), `Expected smaller SI units for delta_D: ${deltaLevels}`);
+
+    const diamLevels = unitLevels("mm", metaDiam, mulberry32(1), S.D_i);
+    assert.ok(diamLevels.includes("yd"), `Large D_i (${S.D_i} mm) should still retain yd in matrix levels: ${diamLevels}`);
+
+    for (const mode of ["SI", "US", "MIXED"]) {
+      withSeededRandom(7, () => {
+        const sampled = applyProblemUnitSampling(topic.createSystem({ sys: mode === "US" ? "US" : "SI" }), topic.varsDb, mode);
+        assert.notEqual(sampled._u.delta_D, "yd", `applyProblemUnitSampling(${mode}) must not select yd for delta_D`);
+      });
+    }
   });
 });
 

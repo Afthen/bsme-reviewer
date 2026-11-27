@@ -87,7 +87,7 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
   });
 
   const coherentNum = evalAST(node, coherentState, null);
-  if (isNaN(coherentNum)) return { value: NaN, unitAnalysis };
+  if (isNaN(coherentNum)) return { value: NaN, unitAnalysis: null };
 
   // Project coherent SI base result into requested targetUnit with target dimension awareness
   const targetMeta = varsDb[cTarget] || varsDb[targetVar] || {};

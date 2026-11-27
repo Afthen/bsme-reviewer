@@ -392,7 +392,10 @@ const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["T_i", "T_f"]),
   new Set(["sigma_1", "sigma_2", "sigma_3"]),
   new Set(["sigma_xp", "sigma_yp", "tau_xyp"]),
-  new Set(["sigma_max", "sigma_min", "sigma_a", "sigma_m"])
+  new Set(["sigma_max", "sigma_min", "sigma_a", "sigma_m"]),
+  new Set(["p_i", "p_o", "P_des", "sigma_h", "sigma_L", "sigma_s", "sigma_t_i", "sigma_t_o", "sigma_r_i", "tau_max_in", "tau_max", "tau_max_i", "S_allow"]),
+  new Set(["D_i", "D_o", "D_m", "r_i", "r_o", "r_m", "t", "L", "c_a", "t_nom", "t_cyl_h", "t_cyl_L", "t_hemi", "t_ellip", "t_tori", "L_c", "t_cone", "t_flat", "d_c"]),
+  new Set(["delta_D", "delta_L", "u_o", "delta_D_o"])
 ]);
 
 export function findCoupledGroup(varKey) {

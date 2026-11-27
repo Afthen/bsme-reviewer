@@ -52,7 +52,7 @@ test("Derivation matrix: pairwise step coverage and seeded problem-generator inv
     skipped += r.skipped;
   }
 
-  if (skipped > 0) console.log(`[matrix] skipped ${skipped} unit levels below the display floor`);
+  if (skipped > 0) console.log(`[matrix] skipped ${skipped} unit levels outside the sig-fig display range`);
   if (failures.length > 0) {
     const groups = new Map();
     for (const f of failures) {

@@ -8,8 +8,7 @@
 import { parseMathAST } from "../src/cas/ast.js";
 import { isolateVariable } from "../src/cas/algebra.js";
 import { buildAlignedDerivationWithAnalysis } from "../src/core/derivation.js";
-import { DIMENSIONS, displayFloorOk } from "../src/core/dimensions.js";
-import { candidateUnitsFor } from "../src/core/unit_sampler.js";
+import { candidateUnitsFor, retainsSufficientSigFigs } from "../src/core/unit_sampler.js";
 import {
   convertUnitValue, getUnitAtomBag, isDimEqual,
   evaluatePhysicalAST, solveUnitAlgebra, isCanonicalScaleFactor
@@ -48,11 +47,11 @@ export function unitLevels(canonUnit, meta, rng, canonVal = null) {
     }
   }
   pool.delete(canonUnit);
-  // Display floor: drop levels where the restated value would be shown below the floor.
+  // Idea B: drop non-canonical levels outside the sig-fig display range (matching unit_sampler.js).
   // The canonical level is always kept.
   if (typeof canonVal === "number" && !meta.isConstant) {
     for (const u of [...pool]) {
-      if (!displayFloorOk(convertUnitValue(canonVal, canonUnit, u, meta.dimension))) {
+      if (!retainsSufficientSigFigs(convertUnitValue(canonVal, canonUnit, u, meta.dimension))) {
         pool.delete(u);
         levelStats.skipped++;
       }
