@@ -19,7 +19,18 @@ export const TOPIC_MANIFEST = Object.freeze([
   Object.freeze({"id":"springs_parallel","title":"Springs in Parallel","subject":"Machine Design","category":"Springs"}),
   Object.freeze({"id":"springs_period_frequency","title":"Spring Period & Frequency","subject":"Machine Design","category":"Springs"}),
   Object.freeze({"id":"springs_series","title":"Springs in Series","subject":"Machine Design","category":"Springs"}),
-  Object.freeze({"id":"spur_gears","title":"Spur Gears","subject":"Machine Design","category":null})
+  Object.freeze({"id":"spur_gears","title":"Spur Gears","subject":"Machine Design","category":null}),
+  Object.freeze({"id":"stress_axial_members","title":"Axial Stress & Indeterminate Bars","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_beam_bending_shear","title":"Beam Bending & Transverse Shear","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_combined_loading","title":"Combined Axial, Bending & Torsion","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_concentration","title":"Stress Concentration & Notch Sensitivity","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_fatigue","title":"Fatigue, Marin & Fluctuating Stress","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_material_properties","title":"Material Properties & Elastic Constants","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_shear_and_bearing","title":"Direct Shear, Bearing & Connections","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_static_failure","title":"Static Failure Theories & Design","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_thermal_stress","title":"Thermal Stress & Restrained Expansion","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_torsion","title":"Torsion of Circular Members","subject":"Machine Design","category":"Stress"}),
+  Object.freeze({"id":"stress_transformation_mohr","title":"Stress Transformation & Mohr's Circle","subject":"Machine Design","category":"Stress"})
 ]);
 
 const MANIFEST_IDS = new Set(TOPIC_MANIFEST.map(m => m.id));
@@ -40,7 +51,18 @@ const LOADERS = Object.freeze({
   "springs_parallel": () => import("./machine_design/springs/systems/parallel/index.js").then(m => m.springParallelTopic),
   "springs_period_frequency": () => import("./machine_design/springs/period_frequency/index.js").then(m => m.periodFrequencyTopic),
   "springs_series": () => import("./machine_design/springs/systems/series/index.js").then(m => m.springSeriesTopic),
-  "spur_gears": () => import("./machine_design/spur_gears/index.js").then(m => m.spurGearsTopic)
+  "spur_gears": () => import("./machine_design/spur_gears/index.js").then(m => m.spurGearsTopic),
+  "stress_axial_members": () => import("./machine_design/stress/axial_members/index.js").then(m => m.axialMembersTopic),
+  "stress_beam_bending_shear": () => import("./machine_design/stress/beam_bending_shear/index.js").then(m => m.beamBendingShearTopic),
+  "stress_combined_loading": () => import("./machine_design/stress/combined_loading/index.js").then(m => m.combinedLoadingTopic),
+  "stress_concentration": () => import("./machine_design/stress/stress_concentration/index.js").then(m => m.stressConcentrationTopic),
+  "stress_fatigue": () => import("./machine_design/stress/fatigue/index.js").then(m => m.fatigueTopic),
+  "stress_material_properties": () => import("./machine_design/stress/material_properties/index.js").then(m => m.materialPropertiesTopic),
+  "stress_shear_and_bearing": () => import("./machine_design/stress/shear_and_bearing/index.js").then(m => m.shearAndBearingTopic),
+  "stress_static_failure": () => import("./machine_design/stress/static_failure/index.js").then(m => m.staticFailureTopic),
+  "stress_thermal_stress": () => import("./machine_design/stress/thermal_stress/index.js").then(m => m.thermalStressTopic),
+  "stress_torsion": () => import("./machine_design/stress/torsion/index.js").then(m => m.torsionTopic),
+  "stress_transformation_mohr": () => import("./machine_design/stress/transformation_mohr/index.js").then(m => m.transformationMohrTopic)
 });
 
 const CACHE = new Map();

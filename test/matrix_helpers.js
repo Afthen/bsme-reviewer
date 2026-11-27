@@ -7,7 +7,7 @@
 
 import { parseMathAST } from "../src/cas/ast.js";
 import { isolateVariable } from "../src/cas/algebra.js";
-import { buildAlignedDerivation } from "../src/core/derivation.js";
+import { buildAlignedDerivationWithAnalysis } from "../src/core/derivation.js";
 import { DIMENSIONS, displayFloorOk } from "../src/core/dimensions.js";
 import { candidateUnitsFor } from "../src/core/unit_sampler.js";
 import {
@@ -132,7 +132,8 @@ export function checkStep({
   where,
   topicTag = "",
   tags = [],
-  changed = 0
+  changed = 0,
+  validateLatexFn = validateDerivationLatex
 }) {
   const failures = [];
   const meta = varsDb[step.targetVar] || {};
@@ -150,16 +151,17 @@ export function checkStep({
     return { failures, affineSkipped: false };
   }
 
-  let deriv;
+  let deriv, derivMeta;
   try {
-    deriv = buildAlignedDerivation(step, S, allSteps, varsDb, relations);
+    derivMeta = buildAlignedDerivationWithAnalysis(step, S, allSteps, varsDb, relations);
+    deriv = derivMeta.tex;
   } catch (e) {
     failures.push({ layer: "derivation-throw", where, topic: topicTag, tags, changed, msg: e.message });
     return { failures, affineSkipped: false };
   }
 
   try {
-    validateDerivationLatex(deriv);
+    validateLatexFn(deriv);
   } catch (e) {
     failures.push({ layer: "derivation-latex", where, topic: topicTag, tags, changed, msg: e.message });
   }
@@ -179,9 +181,12 @@ export function checkStep({
   }
 
   try {
-    const formulaRhs = step.rhsExpr || (step.baseFormula?.includes("=") ? step.baseFormula.split("=")[1].trim() : step.baseFormula) || "";
-    const ua = solveUnitAlgebra(formulaRhs, S, step.targetVar, tUnit, varsDb, step.requiredUnits);
-    for (const s of ua.conversionScalars || []) {
+    const scalarsToCheck = derivMeta.conversionScalars
+      || (() => {
+        const formulaRhs = step.rhsExpr || (step.baseFormula?.includes("=") ? step.baseFormula.split("=")[1].trim() : step.baseFormula) || "";
+        return solveUnitAlgebra(formulaRhs, S, step.targetVar, tUnit, varsDb, step.requiredUnits).conversionScalars || [];
+      })();
+    for (const s of scalarsToCheck) {
       if (!isCanonicalScaleFactor(s)) {
         failures.push({ layer: "alien-scalar", where, topic: topicTag, tags, changed, msg: `scalar ${s}` });
       }

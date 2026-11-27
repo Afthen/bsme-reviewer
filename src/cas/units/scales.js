@@ -90,6 +90,8 @@ export function formatPairConversion(fromUnit, toUnit, fromDim = null, toDim = f
     if (isCanonicalScaleFactor(r2)) return { root: Math.sign(val) * r2, power: 2 };
     const r3 = Math.pow(Math.abs(val), 1 / 3);
     if (isCanonicalScaleFactor(r3)) return { root: Math.sign(val) * r3, power: 3 };
+    const r4 = Math.pow(Math.abs(val), 1 / 4);
+    if (isCanonicalScaleFactor(r4)) return { root: Math.sign(val) * r4, power: 4 };
     return { root: val, power: 1 };
   };
 
@@ -536,8 +538,31 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     const ratio = sSrc / sTgt;
     if (Math.abs(ratio - 1) <= 1e-6) return false;
 
-    if (!conversionsByToken[tok]) conversionsByToken[tok] = [];
     const mag = ratio > 1 ? ratio : (1 / ratio);
+    const directRoot = expPow > 1 ? Math.pow(mag, 1 / expPow) : mag;
+
+    // Decompose fused prefix*base conversions (e.g. um -> in = 10^-6 * 39.3701) into decade + base steps
+    if (!isCanonicalScaleFactor(directRoot)) {
+      const srcAst = parseUnitToSemanticAST(srcStr);
+      const tgtAst = parseUnitToSemanticAST(tgtStr);
+      if (srcAst.length === 1 && tgtAst.length === 1 && srcAst[0].base !== tgtAst[0].base && (srcAst[0].prefix || tgtAst[0].prefix)) {
+        const bareSrc = atomToPoweredUnitString({ prefix: null, base: srcAst[0].base, power: 1 }, Math.abs(srcAst[0].power));
+        const bareTgt = atomToPoweredUnitString({ prefix: null, base: tgtAst[0].base, power: 1 }, Math.abs(tgtAst[0].power));
+        const steps = [];
+        if (srcStr !== bareSrc) steps.push([srcStr, bareSrc, true]);
+        if (bareSrc !== bareTgt) steps.push([bareSrc, bareTgt, tgtStr !== bareTgt || cancelBoth]);
+        if (bareTgt !== tgtStr) steps.push([bareTgt, tgtStr, cancelBoth]);
+        if (steps.length > 1) {
+          let emitted = false;
+          for (const [a, b, cancelB] of steps) {
+            if (emitSingleUnitConversion(tok, a, b, atomPower, expPow, cancelB)) emitted = true;
+          }
+          return emitted;
+        }
+      }
+    }
+
+    if (!conversionsByToken[tok]) conversionsByToken[tok] = [];
 
     let texVal = fmtScale(mag);
     if (expPow > 1) {
@@ -745,10 +770,35 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     for (let idx = 0; idx < targetAst.length; idx++) {
       if (usedTargetIndices.has(idx)) continue;
       const t = targetAst[idx];
-      if (Math.abs(t.power) !== 1) continue;
+      if (Math.abs(t.power) < 1 || !Number.isInteger(t.power)) continue;
       maxRank = Math.max(maxRank, getAtomUnpackRank(t, expandDerivedAtom(t) || expandTargetForce(t)));
     }
     if (maxRank === 0) break;
+
+    // Align balanced Force source atoms (e.g. psi^(1/2)*MPa^(1/2)/kPa) before unpacking newton -> kg*m/s^2
+    if (maxRank <= 2) {
+      const forceUnmatched = sourceAtoms.filter(s => !s.matched && s.family === "L:1,M:1,T:-2");
+      const targetNeedsForceUnpack = targetAst.some((t, idx) => !usedTargetIndices.has(idx) && BASE_UNITS[t.base]?.dimMap?.M);
+      if (forceUnmatched.length > 1 && !targetNeedsForceUnpack) {
+        const netForce = forceUnmatched.reduce((s, x) => s + x.netPower, 0);
+        if (Math.abs(netForce) < 1e-6) {
+          const canonForce = forceUnmatched.find(s => !s.atom.prefix && !BASE_UNITS[s.atom.base]?.massCompanion)
+            || forceUnmatched.find(s => !s.atom.prefix)
+            || forceUnmatched[0];
+          const canonAtom = { prefix: canonForce.atom.prefix, base: canonForce.atom.base, power: 1 };
+          for (const src of forceUnmatched) {
+            markCancelled(src.tok, src.origIndex);
+            const srcPow = Math.abs(src.atom.power);
+            const srcStr = atomToPoweredUnitString(src.atom, srcPow);
+            const tgtStr = atomToPoweredUnitString(canonAtom, srcPow);
+            emitSingleUnitConversion(src.tok, srcStr, tgtStr, src.atom.power, srcPow, true);
+            src.resolvedUnit = tgtStr;
+            src.matched = true;
+          }
+          continue;
+        }
+      }
+    }
 
     for (let i = sourceAtoms.length - 1; i >= 0; i--) {
       const src = sourceAtoms[i];
@@ -794,25 +844,28 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
     for (let idx = targetAst.length - 1; idx >= 0; idx--) {
       if (usedTargetIndices.has(idx)) continue;
       const tAtom = targetAst[idx];
-      if (Math.abs(tAtom.power) !== 1) continue;
+      if (Math.abs(tAtom.power) < 1 || !Number.isInteger(tAtom.power)) continue;
       const expRes = expandDerivedAtom(tAtom) || expandTargetForce(tAtom);
       if (getAtomUnpackRank(tAtom, expRes) !== maxRank) continue;
 
       unpackedAny = true;
       usedTargetIndices.add(idx);
       const tSign = Math.sign(tAtom.power);
+      const tAbs = Math.abs(tAtom.power);
       if (Math.abs(expRes.scale - 1) > 1e-6) {
         const r = expRes.scale;
-        scalars.push(parseFloat(r.toPrecision(6)));
-        const tStr = atomToUnitString(tAtom);
+        scalars.push(...Array(tAbs).fill(parseFloat(r.toPrecision(6))));
+        const tStr = atomToPoweredUnitString(tAtom, tAbs);
+        const expTex = tAbs > 1 ? `\\cancel{${unitToTex(expRes.unit, true)}}^{${tAbs}}` : `\\cancel{${unitToTex(expRes.unit, true)}}`;
+        const scaleTex = tAbs > 1 ? `(${fmtScale(r)})^${tAbs}` : fmtScale(r);
         globalConvTex += tSign > 0
-          ? ` \\cdot \\cfrac{${unitToTex(tStr)}}{${fmtScale(r)} \\, \\cancel{${unitToTex(expRes.unit, true)}}}`
-          : ` \\cdot ${fmtScale(r)} \\, \\cfrac{\\cancel{${unitToTex(expRes.unit, true)}}}{${unitToTex(tStr)}}`;
+          ? ` \\cdot \\cfrac{${unitToTex(tStr)}}{${scaleTex} \\, ${expTex}}`
+          : ` \\cdot ${scaleTex} \\, \\cfrac{${expTex}}{${unitToTex(tStr)}}`;
       }
 
       const subFactors = parseUnitToSemanticAST(expRes.unit);
       subFactors.forEach(f => {
-        targetAst.push({ prefix: f.prefix, base: f.base, power: f.power * tSign });
+        targetAst.push({ prefix: f.prefix, base: f.base, power: f.power * tSign * tAbs });
       });
     }
 

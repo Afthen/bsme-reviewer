@@ -13,6 +13,7 @@ import { phi, fib } from "../src/mastery/constants.js";
 import { CONSTANTS_DB } from "../src/core/constants_registry.js";
 import { DIMENSIONS } from "../src/core/dimensions.js";
 import { getUnitAtomBag, hasPointTempInCompound } from "../src/cas/units/index.js";
+import { isReservedMathToken } from "../src/cas/algebra.js";
 
 const ALL_TOPICS = await loadAllTopics();
 
@@ -113,6 +114,11 @@ describe("Hygiene: Topic Schema & Dead Variable Audit", () => {
       const orphanVars = [];
 
       for (const [varKey, meta] of Object.entries(topic.varsDb)) {
+        assert.equal(
+          isReservedMathToken(varKey),
+          false,
+          `Topic '${topic.title}' uses reserved math token '${varKey}' as a variable key in varsDb.`
+        );
         if (meta.isAbstract) continue;
 
         const usedInEquations = activeVarsInRelations.has(varKey);

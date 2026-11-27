@@ -22,6 +22,7 @@ const LABELS = [
   [{ M: 1, L: 1, T: -2 }, "Force"], [{ M: 1, L: -1, T: -2 }, "Pressure"],
   [{ M: 1, L: 2, T: -2 }, "Energy"], [{ M: 1, L: 2, T: -3 }, "Power"],
   [{ L: 3 }, "Volume"], [{ L: 3, T: -1 }, "Volume flow"], [{ T: -1 }, "Frequency"],
+  [{ L: 2 }, "Area"], [{ L: 4 }, "Second moment of area"], [{ Th: -1 }, "Thermal expansion"],
   [{ Ang: 1 }, "Angle"], [{ C: 1 }, "Count"], [{ C: 1, T: -1 }, "Rotational speed"], [{ Pct: 1 }, "Percent"]
 ].map(([m, label]) => ({ key: dimKeyOf(m), label }));
 

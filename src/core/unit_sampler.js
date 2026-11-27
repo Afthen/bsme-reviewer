@@ -20,6 +20,20 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "cm", tokens: 1 },
       { unit: "m", tokens: 1 }
     ],
+    [DIMENSIONS.AREA]: [
+      { unit: "mm^2", tokens: 1 },
+      { unit: "cm^2", tokens: 1 },
+      { unit: "m^2", tokens: 1 }
+    ],
+    [DIMENSIONS.SECOND_MOMENT_OF_AREA]: [
+      { unit: "mm^4", tokens: 1 },
+      { unit: "cm^4", tokens: 1 },
+      { unit: "m^4", tokens: 1 }
+    ],
+    [DIMENSIONS.THERMAL_EXPANSION]: [
+      { unit: "um/(m*Δ°C)", tokens: 3 },
+      { unit: "um/(m*ΔK)", tokens: 3 }
+    ],
     [DIMENSIONS.FORCE]: [
       { unit: "N", tokens: 1 },
       { unit: "kN", tokens: 1 },
@@ -125,6 +139,17 @@ export const DIMENSION_TOKEN_PALETTES = Object.freeze({
       { unit: "in", tokens: 1 },
       { unit: "ft", tokens: 1 },
       { unit: "yd", tokens: 1 }
+    ],
+    [DIMENSIONS.AREA]: [
+      { unit: "in^2", tokens: 1 },
+      { unit: "ft^2", tokens: 1 }
+    ],
+    [DIMENSIONS.SECOND_MOMENT_OF_AREA]: [
+      { unit: "in^4", tokens: 1 }
+    ],
+    [DIMENSIONS.THERMAL_EXPANSION]: [
+      { unit: "uin/(in*Δ°F)", tokens: 3 },
+      { unit: "uin/(in*Δ°R)", tokens: 3 }
     ],
     [DIMENSIONS.FORCE]: [
       { unit: "lb_f", tokens: 1 },
@@ -363,7 +388,11 @@ const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["D_o", "D_i", "D_m", "R_m", "d_w", "FL", "SL", "OL", "delta", "delta_solid"]),
   new Set(["F_1", "F_2", "F_3", "F_4"]),
   new Set(["delta_1", "delta_2", "delta_3", "delta_4"]),
-  new Set(["k_1", "k_2", "k_3", "k_4"])
+  new Set(["k_1", "k_2", "k_3", "k_4"]),
+  new Set(["T_i", "T_f"]),
+  new Set(["sigma_1", "sigma_2", "sigma_3"]),
+  new Set(["sigma_xp", "sigma_yp", "tau_xyp"]),
+  new Set(["sigma_max", "sigma_min", "sigma_a", "sigma_m"])
 ]);
 
 export function findCoupledGroup(varKey) {

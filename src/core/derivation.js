@@ -9,7 +9,7 @@
  * ============================================================================
  */
 
-import { parseMathAST, getAstIdentifiers, unwrapGroup } from "../cas/ast.js";
+import { parseMathAST, getAstIdentifiers, countVariableOccurrences, unwrapGroup } from "../cas/ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../cas/algebra.js";
 import { casToTex, astToLatex, toLatexSymbol } from "../cas/latex.js";
 import {
@@ -76,6 +76,19 @@ export function buildAlignedDerivation(
   givens = [],
   overrides = {}
 ) {
+  return buildAlignedDerivationWithAnalysis(step, S, allSteps, varsDb, relations, answeredVars, givens, overrides).tex;
+}
+
+export function buildAlignedDerivationWithAnalysis(
+  step,
+  S = {},
+  allSteps = [],
+  varsDb = {},
+  relations = [],
+  answeredVars = new Set(),
+  givens = [],
+  overrides = {}
+) {
   const { targetVar, baseFormula, canonicalTex, rhsExpr, requiredUnits } = step;
 
   const canonicalTarget = resolveCanonicalKey(targetVar, varsDb);
@@ -89,6 +102,7 @@ export function buildAlignedDerivation(
   const workingVarsDb = { ...varsDb };
   const rhsAst = parseMathAST(formulaRhs);
   const prepLines = [];
+  const prepScalars = [];
   const alignedTokens = new Set();
   const useScaleFmtFor = new Set();
   const factoredInfo = {};
@@ -140,6 +154,7 @@ export function buildAlignedDerivation(
         prepLines.push(`${sym} &= ${exprTex} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
       } else {
         const singleConv = solveUnitAlgebra(key, { ...evalState, _u: { ...activeUnitMap, [key]: currU } }, key, targetU, workingVarsDb);
+        prepScalars.push(...(singleConv.conversionScalars || []));
         const unitTex = singleConv.tokenMarkup?.[key] || unitToTex(currU, false, meta.dimension);
         const convTex = (singleConv.tokenConversions?.[key]?.join("") || "") + (singleConv.globalConversionTex || "");
         prepLines.push(`${sym} &= ${formattedRaw} \\, ${unitTex}${convTex} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
@@ -194,6 +209,45 @@ export function buildAlignedDerivation(
       }
     }
 
+    // 1b-pre. Align variables appearing multiple times across expressions so every occurrence shares one unit
+    const rhsVarIds = Array.from(new Set(getAstIdentifiers(rhsAst).filter(t => !isReservedMathToken(t))));
+    const dimPeers = new Map();
+    for (const k of rhsVarIds) {
+      if (typeof evalState[k] !== "number") continue;
+      const u = unitOfKey(k);
+      if (!u || u === "dimless" || u === "ratio" || u === "%" || u === "\\%") continue;
+      const cK = resolveCanonicalKey(k, workingVarsDb);
+      const m = workingVarsDb[cK] || workingVarsDb[k] || {};
+      const bag = getUnitAtomBag(u, m.dimension);
+      const dKey = JSON.stringify(Object.entries(bag.dimMap).sort());
+      if (!dimPeers.has(dKey)) dimPeers.set(dKey, []);
+      dimPeers.get(dKey).push({ key: k, unit: u, bag, meta: m });
+    }
+    const tBagPre = rowTargetUnit && rowTargetUnit !== "dimless" && rowTargetUnit !== "ratio"
+      ? getUnitAtomBag(rowTargetUnit, targetMeta.dimension)
+      : null;
+    const tDimKeyPre = tBagPre ? JSON.stringify(Object.entries(tBagPre.dimMap).sort()) : null;
+    for (const [dKey, peers] of dimPeers.entries()) {
+      const hasRepeated = peers.some(p => countVariableOccurrences(rhsAst, p.key) > 1);
+      if (!hasRepeated) continue;
+      let frameU = null;
+      if (tDimKeyPre && dKey === tDimKeyPre) {
+        frameU = rowTargetUnit;
+      } else {
+        const counts = new Map();
+        for (const p of peers) counts.set(p.unit, (counts.get(p.unit) || 0) + 1);
+        frameU = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      }
+      if (!frameU) continue;
+      for (const p of peers) {
+        if (countVariableOccurrences(rhsAst, p.key) > 1 || peers.length > 1) {
+          if (p.bag.kind === "linear" && getUnitKind(frameU) === "linear") {
+            alignLeafToUnit(p.key, frameU);
+          }
+        }
+      }
+    }
+
     (function alignAdditiveGroups(node) {
       if (!node) return;
       if (node.type === "group") { alignAdditiveGroups(node.expr); return; }
@@ -202,6 +256,7 @@ export function buildAlignedDerivation(
 
       if (node.op === "+" || node.op === "-") {
         const leaves = [];
+        let pureIds = true;
         (function walk(n) {
           const u = n && n.type === "group" ? n.expr : n;
           if (u && u.type === "binary" && (u.op === "+" || u.op === "-")) {
@@ -211,10 +266,12 @@ export function buildAlignedDerivation(
           }
           if (u && u.type === "id" && typeof evalState[u.name] === "number") {
             leaves.push({ key: u.name });
+          } else {
+            pureIds = false;
           }
         })(node);
 
-        if (leaves.length > 1) {
+        if (pureIds && leaves.length > 1) {
           const units = leaves.map(l => unitOfKey(l.key));
           const firstBag = getUnitAtomBag(units[0]);
           const allShareUnit = units.every(u => {
@@ -268,6 +325,7 @@ export function buildAlignedDerivation(
 
       if (node.op === "+" || node.op === "-") {
         const leaves = [];
+        let pureIds = true;
         (function walk(n, sign) {
           const u = n && n.type === "group" ? n.expr : n;
           if (u && u.type === "binary" && (u.op === "+" || u.op === "-")) {
@@ -277,12 +335,14 @@ export function buildAlignedDerivation(
           }
           if (u && u.type === "id" && typeof evalState[u.name] === "number") {
             leaves.push({ key: u.name, sign });
+          } else {
+            pureIds = false;
           }
         })(node, 1);
 
         const units = leaves.map(l => unitOfKey(l.key));
         const firstBag = getUnitAtomBag(units[0]);
-        const allShareUnit = leaves.length > 1 && units.every(u => {
+        const allShareUnit = pureIds && leaves.length > 1 && units.every(u => {
           if (u && units[0] && getUnitAtomBag(u).kind !== firstBag.kind) return false;
           if (!u && !units[0]) return true;
           if (!u || !units[0]) return false;
@@ -296,10 +356,16 @@ export function buildAlignedDerivation(
           const meta0 = workingVarsDb[leaves[0].key] || {};
           const inner = leaves
             .map((l, i) => {
-              const signStr = i === 0 ? (l.sign < 0 ? "-" : "") : (l.sign < 0 ? " - " : " + ");
               const lMeta = workingVarsDb[l.key] || meta0;
               const lUnit = unitOfKey(l.key);
-              return `${signStr}${formatGivenValue(evalState[l.key], lMeta, true, lUnit)}`;
+              let valStr = formatGivenValue(evalState[l.key], lMeta, true, lUnit);
+              let effSign = l.sign;
+              if (valStr.startsWith("-")) {
+                valStr = valStr.slice(1);
+                effSign = -effSign;
+              }
+              const signStr = i === 0 ? (effSign < 0 ? "-" : "") : (effSign < 0 ? " - " : " + ");
+              return `${signStr}${valStr}`;
             })
             .join("");
 
@@ -481,5 +547,11 @@ export function buildAlignedDerivation(
 
   rows.push(finalLine);
 
-  return `$$\\begin{aligned}\n  ${rows.join(" \\\\[6pt]\n  ")}\n\\end{aligned}$$`;
+  const allScalars = [...prepScalars, ...(unitAnalysis?.conversionScalars || [])];
+  return {
+    tex: `$$\\begin{aligned}\n  ${rows.join(" \\\\[6pt]\n  ")}\n\\end{aligned}$$`,
+    unitAnalysis,
+    conversionScalars: allScalars,
+    hasPrepOrFactor: prepLines.length > 0 || Object.keys(factoredInfo).length > 0
+  };
 }

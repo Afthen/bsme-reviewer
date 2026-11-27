@@ -36,11 +36,10 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
   const cTarget = resolveCanonicalKey(targetVar, varsDb);
   const targetUnit = S._u?.[cTarget] || S._u?.[targetVar] || varsDb[cTarget]?.unit || varsDb[targetVar]?.unit || "dimless";
 
-  const unitAnalysis = solveUnitAlgebra(node, S, targetVar, targetUnit, varsDb, requiredUnits);
-
   // 1. Empirical formulas with requiredUnits (e.g. Buckingham, Carrier, Liley, BSFC):
   //    Inputs convert into requiredUnits via preConversions; result converts into targetUnit
   if (requiredUnits && typeof requiredUnits === "object") {
+    const unitAnalysis = solveUnitAlgebra(node, S, targetVar, targetUnit, varsDb, requiredUnits);
     const evalState = { ...S };
     if (unitAnalysis.preConversions && unitAnalysis.preConversions.length > 0) {
       unitAnalysis.preConversions.forEach(pc => {
@@ -93,5 +92,14 @@ export function evaluatePhysicalAST(node, S, targetVar, varsDb = {}, requiredUni
   // Project coherent SI base result into requested targetUnit with target dimension awareness
   const targetMeta = varsDb[cTarget] || varsDb[targetVar] || {};
   const finalValue = formatValueInUnit(coherentNum, targetUnit, targetMeta.dimension);
-  return { value: finalValue, unitAnalysis };
+  let cachedUA;
+  return {
+    value: finalValue,
+    get unitAnalysis() {
+      if (cachedUA === undefined) {
+        cachedUA = solveUnitAlgebra(node, S, targetVar, targetUnit, varsDb, requiredUnits);
+      }
+      return cachedUA;
+    }
+  };
 }

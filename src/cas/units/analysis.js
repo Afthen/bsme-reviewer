@@ -41,6 +41,14 @@ function getFormulaFractionDepth(node, targetName, currentDepth = 0) {
   return null;
 }
 
+function isUnaryMinusNode(n) {
+  return !!(n && n.type === "binary" && n.op === "-" && n.left?.type === "num" && n.left.val === "0");
+}
+
+function astHasNonReservedVar(n) {
+  return getAstIdentifiers(n).some(t => !isReservedMathToken(t));
+}
+
 function isPureThDim(d = {}) {
   const keys = Object.keys(d);
   return keys.length === 1 && d.Th === 1;
@@ -269,11 +277,35 @@ export function solveUnitAlgebra(
   function collectAdditiveBranches(node) {
     if (!node) return [];
     if (node.type === "group") return collectAdditiveBranches(node.expr);
-    if (node.type === "call" && node.fn === "sqrt" && hasTopAdditive(node.arg)) {
-      return collectAdditiveBranches(node.arg).map(b => ({ type: "call", fn: "sqrt", arg: b }));
+    if (isUnaryMinusNode(node)) {
+      const sub = collectAdditiveBranches(node.right);
+      if (sub.length > 1) return sub.map(b => ({ type: "binary", op: "-", left: { type: "num", val: "0" }, right: b }));
+      return [node];
     }
-    if (node.type === "binary" && node.op === "^" && hasTopAdditive(node.left)) {
-      return collectAdditiveBranches(node.left).map(b => ({ type: "binary", op: "^", left: b, right: node.right }));
+    if (node.type === "call" && node.fn === "sqrt") {
+      const sub = collectAdditiveBranches(node.arg);
+      if (sub.length > 1) return sub.map(b => ({ type: "call", fn: "sqrt", arg: b }));
+      return [node];
+    }
+    if (node.type === "binary" && node.op === "^") {
+      const sub = collectAdditiveBranches(node.left);
+      if (sub.length > 1) return sub.map(b => ({ type: "binary", op: "^", left: b, right: node.right }));
+      return [node];
+    }
+    if (node.type === "binary" && node.op === "*") {
+      if (!astHasNonReservedVar(node.right)) {
+        const sub = collectAdditiveBranches(node.left);
+        if (sub.length > 1) return sub.map(b => ({ type: "binary", op: "*", left: b, right: node.right }));
+      } else if (!astHasNonReservedVar(node.left)) {
+        const sub = collectAdditiveBranches(node.right);
+        if (sub.length > 1) return sub.map(b => ({ type: "binary", op: "*", left: node.left, right: b }));
+      }
+      return [node];
+    }
+    if (node.type === "binary" && node.op === "/" && !astHasNonReservedVar(node.right)) {
+      const sub = collectAdditiveBranches(node.left);
+      if (sub.length > 1) return sub.map(b => ({ type: "binary", op: "/", left: b, right: node.right }));
+      return [node];
     }
     if (node.type === "binary" && (node.op === "+" || node.op === "-")) {
       return [...collectAdditiveBranches(node.left), ...collectAdditiveBranches(node.right)];
@@ -361,9 +393,10 @@ export function solveUnitAlgebra(
     }
     const resolvedUnitByTok = {};
 
-    const findCounterpart = (tok) => {
+    const findCounterpart = (tok, sameAdditiveOnly = false) => {
       const myInfo = tokenBags[tok];
       if (!myInfo || Math.abs(myInfo.exp) !== 1) return null;
+      const myInAdd = isTokenInAdditiveSubtree(branchAst, tok);
       let fallback = null;
       for (const [otherTok, otherInfo] of Object.entries(tokenBags)) {
         if (
@@ -371,7 +404,8 @@ export function solveUnitAlgebra(
           pairedInSectionC.has(otherTok) ||
           Math.abs(otherInfo.exp) !== 1 ||
           otherInfo.exp * myInfo.exp >= 0 ||
-          !isDimEqual(myInfo.bag.dimMap, otherInfo.bag.dimMap)
+          !isDimEqual(myInfo.bag.dimMap, otherInfo.bag.dimMap) ||
+          (sameAdditiveOnly && isTokenInAdditiveSubtree(branchAst, otherTok) !== myInAdd)
         ) {
           continue;
         }
@@ -387,27 +421,31 @@ export function solveUnitAlgebra(
     };
 
     // Pass 1: Non-dimensional markers, Section B (affine temp), and Section C (1:1 counterpart bijection)
-    for (const tok of branchTokens) {
-      const cKey = resolveCanonicalKey(tok, varsDb);
-      const meta = varsDb[cKey] || varsDb[tok] || {};
-      const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
-      if (!uName || uName === "dimless" || uName === "ratio") continue;
+    // Match tokens sharing an additive scope first so inner dimensionless ratios cancel internally before outer tokens.
+    for (const sameAdditiveOnly of [true, false]) {
+      for (const tok of branchTokens) {
+        const cKey = resolveCanonicalKey(tok, varsDb);
+        const meta = varsDb[cKey] || varsDb[tok] || {};
+        const uName = S._u?.[cKey] || S._u?.[tok] || meta.unit || "";
+        if (!uName || uName === "dimless" || uName === "ratio") continue;
 
-      const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
-      const useInlineUnit = fDepth >= 2;
+        const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
+        const useInlineUnit = fDepth >= 2;
 
-      if (uName === "%" || uName === "\\%" || exps[tok] === undefined) {
-        tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
-        if (exps[tok] === undefined && uName !== "%" && uName !== "\\%") placeholderMarkup.add(tok);
-        continue;
-      }
+        if (uName === "%" || uName === "\\%" || exps[tok] === undefined) {
+          if (sameAdditiveOnly) {
+            tokenMarkup[tok] = unitToTex(uName, useInlineUnit, meta.dimension);
+            if (exps[tok] === undefined && uName !== "%" && uName !== "\\%") placeholderMarkup.add(tok);
+          }
+          continue;
+        }
 
-      if (pairedInSectionC.has(tok)) continue;
+        if (pairedInSectionC.has(tok)) continue;
 
-      const counterpart = findCounterpart(tok);
+        const counterpart = findCounterpart(tok, sameAdditiveOnly);
 
-      // C. Counterpart with Matching Dimension Vector
-      if (counterpart) {
+        // C. Counterpart with Matching Dimension Vector
+        if (counterpart) {
         const bagCurrent = getUnitAtomBag(uName, meta.dimension);
         const bagTarget = getUnitAtomBag(counterpart.uName, counterpart.dim);
         const scaleRatio = bagCurrent.scale / bagTarget.scale;
@@ -457,7 +495,7 @@ export function solveUnitAlgebra(
             conversionScalars.push(...revScalars);
             resolvedUnitByTok[tok] = uName;
             resolvedUnitByTok[counterpart.tok] = uName;
-          } else if (!isMultiBranch && !globalConversionTex) {
+          } else if (!isMultiBranch && !globalConversionTex && exps[tok] === 1 && !isTokenInAdditiveSubtree(branchAst, tok)) {
             globalConversionTex = mismatch.tex;
             conversionScalars.push(...mScalars);
             resolvedUnitByTok[tok] = counterpart.uName;
@@ -471,13 +509,41 @@ export function solveUnitAlgebra(
           continue;
         }
       }
+      }
     }
 
     // Pass 2: Section D — Target Unit Scaling over remaining unpaired tokens
     const remainingTokens = branchTokens.filter(tok => tokenBags[tok] && !pairedInSectionC.has(tok));
     if (remainingTokens.length > 0) {
-      const isSingleDimRemaining = !!branchTargetBag
-        && remainingTokens.every(tok => isDimEqual(tokenBags[tok].bag.dimMap, branchTargetBag.dimMap));
+      let effectiveDTarget = effectiveBranchTarget;
+      let effectiveDBag = branchTargetBag;
+      if (hasExplicitTarget && remainingTokens.length === 1 && !cancelTokSet.has(remainingTokens[0])) {
+        const onlyInfo = tokenBags[remainingTokens[0]];
+        if (Math.abs(onlyInfo.exp) > 1 && isDimEqual(scaleDimMapLocal(onlyInfo.bag.dimMap, onlyInfo.exp), branchTargetBag.dimMap)) {
+          const targetAst = parseUnitToSemanticAST(effectiveBranchTarget, targetDim);
+          if (targetAst.length > 0 && targetAst.every(f => Math.abs(f.power / onlyInfo.exp - Math.round(f.power / onlyInfo.exp)) < 1e-6)) {
+            const pSym = { pico: "p", nano: "n", micro: "u", milli: "m", centi: "c", deci: "d", kilo: "k", mega: "M", giga: "G" };
+            const nParts = [];
+            const dParts = [];
+            for (const f of targetAst) {
+              const np = Math.round(f.power / onlyInfo.exp);
+              if (np === 0) continue;
+              const str = `${f.prefix ? (pSym[f.prefix] || f.prefix) : ""}${BASE_UNITS[f.base]?.symbol || f.base}`;
+              const part = Math.abs(np) === 1 ? str : `${str}^${Math.abs(np)}`;
+              (np > 0 ? nParts : dParts).push(part);
+            }
+            const rootU = dParts.length ? `${nParts.join("*") || "1"}/(${dParts.join("*")})` : (nParts.join("*") || "dimless");
+            const rootBag = getUnitAtomBag(rootU, onlyInfo.dim);
+            if (!rootBag.isUnknown && isDimEqual(onlyInfo.bag.dimMap, rootBag.dimMap)) {
+              effectiveDTarget = rootU;
+              effectiveDBag = rootBag;
+            }
+          }
+        }
+      }
+
+      const isSingleDimRemaining = !!effectiveDBag
+        && remainingTokens.every(tok => isDimEqual(tokenBags[tok].bag.dimMap, effectiveDBag.dimMap));
 
       // The pairwise shortcut is valid only when every token converts by registered ratios.
       // Atom-soup targets (e.g. kg*m*m/(h*h^2)) and outer-cancelled sibling terms route to compound builder.
@@ -485,12 +551,12 @@ export function solveUnitAlgebra(
         && remainingTokens.every(tok => {
           if (cancelTokSet.has(tok)) return false;
           const { uName, dim } = tokenBags[tok];
-          return formatPairConversion(uName, effectiveBranchTarget, dim, targetDim, "whole").scalars.every(isCanonicalScaleFactor);
+          return formatPairConversion(uName, effectiveDTarget, dim, targetDim, "whole").scalars.every(isCanonicalScaleFactor);
         });
 
       if (pairwiseIsCanonical) {
         const mismatchingCount = remainingTokens.filter(tok =>
-          Math.abs(tokenBags[tok].bag.scale / branchTargetBag.scale - 1) >= 1e-6
+          Math.abs(tokenBags[tok].bag.scale / effectiveDBag.scale - 1) >= 1e-6
         ).length;
 
         for (const tok of remainingTokens) {
@@ -498,7 +564,7 @@ export function solveUnitAlgebra(
           const fDepth = getFormulaFractionDepth(branchAst, tok) || 0;
           const useInlineUnit = fDepth >= 2;
           const inAdditive = forceInSitu || isMultiBranch || isTokenInAdditiveSubtree(branchAst, tok);
-          const conv = formatPairConversion(uName, effectiveBranchTarget, tokDim, targetDim, "whole");
+          const conv = formatPairConversion(uName, effectiveDTarget, tokDim, targetDim, "whole");
 
           if (!conv.tex) {
             tokenMarkup[tok] = unitToTex(uName, useInlineUnit, tokDim);
@@ -513,14 +579,14 @@ export function solveUnitAlgebra(
               fullyCancelledTokens.add(tok);
             }
 
-            if (!inAdditive && !globalConversionTex && tokExp === 1 && mismatchingCount === 1) {
+            if (!inAdditive && !globalConversionTex && tokExp === 1 && mismatchingCount === 1 && fDepth <= 1) {
               globalConversionTex = convTex;
               conversionScalars.push(...convScalars);
-              resolvedUnitByTok[tok] = effectiveBranchTarget;
+              resolvedUnitByTok[tok] = effectiveDTarget;
             } else {
               tokenConversions[tok] = [convTex];
               conversionScalars.push(...convScalars);
-              resolvedUnitByTok[tok] = effectiveBranchTarget;
+              resolvedUnitByTok[tok] = effectiveDTarget;
             }
           }
         }
@@ -560,7 +626,8 @@ export function solveUnitAlgebra(
         }
         Object.assign(resolvedUnitByTok, resolvedUnitsByToken || {});
         if (globalConvTex) {
-          if (forceInSitu || isMultiBranch) {
+          const anyInAdd = entries.some(e => isTokenInAdditiveSubtree(branchAst, e.tok));
+          if (forceInSitu || isMultiBranch || anyInAdd) {
             const attachTok = entries.find(e => e.exp === 1)?.tok;
             if (attachTok) {
               if (!tokenConversions[attachTok]) tokenConversions[attachTok] = [];
@@ -639,10 +706,18 @@ export function solveUnitAlgebra(
         return;
       }
       if (n.type === "binary") {
+        if (isUnaryMinusNode(n)) {
+          scanNested(n.right);
+          return;
+        }
         if (n.op === "+" || n.op === "-") {
           const flat = [];
           (function collectTerms(t) {
             const u = t && t.type === "group" ? t.expr : t;
+            if (isUnaryMinusNode(u)) {
+              flat.push(u.right);
+              return;
+            }
             if (u && u.type === "binary" && (u.op === "+" || u.op === "-")) {
               collectTerms(u.left);
               collectTerms(u.right);
@@ -726,7 +801,9 @@ function collectTokenExponents(node, sign = 1, acc = {}) {
     return acc;
   }
   if (node.type === "binary") {
-    if (node.op === "+" || node.op === "-") {
+    if (isUnaryMinusNode(node)) {
+      collectTokenExponents(node.right, sign, acc);
+    } else if (node.op === "+" || node.op === "-") {
       // Terms of a sum are alternatives of one shared dimension: count one representative.
       collectTokenExponents(node.left, sign, acc);
     } else if (node.op === "*") {

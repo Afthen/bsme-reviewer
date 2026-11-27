@@ -1,174 +1,58 @@
 /**
  * test/derivation_matrix_test.js
- * Deterministic derivation matrix across two layers:
+ * Deterministic derivation matrix across two layers (parallelized across CPU cores):
  * 1. Pairwise step matrix: every topic x system x relation x solvable target under
- *    2-wise unit coverage.
- * 2. Seeded problem-generator matrix: every topic x mode (SI/US/MIXED) x seed x mastery,
- *    checking statement LaTeX, finite/coherent givens & active steps, coupled-group
- *    coherence, derivation LaTeX, numerical oracle match, and canonical scale factors.
+ *    2-wise unit coverage (deduplicating identical deterministic seed states).
+ * 2. Seeded problem-generator matrix: every topic x mode (SI/US/MIXED) x seed x mastery.
  * All failures are collected and reported grouped by layer; nothing stops at the first one.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadAllTopics } from "../src/topics/index.js";
-import { parseMathAST } from "../src/cas/ast.js";
-import { generateProblem } from "../src/core/problem_gen.js";
-import { valueToCoherentBase, formatValueInUnit } from "../src/cas/units/index.js";
-import { validateStatementLatex } from "./latex_oracle.js";
-import {
-  SEEDS, GEN_SEEDS, mulberry32, withSeededRandom,
-  unitLevels, coveringRows, restate, collectSteps, checkStep, levelStats
-} from "./matrix_helpers.js";
+import os from "node:os";
+import { Worker } from "node:worker_threads";
+import { TOPIC_MANIFEST } from "../src/topics/index.js";
+import { runMatrixForTopicIds } from "./matrix_worker.js";
 
-function collectCalls(n, acc = new Set()) {
-  if (!n) return acc;
-  if (n.type === "call") { acc.add(n.fn); collectCalls(n.arg, acc); }
-  else if (n.type === "group") collectCalls(n.expr, acc);
-  else if (n.type === "binary") { collectCalls(n.left, acc); collectCalls(n.right, acc); }
-  return acc;
-}
-
-/** Feature tags describing the structural class of a failing step (for clustering). */
-function tagsOf(step, tUnit, varsDb) {
-  const tags = [];
-  if (!tUnit || tUnit === "dimless" || tUnit === "ratio" || tUnit === "%") tags.push("target:dimless");
-  for (const fn of collectCalls(parseMathAST(step.rhsExpr))) tags.push(`call:${fn}`);
-  if (step.requiredUnits) tags.push("requiredUnits");
-  const dims = new Set(step.nodes.map(k => varsDb[k]?.dimension).filter(Boolean));
-  if (dims.size > 2) tags.push("mixed-dims");
-  for (const d of dims) tags.push(`dim:${d}`);
-  return tags;
+function runWorker(topicIds) {
+  return new Promise((resolve, reject) => {
+    const w = new Worker(new URL("./matrix_worker.js", import.meta.url), {
+      workerData: { topicIds }
+    });
+    w.once("message", resolve);
+    w.once("error", reject);
+    w.once("exit", code => {
+      if (code !== 0) reject(new Error(`Matrix worker exited with code ${code}`));
+    });
+  });
 }
 
 test("Derivation matrix: pairwise step coverage and seeded problem-generator invariants", async () => {
-  const loaded = await loadAllTopics();
-  const topics = Array.isArray(loaded) ? loaded : Object.values(loaded);
+  const filter = process.env.MATRIX_TOPIC?.trim();
+  const topicIds = TOPIC_MANIFEST
+    .map(m => m.id)
+    .filter(id => !filter || id === filter);
+
+  const workerCount = Math.min(topicIds.length, Math.max(1, os.availableParallelism?.() ?? os.cpus().length));
+  let results;
+  if (workerCount <= 1) {
+    results = [await runMatrixForTopicIds(topicIds)];
+  } else {
+    const buckets = Array.from({ length: workerCount }, () => []);
+    topicIds.forEach((id, idx) => buckets[idx % workerCount].push(id));
+    results = await Promise.all(buckets.map(runWorker));
+  }
+
   const failures = [];
   let cases = 0;
-
-  // Layer 1: Pairwise step-level covering matrix
-  for (const topic of topics) {
-    for (const sys of ["SI", "US"]) {
-      for (const seed of SEEDS) {
-        let S;
-        try { S = withSeededRandom(seed, () => topic.createSystem({ sys })); }
-        catch (e) { failures.push({ layer: "createSystem", where: `${topic.id}[${sys}]`, msg: e.message }); continue; }
-
-        for (const step of collectSteps(topic, sys, S)) {
-          const rng = mulberry32(seed * 7919 + step.targetVar.length);
-          const tokens = [...new Set([...step.nodes, step.targetVar])].filter(k => topic.varsDb[k]);
-          const levels = tokens.map(k => unitLevels(S._u?.[k] || topic.varsDb[k].unit, topic.varsDb[k], rng, S[k]));
-          const rows = coveringRows(levels.map(l => l.length), rng);
-
-          // Extra row: every token in the target's unit where dimensions agree.
-          const tIdx = tokens.indexOf(step.targetVar);
-          rows.push(tokens.map((k, i) => {
-            const j = levels[i].indexOf(levels[tIdx][0]);
-            return j >= 0 ? j : 0;
-          }));
-
-          for (const row of rows) {
-            cases++;
-            const unitsByTok = Object.fromEntries(tokens.map((k, i) => [k, levels[i][row[i]]]));
-            const where = `${topic.id}[${sys}] ${step.id} -> ${step.targetVar} {${tokens.map(k => `${k}:${unitsByTok[k]}`).join(", ")}} seed=${seed}`;
-            const S2 = restate(S, tokens, unitsByTok, topic.varsDb, sys);
-            const cur = { ...step, expectedVal: S2[step.targetVar] };
-            const tUnit = S2._u?.[step.targetVar] || topic.varsDb[step.targetVar].unit;
-            const changed = tokens.filter(k => unitsByTok[k] !== (S._u?.[k] || topic.varsDb[k].unit)).length;
-
-            const res = checkStep({
-              step: cur,
-              S: S2,
-              varsDb: topic.varsDb,
-              relations: topic.relations,
-              where,
-              topicTag: `${topic.id}[${sys}]`,
-              tags: tagsOf(step, tUnit, topic.varsDb),
-              changed
-            });
-            failures.push(...res.failures);
-          }
-        }
-      }
-    }
+  let skipped = 0;
+  for (const r of results) {
+    failures.push(...r.failures);
+    cases += r.cases;
+    skipped += r.skipped;
   }
 
-  // Layer 2: Seeded problem-generator matrix (SI, US, MIXED across low/mid/high mastery)
-  for (const topic of topics) {
-    for (const mode of ["SI", "US", "MIXED"]) {
-      for (const seed of GEN_SEEDS) {
-        const mastery = seed % 3 === 0 ? 0 : (seed % 3 === 1 ? 0.5 : 0.9);
-        const genWhere = `${topic.id}[gen:${mode}] seed=${seed}`;
-        let problem;
-        try {
-          problem = withSeededRandom(seed, () => generateProblem(topic, () => mastery, { mode }));
-        } catch (e) {
-          failures.push({ layer: "generateProblem", where: genWhere, topic: `${topic.id}[${mode}]`, msg: e.message });
-          continue;
-        }
-        if (!problem) {
-          failures.push({ layer: "generateProblem", where: genWhere, topic: `${topic.id}[${mode}]`, msg: "returned null" });
-          continue;
-        }
-
-        try {
-          validateStatementLatex(problem.statement, genWhere);
-        } catch (e) {
-          failures.push({ layer: "statement-latex", where: genWhere, topic: `${topic.id}[${mode}]`, msg: e.message });
-        }
-
-        for (const gVar of problem.givens) {
-          const val = problem.system[gVar];
-          const meta = problem.varsDb[gVar] || {};
-          const u = problem.system._u?.[gVar] || meta.unit;
-          if (typeof val !== "number" || isNaN(val) || !u) {
-            failures.push({ layer: "given-invalid", where: `${genWhere} given=${gVar}`, topic: `${topic.id}[${mode}]`, msg: `val=${val}, unit=${u}` });
-            continue;
-          }
-          const baseVal = valueToCoherentBase(val, u, meta.dimension);
-          if (!Number.isFinite(baseVal)) {
-            failures.push({ layer: "given-nonfinite", where: `${genWhere} given=${gVar}`, topic: `${topic.id}[${mode}]`, msg: `baseVal=${baseVal}` });
-          }
-        }
-
-        for (const step of problem.solution) {
-          cases++;
-          const meta = problem.varsDb[step.targetVar] || {};
-          const tUnit = problem.system._u?.[step.targetVar] || meta.unit || "";
-          const where = `${topic.id}[gen:${mode}] ${step.id || step.eqId} -> ${step.targetVar} seed=${seed}`;
-
-          if (!step.isFaded) {
-            if (typeof step.expectedVal !== "number" || !Number.isFinite(step.expectedVal)) {
-              failures.push({ layer: "step-nonfinite", where, topic: `${topic.id}[${mode}]`, msg: `expectedVal=${step.expectedVal}` });
-              continue;
-            }
-            const baseVal = valueToCoherentBase(step.expectedVal, tUnit, meta.dimension);
-            const projected = formatValueInUnit(baseVal, tUnit, meta.dimension);
-            const relErr = Math.abs(projected - step.expectedVal) / (Math.abs(step.expectedVal) || 1);
-            if (!Number.isFinite(baseVal) || !(relErr < 1e-3)) {
-              failures.push({ layer: "step-roundtrip", where, topic: `${topic.id}[${mode}]`, msg: `expected ${step.expectedVal}, projected ${projected}` });
-            }
-          }
-
-          const res = checkStep({
-            step,
-            S: problem.system,
-            varsDb: problem.varsDb,
-            relations: topic.relations,
-            allSteps: problem.allSteps,
-            where,
-            topicTag: `${topic.id}[gen:${mode}]`,
-            tags: tagsOf(step, tUnit, problem.varsDb),
-            changed: 0
-          });
-          failures.push(...res.failures);
-        }
-      }
-    }
-  }
-
-  if (levelStats.skipped > 0) console.log(`[matrix] skipped ${levelStats.skipped} unit levels below the display floor`);
+  if (skipped > 0) console.log(`[matrix] skipped ${skipped} unit levels below the display floor`);
   if (failures.length > 0) {
     const groups = new Map();
     for (const f of failures) {
