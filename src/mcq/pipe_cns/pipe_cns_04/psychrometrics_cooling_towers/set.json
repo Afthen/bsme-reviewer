@@ -1,0 +1,217 @@
+{
+  "id": "mcq_pipe_cns_04_psychrometrics",
+  "title": "Psychrometrics, Air Conditioning & Cooling Towers",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "It is the temperature to which the air becomes saturated at constant pressure.",
+      "options": [
+        "Dry-bulb temperature",
+        "Dewpoint temperature",
+        "Wet-bulb temperature",
+        "Saturation temperature"
+      ],
+      "answer": "Dewpoint temperature"
+    },
+    {
+      "id": 2,
+      "q": "In a _________ cooling tower, the air moves horizontally through the fills as the water moves downward.",
+      "options": [
+        "Crossflow",
+        "Parallel flow",
+        "Counterflow",
+        "Double-flow"
+      ],
+      "answer": "Crossflow"
+    },
+    {
+      "id": 3,
+      "q": "It is the subject that deals with the behavior of moist air.",
+      "options": [
+        "Psychrometer",
+        "Refrigeration",
+        "Psychrometry",
+        "Pneumatics"
+      ],
+      "answer": "Psychrometry"
+    },
+    {
+      "id": 4,
+      "q": "It is the ratio of the mass of water vapor in a certain volume of moist air at a given temperature to the mass of water vapor in the same volume of saturated air at the same temperature.",
+      "options": [
+        "Humidity ratio",
+        "Humidity",
+        "Specific humidity",
+        "Relative humidity"
+      ],
+      "answer": "Relative humidity"
+    },
+    {
+      "id": 5,
+      "q": "Air whose condition is such that any decrease in temperature will result in condensation of water vapor into liquid:",
+      "options": [
+        "Saturated air",
+        "Saturated vapor",
+        "Unsaturated air",
+        "Moist air"
+      ],
+      "answer": "Saturated air"
+    },
+    {
+      "id": 6,
+      "q": "It is the warm water temperature minus the cold-water temperature leaving the cooling tower.",
+      "options": [
+        "Approach",
+        "Cooling Range",
+        "Terminal difference",
+        "LMTD"
+      ],
+      "answer": "Cooling Range"
+    },
+    {
+      "id": 7,
+      "q": "The temperature where the relative humidity becomes 100% and where the water vapor starts to condense is known as _________.",
+      "options": [
+        "Dry-bulb temperature",
+        "Dewpoint temperature",
+        "Wet-bulb temperature",
+        "Saturation temperature"
+      ],
+      "answer": "Dewpoint temperature"
+    },
+    {
+      "id": 8,
+      "q": "The surrounding air _________ temperature is the lowest temperature to which water could possibly be cooled in a cooling tower.",
+      "options": [
+        "Dry-bulb",
+        "Dew-point",
+        "Wet-bulb",
+        "Saturation temperature"
+      ],
+      "answer": "Wet-bulb"
+    },
+    {
+      "id": 9,
+      "q": "This refers to the rate of heat transfer attributable only to a change in dry-bulb temperature.",
+      "options": [
+        "Sensible heating or cooling",
+        "Dehumidification",
+        "Humidification",
+        "Cooling and dehumidifying"
+      ],
+      "answer": "Sensible heating or cooling"
+    },
+    {
+      "id": 10,
+      "q": "It is a binary mixture of dry air and water vapor.",
+      "options": [
+        "Dry air",
+        "Saturated vapor",
+        "Moist air",
+        "Wet mixture"
+      ],
+      "answer": "Moist air"
+    },
+    {
+      "id": 11,
+      "q": "The temperature measured by an ordinary thermometer:",
+      "options": [
+        "Wet-bulb temp.",
+        "Dry-bulb temp.",
+        "Dew-point temp.",
+        "Wet-bulb depression"
+      ],
+      "answer": "Dry-bulb temp."
+    },
+    {
+      "id": 12,
+      "q": "The mass of water interspersed in each kilogram of dry air:",
+      "options": [
+        "Enthalpy",
+        "Specific volume",
+        "Humidity ratio",
+        "Relative humidity"
+      ],
+      "answer": "Humidity ratio"
+    },
+    {
+      "id": 13,
+      "q": "A process of increasing the humidity ratio at constant dry-bulb temperature:",
+      "options": [
+        "Dehumidifying process",
+        "Cooling process",
+        "Heating process",
+        "Humidifying process"
+      ],
+      "answer": "Humidifying process"
+    },
+    {
+      "id": 14,
+      "q": "The ratio of the partial pressure of water vapor in the air to the saturation pressure corresponding to the temperature of the air:",
+      "options": [
+        "Humidity Ratio",
+        "Relative Humidity",
+        "Specific humidity",
+        "Moisture content"
+      ],
+      "answer": "Relative Humidity"
+    },
+    {
+      "id": 15,
+      "q": "It is an air conditioning process that involves heating without changing the moisture content of air. The process is represented by a horizontal line in the psychrometric chart, from left to right.",
+      "options": [
+        "Sensible cooling process",
+        "Humidifying process",
+        "Sensible heating process",
+        "Heating and dehumidifying process"
+      ],
+      "answer": "Sensible heating process"
+    },
+    {
+      "id": 16,
+      "q": "It is an air conditioning process of increasing the humidity ratio without changing the dry-bulb temperature of air. The process is represented in the psychrometric chart by a vertical line, from bottom to top.",
+      "options": [
+        "Sensible cooling process",
+        "Humidifying process",
+        "Sensible heating process",
+        "Heating and dehumidifying process"
+      ],
+      "answer": "Humidifying process"
+    },
+    {
+      "id": 17,
+      "q": "The temperature at which the water vapor content of moist air begins to condense when air is cooled at constant pressure:",
+      "options": [
+        "Dew Point Temperature",
+        "Wet Bulb Temperature",
+        "Dry Bulb Temperature",
+        "Condensing temperature"
+      ],
+      "answer": "Dew Point Temperature"
+    },
+    {
+      "id": 18,
+      "q": "What is the simultaneous control of temperature, humidity, air movement, and quantity of air in space?",
+      "options": [
+        "Refrigeration",
+        "Air-conditioning",
+        "Psychrometry",
+        "Humidification"
+      ],
+      "answer": "Air-conditioning"
+    },
+    {
+      "id": 19,
+      "q": "The non-condensing component of moist air:",
+      "options": [
+        "Hydrogen",
+        "Nitrogen",
+        "Water vapor",
+        "Dry air"
+      ],
+      "answer": "Dry air"
+    }
+  ]
+}

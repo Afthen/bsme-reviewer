@@ -1,0 +1,213 @@
+{
+  "id": "mcq_pipe_cns_02_fuels_water",
+  "title": "Fuels, Combustion & Water Treatment",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-02",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The fuel used in a power plant during peak periods:",
+      "options": [
+        "Gas",
+        "Solid",
+        "Liquid",
+        "None of these"
+      ],
+      "answer": "Liquid",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 2,
+      "q": "Dissolved gases like _________ make water corrosive and react with metal to form iron oxide.",
+      "options": [
+        "O₂ and N₂",
+        "O₂ and CO",
+        "O₂ and CO₂",
+        "N₂ and SO₂"
+      ],
+      "answer": "O₂ and CO₂"
+    },
+    {
+      "id": 3,
+      "q": "A type of coal formed after anthracite:",
+      "options": [
+        "Lignite",
+        "Bituminous",
+        "Peat",
+        "Graphite"
+      ],
+      "answer": "Graphite"
+    },
+    {
+      "id": 4,
+      "q": "Which of the following is the lowest grade of coal?",
+      "options": [
+        "Peat",
+        "Lignite",
+        "Sub-bituminous",
+        "Bituminous"
+      ],
+      "answer": "Lignite"
+    },
+    {
+      "id": 5,
+      "q": "Which of the following helps in the ignition of coal?",
+      "options": [
+        "Moisture",
+        "Ash",
+        "Fixed carbon",
+        "Volatile matter"
+      ],
+      "answer": "Volatile matter"
+    },
+    {
+      "id": 6,
+      "q": "Is the ratio of fixed carbon and volatile matter:",
+      "options": [
+        "Air-fuel ratio",
+        "Fuel ratio",
+        "Combustion ratio",
+        "Carbon-volatile ratio"
+      ],
+      "answer": "Fuel ratio"
+    },
+    {
+      "id": 7,
+      "q": "A suspension of a finely divided fluid in another:",
+      "options": [
+        "Filtration",
+        "Flotation",
+        "Emulsion",
+        "Separation"
+      ],
+      "answer": "Emulsion"
+    },
+    {
+      "id": 8,
+      "q": "Contains 90% gasoline and 10% ethanol:",
+      "options": [
+        "Gasohol",
+        "Gasonol",
+        "Gasothanol",
+        "Gasethanol"
+      ],
+      "answer": "Gasohol"
+    },
+    {
+      "id": 9,
+      "q": "Process used commercially in coal liquefaction:",
+      "options": [
+        "Tropsch process",
+        "Fischer process",
+        "Fischer-Tropsch process",
+        "Mitch-Tropsch process"
+      ],
+      "answer": "Fischer-Tropsch process"
+    },
+    {
+      "id": 10,
+      "q": "Organic matter produced by plants in both land and water:",
+      "options": [
+        "Bio-ethanol",
+        "Biomass",
+        "Petroleum",
+        "Biodegradable"
+      ],
+      "answer": "Biomass"
+    },
+    {
+      "id": 11,
+      "q": "Carbon dioxide can be removed by:",
+      "options": [
+        "Deaeration",
+        "Aeration",
+        "Evaporation",
+        "Vaporization"
+      ],
+      "answer": "Aeration"
+    },
+    {
+      "id": 12,
+      "q": "Often used to absorb silica from water:",
+      "options": [
+        "Sorbent",
+        "Rectifier",
+        "Silica gel",
+        "Magnesium hydroxide"
+      ],
+      "answer": "Magnesium hydroxide"
+    },
+    {
+      "id": 13,
+      "q": "Presence of excess hydrogen ions makes the water:",
+      "options": [
+        "Acidic",
+        "Alkalinity",
+        "Base",
+        "Hydroxicity"
+      ],
+      "answer": "Acidic"
+    },
+    {
+      "id": 14,
+      "q": "pH of water varies with:",
+      "options": [
+        "Pressure",
+        "Temperature",
+        "Density",
+        "Volume"
+      ],
+      "answer": "Temperature"
+    },
+    {
+      "id": 15,
+      "q": "A pH value of _________ is usually maintained for boiler water to minimize corrosion.",
+      "options": [
+        "8.5",
+        "9.5",
+        "10.5",
+        "11.5"
+      ],
+      "answer": "10.5"
+    },
+    {
+      "id": 16,
+      "q": "What waste treatment method involves removal of algae from stabilization pond effluents?",
+      "options": [
+        "Sedimentation",
+        "Flotation",
+        "Filtration",
+        "Microscreening"
+      ],
+      "answer": "Microscreening"
+    },
+    {
+      "id": 17,
+      "q": "Which is not a physical characteristic of water?",
+      "options": [
+        "Total suspended and dissolved solids",
+        "Turbidity",
+        "Color",
+        "Hardness"
+      ],
+      "answer": "Hardness"
+    },
+    {
+      "id": 18,
+      "q": "Select the one that is a positive indication of pollution of a river:",
+      "options": [
+        "Acidity",
+        "Oxygen content",
+        "Chloride content",
+        "Nitrite content"
+      ],
+      "answer": "Chloride content"
+    }
+  ]
+}

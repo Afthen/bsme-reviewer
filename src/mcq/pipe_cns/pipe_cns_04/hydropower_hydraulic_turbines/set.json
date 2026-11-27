@@ -1,0 +1,341 @@
+{
+  "id": "mcq_pipe_cns_04_hydropower",
+  "title": "Hydropower & Hydraulic Turbines",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "This is a type of reaction turbine usually with a spiral casing where water enters the runner radially at its outer periphery and changes direction (imparting energy to the runner) while flowing along the complex-shaped profiles to discharge axially. It is the most widely used type of hydraulic turbine for modern power generation purposes.",
+      "options": [
+        "Pelton Turbine",
+        "Francis Turbine",
+        "Turgo Turbine",
+        "Kaplan Turbine"
+      ],
+      "answer": "Francis Turbine"
+    },
+    {
+      "id": 2,
+      "q": "It is an expanding tube connecting the outlet passage of a turbine with the tail water.",
+      "options": [
+        "Draft Tube",
+        "Forebay",
+        "Penstock",
+        "Surge Chamber"
+      ],
+      "answer": "Draft Tube"
+    },
+    {
+      "id": 3,
+      "q": "It is a hydroelectric plant in which excess water is pumped to an elevated space during the off-peak period and the stored water is used to drive hydraulic turbines during the peak period to meet peak demand.",
+      "options": [
+        "Run-of-River Plant",
+        "Storage Plant",
+        "Pumped Storage Plant",
+        "None of the above"
+      ],
+      "answer": "Pumped Storage Plant",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 4,
+      "q": "It is a channel that conducts water away from the turbine.",
+      "options": [
+        "Headrace Pipe",
+        "Forebay",
+        "Penstock",
+        "Tailrace"
+      ],
+      "answer": "Tailrace"
+    },
+    {
+      "id": 5,
+      "q": "This is a grid or screen composed of parallel bars to catch floating debris. It prevents leaves, branches, and other water contaminants from entering the penstock.",
+      "options": [
+        "Surge tank",
+        "Trash Rack",
+        "Butterfly valve",
+        "Weir"
+      ],
+      "answer": "Trash Rack"
+    },
+    {
+      "id": 6,
+      "q": "It is the term used that refers to water in the reservoir.",
+      "options": [
+        "Headwater",
+        "Discharge",
+        "Tailwater",
+        "Stored water"
+      ],
+      "answer": "Headwater"
+    },
+    {
+      "id": 7,
+      "q": "This is a propeller-type reaction turbine with both adjustable guide vanes and runner blades.",
+      "options": [
+        "Kaplan Turbine",
+        "Pelton Turbine",
+        "Turgo Turbine",
+        "Cross-flow"
+      ],
+      "answer": "Kaplan Turbine"
+    },
+    {
+      "id": 8,
+      "q": "It is basically hydroelectric power utilizing the difference in elevation between high and low tide to produce energy.",
+      "options": [
+        "Water power",
+        "Tidal Power",
+        "Fluid Power",
+        "Wave Power"
+      ],
+      "answer": "Tidal Power"
+    },
+    {
+      "id": 9,
+      "q": "The power output of this plant depends on the water flow in the river; at low river flows the output decreases accordingly.",
+      "options": [
+        "Pumped Storage Plant",
+        "Run-of-River Plant",
+        "Storage Plant",
+        "All of the above"
+      ],
+      "answer": "Run-of-River Plant",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 10,
+      "q": "The intake pipe to a hydraulic turbine from a dam:",
+      "options": [
+        "Forebay",
+        "Draft tube",
+        "Penstock",
+        "Tailrace"
+      ],
+      "answer": "Penstock"
+    },
+    {
+      "id": 11,
+      "q": "It conducts the water around the turbine.",
+      "options": [
+        "Spiral casing",
+        "Draft tube",
+        "Wicket gate",
+        "Governor"
+      ],
+      "answer": "Spiral casing"
+    },
+    {
+      "id": 12,
+      "q": "These are movable vertical vanes that are actuated by the governor to control the flow of water and therefore the energy supplied to the runner.",
+      "options": [
+        "Spillway",
+        "Runner",
+        "Headrace pipe",
+        "Wicket gate"
+      ],
+      "answer": "Wicket gate"
+    },
+    {
+      "id": 13,
+      "q": "The speed of a hypothetical model turbine having the same configuration as the actual turbine, when the model would be of the proper size to develop 1 hp at a head of 1 ft:",
+      "options": [
+        "Synchronous speed",
+        "Specific speed",
+        "Runaway speed",
+        "Turbine speed"
+      ],
+      "answer": "Specific speed"
+    },
+    {
+      "id": 14,
+      "q": "The difference in elevation between the headwater and the tailwater or tailrace:",
+      "options": [
+        "Dynamic head",
+        "Net head",
+        "Gross head",
+        "Effective head"
+      ],
+      "answer": "Gross head"
+    },
+    {
+      "id": 15,
+      "q": "The ratio of the effective head to the gross head:",
+      "options": [
+        "Mechanical efficiency",
+        "Penstock efficiency",
+        "Hydraulic efficiency",
+        "Volumetric efficiency"
+      ],
+      "answer": "Penstock efficiency"
+    },
+    {
+      "id": 16,
+      "q": "The ratio of the head utilized to the effective head:",
+      "options": [
+        "Mechanical efficiency",
+        "Penstock efficiency",
+        "Hydraulic efficiency",
+        "Volumetric efficiency"
+      ],
+      "answer": "Hydraulic efficiency"
+    },
+    {
+      "id": 17,
+      "q": "Heads between 70 and 800 ft generally indicate this type of turbine:",
+      "options": [
+        "Impulse turbine",
+        "Propeller turbine",
+        "Reaction turbine",
+        "Pelton turbine"
+      ],
+      "answer": "Reaction turbine"
+    },
+    {
+      "id": 18,
+      "q": "Heads below about 70 ft call for this type of turbine:",
+      "options": [
+        "Impulse turbine",
+        "Propeller turbine",
+        "Reaction turbine",
+        "Pelton turbine"
+      ],
+      "answer": "Propeller turbine"
+    },
+    {
+      "id": 19,
+      "q": "The functions of this hydraulic turbine part are: (1) it enables the turbine to be set above the tailwater level without losing any head thereby, and (2) it reduces the head loss at submerged discharge to increase the net head available to the turbine runner.",
+      "options": [
+        "Spiral casing",
+        "Draft tube",
+        "Wicket gate",
+        "Butterfly valve"
+      ],
+      "answer": "Draft tube"
+    },
+    {
+      "id": 20,
+      "q": "It is a tank with a free surface provided at the transition from the low-pressure headrace or tunnel to the penstock. It protects the headrace pipe or tunnel from excessive changes in pressure and supplies or stores water as required.",
+      "options": [
+        "Surge tank",
+        "Draft tube",
+        "Butterfly valve",
+        "Spillway"
+      ],
+      "answer": "Surge tank"
+    },
+    {
+      "id": 21,
+      "q": "The rotating part of the turbine where the water imparts its energy onto the turbine shaft:",
+      "options": [
+        "Runner",
+        "Flywheel",
+        "Impeller",
+        "Lobe"
+      ],
+      "answer": "Runner"
+    },
+    {
+      "id": 22,
+      "q": "It connects the turbine outlet to the tailwater so that the turbine can be set above the tailwater level.",
+      "options": [
+        "Draft tube",
+        "Penstock",
+        "Surge chamber",
+        "Spillway"
+      ],
+      "answer": "Draft tube"
+    },
+    {
+      "id": 23,
+      "q": "It provides an efficient and safe means of releasing flood water that exceeds the design capacity of the dam.",
+      "options": [
+        "Draft tube",
+        "Penstock",
+        "Surge chamber",
+        "Spillway"
+      ],
+      "answer": "Spillway"
+    },
+    {
+      "id": 24,
+      "q": "This is a type of water turbine where a jet of water is made to fall on the blades or buckets and due to the impulse of water the turbine starts moving.",
+      "options": [
+        "Steam turbine",
+        "Francis turbine",
+        "Reaction turbine",
+        "Pelton wheel turbine"
+      ],
+      "answer": "Pelton wheel turbine"
+    },
+    {
+      "id": 25,
+      "q": "A device used to prevent water hammer in a turbine:",
+      "options": [
+        "Governor",
+        "Surge tank",
+        "Guard",
+        "Wicket gate"
+      ],
+      "answer": "Surge tank"
+    },
+    {
+      "id": 26,
+      "q": "Constant rotative speed of the hydraulic turbine runner under varying load is achieved by a _________ that actuates a mechanism that adjusts the gate openings.",
+      "options": [
+        "Governor",
+        "Runner",
+        "Wicket gates",
+        "Draft tube"
+      ],
+      "answer": "Governor"
+    },
+    {
+      "id": 27,
+      "q": "A pipe or conduit used to carry water from reservoir intake to a reaction turbine is known as:",
+      "options": [
+        "Guide Vane",
+        "Wicket Gate",
+        "Draft Tube",
+        "Penstock"
+      ],
+      "answer": "Penstock"
+    },
+    {
+      "id": 28,
+      "q": "In order to prevent shock or water hammering in the penstock when the governor quickly closes the gates, many turbines are provided with a _________.",
+      "options": [
+        "Surge Tank",
+        "Intake Valve",
+        "Draft Tube",
+        "Flywheel"
+      ],
+      "answer": "Surge Tank"
+    },
+    {
+      "id": 29,
+      "q": "Hydraulic turbine suitable for low head:",
+      "options": [
+        "Pelton wheel",
+        "Francis turbine",
+        "Kaplan turbine",
+        "Turgo turbine"
+      ],
+      "answer": "Kaplan turbine"
+    }
+  ]
+}

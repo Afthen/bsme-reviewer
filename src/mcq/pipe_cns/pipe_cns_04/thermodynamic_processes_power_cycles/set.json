@@ -1,0 +1,350 @@
+{
+  "id": "mcq_pipe_cns_04_thermo_processes_cycles",
+  "title": "Thermodynamic Processes & Power Cycles",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The ratio of constant-pressure specific heat to the constant-volume specific heat:",
+      "options": [
+        "Compression ratio",
+        "Cutoff ratio",
+        "Expansion ratio",
+        "Specific heat ratio"
+      ],
+      "answer": "Specific heat ratio"
+    },
+    {
+      "id": 2,
+      "q": "A series of processes during which the initial state point and the final state point are the same:",
+      "options": [
+        "Process",
+        "Cycle",
+        "Change of state",
+        "All of the above"
+      ],
+      "answer": "Cycle",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 3,
+      "q": "The compressibility factor of an ideal gas is equal to _________.",
+      "options": [
+        "1.00",
+        "0.90",
+        "1.40",
+        "1.30"
+      ],
+      "answer": "1.00"
+    },
+    {
+      "id": 4,
+      "q": "The relation $pV = C$ represents a process or change of state which is known as _________.",
+      "options": [
+        "Isometric process",
+        "Isothermal process",
+        "Isobaric process",
+        "Isentropic process"
+      ],
+      "answer": "Isothermal process"
+    },
+    {
+      "id": 5,
+      "q": "In the relation $pV^n = C$, if the value of $n = 0$, the process is said to be _________.",
+      "options": [
+        "Isometric process",
+        "Isothermal process",
+        "Isobaric process",
+        "Polytropic process"
+      ],
+      "answer": "Isobaric process"
+    },
+    {
+      "id": 6,
+      "q": "In a Carnot cycle, heat rejection occurs in the _________ process.",
+      "options": [
+        "Isentropic expansion",
+        "Isothermal expansion",
+        "Isentropic compression",
+        "Isothermal compression"
+      ],
+      "answer": "Isothermal compression"
+    },
+    {
+      "id": 7,
+      "q": "The area under the curve on a pressure-volume diagram represents _________.",
+      "options": [
+        "Steady flow work",
+        "Net work",
+        "Nonflow work",
+        "Cycle work"
+      ],
+      "answer": "Nonflow work"
+    },
+    {
+      "id": 8,
+      "q": "An ideal gas is compressed isothermally. The enthalpy change is equal to _________.",
+      "options": [
+        "Zero",
+        "Negative",
+        "Positive",
+        "None of the above"
+      ],
+      "answer": "Zero",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 9,
+      "q": "The _________ is constant in an adiabatic throttling process.",
+      "options": [
+        "Pressure",
+        "Internal energy",
+        "Volume",
+        "Enthalpy"
+      ],
+      "answer": "Enthalpy"
+    },
+    {
+      "id": 10,
+      "q": "It is the ideal cycle for a gas turbine plant.",
+      "options": [
+        "Carnot cycle",
+        "Diesel cycle",
+        "Rankine cycle",
+        "Brayton cycle"
+      ],
+      "answer": "Brayton cycle"
+    },
+    {
+      "id": 11,
+      "q": "It is the most thermally efficient cycle consisting of two (2) isentropic processes and two (2) isothermal processes.",
+      "options": [
+        "Carnot cycle",
+        "Otto cycle",
+        "Rankine cycle",
+        "Diesel cycle"
+      ],
+      "answer": "Carnot cycle"
+    },
+    {
+      "id": 12,
+      "q": "How can the average temperature during the heat rejection process of a Rankine cycle be decreased?",
+      "options": [
+        "Increase boiler pressure",
+        "Increase inlet turbine pressure",
+        "Increase condenser pressure",
+        "Reduce turbine exit pressure"
+      ],
+      "answer": "Reduce turbine exit pressure"
+    },
+    {
+      "id": 13,
+      "q": "What is commonly done to a vapor power cycle when the turbine has excessive moisture?",
+      "options": [
+        "Frosting",
+        "Reheating",
+        "Diffusing",
+        "Dehumidifying"
+      ],
+      "answer": "Reheating"
+    },
+    {
+      "id": 14,
+      "q": "A thermodynamic process with no heat transfer:",
+      "options": [
+        "Isentropic Process",
+        "Throttling Process",
+        "Adiabatic Process",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "q": "A rigid container is heated by the sun. There is no shaft work associated with the container. From the first law of thermodynamics, the resulting work is:",
+      "options": [
+        "Equal to the heat transfer",
+        "Equal to the change in internal energy",
+        "Equal to the volume times the change in pressure",
+        "Equal to zero"
+      ],
+      "answer": "Equal to zero"
+    },
+    {
+      "id": 16,
+      "q": "The net work output of a heat engine is always _________.",
+      "options": [
+        "Less than the amount of heat input",
+        "More than the amount of heat input",
+        "Less than the amount of heat output",
+        "None of the above"
+      ],
+      "answer": "Less than the amount of heat input",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "q": "A device that violates the first law of thermodynamics is called a:",
+      "options": [
+        "Perpetual motion machine of the second kind",
+        "Perpetual motion machine of the third kind",
+        "Perpetual motion machine of the first kind",
+        "None of the above"
+      ],
+      "answer": "Perpetual motion machine of the first kind",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 18,
+      "q": "The efficiencies of all reversible heat engines operating between the same two reservoirs _________.",
+      "options": [
+        "Differ",
+        "Are unequal",
+        "Are the same",
+        "None of the above"
+      ],
+      "answer": "Are the same",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 19,
+      "q": "A process with no heat transfer is known as:",
+      "options": [
+        "Isobaric process",
+        "Adiabatic process",
+        "Isothermal process",
+        "Isometric process"
+      ],
+      "answer": "Adiabatic process"
+    },
+    {
+      "id": 20,
+      "q": "This type of heat exchanger allows fluids to flow at right angles to each other:",
+      "options": [
+        "Series flow",
+        "Cross flow",
+        "Parallel flow",
+        "Counter flow"
+      ],
+      "answer": "Cross flow"
+    },
+    {
+      "id": 21,
+      "q": "A process for which the inlet and outlet enthalpies are the same:",
+      "options": [
+        "Isentropic",
+        "Throttling",
+        "Enthalpy conservation",
+        "Steady state"
+      ],
+      "answer": "Throttling"
+    },
+    {
+      "id": 22,
+      "q": "The thermodynamic process wherein temperature is constant and the change in internal energy is zero:",
+      "options": [
+        "Isobaric process",
+        "Isometric process",
+        "Isothermal process",
+        "Polytropic process"
+      ],
+      "answer": "Isothermal process"
+    },
+    {
+      "id": 23,
+      "q": "Another term for a constant-volume process:",
+      "options": [
+        "Isometric",
+        "Isovolumic",
+        "Isochoric",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 24,
+      "q": "Work done by the steam during a reversible adiabatic expansion process in the turbine:",
+      "options": [
+        "Brake work",
+        "Ideal work",
+        "Actual fluid work",
+        "Combined work"
+      ],
+      "answer": "Ideal work"
+    },
+    {
+      "id": 25,
+      "q": "The efficiency of the Carnot cycle depends upon the:",
+      "options": [
+        "Pressure",
+        "Volume",
+        "Entropy",
+        "Temperature"
+      ],
+      "answer": "Temperature"
+    },
+    {
+      "id": 26,
+      "q": "In an ideal Rankine cycle with fixed boiler and condenser pressure, what is the effect of superheating the steam to a higher temperature on the cycle thermal efficiency?",
+      "options": [
+        "The cycle thermal efficiency will increase",
+        "The cycle thermal efficiency will decrease",
+        "The cycle thermal efficiency will remain constant",
+        "None of the above"
+      ],
+      "answer": "The cycle thermal efficiency will increase",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    }
+  ]
+}

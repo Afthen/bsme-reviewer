@@ -1,0 +1,360 @@
+{
+  "id": "mcq_pipe_cns_01_psychrometrics",
+  "title": "Psychrometrics & Air Conditioning",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-01",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The ratio of the actual vapor density to the vapor density at saturation:",
+      "options": [
+        "Relative humidity",
+        "Absolute humidity",
+        "Humidity ratio",
+        "Saturation ratio"
+      ],
+      "answer": "Relative humidity"
+    },
+    {
+      "id": 2,
+      "q": "An expression of the mass of water vapor per unit mass of dry air:",
+      "options": [
+        "Relative humidity",
+        "Absolute humidity",
+        "Humidity ratio",
+        "Saturation ratio"
+      ],
+      "answer": "Humidity ratio"
+    },
+    {
+      "id": 3,
+      "q": "Which of the following is equivalent to 1 lb?",
+      "options": [
+        "5,000 grains",
+        "6,000 grains",
+        "7,000 grains",
+        "8,000 grains"
+      ],
+      "answer": "7,000 grains"
+    },
+    {
+      "id": 4,
+      "q": "The bypass factor for large commercial units:",
+      "options": [
+        "Around 20%",
+        "Around 30%",
+        "Around 10%",
+        "Around 50%"
+      ],
+      "answer": "Around 10%"
+    },
+    {
+      "id": 5,
+      "q": "Sometimes called specific humidity:",
+      "options": [
+        "Relative humidity",
+        "Absolute humidity",
+        "Humidity ratio",
+        "Saturation ratio"
+      ],
+      "answer": "Humidity ratio"
+    },
+    {
+      "id": 6,
+      "q": "For any given barometric pressure, the humidity ratio is a function of the:",
+      "options": [
+        "Critical temperature",
+        "Dew point temperature",
+        "Dry bulb temperature",
+        "Wet bulb temperature"
+      ],
+      "answer": "Dew point temperature"
+    },
+    {
+      "id": 7,
+      "q": "The humidity ratio corresponding to any given dew point temperature varies with the total barometric pressure, increasing as the barometric pressure:",
+      "options": [
+        "Increases",
+        "Decreases",
+        "Varies",
+        "Constant"
+      ],
+      "answer": "Decreases"
+    },
+    {
+      "id": 8,
+      "q": "The ratio of the mass of water vapor in the air per unit mass of dry air to the mass of water vapor required for saturation of the same air sample:",
+      "options": [
+        "Relative humidity",
+        "Absolute humidity",
+        "Humidity ratio",
+        "Saturation ratio"
+      ],
+      "answer": "Saturation ratio"
+    },
+    {
+      "id": 9,
+      "q": "In a sensible heating process, the final humidity ratio is:",
+      "options": [
+        "Increased",
+        "Decreased",
+        "The same",
+        "Cannot be determined"
+      ],
+      "answer": "The same"
+    },
+    {
+      "id": 10,
+      "q": "In an adiabatic saturation process, the final relative humidity is:",
+      "options": [
+        "Increased",
+        "Decreased",
+        "The same",
+        "Cannot be determined"
+      ],
+      "answer": "Increased"
+    },
+    {
+      "id": 11,
+      "q": "Cooling and dehumidifying process is commonly used for:",
+      "options": [
+        "Summer air conditioning",
+        "Ice making",
+        "Winter cooling",
+        "Heat pumping"
+      ],
+      "answer": "Summer air conditioning"
+    },
+    {
+      "id": 12,
+      "q": "An adiabatic saturation process is also known as:",
+      "options": [
+        "Constant WB temperature process",
+        "Constant DB temperature process",
+        "Constant DP temperature process",
+        "Constant vapor temperature process"
+      ],
+      "answer": "Constant WB temperature process"
+    },
+    {
+      "id": 13,
+      "q": "The process of simultaneous heating and dehumidifying is known as:",
+      "options": [
+        "Sensible heating",
+        "Cooling and dehumidifying",
+        "Sensible cooling",
+        "Chemical dehumidifying"
+      ],
+      "answer": "Chemical dehumidifying"
+    },
+    {
+      "id": 14,
+      "q": "The process of increasing the dry-bulb temperature without changing the humidity ratio is known as:",
+      "options": [
+        "Sensible heating",
+        "Cooling and dehumidifying",
+        "Sensible cooling",
+        "Heating and dehumidifying"
+      ],
+      "answer": "Sensible heating"
+    },
+    {
+      "id": 15,
+      "q": "The process of simultaneous cooling and decreasing of humidity ratio is known as:",
+      "options": [
+        "Sensible cooling",
+        "Cooling and humidifying",
+        "Cooling and dehumidifying",
+        "Heating and dehumidifying"
+      ],
+      "answer": "Cooling and dehumidifying"
+    },
+    {
+      "id": 16,
+      "q": "The process of cooling without changing the humidity ratio is known as:",
+      "options": [
+        "Sensible heating",
+        "Cooling and dehumidifying",
+        "Sensible cooling",
+        "Heating and humidifying"
+      ],
+      "answer": "Sensible cooling"
+    },
+    {
+      "id": 17,
+      "q": "The process of simultaneous heating and humidifying is known as:",
+      "options": [
+        "Sensible cooling",
+        "Cooling and humidifying",
+        "Heating and humidifying",
+        "Heating and dehumidifying"
+      ],
+      "answer": "Heating and humidifying"
+    },
+    {
+      "id": 18,
+      "q": "Which of the following types of air dryers works by adsorbing moisture on a solid desiccant or drying material such as activated alumina, silica gel, or molecular sieve?",
+      "options": [
+        "Regenerative dryer",
+        "Spray dryer",
+        "Deliquescent dryer",
+        "Refrigerated dryer"
+      ],
+      "answer": "Regenerative dryer"
+    },
+    {
+      "id": 19,
+      "q": "The temperature at which the water vapor in the air begins to condense, or the temperature at which the relative humidity of air becomes 100%:",
+      "options": [
+        "Flash point",
+        "Boiling point",
+        "Dew point",
+        "Freezing point"
+      ],
+      "answer": "Dew point"
+    },
+    {
+      "id": 20,
+      "q": "It consists of wet and dry bulb thermometers mounted on a strip of metal:",
+      "options": [
+        "Manometer",
+        "Gyrometer",
+        "Pyrometer",
+        "Sling psychrometer"
+      ],
+      "answer": "Sling psychrometer"
+    },
+    {
+      "id": 21,
+      "q": "The relationship of water vapor in the air at the dew point temperature to the amount that would be in the air if the air were saturated at the dry-bulb temperature is:",
+      "options": [
+        "Partial pressure at dew point",
+        "Percentage humidity",
+        "Relative humidity",
+        "Saturation pressure"
+      ],
+      "answer": "Relative humidity"
+    },
+    {
+      "id": 22,
+      "q": "All of the following statements about wet bulb temperature are true, EXCEPT:",
+      "options": [
+        "Wet bulb temperature equals adiabatic saturation temperature.",
+        "Wet bulb temperature is the only temperature necessary to determine grains of water per lb of dry air.",
+        "Wet bulb temperature lies numerically between dew point and dry bulb temperature for unsaturated systems.",
+        "Wet bulb temperature equals both dry-bulb and dew point temperature at 100% relative humidity."
+      ],
+      "answer": "Wet bulb temperature is the only temperature necessary to determine grains of water per lb of dry air."
+    },
+    {
+      "id": 23,
+      "q": "Heat added to or removed from a substance that causes a change of temperature:",
+      "options": [
+        "Absolute heat",
+        "Latent heat",
+        "Specific heat",
+        "Sensible heat"
+      ],
+      "answer": "Sensible heat"
+    },
+    {
+      "id": 24,
+      "q": "Sometimes called percentage humidity:",
+      "options": [
+        "Relative humidity",
+        "Absolute humidity",
+        "Humidity ratio",
+        "Saturation ratio"
+      ],
+      "answer": "Saturation ratio"
+    },
+    {
+      "id": 25,
+      "q": "When measuring _________ of air, the bulb of the thermometer should be shaded to reduce the effect of direct radiation.",
+      "options": [
+        "Dry bulb temperature",
+        "Wet bulb temperature",
+        "Critical temperature",
+        "Saturation temperature"
+      ],
+      "answer": "Dry bulb temperature"
+    },
+    {
+      "id": 26,
+      "q": "An ordinary thermometer whose bulb is enclosed in a wetted cloth sac or wick:",
+      "options": [
+        "Dry bulb thermometer",
+        "Wet bulb thermometer",
+        "Ordinary thermometer",
+        "Mercury thermometer"
+      ],
+      "answer": "Wet bulb thermometer"
+    },
+    {
+      "id": 27,
+      "q": "To obtain an accurate reading with a wet bulb thermometer, the wick should be saturated with:",
+      "options": [
+        "Clean air",
+        "Vapor",
+        "Moist",
+        "Clean water"
+      ],
+      "answer": "Clean water"
+    },
+    {
+      "id": 28,
+      "q": "The amount by which the wet bulb temperature is reduced below the dry bulb temperature depends on the relative humidity of the air and is called:",
+      "options": [
+        "Range",
+        "Approach",
+        "Drift",
+        "Wet bulb depression"
+      ],
+      "answer": "Wet bulb depression"
+    },
+    {
+      "id": 29,
+      "q": "The measure of the relationship between the dry bulb and dew point temperature of the air and, as such, provides a convenient means of determining the dew point temperature of the air when the dry bulb temperature is known:",
+      "options": [
+        "Wet bulb temperature",
+        "Saturation temperature",
+        "Humidity ratio",
+        "Relative humidity"
+      ],
+      "answer": "Wet bulb temperature"
+    },
+    {
+      "id": 30,
+      "q": "An index of the total heat (enthalpy) of the air:",
+      "options": [
+        "Wet bulb temperature",
+        "Saturation temperature",
+        "Dry bulb temperature",
+        "Dew point temperature"
+      ],
+      "answer": "Wet bulb temperature"
+    },
+    {
+      "id": 31,
+      "q": "The sensible heat of the air is a function of the:",
+      "options": [
+        "Wet bulb temperature",
+        "Dry bulb temperature",
+        "Dew point temperature",
+        "Saturation temperature"
+      ],
+      "answer": "Dry bulb temperature"
+    },
+    {
+      "id": 32,
+      "q": "The latent heat of the air is a function of the:",
+      "options": [
+        "Wet bulb temperature",
+        "Dry bulb temperature",
+        "Dew point temperature",
+        "Saturation temperature"
+      ],
+      "answer": "Dew point temperature"
+    }
+  ]
+}

@@ -1,0 +1,260 @@
+{
+  "id": "mcq_pipe_cns_04_fuels_lubricants",
+  "title": "Fuels, Combustion & Lubricants",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A property of lubricating oil that measures the thickness of the oil and helps determine how long oil will flow at a given temperature is known as _________.",
+      "options": [
+        "Pour point",
+        "Flash point",
+        "Relative density",
+        "Viscosity"
+      ],
+      "answer": "Viscosity"
+    },
+    {
+      "id": 2,
+      "q": "Natural gas is considered _________ when it is almost pure methane.",
+      "options": [
+        "Dry",
+        "Saturated",
+        "Wet",
+        "Superheated"
+      ],
+      "answer": "Dry"
+    },
+    {
+      "id": 3,
+      "q": "Natural gas is a fossil fuel formed when layers of buried plants and animals are exposed to intense heat and pressure. It has been dubbed as the \"fuel of the future\" or \"green fuel\" and comprises mainly of _________.",
+      "options": [
+        "Propane",
+        "Ethane",
+        "Butane",
+        "Methane"
+      ],
+      "answer": "Methane"
+    },
+    {
+      "id": 4,
+      "q": "It is the coal ash that exits a combustion chamber in the flue gas and is captured by air pollution control equipment such as electrostatic precipitators, baghouses, and wet scrubbers.",
+      "options": [
+        "Ash",
+        "Fly Ash",
+        "Bottoming Ash",
+        "Refuse"
+      ],
+      "answer": "Fly Ash"
+    },
+    {
+      "id": 5,
+      "q": "Also known as brown coal, it is the lowest-rank solid coal with a calorific value of less than 8,300 Btu/lb on a moist mineral-matter-free basis.",
+      "options": [
+        "Bituminous coal",
+        "Lignite",
+        "Peat",
+        "Anthracite"
+      ],
+      "answer": "Lignite"
+    },
+    {
+      "id": 6,
+      "q": "The minimum amount of air required for the complete combustion of fuel:",
+      "options": [
+        "Stoichiometric Air",
+        "Actual Air",
+        "Excess Air",
+        "Percentage excess air"
+      ],
+      "answer": "Stoichiometric Air"
+    },
+    {
+      "id": 7,
+      "q": "The device or instrument used for measuring the calorific value of a unit mass of fuel is called:",
+      "options": [
+        "Calorimeter",
+        "Pyrometer",
+        "Salinometer",
+        "Thermometer"
+      ],
+      "answer": "Calorimeter"
+    },
+    {
+      "id": 8,
+      "q": "When water ($\\text{H}_2\\text{O}$) in the products of combustion is in the vapor or gaseous form, the heating value is known as:",
+      "options": [
+        "Higher heating value (HHV)",
+        "Heating value (HV)",
+        "Lower heating value (LHV)",
+        "Gross calorific value (GCV)"
+      ],
+      "answer": "Lower heating value (LHV)"
+    },
+    {
+      "id": 9,
+      "q": "The percent excess air is the difference between the air actually supplied and the theoretical air required divided by:",
+      "options": [
+        "The theoretical air supplied",
+        "The deficiency air supplied",
+        "Total air supplied",
+        "None of the above"
+      ],
+      "answer": "The theoretical air supplied",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 10,
+      "q": "During a combustion process, the components which exist before the reaction are called _________.",
+      "options": [
+        "Reactants",
+        "Flue gases",
+        "Products",
+        "None of the above"
+      ],
+      "answer": "Reactants",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 11,
+      "q": "The minimum amount of air needed for the complete combustion of fuel is called _________.",
+      "options": [
+        "Excess air",
+        "Combustion air",
+        "Theoretical air",
+        "None of the above"
+      ],
+      "answer": "Theoretical air",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 12,
+      "q": "A gas which will not be found in the flue gases produced from the complete combustion of fuel oil is:",
+      "options": [
+        "Carbon dioxide",
+        "Oxygen",
+        "Hydrogen",
+        "Nitrogen"
+      ],
+      "answer": "Hydrogen"
+    },
+    {
+      "id": 13,
+      "q": "The higher heating value is determined when the water in the products of combustion is in:",
+      "options": [
+        "Solid form",
+        "Liquid form",
+        "Vapor form",
+        "Gas form"
+      ],
+      "answer": "Liquid form"
+    },
+    {
+      "id": 14,
+      "q": "The amount of heat liberated by the complete combustion of a unit weight or volume of fuel is known as:",
+      "options": [
+        "Heating value",
+        "Sensible heat",
+        "Latent heat",
+        "Work of compression"
+      ],
+      "answer": "Heating value"
+    },
+    {
+      "id": 15,
+      "q": "What is the fundamental indicator of good combustion?",
+      "options": [
+        "Colorless smoke.",
+        "Releasing maximum nitrogen content of the combustion with minimum oxygen, carbon dioxide, and carbon monoxide content.",
+        "Presence of minimum oxygen, maximum carbon dioxide, and nil combustibles in the flue gas.",
+        "Saturated clean smoke."
+      ],
+      "answer": "Presence of minimum oxygen, maximum carbon dioxide, and nil combustibles in the flue gas."
+    },
+    {
+      "id": 16,
+      "q": "It is a solidified mass of fused ash.",
+      "options": [
+        "Sludge",
+        "Carbon residues",
+        "Solidified ash",
+        "Clinker"
+      ],
+      "answer": "Clinker"
+    },
+    {
+      "id": 17,
+      "q": "What components are included in the proximate analysis in solid fuel?",
+      "options": [
+        "Carbon dioxide, carbon monoxide, and excess oxygen",
+        "Carbon, hydrogen, oxygen, nitrogen, sulfur, ash, and moisture",
+        "Carbon, hydrogen, oxygen, sulfur, nitrogen, and ash",
+        "Fixed carbon, volatile matter, ash, and moisture"
+      ],
+      "answer": "Fixed carbon, volatile matter, ash, and moisture"
+    },
+    {
+      "id": 18,
+      "q": "Which element of fuel is not combustible?",
+      "options": [
+        "Carbon",
+        "Sulfur",
+        "Hydrogen",
+        "Oxygen"
+      ],
+      "answer": "Oxygen"
+    },
+    {
+      "id": 19,
+      "q": "Diesel engine fuel is rated in terms of:",
+      "options": [
+        "Cetane number",
+        "Power output",
+        "Octane rating",
+        "Net calorific value"
+      ],
+      "answer": "Cetane number"
+    },
+    {
+      "id": 20,
+      "q": "It is the indicator used to determine the anti-knock characteristics of gasoline.",
+      "options": [
+        "Octane Number",
+        "Compression Ratio",
+        "Cetane Number",
+        "Viscosity"
+      ],
+      "answer": "Octane Number"
+    },
+    {
+      "id": 21,
+      "q": "It is used to reduce the friction of bearings and sliding surfaces in machines and thus diminish the wear, heat, and possibility of seizure of the parts.",
+      "options": [
+        "Lubricant",
+        "Wax",
+        "Gasoline",
+        "Benzene"
+      ],
+      "answer": "Lubricant"
+    }
+  ]
+}

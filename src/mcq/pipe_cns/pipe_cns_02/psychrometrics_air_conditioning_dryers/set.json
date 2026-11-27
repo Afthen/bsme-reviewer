@@ -1,0 +1,161 @@
+{
+  "id": "mcq_pipe_cns_02_psychrometrics",
+  "title": "Psychrometrics, Air Conditioning & Dryers",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-02",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The most common dryer used, which consists of a rotating cylinder inside which the materials flow while getting in contact with hot gas:",
+      "options": [
+        "Tower dryer",
+        "Centrifugal dryer",
+        "Tray dryer",
+        "Rotary dryer"
+      ],
+      "answer": "Rotary dryer"
+    },
+    {
+      "id": 2,
+      "q": "The ratio of the mass of water vapor in air to the mass of water vapor in the air if it were saturated is called:",
+      "options": [
+        "Humidity ratio",
+        "Mass ratio",
+        "Vapor ratio",
+        "Relative humidity"
+      ],
+      "answer": "Relative humidity"
+    },
+    {
+      "id": 3,
+      "q": "The hands feel painfully cold when the skin temperature reaches:",
+      "options": [
+        "$8°\\text{C}$",
+        "$10°\\text{C}$",
+        "$12°\\text{C}$",
+        "$14°\\text{C}$"
+      ],
+      "answer": "$10°\\text{C}$"
+    },
+    {
+      "id": 4,
+      "q": "The total heat of the air is a function of:",
+      "options": [
+        "WB temperature",
+        "DP temperature",
+        "DB temperature",
+        "WB depression"
+      ],
+      "answer": "WB temperature"
+    },
+    {
+      "id": 5,
+      "q": "Which instrument is used to measure humidity of the atmosphere continuously?",
+      "options": [
+        "Barograph",
+        "Thermograph",
+        "Hygrograph",
+        "Thermo-hygrograph"
+      ],
+      "answer": "Hygrograph"
+    },
+    {
+      "id": 6,
+      "q": "The air that contains no water vapor is called:",
+      "options": [
+        "Zero air",
+        "Saturated air",
+        "Dry air",
+        "Humid air"
+      ],
+      "answer": "Dry air"
+    },
+    {
+      "id": 7,
+      "q": "In a psychrometric chart, the constant-enthalpy lines coincide with constant-wet-bulb-temperature lines at temperatures:",
+      "options": [
+        "Above 50°C",
+        "Below 40°C",
+        "Below 50°C",
+        "Above 10°C"
+      ],
+      "answer": "Below 50°C"
+    },
+    {
+      "id": 8,
+      "q": "The amount of moisture in air depends on its:",
+      "options": [
+        "Pressure",
+        "Volume",
+        "Temperature",
+        "Humidity"
+      ],
+      "answer": "Temperature"
+    },
+    {
+      "id": 9,
+      "q": "The deep body temperature of a healthy person is maintained constant at:",
+      "options": [
+        "$27°\\text{C}$",
+        "$37°\\text{C}$",
+        "$47°\\text{C}$",
+        "$48°\\text{C}$"
+      ],
+      "answer": "$37°\\text{C}$"
+    },
+    {
+      "id": 10,
+      "q": "Air motion also plays an important role in:",
+      "options": [
+        "Surroundings",
+        "Cooling",
+        "Human comfort",
+        "None of these"
+      ],
+      "answer": "Human comfort",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 11,
+      "q": "A simple heating and cooling process has a _________ humidity ratio.",
+      "options": [
+        "Increasing",
+        "Decreasing",
+        "Constant",
+        "None of these"
+      ],
+      "answer": "Constant",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 12,
+      "q": "The _________ follows a line of constant wet-bulb temperature on the psychrometric chart.",
+      "options": [
+        "Evaporative cooling process",
+        "Condensive cooling process",
+        "Direct cooling process",
+        "None of these"
+      ],
+      "answer": "Evaporative cooling process",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    }
+  ]
+}

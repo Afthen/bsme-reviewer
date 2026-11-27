@@ -1,0 +1,411 @@
+{
+  "id": "mcq_pipe_cns_02_steam_power",
+  "title": "Steam Boilers, Turbines & Power Plant Cycles",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-02",
+  "questions": [
+    {
+      "id": 1,
+      "q": "For the foundation of stacks, the maximum pressure on the soil is equal to the pressure due to the weight and the _________.",
+      "options": [
+        "Soil movement",
+        "Wind movement",
+        "Ground movement",
+        "Engine movement"
+      ],
+      "answer": "Wind movement"
+    },
+    {
+      "id": 2,
+      "q": "Foundation bolts of specified size should be used and surrounded by a pipe sleeve with an inside diameter of at least:",
+      "options": [
+        "3 times the diameter of engine bolt",
+        "2 times the diameter of engine bolt",
+        "3 times the diameter of anchor bolt",
+        "2 times the diameter of anchor bolt"
+      ],
+      "answer": "3 times the diameter of anchor bolt"
+    },
+    {
+      "id": 3,
+      "q": "The most important safety device on a power boiler:",
+      "options": [
+        "Check valve",
+        "Gate valve",
+        "Safety valve",
+        "Globe valve"
+      ],
+      "answer": "Safety valve"
+    },
+    {
+      "id": 4,
+      "q": "During a hydrostatic test, the safety valves should be:",
+      "options": [
+        "Removed",
+        "Open",
+        "Closed",
+        "Partially closed"
+      ],
+      "answer": "Removed"
+    },
+    {
+      "id": 5,
+      "q": "Where deaerating heaters are not employed, it is recommended that the temperature of the feedwater be not less than _________.",
+      "options": [
+        "$197°\\text{F}$",
+        "$216°\\text{F}$",
+        "$219°\\text{F}$",
+        "$223°\\text{F}$"
+      ],
+      "answer": "$197°\\text{F}$"
+    },
+    {
+      "id": 6,
+      "q": "Presently the highest steam temperature allowed at the turbine inlet is about _________.",
+      "options": [
+        "$340°\\text{C}$",
+        "$520°\\text{C}$",
+        "$620°\\text{C}$",
+        "$1{,}020°\\text{C}$"
+      ],
+      "answer": "$620°\\text{C}$"
+    },
+    {
+      "id": 7,
+      "q": "Converts fossil fuels into shaft work:",
+      "options": [
+        "Nuclear power plant",
+        "Gas turbine power plant",
+        "Dendrothermal power plant",
+        "Thermal power plant"
+      ],
+      "answer": "Thermal power plant"
+    },
+    {
+      "id": 8,
+      "q": "Ultimate strength drops by 30% as steam temperature rises from _________ for unalloyed steel:",
+      "options": [
+        "300 to 400°C",
+        "400 to 500°C",
+        "600 to 700°C",
+        "700 to 800°C"
+      ],
+      "answer": "400 to 500°C"
+    },
+    {
+      "id": 9,
+      "q": "Recent practice for unalloyed steel limits steam temperature to:",
+      "options": [
+        "$438°\\text{C}$",
+        "$538°\\text{C}$",
+        "$648°\\text{C}$",
+        "$738°\\text{C}$"
+      ],
+      "answer": "$438°\\text{C}$"
+    },
+    {
+      "id": 10,
+      "q": "In a closed feedwater heater, the feedwater passes through:",
+      "options": [
+        "Inside the tube",
+        "Outside the tube",
+        "Inside the shell",
+        "Outside the shell"
+      ],
+      "answer": "Inside the tube"
+    },
+    {
+      "id": 11,
+      "q": "Used if extracted steam upon condensation gets subcooled:",
+      "options": [
+        "Trap",
+        "Deaerator",
+        "Filter",
+        "Drain cooler"
+      ],
+      "answer": "Drain cooler"
+    },
+    {
+      "id": 12,
+      "q": "Needs only a single pump regardless of the number of heaters:",
+      "options": [
+        "Open heater",
+        "Closed heater",
+        "Mono heater",
+        "Regenerative heater"
+      ],
+      "answer": "Closed heater"
+    },
+    {
+      "id": 13,
+      "q": "Is also known as a deaerator:",
+      "options": [
+        "Open heater",
+        "Closed heater",
+        "Reheat heater",
+        "Regenerative heater"
+      ],
+      "answer": "Open heater"
+    },
+    {
+      "id": 14,
+      "q": "A cycle typically used in paper mills, textile mills, chemical factories, sugar factories, and rice mills:",
+      "options": [
+        "Cogeneration cycle",
+        "Combined cycles",
+        "By-products cycle",
+        "Cascading cycle"
+      ],
+      "answer": "Cogeneration cycle"
+    },
+    {
+      "id": 15,
+      "q": "When process steam is the basic need and power is a byproduct, this cycle is known as:",
+      "options": [
+        "Cogeneration cycle",
+        "Combined cycles",
+        "By-product cycle",
+        "Cascading cycle"
+      ],
+      "answer": "By-product cycle"
+    },
+    {
+      "id": 16,
+      "q": "A type of turbine employed where steam is continuously extracted for process heating:",
+      "options": [
+        "Back-pressure turbine",
+        "Gas turbine",
+        "Steam turbine",
+        "Passout turbine"
+      ],
+      "answer": "Passout turbine"
+    },
+    {
+      "id": 17,
+      "q": "Which of the following is used for binary cycle power generation for high-temperature applications?",
+      "options": [
+        "Mercury",
+        "Sodium",
+        "Potassium",
+        "All of these"
+      ],
+      "answer": "All of these",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 18,
+      "q": "Critical temperature of mercury is:",
+      "options": [
+        "$1{,}160°\\text{C}$",
+        "$1{,}260°\\text{C}$",
+        "$1{,}360°\\text{C}$",
+        "$1{,}460°\\text{C}$"
+      ],
+      "answer": "$1{,}460°\\text{C}$"
+    },
+    {
+      "id": 19,
+      "q": "Critical pressure of mercury is:",
+      "options": [
+        "100 MPa",
+        "108 MPa",
+        "128 MPa",
+        "158 MPa"
+      ],
+      "answer": "108 MPa"
+    },
+    {
+      "id": 20,
+      "q": "Method used in converting heat directly to electricity by magnetism:",
+      "options": [
+        "Electromagnetic induction",
+        "Magnetodynamic",
+        "Magnetohydrodynamic",
+        "Thermoelectric"
+      ],
+      "answer": "Magnetohydrodynamic"
+    },
+    {
+      "id": 21,
+      "q": "Which of the following is not a material used for thermoelectric elements?",
+      "options": [
+        "Bismuth telluride",
+        "Lead telluride",
+        "Zinc telluride",
+        "Germanium"
+      ],
+      "answer": "Zinc telluride"
+    },
+    {
+      "id": 22,
+      "q": "In a thermal power plant, induced draft fans are located at the:",
+      "options": [
+        "Exit of furnace",
+        "Foot of the stack",
+        "Above the stack",
+        "Top of the stack"
+      ],
+      "answer": "Foot of the stack"
+    },
+    {
+      "id": 23,
+      "q": "In a thermal power plant, forced draft fans are installed at the:",
+      "options": [
+        "Foot of the stack",
+        "Top of the stack",
+        "Exit of the preheater",
+        "Inlet of the preheater"
+      ],
+      "answer": "Inlet of the preheater"
+    },
+    {
+      "id": 24,
+      "q": "Known as a drumless boiler:",
+      "options": [
+        "La Mont boiler",
+        "Fire tube boiler",
+        "Forced circulation boiler",
+        "Once-through boiler"
+      ],
+      "answer": "Once-through boiler"
+    },
+    {
+      "id": 25,
+      "q": "Reduces the steam temperature by spraying low-temperature water from the boiler drum:",
+      "options": [
+        "Reheater",
+        "Preheater",
+        "Desuperheater",
+        "Superheater"
+      ],
+      "answer": "Desuperheater"
+    },
+    {
+      "id": 26,
+      "q": "What type of turbine has a degree of reaction of 1/2?",
+      "options": [
+        "Impulse turbine",
+        "Reaction turbine",
+        "Parsons turbine",
+        "Deriaz turbine"
+      ],
+      "answer": "Parsons turbine"
+    },
+    {
+      "id": 27,
+      "q": "The number of nozzles will depend on the quantity of steam required by the turbine. If nozzles occupy the entire circumference of the ring, the turbine is said to have:",
+      "options": [
+        "Partially full peripheral admission",
+        "One-half peripheral admission",
+        "Maximum peripheral admission",
+        "Full peripheral admission"
+      ],
+      "answer": "Full peripheral admission"
+    },
+    {
+      "id": 28,
+      "q": "Tandem compound units may also have two low-pressure casings that produce:",
+      "options": [
+        "Single flow",
+        "Double flow",
+        "Triple flow",
+        "Quadruple flow"
+      ],
+      "answer": "Triple flow"
+    },
+    {
+      "id": 29,
+      "q": "A type of turbine used for driving pumps, fans, and other auxiliaries in a power plant commonly operates at exhaust pressure approximating atmospheric:",
+      "options": [
+        "Tandem compound turbine",
+        "Passout turbine",
+        "Cross-compound turbine",
+        "Back-pressure turbine"
+      ],
+      "answer": "Back-pressure turbine"
+    },
+    {
+      "id": 30,
+      "q": "A governor with 0% regulation is termed as:",
+      "options": [
+        "Isochronous governor",
+        "Synchronous governor",
+        "Isenchronous governor",
+        "Isobarnous governor"
+      ],
+      "answer": "Isochronous governor"
+    },
+    {
+      "id": 31,
+      "q": "The speed regulation for most turbine-generators is adjustable from:",
+      "options": [
+        "2 to 6%",
+        "4 to 8%",
+        "6 to 10%",
+        "8 to 12%"
+      ],
+      "answer": "2 to 6%"
+    },
+    {
+      "id": 32,
+      "q": "Poppet valves of steam turbines are used for extraction pressure of:",
+      "options": [
+        "20 to 120 psig",
+        "20 to 150 psig",
+        "20 to 130 psig",
+        "20 to 140 psig"
+      ],
+      "answer": "20 to 150 psig"
+    },
+    {
+      "id": 33,
+      "q": "When both bearings of a steam engine are on one side of the connecting rod, the engine is referred to as:",
+      "options": [
+        "Center-crank engine",
+        "Side crank engine",
+        "Under crank engine",
+        "Standard crank engine"
+      ],
+      "answer": "Side crank engine"
+    },
+    {
+      "id": 34,
+      "q": "When the valve in a steam engine is in mid-position of its travel, it will cover the steam port by an amount known as:",
+      "options": [
+        "Steam lap",
+        "Partial lap",
+        "Full lap",
+        "Angular lap"
+      ],
+      "answer": "Steam lap"
+    },
+    {
+      "id": 35,
+      "q": "A type of governor in a steam engine that does not control the actual admission of steam to the cylinder but controls the pressure of the steam:",
+      "options": [
+        "Flyball governor",
+        "Variable cut-off governor",
+        "Throttling governor",
+        "Shaft governor"
+      ],
+      "answer": "Throttling governor"
+    },
+    {
+      "id": 36,
+      "q": "The cooling water is made to fall in a series of baffles to expose a large surface area for steam led from below to come in direct contact:",
+      "options": [
+        "Spray condenser",
+        "Surface condenser",
+        "Jet condenser",
+        "Barometric condenser"
+      ],
+      "answer": "Barometric condenser"
+    }
+  ]
+}

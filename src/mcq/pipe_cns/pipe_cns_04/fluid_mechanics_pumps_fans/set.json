@@ -1,0 +1,449 @@
+{
+  "id": "mcq_pipe_cns_04_fluids_pumps_fans",
+  "title": "Fluid Mechanics, Pumps & Fans",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A kind of fluid flow wherein the fluid travels parallel to the adjacent layers and the paths of individual particles do not cross or intersect:",
+      "options": [
+        "Turbulent flow",
+        "Laminar flow",
+        "Critical flow",
+        "Steady flow"
+      ],
+      "answer": "Laminar flow"
+    },
+    {
+      "id": 2,
+      "q": "The formation and collapse of vapor bubbles that occurs when the pump inlet suction pressure falls to or below the vapor pressure of the liquid is called:",
+      "options": [
+        "Priming",
+        "Cavitation",
+        "Foaming",
+        "Net positive suction head",
+        "Sublimation",
+        "Oxidation",
+        "Water hammering"
+      ],
+      "answer": "Cavitation"
+    },
+    {
+      "id": 3,
+      "q": "A flow at low Reynolds number with smooth streamlines and shear and conduction effects owing entirely to the fluid's molecular viscosity and conductivity:",
+      "options": [
+        "Turbulent",
+        "Laminar",
+        "Critical",
+        "Non-viscous"
+      ],
+      "answer": "Laminar"
+    },
+    {
+      "id": 4,
+      "q": "The fact that the buoyant force on a floating object is equal to the weight of displaced liquid is known as:",
+      "options": [
+        "Bernoulli's theorem",
+        "Continuity equation",
+        "Archimedes' principle",
+        "Law of Conservation of mass"
+      ],
+      "answer": "Archimedes' principle"
+    },
+    {
+      "id": 5,
+      "q": "The primary purpose of a turbine in a fluid loop is to:",
+      "options": [
+        "Add energy to the flow",
+        "Extract energy from the flow",
+        "Add mass to the flow",
+        "None of the above"
+      ],
+      "answer": "Extract energy from the flow",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 6,
+      "q": "The power required to deliver a given quantity of fluid against a given head with no losses in the pump is called:",
+      "options": [
+        "Brake power",
+        "Hydraulic power",
+        "Indicated power",
+        "None of the above"
+      ],
+      "answer": "Hydraulic power",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 7,
+      "q": "The velocity of fluid is zero at the wall and maximum at the center because of the:",
+      "options": [
+        "Velocity effect",
+        "Temperature effect",
+        "Viscous effect",
+        "None of the above"
+      ],
+      "answer": "Viscous effect",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 8,
+      "q": "The work termed for pumps, compressors, fans, and blowers is negative since work is:",
+      "options": [
+        "Done by the fluid",
+        "Rejected by the fluid",
+        "Done on the fluid",
+        "None of the above"
+      ],
+      "answer": "Done on the fluid",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 9,
+      "q": "It is an instrument used for determining the specific gravity of a solution.",
+      "options": [
+        "Barometer",
+        "Calorimeter",
+        "Hydrometer",
+        "Manometer"
+      ],
+      "answer": "Hydrometer"
+    },
+    {
+      "id": 10,
+      "q": "It is a valve designed to allow a fluid to pass through in one direction only.",
+      "options": [
+        "Gate valve",
+        "Quick-return valve",
+        "Globe valve",
+        "Check valve"
+      ],
+      "answer": "Check valve"
+    },
+    {
+      "id": 11,
+      "q": "The relative density of a substance is the ratio of its density to the density of:",
+      "options": [
+        "Mercury",
+        "Gas",
+        "Oil",
+        "Water"
+      ],
+      "answer": "Water"
+    },
+    {
+      "id": 12,
+      "q": "A device used to measure small and moderate pressure difference:",
+      "options": [
+        "Manometer",
+        "Barometer",
+        "Bourdon gage",
+        "Piezometer"
+      ],
+      "answer": "Manometer"
+    },
+    {
+      "id": 13,
+      "q": "The function of a pump or compressor is to:",
+      "options": [
+        "Transfer heat from one fluid to another",
+        "Increase the total energy content of the flow",
+        "Extract energy from the flow",
+        "Exchange heat to increase energy to the flow"
+      ],
+      "answer": "Increase the total energy content of the flow"
+    },
+    {
+      "id": 14,
+      "q": "Axial fans are best suitable for what application?",
+      "options": [
+        "Large flow, low head",
+        "High head, large flow",
+        "Low flow, high head",
+        "Low flow, low head"
+      ],
+      "answer": "Large flow, low head"
+    },
+    {
+      "id": 15,
+      "q": "Which of the following axial fan types is most efficient?",
+      "options": [
+        "Propeller",
+        "Vane axial",
+        "Tube axial",
+        "Radial"
+      ],
+      "answer": "Vane axial"
+    },
+    {
+      "id": 16,
+      "q": "The efficiency of forward-curved centrifugal fans compared to backward-curved fans is _________.",
+      "options": [
+        "Higher",
+        "Same",
+        "Lower",
+        "None"
+      ],
+      "answer": "Lower",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "q": "When selecting a pump for a given application, it is usually desirable to use a pump that will operate near its BEP, which stands for _________.",
+      "options": [
+        "Brake Effective Horsepower",
+        "Best Efficiency Point",
+        "Best Effective Point",
+        "Break Even Point"
+      ],
+      "answer": "Best Efficiency Point"
+    },
+    {
+      "id": 18,
+      "q": "Name the fan which is more suitable for high-pressure application:",
+      "options": [
+        "Propeller type fan",
+        "Backward curved centrifugal fan",
+        "Tube-axial fans",
+        "All of the above"
+      ],
+      "answer": "Backward curved centrifugal fan",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 19,
+      "q": "A type of centrifugal pump impeller characterized by wide passages for water and a ratio of outside impeller to impeller eye diameter of about 1.5:",
+      "options": [
+        "Francis type",
+        "Mixed Flow type",
+        "Radial type",
+        "Axial type"
+      ],
+      "answer": "Francis type"
+    },
+    {
+      "id": 20,
+      "q": "The seal that allows the impeller shaft of a centrifugal pump to pass from outside of the pump to inside, while maintaining an airtight seal:",
+      "options": [
+        "Sleeve",
+        "Mechanical Seal",
+        "Wearing Ring",
+        "Packing"
+      ],
+      "answer": "Packing"
+    },
+    {
+      "id": 21,
+      "q": "Stationary guide vanes of a centrifugal pump surrounding the impeller that convert velocity energy to pressure head:",
+      "options": [
+        "Diffuser",
+        "Impeller",
+        "Volute Casing",
+        "Impeller vanes"
+      ],
+      "answer": "Diffuser"
+    },
+    {
+      "id": 22,
+      "q": "If two identical centrifugal pumps are installed in parallel, the _________ is doubled.",
+      "options": [
+        "Flow rate",
+        "Head",
+        "Power",
+        "Efficiency"
+      ],
+      "answer": "Flow rate"
+    },
+    {
+      "id": 23,
+      "q": "_________ are used to isolate as well as regulate flow. They have a high pressure drop even wide open.",
+      "options": [
+        "Check Valve",
+        "Gate Valve",
+        "Ball Valve",
+        "Globe Valve"
+      ],
+      "answer": "Globe Valve"
+    },
+    {
+      "id": 24,
+      "q": "Which pipe accessory does not belong to the group?",
+      "options": [
+        "Elbows",
+        "Unions",
+        "Tees",
+        "Strainers"
+      ],
+      "answer": "Strainers"
+    },
+    {
+      "id": 25,
+      "q": "_________ pumps are known as vortex and periphery pumps.",
+      "options": [
+        "Turbine (Regenerative) Pumps",
+        "Vertical Turbine Pumps",
+        "Diaphragm Pumps",
+        "Sliding Vane Pumps"
+      ],
+      "answer": "Turbine (Regenerative) Pumps"
+    },
+    {
+      "id": 26,
+      "q": "Which type of pump does not belong to the group?",
+      "options": [
+        "Screw Rotary Pump",
+        "Diaphragm Pump",
+        "Direct Acting Steam Pump",
+        "Centrifugal Pump"
+      ],
+      "answer": "Centrifugal Pump"
+    },
+    {
+      "id": 27,
+      "q": "_________ impellers are generally preferred when handling average waters, because they do not rust and machining them to make their surface smooth is easy.",
+      "options": [
+        "Stainless Steel",
+        "Bronze",
+        "Cast-Steel",
+        "Cast-iron"
+      ],
+      "answer": "Bronze"
+    },
+    {
+      "id": 28,
+      "q": "A valve used to prevent backflow in the fluid pipe is called:",
+      "options": [
+        "Check Valve",
+        "Globe Valve",
+        "Angle Valve",
+        "Gate Valve"
+      ],
+      "answer": "Check Valve"
+    },
+    {
+      "id": 29,
+      "q": "_________ is a single-stage or multistage centrifugal pump with the pumping element suspended from discharge piping, also known as deep well or borehole pumps.",
+      "options": [
+        "Turbine (Regenerative) Pump",
+        "Vertical Turbine Pump",
+        "Screw Pump",
+        "Sliding Vane Pump"
+      ],
+      "answer": "Vertical Turbine Pump"
+    },
+    {
+      "id": 30,
+      "q": "_________ pumps are intended for handling thick pulps, sewage sludge, acid or alkaline solutions, and mixtures of water and gritty solids that wear out metal pumps.",
+      "options": [
+        "Direct acting steam pumps",
+        "Vertical Turbine Pumps",
+        "Lobe pumps",
+        "Diaphragm pumps"
+      ],
+      "answer": "Diaphragm pumps"
+    },
+    {
+      "id": 31,
+      "q": "_________ is that part of a rotary pump mounted on the drive shaft; it is the principal pumping member.",
+      "options": [
+        "Idle Rotors",
+        "Stator",
+        "Rotor",
+        "Driver"
+      ],
+      "answer": "Rotor"
+    },
+    {
+      "id": 32,
+      "q": "What is the relationship of the capacity of a centrifugal pump, $Q$, to impeller diameter, $D$, when there are two impeller diameters (one is original, the other cut-down diameter) in the same pump?",
+      "options": [
+        "$Q$ is directly proportional to the square of $D$.",
+        "$Q$ is directly proportional to $D$.",
+        "$Q$ is inversely proportional to $D$.",
+        "$Q$ is inversely proportional to the square of $D$."
+      ],
+      "answer": "$Q$ is directly proportional to $D$."
+    },
+    {
+      "id": 33,
+      "q": "What is the relationship of the horsepower of a centrifugal pump, $P$, to the impeller speed, $N$, if the pump is at two different rotative speeds?",
+      "options": [
+        "$P$ is inversely proportional to the cube of $N$.",
+        "$P$ is inversely proportional to $N$.",
+        "$P$ is directly proportional to $N$.",
+        "$P$ is directly proportional to the cube of $N$."
+      ],
+      "answer": "$P$ is directly proportional to the cube of $N$."
+    },
+    {
+      "id": 34,
+      "q": "If two identical centrifugal pumps are installed in series, the system flow rate _________.",
+      "options": [
+        "Is doubled",
+        "Is halved",
+        "Remains the same",
+        "Zero"
+      ],
+      "answer": "Remains the same"
+    },
+    {
+      "id": 35,
+      "q": "The process done in a centrifugal pump by filling up the suction line and pump casing with liquid to remove air or vapors from the waterways of the pump is called:",
+      "options": [
+        "Priming",
+        "Charging",
+        "Water hammering",
+        "Pumping"
+      ],
+      "answer": "Priming"
+    },
+    {
+      "id": 36,
+      "q": "Which term does not belong to the group?",
+      "options": [
+        "Gear pump",
+        "Screw pump",
+        "Vane pump",
+        "Diaphragm pump"
+      ],
+      "answer": "Diaphragm pump"
+    }
+  ]
+}

@@ -1,0 +1,229 @@
+{
+  "id": "mcq_pipe_cns_05_fuels_water",
+  "title": "Fuels, Combustion & Water Treatment",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-05",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The measure of the ability of a coal to withstand exposure to environmental elements without excessive crumbling:",
+      "options": [
+        "Crumbling coefficient",
+        "Weatherability",
+        "Cohesiveness",
+        "Attrition coefficient"
+      ],
+      "answer": "Weatherability"
+    },
+    {
+      "id": 2,
+      "q": "A type of coal that tends to break apart as it burns, thereby exposing the unburned coal to the combustion air:",
+      "options": [
+        "Loose coal",
+        "Free burning coal",
+        "Non-cohesive coal",
+        "Aggregate"
+      ],
+      "answer": "Free burning coal"
+    },
+    {
+      "id": 3,
+      "q": "A type of coal that produces a fused coal mass as it burns:",
+      "options": [
+        "Plastic coal",
+        "Caking coal",
+        "Soft coal",
+        "High-moisture coal"
+      ],
+      "answer": "Caking coal"
+    },
+    {
+      "id": 4,
+      "q": "A combustible coal content that produces a major atmospheric pollutant; consequently, it is important that coal has a low percentage of this component:",
+      "options": [
+        "Nitrogen",
+        "Sulfur",
+        "Carbon",
+        "Hydrogen"
+      ],
+      "answer": "Sulfur"
+    },
+    {
+      "id": 5,
+      "q": "Where groundwater (wells and springs) or surface water (streams and lakes) are used for feedwater, a water hardness of _________ and alkalinity of pH 10 should be considered.",
+      "options": [
+        "0-10 ppm",
+        "10-20 ppm",
+        "20-30 ppm",
+        "30-40 ppm"
+      ],
+      "answer": "0-10 ppm"
+    },
+    {
+      "id": 6,
+      "q": "Which of the following is not a solid fuel?",
+      "options": [
+        "Peat",
+        "Briquettes",
+        "Tar",
+        "Coke"
+      ],
+      "answer": "Tar"
+    },
+    {
+      "id": 7,
+      "q": "An air pollutant which is the result of burning fuel oils:",
+      "options": [
+        "Ferrous oxide",
+        "Hydrogen nitride",
+        "Sulfur dioxide",
+        "Aluminum oxide"
+      ],
+      "answer": "Sulfur dioxide"
+    },
+    {
+      "id": 8,
+      "q": "Analysis of solid fuel to determine moisture, volatile matter, fixed carbon, and ash expressed as a percentage of the total weight of the sample:",
+      "options": [
+        "Viscometer",
+        "Proximate analysis",
+        "Ultimate analysis",
+        "Pour point"
+      ],
+      "answer": "Proximate analysis"
+    },
+    {
+      "id": 9,
+      "q": "A gas analysis apparatus in which the percentage of oxygen, carbon dioxide, and carbon monoxide in the gas is measured by absorption in separate chemical solutions:",
+      "options": [
+        "Orsat",
+        "Proximate",
+        "Ultimate",
+        "Pour point"
+      ],
+      "answer": "Orsat"
+    },
+    {
+      "id": 10,
+      "q": "The water added to boiler feed to compensate for the water lost through blowdown, leakage, etc.:",
+      "options": [
+        "Condensate",
+        "Make-up",
+        "Sulfur",
+        "Economizer"
+      ],
+      "answer": "Make-up"
+    },
+    {
+      "id": 11,
+      "q": "Which of the following properties of coal has a major influence on the design and operation of a steam power plant?",
+      "options": [
+        "Density of coal",
+        "Carbon content of coal",
+        "Ash content of coal",
+        "Shape and size of coal"
+      ],
+      "answer": "Ash content of coal"
+    },
+    {
+      "id": 12,
+      "q": "_________ is obtained by mixing and burning precisely the right amount of fuel and oxygen so that no unused reactants are left once combustion is complete.",
+      "options": [
+        "Perfect combustion",
+        "Burning combustion",
+        "Firing combustion",
+        "Incomplete combustion"
+      ],
+      "answer": "Perfect combustion"
+    },
+    {
+      "id": 13,
+      "q": "An instrument commonly used to measure the most important characteristic of fuel oil, which is viscosity, is known as:",
+      "options": [
+        "Saybolt Viscosimeter",
+        "pH-meter",
+        "Acid Testmeter",
+        "Gravity meter"
+      ],
+      "answer": "Saybolt Viscosimeter"
+    },
+    {
+      "id": 14,
+      "q": "A mechanical device used to burn solid fuel, specifically used in a coal power plant:",
+      "options": [
+        "Stoker",
+        "Boiler",
+        "Staybolt",
+        "Condenser"
+      ],
+      "answer": "Stoker"
+    },
+    {
+      "id": 15,
+      "q": "The chemically correct ratio of air-fuel mixture capable of perfect combustion with no unused air or fuel:",
+      "options": [
+        "Fuel point",
+        "Pour point",
+        "Stoichiometric ratio",
+        "Stack"
+      ],
+      "answer": "Stoichiometric ratio"
+    },
+    {
+      "id": 16,
+      "q": "Scale in a boiler can:",
+      "options": [
+        "Create low steam quality",
+        "Cause foaming",
+        "Overheat blow-off line",
+        "Inhibit circulation and heat transfer"
+      ],
+      "answer": "Inhibit circulation and heat transfer"
+    },
+    {
+      "id": 17,
+      "q": "What is absorbed by sulphites in boiler water treatment?",
+      "options": [
+        "Carbon dioxide",
+        "Oxygen",
+        "Carbon monoxide",
+        "Impurities settled in mud drums"
+      ],
+      "answer": "Oxygen"
+    },
+    {
+      "id": 18,
+      "q": "It is inversely proportional to the power required to grind the coal to a certain fineness:",
+      "options": [
+        "Pulverizing index",
+        "Fineness index",
+        "Grindability index",
+        "Inverse power coefficient"
+      ],
+      "answer": "Grindability index"
+    },
+    {
+      "id": 19,
+      "q": "The temperature where the ash becomes very plastic, somewhat below the melting point of the ash:",
+      "options": [
+        "Ash-softening temperature",
+        "Ash-plasticity temperature",
+        "Ash-fluidity temperature",
+        "Ash-liquefaction temperature"
+      ],
+      "answer": "Ash-softening temperature"
+    },
+    {
+      "id": 20,
+      "q": "The amount of chemical energy in a given mass or volume of fuel:",
+      "options": [
+        "Heating value",
+        "Energy storage",
+        "Calorific value",
+        "A and C"
+      ],
+      "answer": "A and C",
+      "shuffle": []
+    }
+  ]
+}

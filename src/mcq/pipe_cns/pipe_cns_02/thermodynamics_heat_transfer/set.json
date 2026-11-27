@@ -1,0 +1,376 @@
+{
+  "id": "mcq_pipe_cns_02_thermodynamics",
+  "title": "Thermodynamics & Heat Transfer",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-02",
+  "questions": [
+    {
+      "id": 1,
+      "q": "For multistage compression of an ideal Brayton cycle, the back work ratio will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Decrease",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 2,
+      "q": "A reaction during which chemical energy is released in the form of heat:",
+      "options": [
+        "Cosmic reaction",
+        "Ethnic reaction",
+        "Endothermic reaction",
+        "Exothermic reaction"
+      ],
+      "answer": "Exothermic reaction"
+    },
+    {
+      "id": 3,
+      "q": "By reheating the steam in an ideal Rankine cycle, the heat rejected will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Increase",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 4,
+      "q": "By increasing the boiler pressure in the Rankine cycle, the moisture content at the turbine exit will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Increase",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 5,
+      "q": "Two most common gases employed in Stirling and Ericsson cycles are:",
+      "options": [
+        "Air and helium",
+        "Oxygen and helium",
+        "Hydrogen and helium",
+        "Nitrogen and helium"
+      ],
+      "answer": "Hydrogen and helium"
+    },
+    {
+      "id": 6,
+      "q": "In the Brayton cycle, heat is transferred during what process?",
+      "options": [
+        "Constant temperature",
+        "Isentropic process",
+        "Isobaric process",
+        "Isochoric process"
+      ],
+      "answer": "Isobaric process"
+    },
+    {
+      "id": 7,
+      "q": "If the cut-off ratio of a diesel cycle increases, the cycle efficiency will:",
+      "options": [
+        "Decrease",
+        "Increase",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Decrease",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 8,
+      "q": "If the Joule-Thomson coefficient is equal to zero, then the process will become:",
+      "options": [
+        "Isentropic",
+        "Isenthalpic",
+        "Isobaric",
+        "Isothermal"
+      ],
+      "answer": "Isothermal"
+    },
+    {
+      "id": 9,
+      "q": "If a fluid passes through an isentropic nozzle, its entropy will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Remains the same",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 10,
+      "q": "By intercooling using a two-stage compressor in a Brayton cycle, the back work ratio will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains constant",
+        "None of these"
+      ],
+      "answer": "Decrease",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 11,
+      "q": "A vapor which is not about to condense is called a:",
+      "options": [
+        "Mixture of vapor and liquid",
+        "Critical vapor",
+        "Superheated vapor",
+        "None of these"
+      ],
+      "answer": "Superheated vapor",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 12,
+      "q": "Passing from the solid phase directly into the vapor phase is called:",
+      "options": [
+        "Condensation",
+        "Fusion",
+        "Sublimation",
+        "None of these"
+      ],
+      "answer": "Sublimation",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 13,
+      "q": "Robert Boyle observed during his experiments with a vacuum chamber that the pressure of gases is inversely proportional to their:",
+      "options": [
+        "Temperature",
+        "Pressure",
+        "Volume",
+        "None of these"
+      ],
+      "answer": "Volume",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 14,
+      "q": "_________ is energy in transition.",
+      "options": [
+        "Heat",
+        "Work",
+        "Power",
+        "None of these"
+      ],
+      "answer": "Heat",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "q": "The mode of energy transfer between a solid surface and the adjacent liquid or gas which is in motion, involving the combined effects of conduction and fluid motion:",
+      "options": [
+        "Conduction",
+        "Convection",
+        "Radiation",
+        "None of these"
+      ],
+      "answer": "Convection",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "q": "Radiation is usually considered as:",
+      "options": [
+        "Surface phenomenon",
+        "Surface interaction",
+        "Surface corrosion",
+        "None of these"
+      ],
+      "answer": "Surface phenomenon",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "q": "Work is _________ between the system and the surroundings.",
+      "options": [
+        "Work interaction",
+        "Energy interaction",
+        "Heat interaction",
+        "None of these"
+      ],
+      "answer": "Energy interaction",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 18,
+      "q": "A process during which the system remains in equilibrium at all times:",
+      "options": [
+        "Quasi-equilibrium",
+        "Static equilibrium",
+        "Dynamic equilibrium",
+        "None of these"
+      ],
+      "answer": "Quasi-equilibrium",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 19,
+      "q": "In the absence of any work interactions between a system and its surroundings, the amount of net heat transfer is equal to:",
+      "options": [
+        "The change in total energy of a closed system",
+        "Heat and work",
+        "Energy interactions",
+        "None of these"
+      ],
+      "answer": "The change in total energy of a closed system",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 20,
+      "q": "The constant-volume and constant-pressure specific heats are identical for:",
+      "options": [
+        "Compressible substance",
+        "Incompressible substance",
+        "Compressible gas",
+        "None of these"
+      ],
+      "answer": "Incompressible substance",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 21,
+      "q": "For steady-flow devices, the volume of the control volume is:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Constant",
+        "None of these"
+      ],
+      "answer": "Constant",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 22,
+      "q": "Work done in a turbine is _________ since it is done by the fluid.",
+      "options": [
+        "Positive",
+        "Negative",
+        "Zero",
+        "None of these"
+      ],
+      "answer": "Positive",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    }
+  ]
+}

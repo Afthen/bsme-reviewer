@@ -1,0 +1,407 @@
+{
+  "id": "mcq_pipe_cns_04_ic_engines",
+  "title": "IC Engines & Engine Testing",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A device or instrument used to record the cylinder pressure of an engine and piston travel in an X-Y graph, where pressure forms the vertical axis and piston travel forms the horizontal axis:",
+      "options": [
+        "Engine Indicator",
+        "Pyrometer",
+        "Planimeter",
+        "Dynamometer"
+      ],
+      "answer": "Engine Indicator"
+    },
+    {
+      "id": 2,
+      "q": "This diagram is used by the operating engineer to detect or determine leaky piston packing, sticking piston, incorrect valve timing, loose bearings, restricted inlet or outlet piping, etc.",
+      "options": [
+        "Timing diagram",
+        "P-h diagram",
+        "T-s diagram",
+        "Indicator diagram"
+      ],
+      "answer": "Indicator diagram"
+    },
+    {
+      "id": 3,
+      "q": "The effective weight of the brake arm when the brake band is loose:",
+      "options": [
+        "Tare Weight",
+        "Net Load",
+        "Gross Load",
+        "Net Tension"
+      ],
+      "answer": "Tare Weight"
+    },
+    {
+      "id": 4,
+      "q": "The power output of the generator:",
+      "options": [
+        "Ideal Power",
+        "Brake Power",
+        "Indicated Power",
+        "Electrical Power"
+      ],
+      "answer": "Electrical Power"
+    },
+    {
+      "id": 5,
+      "q": "The amount of fuel needed to perform a unit of power:",
+      "options": [
+        "Specific fuel consumption",
+        "Heat rate",
+        "Steam rate",
+        "Mass flow rate"
+      ],
+      "answer": "Specific fuel consumption"
+    },
+    {
+      "id": 6,
+      "q": "The ratio of heat converted to useful power to the heat supplied:",
+      "options": [
+        "Mechanical efficiency",
+        "Generator efficiency",
+        "Thermal efficiency",
+        "Engine efficiency"
+      ],
+      "answer": "Thermal efficiency"
+    },
+    {
+      "id": 7,
+      "q": "The ratio of the actual power of the engine to its ideal power:",
+      "options": [
+        "Mechanical efficiency",
+        "Generator efficiency",
+        "Thermal efficiency",
+        "Engine efficiency"
+      ],
+      "answer": "Engine efficiency"
+    },
+    {
+      "id": 8,
+      "q": "The ratio of the cylinder volumes after and before the combustion process:",
+      "options": [
+        "Compression ratio",
+        "Cutoff ratio",
+        "Expansion ratio",
+        "All of the above"
+      ],
+      "answer": "Cutoff ratio",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 9,
+      "q": "The position of the piston when it forms the smallest volume in the cylinder:",
+      "options": [
+        "Crank End Dead Center Position",
+        "Head End Dead Center Position",
+        "Bottom Dead Center Position",
+        "Clearance Volume"
+      ],
+      "answer": "Head End Dead Center Position"
+    },
+    {
+      "id": 10,
+      "q": "The position of the piston when it forms the largest volume in the cylinder:",
+      "options": [
+        "Crank End Dead Center Position",
+        "Head End Dead Center Position",
+        "Top Dead Center Position",
+        "Clearance Volume"
+      ],
+      "answer": "Crank End Dead Center Position"
+    },
+    {
+      "id": 11,
+      "q": "When four events take place in one revolution of a crankshaft of an engine, the engine is called:",
+      "options": [
+        "Rotary engine",
+        "2-stroke cycle engine",
+        "Steam engine",
+        "4-stroke cycle engine"
+      ],
+      "answer": "2-stroke cycle engine"
+    },
+    {
+      "id": 12,
+      "q": "What is the model cycle for a spark-ignition engine?",
+      "options": [
+        "Diesel cycle",
+        "Otto cycle",
+        "Brayton cycle",
+        "Carnot cycle"
+      ],
+      "answer": "Otto cycle"
+    },
+    {
+      "id": 13,
+      "q": "The distance that the piston can travel in one direction:",
+      "options": [
+        "Bore",
+        "Clearance",
+        "Stroke",
+        "Displacement"
+      ],
+      "answer": "Stroke"
+    },
+    {
+      "id": 14,
+      "q": "The minimum volume formed in the cylinder when the piston is at the top dead center:",
+      "options": [
+        "Displacement volume",
+        "Cylinder volume",
+        "Clearance volume",
+        "None of the above"
+      ],
+      "answer": "Clearance volume",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "q": "It is a fictitious pressure which, if it acted on the piston during the entire power stroke, would produce the same amount of net work as that produced during the actual cycle.",
+      "options": [
+        "Average pressure",
+        "Mean effective pressure",
+        "Maximum pressure",
+        "Minimum pressure"
+      ],
+      "answer": "Mean effective pressure"
+    },
+    {
+      "id": 16,
+      "q": "The ideal cycle for compression-ignition reciprocating engines:",
+      "options": [
+        "Diesel cycle",
+        "Dual cycle",
+        "Otto cycle",
+        "Carnot cycle"
+      ],
+      "answer": "Diesel cycle"
+    },
+    {
+      "id": 17,
+      "q": "The power developed in the engine cylinder as obtained from the pressure in the cylinder:",
+      "options": [
+        "Ideal power",
+        "Brake power",
+        "Indicated power",
+        "Electrical power"
+      ],
+      "answer": "Indicated power"
+    },
+    {
+      "id": 18,
+      "q": "The pressure and torque spent in overcoming friction of reciprocating and revolving parts of the engine and automobile before it reaches the drive shaft:",
+      "options": [
+        "Electrical losses",
+        "Brake power",
+        "Indicated power",
+        "Friction power"
+      ],
+      "answer": "Friction power"
+    },
+    {
+      "id": 19,
+      "q": "It is an instrument for determining brake power, usually by the independent measurement of force, time, and distance through which the force is moved.",
+      "options": [
+        "Planimeter",
+        "Anemometer",
+        "Dynamometer",
+        "Barometer"
+      ],
+      "answer": "Dynamometer"
+    },
+    {
+      "id": 20,
+      "q": "Draws fuel from the tank through the primary fuel filter, providing flow throughout the low-pressure portion of the fuel system:",
+      "options": [
+        "Fuel injection pump",
+        "Valve lifter",
+        "Fuel transfer pump",
+        "Oil pan"
+      ],
+      "answer": "Fuel transfer pump"
+    },
+    {
+      "id": 21,
+      "q": "Acts as a balancer and provides momentum during the dead stroke in a cycle:",
+      "options": [
+        "Flywheel",
+        "Oil cooler",
+        "Crankshaft",
+        "After cooler"
+      ],
+      "answer": "Flywheel"
+    },
+    {
+      "id": 22,
+      "q": "Are steel tubes with seats at both ends that bridge the motion from camshaft to rocker arm:",
+      "options": [
+        "Push rod",
+        "Suction bell",
+        "Valve lifter",
+        "Flywheel"
+      ],
+      "answer": "Push rod"
+    },
+    {
+      "id": 23,
+      "q": "Passage of coolant from the engine block to the cylinder head:",
+      "options": [
+        "Water jacket",
+        "Fuel transfer pump",
+        "Oil cooler",
+        "Turbo charger"
+      ],
+      "answer": "Water jacket"
+    },
+    {
+      "id": 24,
+      "q": "Used to cool incoming air so that the mass of air available is increased:",
+      "options": [
+        "After cooler",
+        "Waste gates",
+        "Radiator",
+        "Muffler"
+      ],
+      "answer": "After cooler"
+    },
+    {
+      "id": 25,
+      "q": "The difference between the maximum and minimum cylinder volume:",
+      "options": [
+        "Displacement volume",
+        "Top dead center",
+        "Clearance volume",
+        "Differential volume"
+      ],
+      "answer": "Displacement volume"
+    },
+    {
+      "id": 26,
+      "q": "These are used to seal the gases within the cylinder and to keep oil out.",
+      "options": [
+        "Piston rings",
+        "Cylinder liner",
+        "Combustion chamber",
+        "Piston plug"
+      ],
+      "answer": "Piston rings"
+    },
+    {
+      "id": 27,
+      "q": "Process where heat is added in the Otto cycle:",
+      "options": [
+        "Constant temperature",
+        "Constant entropy",
+        "Constant volume",
+        "Constant pressure"
+      ],
+      "answer": "Constant volume"
+    },
+    {
+      "id": 28,
+      "q": "Process where heat is added in the Diesel cycle:",
+      "options": [
+        "Constant temperature",
+        "Constant entropy",
+        "Constant volume",
+        "Constant pressure"
+      ],
+      "answer": "Constant pressure"
+    },
+    {
+      "id": 29,
+      "q": "In a heat engine, the ratio of brake power to the indicated power is called:",
+      "options": [
+        "Thermal efficiency",
+        "Generator efficiency",
+        "Mechanical efficiency",
+        "Engine efficiency"
+      ],
+      "answer": "Mechanical efficiency"
+    },
+    {
+      "id": 30,
+      "q": "The efficiency of the Otto cycle depends upon the:",
+      "options": [
+        "Pressure ratio",
+        "Compression ratio",
+        "Specific heat ratio",
+        "Cut-off ratio"
+      ],
+      "answer": "Compression ratio"
+    },
+    {
+      "id": 31,
+      "q": "The maximum temperature of the Diesel cycle will occur:",
+      "options": [
+        "After isentropic compression",
+        "At the end of isobaric heating",
+        "After isentropic expansion",
+        "At the beginning of adiabatic compression"
+      ],
+      "answer": "At the end of isobaric heating"
+    },
+    {
+      "id": 32,
+      "q": "The ratio of the brake mean effective pressure to the indicated mean effective pressure:",
+      "options": [
+        "Mechanical efficiency",
+        "Indicated engine efficiency",
+        "Brake engine efficiency",
+        "Brake thermal efficiency"
+      ],
+      "answer": "Mechanical efficiency"
+    },
+    {
+      "id": 33,
+      "q": "This is the ratio of the heat equivalent of the brake or useful horsepower developed by an engine and available on its crankshaft to the heat supplied during the same time.",
+      "options": [
+        "Brake engine efficiency",
+        "Indicated thermal efficiency",
+        "Combined thermal efficiency",
+        "Brake thermal efficiency"
+      ],
+      "answer": "Brake thermal efficiency"
+    },
+    {
+      "id": 34,
+      "q": "The volume between the engine head and the piston when the piston is at the top dead center:",
+      "options": [
+        "Clearance volume",
+        "Displacement volume",
+        "Volume of gas drawn in",
+        "Volume of exhaust gas"
+      ],
+      "answer": "Clearance volume"
+    },
+    {
+      "id": 35,
+      "q": "The process in which both the intake and exhaust valves are closed, and the air-fuel mixture is compressed by the upward piston movement:",
+      "options": [
+        "Intake Stroke",
+        "Compression Stroke",
+        "Power Stroke",
+        "Exhaust Stroke"
+      ],
+      "answer": "Compression Stroke"
+    }
+  ]
+}

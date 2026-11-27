@@ -1,0 +1,440 @@
+{
+  "id": "mcq_pipe_cns_05_thermodynamics",
+  "title": "Thermodynamics & Cycles",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-05",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Which of the following statements is/are true regarding the first law of thermodynamics for a change in state of a control mass?",
+      "options": [
+        "Since heat and work are path functions, $Q - W$ must also be a path function",
+        "$Q - W$ is an inexact differential",
+        "A and B",
+        "$Q - W$ is a point function"
+      ],
+      "answer": "$Q - W$ is a point function",
+      "shuffle": []
+    },
+    {
+      "id": 2,
+      "q": "Which of the following statements is/are true regarding heat and work?",
+      "options": [
+        "Heat and work are both transient phenomena",
+        "Both heat and work are boundary phenomena",
+        "Both heat and work are path functions",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 3,
+      "q": "A gas in a piston-cylinder setup undergoes an expansion such that $PV^{1.2} = \\text{constant}$. Before the expansion process, the pressure of the gas is 300 kPa and the volume is $0.05\\text{ m}^3$. If the final volume of the gas is $0.1\\text{ m}^3$, calculate the work done by the gas.",
+      "options": [
+        "9.71 kJ",
+        "11.0 kJ",
+        "12 kJ",
+        "8 kJ"
+      ],
+      "answer": "9.71 kJ"
+    },
+    {
+      "id": 4,
+      "q": "At the start of the compression process of an air-standard diesel power cycle, the pressure is 100 kPa and the temperature is $15°\\text{C}$. For a mean effective pressure of 1,362 kPa and compression ratio of 18, the heat of combustion developed is 1,800 kJ/kg. What is the thermal efficiency of the cycle?",
+      "options": [
+        "65%",
+        "59%",
+        "55%",
+        "68%"
+      ],
+      "answer": "59%"
+    },
+    {
+      "id": 5,
+      "q": "Exergy is always:",
+      "options": [
+        "Being produced",
+        "Being destroyed",
+        "Not changing",
+        "None of the above"
+      ],
+      "answer": "Being destroyed",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 6,
+      "q": "Exergy destruction is a result of:",
+      "options": [
+        "Heat transfer",
+        "Work production",
+        "Process irreversibility",
+        "None of the above"
+      ],
+      "answer": "Process irreversibility",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 7,
+      "q": "Working fluids used in a refrigeration cycle decrease in temperature as they pass through the throttle valve. The Joule-Thomson coefficient of these fluids is:",
+      "options": [
+        "Negative",
+        "Zero",
+        "Positive",
+        "None of the above"
+      ],
+      "answer": "Positive",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 8,
+      "q": "The interaction that occurs between a system and its surroundings as the system executes a process, which is the result of the system being at a temperature different from the surroundings, is:",
+      "options": [
+        "Mass transfer",
+        "Heat transfer",
+        "Work transfer",
+        "None of the above"
+      ],
+      "answer": "Heat transfer",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 9,
+      "q": "A change of phase directly from vapor to solid without passing through the liquid state is called:",
+      "options": [
+        "Sublimation",
+        "Vaporization",
+        "Solidification",
+        "Deposition"
+      ],
+      "answer": "Deposition"
+    },
+    {
+      "id": 10,
+      "q": "A heat engine whose thermodynamic efficiency is greater than that of a Carnot device using the same energy reservoirs is known as:",
+      "options": [
+        "A perpetual motion machine of the zeroth kind",
+        "A perpetual motion machine of the second kind",
+        "A perpetual motion machine of the first kind",
+        "A perpetual motion machine of the third kind"
+      ],
+      "answer": "A perpetual motion machine of the second kind"
+    },
+    {
+      "id": 11,
+      "q": "Which of the following does not illustrate the effect of temperature or pressure on gas solubility?",
+      "options": [
+        "Air bubbles form on the sides of a warm glass of water",
+        "Soda pop is bottled under pressure",
+        "Boiling frees water gases",
+        "Air is more humid on rainy days"
+      ],
+      "answer": "Air is more humid on rainy days"
+    },
+    {
+      "id": 12,
+      "q": "A rigid tank contains gas at 100 kPa and $10°\\text{C}$. The gas is heated until the temperature reaches $100°\\text{C}$. Calculate the work done by the system.",
+      "options": [
+        "2 kJ",
+        "0 kJ",
+        "1 kJ",
+        "1.5 kJ"
+      ],
+      "answer": "0 kJ"
+    },
+    {
+      "id": 13,
+      "q": "The compression ratio in an air-standard Otto cycle is 10. At the beginning of the compression stroke, the pressure is 120 kPa and the temperature is $15°\\text{C}$. Calculate the pressure at the end of the compression process.",
+      "options": [
+        "4,000 kPa",
+        "3,500 kPa",
+        "3,014 kPa",
+        "3,200 kPa"
+      ],
+      "answer": "3,014 kPa"
+    },
+    {
+      "id": 14,
+      "q": "Find the thermal efficiency of an air-standard Otto power cycle with a compression ratio of 7.",
+      "options": [
+        "60%",
+        "50%",
+        "65%",
+        "54%"
+      ],
+      "answer": "54%"
+    },
+    {
+      "id": 15,
+      "q": "At the beginning of the compression stroke in a standard Otto cycle, the pressure is 100 kPa and the temperature is $15°\\text{C}$. The compression ratio is 8 and work is 1,017.7 kJ/kg. Determine the mean effective pressure.",
+      "options": [
+        "1,406 kPa",
+        "1,500 kPa",
+        "1,350 kPa",
+        "1,550 kPa"
+      ],
+      "answer": "1,406 kPa"
+    },
+    {
+      "id": 16,
+      "q": "The compression ratio in an air-standard diesel cycle is 20. At the beginning of the compression process, the pressure and temperature are 0.12 MPa and $15°\\text{C}$, respectively. What is the pressure at the end of the compression process?",
+      "options": [
+        "8,500 kPa",
+        "7,955 kPa",
+        "8,300 kPa",
+        "8,200 kPa"
+      ],
+      "answer": "7,955 kPa"
+    },
+    {
+      "id": 17,
+      "q": "The accounting of all energy units involved in a system, a cycle, or a piece of equipment:",
+      "options": [
+        "Thermodynamic solution",
+        "Equilibrium condition",
+        "Summation of energy units",
+        "Heat Balance"
+      ],
+      "answer": "Heat Balance"
+    },
+    {
+      "id": 18,
+      "q": "A 35.0 mL sample of gas is enclosed in a flask at $22°\\text{C}$. If the flask is placed in an ice bath at $0°\\text{C}$, what would the new gas volume be if the pressure is held constant?",
+      "options": [
+        "34.1 mL",
+        "31.1 mL",
+        "32.39 mL",
+        "33.1 mL"
+      ],
+      "answer": "32.39 mL"
+    },
+    {
+      "id": 19,
+      "q": "The thermal efficiency of a Carnot cycle operating between $170°\\text{C}$ and $620°\\text{C}$ is:",
+      "options": [
+        "44%",
+        "50%",
+        "63%",
+        "73%"
+      ],
+      "answer": "50%"
+    },
+    {
+      "id": 20,
+      "q": "A pressure gage registers 50 psig in a region where the barometer reads 14.8 psia. Find the absolute pressure in kPa.",
+      "options": [
+        "666.66 kPa",
+        "556.66 kPa",
+        "446.66 kPa",
+        "336.66 kPa"
+      ],
+      "answer": "446.66 kPa"
+    },
+    {
+      "id": 21,
+      "q": "Determine the quality of steam in a vessel containing 2 kg of saturated vapor and 8 kg of saturated liquid.",
+      "options": [
+        "100%",
+        "20%",
+        "80%",
+        "60%"
+      ],
+      "answer": "20%"
+    },
+    {
+      "id": 22,
+      "q": "Consider 1 kg of air at $32°\\text{C}$ expanded by a reversible polytropic process with $n = 1.25$ until the pressure is halved. Determine the heat transfer. Specific heat at constant volume for air is $0.7186\\text{ kJ/kg·K}$.",
+      "options": [
+        "17.02 kJ heat rejected",
+        "17.02 kJ added",
+        "7.05 kJ heat rejected",
+        "7.05 kJ added"
+      ],
+      "answer": "17.02 kJ added"
+    },
+    {
+      "id": 23,
+      "q": "One kilogram of air is compressed adiabatically and in a steady-flow manner. The compression efficiency is 80% and the work done on the air is 265 kJ/kg. Compute the heat transfer.",
+      "options": [
+        "212 kJ/kg",
+        "100 kJ/kg",
+        "0 kJ/kg",
+        "331.25 kJ/kg"
+      ],
+      "answer": "0 kJ/kg"
+    },
+    {
+      "id": 24,
+      "q": "Find the flow work of helium gas at $20°\\text{C}$.",
+      "options": [
+        "609 kJ/kg",
+        "168 kJ/kg",
+        "229 kJ/kg",
+        "339 kJ/kg"
+      ],
+      "answer": "609 kJ/kg"
+    },
+    {
+      "id": 25,
+      "q": "Two kilograms of gas are confined in a $1\\text{ m}^3$ tank at 200 kPa and $88°\\text{C}$. What type of gas is in the tank?",
+      "options": [
+        "Helium",
+        "Ethane",
+        "Methane",
+        "Propane"
+      ],
+      "answer": "Ethane"
+    },
+    {
+      "id": 26,
+      "q": "Find the enthalpy of helium if its internal energy is 200 kJ/kg.",
+      "options": [
+        "144 kJ/kg",
+        "223.42 kJ/kg",
+        "333.42 kJ/kg",
+        "168 kJ/kg"
+      ],
+      "answer": "333.42 kJ/kg"
+    },
+    {
+      "id": 27,
+      "q": "Compute the mass of $2\\text{ m}^3$ of propane ($\\text{C}_3\\text{H}_8$) at 280 kPa and $40°\\text{C}$.",
+      "options": [
+        "6.47 kg",
+        "5.1 kg",
+        "10.20 kg",
+        "9.47 kg"
+      ],
+      "answer": "9.47 kg"
+    },
+    {
+      "id": 28,
+      "q": "Find the mass of carbon dioxide having a pressure of 20 psia at $200°\\text{F}$ with $10\\text{ ft}^3$ volume.",
+      "options": [
+        "1.04 lb",
+        "1.14 lb",
+        "1.24 lb",
+        "1.34 lb"
+      ],
+      "answer": "1.24 lb"
+    },
+    {
+      "id": 29,
+      "q": "Find the heat needed to raise the temperature of water from $30°\\text{C}$ to $100°\\text{C}$ with 60% quality. Consider an atmospheric pressure of 101.325 kPa and use the approximate enthalpy formula of liquid.",
+      "options": [
+        "293.09 kJ/kg",
+        "1,772.90 kJ/kg",
+        "1,547.90 kJ/kg",
+        "1,647.29 kJ/kg"
+      ],
+      "answer": "1,647.29 kJ/kg"
+    },
+    {
+      "id": 30,
+      "q": "Find the enthalpy of water at $212°\\text{F}$ and 14.7 psi if the dryness factor is 30%. Use the approximate enthalpy formula of liquid.",
+      "options": [
+        "461 Btu/lb",
+        "471 Btu/lb",
+        "481 Btu/lb",
+        "491 Btu/lb"
+      ],
+      "answer": "471 Btu/lb"
+    },
+    {
+      "id": 31,
+      "q": "What is the approximate temperature of water having an enthalpy of 208 Btu/lb?",
+      "options": [
+        "$138.67°\\text{C}$",
+        "$115.55°\\text{C}$",
+        "$258.67°\\text{C}$",
+        "$68.67°\\text{C}$"
+      ],
+      "answer": "$115.55°\\text{C}$"
+    },
+    {
+      "id": 32,
+      "q": "Convert $750°\\text{R}$ to K:",
+      "options": [
+        "390.67 K",
+        "395.67 K",
+        "410.67 K",
+        "416.67 K"
+      ],
+      "answer": "416.67 K"
+    },
+    {
+      "id": 33,
+      "q": "An Otto cycle has a compression ratio of 8. Find the pressure ratio during compression.",
+      "options": [
+        "18.38",
+        "16.38",
+        "14.38",
+        "12.38"
+      ],
+      "answer": "18.38"
+    },
+    {
+      "id": 34,
+      "q": "A diesel cycle has a cut-off ratio of 2.5 and an expansion ratio of 4. Find the clearance of the cycle.",
+      "options": [
+        "9.11%",
+        "5.55%",
+        "11.11%",
+        "15.25%"
+      ],
+      "answer": "11.11%"
+    },
+    {
+      "id": 35,
+      "q": "A dual cycle has an initial temperature of $30°\\text{C}$. The compression ratio is 6 and heat addition at constant-volume process is 600 kJ/kg. If the cut-off ratio is 2.5, find the maximum temperature of the cycle.",
+      "options": [
+        "$3{,}638.5°\\text{C}$",
+        "$3{,}365.50°\\text{C}$",
+        "$3{,}565.50°\\text{C}$",
+        "$3{,}965.50°\\text{C}$"
+      ],
+      "answer": "$3{,}365.50°\\text{C}$"
+    },
+    {
+      "id": 36,
+      "q": "Carnot cycles A, B, and C are connected in series so that the heat rejected from A is the heat added to B and the heat rejected from B is added to C. Each cycle operates between $30°\\text{C}$ and $400°\\text{C}$. If heat added to A is 1,000 kW, find the work output of C.",
+      "options": [
+        "111.44 kW",
+        "549.78 kW",
+        "247.53 kW",
+        "141.89 kW"
+      ],
+      "answer": "111.44 kW"
+    }
+  ]
+}

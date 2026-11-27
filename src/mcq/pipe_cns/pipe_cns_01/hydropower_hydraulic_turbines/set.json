@@ -1,0 +1,210 @@
+{
+  "id": "mcq_pipe_cns_01_hydropower",
+  "title": "Hydropower & Hydraulic Turbines",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-01",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A closed channel excavated through an obstruction such as a ridge of higher land between the dam and the powerhouse is called:",
+      "options": [
+        "Canal",
+        "Headrace",
+        "Penstock",
+        "Tunnel"
+      ],
+      "answer": "Tunnel"
+    },
+    {
+      "id": 2,
+      "q": "The small reservoir in which the water level rises or falls to reduce the pressure swings so that they are not transmitted to the closed conduit is called:",
+      "options": [
+        "Penstock",
+        "Power reservoir",
+        "Pressure tank",
+        "Surge chamber"
+      ],
+      "answer": "Surge chamber"
+    },
+    {
+      "id": 3,
+      "q": "The regulation of the water in the form of a relatively small pond or reservoir provided at the plant is called:",
+      "options": [
+        "Pondage",
+        "Water storage",
+        "Reservoir",
+        "Lake"
+      ],
+      "answer": "Pondage"
+    },
+    {
+      "id": 4,
+      "q": "A structure used to relieve the reservoir of excess water:",
+      "options": [
+        "Spillway",
+        "Diversion channel",
+        "Buttress dam",
+        "Arch dam"
+      ],
+      "answer": "Spillway"
+    },
+    {
+      "id": 5,
+      "q": "Also known as Francis turbines or radial flow turbines:",
+      "options": [
+        "Impulse turbines",
+        "Tangential turbines",
+        "Reaction turbines",
+        "Axial flow turbines"
+      ],
+      "answer": "Reaction turbines"
+    },
+    {
+      "id": 6,
+      "q": "The turbine, draft tube, and all related parts comprise what is known as:",
+      "options": [
+        "Powerhouse",
+        "Forebay",
+        "Setting",
+        "Surge chamber"
+      ],
+      "answer": "Setting"
+    },
+    {
+      "id": 7,
+      "q": "When a forebay is not part of the generating plant's design, it will be desirable to provide a _________ in order to relieve the effects of rapid changes in flow rate.",
+      "options": [
+        "Forebay",
+        "Draft tube",
+        "Surge chamber",
+        "Penstock"
+      ],
+      "answer": "Surge chamber"
+    },
+    {
+      "id": 8,
+      "q": "To keep the deflected jet out of the way of the incoming jet, the actual angle is limited to approximately:",
+      "options": [
+        "90°",
+        "135°",
+        "150°",
+        "165°",
+        "175°"
+      ],
+      "answer": "165°"
+    },
+    {
+      "id": 9,
+      "q": "In a typical hydroelectric generating plant using reaction turbines, the turbine is generally housed in a:",
+      "options": [
+        "Powerhouse",
+        "Penstock",
+        "Forebay",
+        "Setting"
+      ],
+      "answer": "Powerhouse"
+    },
+    {
+      "id": 10,
+      "q": "After the water passes through the turbine, it is discharged through the draft tube to the receiving reservoir known as the:",
+      "options": [
+        "Tail race",
+        "Tailwater",
+        "Draft tube",
+        "Setting"
+      ],
+      "answer": "Tail race"
+    },
+    {
+      "id": 11,
+      "q": "Type of turbine used for low heads, high rotational speeds, and larger flow rates:",
+      "options": [
+        "Axial flow turbines",
+        "Reaction turbines",
+        "Radial flow turbines",
+        "Impulse turbines"
+      ],
+      "answer": "Axial flow turbines"
+    },
+    {
+      "id": 12,
+      "q": "Which of the following turbines are centrifugal pumps operating in reverse?",
+      "options": [
+        "Reaction turbines",
+        "Impulse turbines",
+        "Tangential turbines",
+        "Axial flow turbines"
+      ],
+      "answer": "Reaction turbines"
+    },
+    {
+      "id": 13,
+      "q": "The maximum speed of the turbine under no load and no governing action is called:",
+      "options": [
+        "Runaway speed",
+        "Pre-governing speed",
+        "Governing speed",
+        "No-load governing"
+      ],
+      "answer": "Runaway speed"
+    },
+    {
+      "id": 14,
+      "q": "Which of the following is an advantage of hydro-plants?",
+      "options": [
+        "Hydro plants provide ancillary benefits like irrigation, flood control, aquaculture, navigation, etc.",
+        "Modern hydro generators give high efficiency over a considerable range of load, which helps in improving the system.",
+        "Due to its great ease of taking up and throwing off the load, hydropower can be used as the ideal spinning reserve in a system mix of thermal, hydro, and power stations.",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "q": "The whole area behind the dam draining into a stream or river across which a dam has been constructed is called:",
+      "options": [
+        "Lake",
+        "Forebay",
+        "Catchment area",
+        "Reserve potential"
+      ],
+      "answer": "Catchment area"
+    },
+    {
+      "id": 16,
+      "q": "Dams constructed primarily to store flood waters are called:",
+      "options": [
+        "Storage dams",
+        "Diversion dams",
+        "Detention dams",
+        "None of the above"
+      ],
+      "answer": "Detention dams",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "q": "A channel which leads water to a turbine is called:",
+      "options": [
+        "Canal",
+        "Tailrace",
+        "Penstock",
+        "Headrace"
+      ],
+      "answer": "Headrace"
+    }
+  ]
+}

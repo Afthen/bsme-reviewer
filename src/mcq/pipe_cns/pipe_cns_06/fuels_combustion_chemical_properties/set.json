@@ -1,0 +1,184 @@
+{
+  "id": "mcq_pipe_cns_06_fuels_combustion",
+  "title": "Fuels, Combustion & Chemical Properties",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-06",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Which of the following is the chemical formula of ethanol?",
+      "options": [
+        "$\\text{C}_7\\text{H}_{16}$",
+        "$\\text{C}_2\\text{H}_6\\text{O}$",
+        "$\\text{C}_7\\text{H}_8$",
+        "$\\text{C}_6\\text{H}_{14}$"
+      ],
+      "answer": "$\\text{C}_2\\text{H}_6\\text{O}$"
+    },
+    {
+      "id": 2,
+      "q": "Which of the following is the chemical formula of heptane?",
+      "options": [
+        "$\\text{C}_7\\text{H}_{16}$",
+        "$\\text{C}_2\\text{H}_6\\text{O}$",
+        "$\\text{C}_7\\text{H}_8$",
+        "$\\text{C}_6\\text{H}_{14}$"
+      ],
+      "answer": "$\\text{C}_7\\text{H}_{16}$"
+    },
+    {
+      "id": 3,
+      "q": "Which of the following is the chemical formula of normal hexane?",
+      "options": [
+        "$\\text{C}_7\\text{H}_{16}$",
+        "$\\text{C}_2\\text{H}_6\\text{O}$",
+        "$\\text{C}_7\\text{H}_8$",
+        "$\\text{C}_6\\text{H}_{14}$"
+      ],
+      "answer": "$\\text{C}_6\\text{H}_{14}$"
+    },
+    {
+      "id": 4,
+      "q": "Which of the following is the chemical formula of toluene?",
+      "options": [
+        "$\\text{C}_7\\text{H}_{16}$",
+        "$\\text{C}_2\\text{H}_6\\text{O}$",
+        "$\\text{C}_7\\text{H}_8$",
+        "$\\text{C}_6\\text{H}_{14}$"
+      ],
+      "answer": "$\\text{C}_7\\text{H}_8$"
+    },
+    {
+      "id": 5,
+      "q": "The largest group of coal, containing 46% to 86% fixed carbon and 20% to 40% volatile matter, is:",
+      "options": [
+        "Anthracite",
+        "Sub-anthracite",
+        "Bituminous",
+        "Sub-bituminous"
+      ],
+      "answer": "Bituminous"
+    },
+    {
+      "id": 6,
+      "q": "When 1 gram of coal is subjected to a temperature of about $105°\\text{C}$ for a period of 1 hour, the loss in weight of the sample indicates the:",
+      "options": [
+        "Volatile matter",
+        "Ash content",
+        "Fixed carbon",
+        "Moisture content"
+      ],
+      "answer": "Moisture content"
+    },
+    {
+      "id": 7,
+      "q": "When a 1-gram sample of coal is placed in a covered crucible and heated to $950°\\text{C}$ for 7 minutes, the loss in weight is due to the elimination of:",
+      "options": [
+        "Volatile matter and moisture",
+        "Ash",
+        "Fixed carbon",
+        "Pure carbon only"
+      ],
+      "answer": "Volatile matter and moisture"
+    },
+    {
+      "id": 8,
+      "q": "Consists of hydrogen and certain hydrocarbon compounds which are driven off from coal in gaseous form by heating:",
+      "options": [
+        "Moisture content",
+        "Products of combustion",
+        "Ash",
+        "Volatile matter"
+      ],
+      "answer": "Volatile matter"
+    },
+    {
+      "id": 9,
+      "q": "By heating 1 gram of coal in an uncovered crucible until the combustible matter is completely burned, the residue formed is:",
+      "options": [
+        "Volatile matter and moisture",
+        "Ash",
+        "Fixed carbon",
+        "Coke"
+      ],
+      "answer": "Ash"
+    },
+    {
+      "id": 10,
+      "q": "Caking coals are used to produce coke by heating in a coke oven in the absence of _________ with volatile matter driven off:",
+      "options": [
+        "Air",
+        "Oil",
+        "Oxygen",
+        "Nitrogen"
+      ],
+      "answer": "Air"
+    },
+    {
+      "id": 11,
+      "q": "The grindability index of standard reference coal is defined as:",
+      "options": [
+        "80",
+        "90",
+        "100",
+        "110"
+      ],
+      "answer": "100"
+    },
+    {
+      "id": 12,
+      "q": "The major hydrocarbon constituent of all natural gases is:",
+      "options": [
+        "Ethane",
+        "Methane",
+        "Propane",
+        "Butane"
+      ],
+      "answer": "Methane"
+    },
+    {
+      "id": 13,
+      "q": "The enthalpy of a substance at a specified state resulting from its chemical composition is called the:",
+      "options": [
+        "Enthalpy of reaction",
+        "Enthalpy of combustion",
+        "Enthalpy of formation",
+        "Enthalpy of product"
+      ],
+      "answer": "Enthalpy of formation"
+    },
+    {
+      "id": 14,
+      "q": "During a combustion process, the chemical substances which exist before the reaction takes place are called:",
+      "options": [
+        "Reaction",
+        "Combustion products",
+        "Reactants",
+        "Flue gases"
+      ],
+      "answer": "Reactants"
+    },
+    {
+      "id": 15,
+      "q": "An obvious primary reason for incomplete combustion in an industrial furnace is:",
+      "options": [
+        "Insufficient carbon",
+        "Insufficient fuel",
+        "Insufficient nitrogen",
+        "Insufficient oxygen"
+      ],
+      "answer": "Insufficient oxygen"
+    },
+    {
+      "id": 16,
+      "q": "The higher heating value (HHV) of a fuel is obtained when the water ($\\text{H}_2\\text{O}$) in the combustion products is condensed into:",
+      "options": [
+        "Solid form",
+        "Vapor form",
+        "Gas form",
+        "Liquid form"
+      ],
+      "answer": "Liquid form"
+    }
+  ]
+}

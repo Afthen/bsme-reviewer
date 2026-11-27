@@ -1,0 +1,326 @@
+{
+  "id": "mcq_pipe_cns_05_boilers_power_plants",
+  "title": "Boilers, Steam Turbines & Power Plants",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-05",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The memory lost when the operating power is removed:",
+      "options": [
+        "Power memory",
+        "Volatile memory",
+        "Initial memory",
+        "Quick data"
+      ],
+      "answer": "Volatile memory"
+    },
+    {
+      "id": 2,
+      "q": "In which of the following regions in a multi-stage turbine is efficiency highest?",
+      "options": [
+        "High pressure region above 200 psi",
+        "Intermediate pressure region",
+        "Low pressure moist region",
+        "A and B"
+      ],
+      "answer": "Intermediate pressure region",
+      "shuffle": []
+    },
+    {
+      "id": 3,
+      "q": "Calculate the use factor of a 135 MW plant with a load factor of 0.8 and a peak load of 120 MW if its operation is limited to 8,500 hrs in a year.",
+      "options": [
+        "0.90",
+        "0.73",
+        "0.70",
+        "0.78"
+      ],
+      "answer": "0.73"
+    },
+    {
+      "id": 4,
+      "q": "Calculate the reserve factor for a power plant with a load factor of 0.7, average load of 50 MW, and rated capacity of 80 MW.",
+      "options": [
+        "2",
+        "1.5",
+        "1.12",
+        "1.6"
+      ],
+      "answer": "1.12"
+    },
+    {
+      "id": 5,
+      "q": "Maximum demands of 30 MW and 10 MW are connected to a power plant with a simultaneous peak load of 24.2 MW. What is the diversity factor of the plant?",
+      "options": [
+        "1.50",
+        "1.70",
+        "1.65",
+        "1.86"
+      ],
+      "answer": "1.65"
+    },
+    {
+      "id": 6,
+      "q": "The condition in which droplets of water are carried by steam in the boiler:",
+      "options": [
+        "Priming",
+        "Breeching",
+        "Carryover",
+        "Condensation"
+      ],
+      "answer": "Priming"
+    },
+    {
+      "id": 7,
+      "q": "Gas flow caused by the uptake pressure being less than the boiler's furnace pressure:",
+      "options": [
+        "Induced draft",
+        "Infrared",
+        "Injector",
+        "Inhibitor"
+      ],
+      "answer": "Induced draft"
+    },
+    {
+      "id": 8,
+      "q": "An automatic pressure-relieving device that opens in proportion to the increase in pressure over its opening pressure:",
+      "options": [
+        "Pressure gauge",
+        "Relief valve",
+        "Ammeter",
+        "Calorimeter"
+      ],
+      "answer": "Relief valve"
+    },
+    {
+      "id": 9,
+      "q": "A rotating device used to convert kinetic energy into mechanical energy:",
+      "options": [
+        "Turbine",
+        "Generator",
+        "Pump",
+        "Vacuum"
+      ],
+      "answer": "Turbine"
+    },
+    {
+      "id": 10,
+      "q": "A boiler horsepower is equal to the evaporation of 34.5 lb of $100°\\text{C}$ water per hr. How much steam in lb per hour can a 700-horsepower boiler generate?",
+      "options": [
+        "24,150 lb/hr",
+        "21,000 lb/hr",
+        "18,000 lb/hr",
+        "30,000 lb/hr"
+      ],
+      "answer": "24,150 lb/hr"
+    },
+    {
+      "id": 11,
+      "q": "What type of boiler is commonly used in industrial and heavy commercial applications due to being less expensive to make for low pressure and easier to maintain and repair?",
+      "options": [
+        "Water tube boiler",
+        "Fire tube boiler",
+        "Air tube boiler",
+        "Marine water boiler"
+      ],
+      "answer": "Fire tube boiler"
+    },
+    {
+      "id": 12,
+      "q": "During emergency operation of the boiler, when there is no water in the gauge glass and steam comes out of the bottom trycock, the water level cannot be determined. What preventive measure does the operator take to save the boiler?",
+      "options": [
+        "Shutdown the boiler and do not add water",
+        "Add water to compensate the water losses",
+        "Increase the firing rate",
+        "Continue to operate the boiler and add water"
+      ],
+      "answer": "Shutdown the boiler and do not add water"
+    },
+    {
+      "id": 13,
+      "q": "The most important valve in boiler operation and the last line of defense against disaster is known as:",
+      "options": [
+        "Pressure gauge",
+        "Compound gauge",
+        "Safety valve",
+        "Gate valve"
+      ],
+      "answer": "Safety valve"
+    },
+    {
+      "id": 14,
+      "q": "A common test, very important when a boiler is being repaired or replaced before being placed back in operation or service, is known as:",
+      "options": [
+        "Hydrostatic test",
+        "Water level test",
+        "Test clamp",
+        "Acid test"
+      ],
+      "answer": "Hydrostatic test"
+    },
+    {
+      "id": 15,
+      "q": "A large paper plant uses its own cogeneration power plant to generate its electricity because:",
+      "options": [
+        "It permits the use of a more efficient generator",
+        "The company can better control the voltage",
+        "It does away with high power lines leading to the plant",
+        "It provides a more efficient conversion of fuel"
+      ],
+      "answer": "It provides a more efficient conversion of fuel"
+    },
+    {
+      "id": 16,
+      "q": "An arrangement of feedwater tubes located in the boiler:",
+      "options": [
+        "Economizer",
+        "Condenser",
+        "Evaporator",
+        "Boiler"
+      ],
+      "answer": "Economizer"
+    },
+    {
+      "id": 17,
+      "q": "A temperature above which a given gas cannot be liquefied:",
+      "options": [
+        "Cryogenic Temperature",
+        "Absolute Temperature",
+        "Vaporization",
+        "Critical Temperature"
+      ],
+      "answer": "Critical Temperature"
+    },
+    {
+      "id": 18,
+      "q": "What is the color code of the steam line in a geothermal power plant?",
+      "options": [
+        "Green",
+        "Blue",
+        "Silver Gray",
+        "Red"
+      ],
+      "answer": "Silver Gray"
+    },
+    {
+      "id": 19,
+      "q": "Among the effluents that may be released from a hydrothermal reservoir, which one is the most toxic?",
+      "options": [
+        "Carbon dioxide",
+        "Hydrogen sulfide",
+        "Methane",
+        "Ammonia"
+      ],
+      "answer": "Hydrogen sulfide"
+    },
+    {
+      "id": 20,
+      "q": "Newton said that a projectile, if given enough horizontal velocity, will not fall to the earth; instead, it moves along a path around the earth. The 1st artificial satellite that verified Newton's statement is:",
+      "options": [
+        "Apollo 1",
+        "Houston 1",
+        "Sputnik 1",
+        "None of these"
+      ],
+      "answer": "Sputnik 1",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 21,
+      "q": "It refers to any arrangement whereby steam is bled from a turbine at one or more pressures for any purpose whatsoever:",
+      "options": [
+        "Regeneration",
+        "Extraction",
+        "Bled-off cycle",
+        "Regenerative extraction cycle"
+      ],
+      "answer": "Extraction"
+    },
+    {
+      "id": 22,
+      "q": "Any arrangement whereby steam is bled from a turbine for the purpose of thermal regeneration of the condensate to a temperature level approaching that of the boiler water:",
+      "options": [
+        "Regenerative",
+        "Extraction cycle",
+        "Bled-off steam cycle",
+        "Regenerative extraction cycle"
+      ],
+      "answer": "Regenerative"
+    },
+    {
+      "id": 23,
+      "q": "The steam extracted from the turbine:",
+      "options": [
+        "Bled steam",
+        "Extraction",
+        "Extracted steam",
+        "A and C"
+      ],
+      "answer": "A and C",
+      "shuffle": []
+    },
+    {
+      "id": 24,
+      "q": "The point of particular pressure where the steam is extracted:",
+      "options": [
+        "Bleeder point",
+        "Extraction point",
+        "Bleeder",
+        "A and B"
+      ],
+      "answer": "A and B",
+      "shuffle": []
+    },
+    {
+      "id": 25,
+      "q": "Fifty kilograms of cooling water per second enter the condenser at $25°\\text{C}$ and leave at $50°\\text{C}$. Find the heat carried away by the water.",
+      "options": [
+        "1,234.45 kW",
+        "5,233.75 kW",
+        "2,340.52 kW",
+        "3,140.25 kW"
+      ],
+      "answer": "5,233.75 kW"
+    },
+    {
+      "id": 26,
+      "q": "Ten kilograms per second of steam enter the turbine with an enthalpy of 3,200 kJ/kg and expand to a condenser with an ideal enthalpy of 2,500 kJ/kg in a Rankine cycle. If the turbine efficiency is 80% and the generator efficiency is 90%, determine the power plant output.",
+      "options": [
+        "4,320 kW",
+        "3,213 kW",
+        "4,056 kW",
+        "5,040 kW"
+      ],
+      "answer": "5,040 kW"
+    },
+    {
+      "id": 27,
+      "q": "The condenser of a reheat power plant rejects heat at the rate of 600 kW. The mass flow rate of cooling water is 5 kg/s and the inlet cooling water temperature is $35°\\text{C}$. Calculate the condenser cooling water exit temperature.",
+      "options": [
+        "$43.35°\\text{C}$",
+        "$53.45°\\text{C}$",
+        "$63.66°\\text{C}$",
+        "$74.34°\\text{C}$"
+      ],
+      "answer": "$63.66°\\text{C}$"
+    },
+    {
+      "id": 28,
+      "q": "A thermal power plant has a heat rate of 11,363 Btu/kW-hr. Find the thermal efficiency of the plant.",
+      "options": [
+        "28%",
+        "30%",
+        "34%",
+        "40%"
+      ],
+      "answer": "30%"
+    }
+  ]
+}

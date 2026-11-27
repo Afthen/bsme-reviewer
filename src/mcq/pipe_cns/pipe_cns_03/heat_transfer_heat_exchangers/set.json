@@ -1,0 +1,217 @@
+{
+  "id": "mcq_pipe_cns_03_heat_transfer",
+  "title": "Heat Transfer & Heat Exchangers",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Determine the critical radius in cm for an asbestos-cement covered pipe ($k_{\\text{asb}} = 0.208\\text{ W/m·K}$). The external heat-transfer coefficient is $1.5\\text{ Btu/h·ft}^2\\text{·°F}$.",
+      "options": [
+        "2.44 cm",
+        "2.66 cm",
+        "2.55 cm",
+        "2.22 cm"
+      ],
+      "answer": "2.44 cm"
+    },
+    {
+      "id": 2,
+      "q": "Calculate the energy transfer rate across a 6-in. wall of firebrick with a temperature difference across it of $50°\\text{C}$. The thermal conductivity of the firebrick is $0.65\\text{ Btu/hr·ft·°F}$.",
+      "options": [
+        "$369\\text{ W/m}^2$",
+        "$639\\text{ W/m}^2$",
+        "$369\\text{ Btu/hr·ft}^2$",
+        "$639\\text{ Btu/hr·ft}^2$"
+      ],
+      "answer": "$369\\text{ W/m}^2$"
+    },
+    {
+      "id": 3,
+      "q": "It refers to a factor used in calculating the overall heat transfer through the tube walls of a condenser tube or other heating surface. It accounts for the thermal resistance of the layer of dirt and foreign material that builds up on the water side of the tube. What is this factor?",
+      "options": [
+        "Cooling factor",
+        "Bypass factor",
+        "Contact factor",
+        "Fouling factor"
+      ],
+      "answer": "Fouling factor"
+    },
+    {
+      "id": 4,
+      "q": "Heat is transferred from hot water to an oil in a double-pipe counter-flow heat exchanger. Water enters the outer pipe at $120°\\text{C}$ and exits at $55°\\text{C}$ while the oil enters the inner pipe at $26°\\text{C}$ and exits at $65°\\text{C}$. What is the log-mean temperature difference (LMTD)?",
+      "options": [
+        "$42.60°\\text{C}$",
+        "$46.20°\\text{C}$",
+        "$40.62°\\text{C}$",
+        "$42.06°\\text{C}$"
+      ],
+      "answer": "$40.62°\\text{C}$"
+    },
+    {
+      "id": 5,
+      "q": "The combustion gases of a furnace are separated from its surrounding ambient air at $29°\\text{C}$. The brick wall is 130 mm thick and has a thermal conductivity of $1.23\\text{ W/m·°C}$ with a surface emissivity of 0.81. The outer surface temperature of the wall is $130°\\text{C}$ and the surface air conductance is $15\\text{ W/m}^2\\text{·°C}$. For steady-state conditions, what is the total heat transmitted for a surface area of $30\\text{ m}^2$?",
+      "options": [
+        "70.33 kW",
+        "33.07 kW",
+        "73.30 kW",
+        "37.30 kW"
+      ],
+      "answer": "70.33 kW"
+    },
+    {
+      "id": 6,
+      "q": "What is the result of using a heat exchanger rating to calculate its steam consumption?",
+      "options": [
+        "The true connected heat load may be different from the rated figure.",
+        "The rating does not take account of the temperature of the secondary medium.",
+        "The rating is based on a steam pressure of 1.0 bar.",
+        "The rating does not allow for condensate forming in the heat exchanger."
+      ],
+      "answer": "The true connected heat load may be different from the rated figure."
+    },
+    {
+      "id": 7,
+      "q": "A heat exchanger has a design rating based on a working pressure of 7 bar g. What would be the effect of supplying the exchanger with steam at 3 bar g?",
+      "options": [
+        "The heat output would be greater because the enthalpy of evaporation at 3 bar g is higher than at 7 bar g.",
+        "The heat output would be greater because steam at 3 bar g has a greater volume than steam at 7 bar g.",
+        "Less weight of steam would be required because steam at 3 bar g has a higher enthalpy of evaporation than 7 bar g.",
+        "The output would be reduced because the difference in temperature between the steam and product is reduced."
+      ],
+      "answer": "The output would be reduced because the difference in temperature between the steam and product is reduced."
+    },
+    {
+      "id": 8,
+      "q": "For any particular tank temperature, how does the heat loss from the lid of a closed tank compare with that from the bottom?",
+      "options": [
+        "Losses from the top are approximately equal to those from the bottom",
+        "Losses from the top are approximately double those from the bottom",
+        "Losses from the bottom are approximately double those from the top",
+        "Losses from the top are approximately 4 times those from the bottom"
+      ],
+      "answer": "Losses from the top are approximately double those from the bottom"
+    },
+    {
+      "id": 9,
+      "q": "What is the disadvantage of heating a tank by direct steam injection?",
+      "options": [
+        "It agitates the solution",
+        "Some of the enthalpy of water is used",
+        "Steam traps are not required",
+        "It dilutes the tank content"
+      ],
+      "answer": "It dilutes the tank content"
+    },
+    {
+      "id": 10,
+      "q": "The forced convective heat transfer coefficient for a hot fluid flowing over a cold surface is $225\\text{ W/m}^2\\text{·°C}$. The fluid temperature upstream of the cold surface is $120°\\text{C}$, and the surface is held at $10°\\text{C}$. Determine the heat transfer rate per unit surface from the fluid to the surface.",
+      "options": [
+        "$24{,}570\\text{ W/m}^2$",
+        "$24{,}470\\text{ W/m}^2$",
+        "$24{,}700\\text{ W/m}^2$",
+        "$24{,}750\\text{ W/m}^2$"
+      ],
+      "answer": "$24{,}750\\text{ W/m}^2$"
+    },
+    {
+      "id": 11,
+      "q": "A published 'U' value from a steam coil to a water-based solution is given as $550\\text{–}1{,}300\\text{ W/m}^2\\text{·°C}$. When would a figure near the lower end of the range be used?",
+      "options": [
+        "When the steam is known to be of good quality",
+        "For short coils",
+        "For small-diameter coils",
+        "When scaling or fouling of the coil takes place"
+      ],
+      "answer": "When scaling or fouling of the coil takes place"
+    },
+    {
+      "id": 12,
+      "q": "Steam coils should enter and leave the top of a tank when:",
+      "options": [
+        "The tank contains a corrosive solution",
+        "Agitation of the tank solution is required",
+        "Steam locking the trap draining a base coil could occur",
+        "Good heat distribution is required"
+      ],
+      "answer": "The tank contains a corrosive solution"
+    },
+    {
+      "id": 13,
+      "q": "What range of 'U' values (in $\\text{W/m}^2\\text{·°C}$) would you apply for a mild steel jacket around a stainless steel tank containing a water and detergent solution?",
+      "options": [
+        "285 to 480",
+        "850 to 1,700",
+        "450 to 1,140",
+        "285 to 850"
+      ],
+      "answer": "450 to 1,140"
+    },
+    {
+      "id": 14,
+      "q": "A tank is to be heated by direct steam injection. How will the quantity of heat required compare with steam coil heating?",
+      "options": [
+        "It depends on the temperature of the water being heated",
+        "More heat will be required",
+        "The same amount of heat will be required",
+        "Less heat will be required"
+      ],
+      "answer": "The same amount of heat will be required"
+    },
+    {
+      "id": 15,
+      "q": "The effectiveness of a body as a thermal radiator at a given temperature:",
+      "options": [
+        "Absorptivity",
+        "Conductivity",
+        "Emissivity",
+        "Reflectivity"
+      ],
+      "answer": "Emissivity"
+    },
+    {
+      "id": 16,
+      "q": "What is a heat exchanger that allows cross contact between two media, allowing the cooling water to flow by gravity over the outside of tubes or plates?",
+      "options": [
+        "Single-pass heat exchanger",
+        "Double-pass heat exchanger",
+        "Baudelot heat exchanger",
+        "Shell-and-tube heat exchanger"
+      ],
+      "answer": "Baudelot heat exchanger"
+    },
+    {
+      "id": 17,
+      "q": "In the critical thickness of insulation concept for a cylinder, what does the Biot number indicate if its value is less than 1?",
+      "options": [
+        "Condition for optimum heat flow",
+        "Addition of insulation will increase heat transfer rate",
+        "Additional insulation will decrease the heat transfer rate",
+        "Heat transfer rate reaches a maximum"
+      ],
+      "answer": "Addition of insulation will increase heat transfer rate"
+    },
+    {
+      "id": 18,
+      "q": "How do you call the ratio of the product of a convective heat transfer coefficient and the critical radius of the insulator to the thermal conductivity of the insulator?",
+      "options": [
+        "Biot number",
+        "Nusselt number",
+        "Prandtl number",
+        "Reynolds number"
+      ],
+      "answer": "Biot number"
+    },
+    {
+      "id": 19,
+      "q": "The ratio of a body's radiating power to that of a blackbody at the same temperature:",
+      "options": [
+        "Transmissivity",
+        "Absorptivity",
+        "Reflectivity",
+        "Emissivity"
+      ],
+      "answer": "Emissivity"
+    }
+  ]
+}

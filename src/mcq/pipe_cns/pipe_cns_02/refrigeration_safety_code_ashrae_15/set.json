@@ -1,0 +1,242 @@
+{
+  "id": "mcq_pipe_cns_02_ashrae15",
+  "title": "Refrigeration Safety Code & Piping (ASHRAE 15)",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-02",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Pairs of mating stop valves that allow sections of a system to be joined before opening these valves or separated after closing them:",
+      "options": [
+        "Check valve",
+        "Gate valve",
+        "Safety valve",
+        "Companion valve"
+      ],
+      "answer": "Companion valve"
+    },
+    {
+      "id": 2,
+      "q": "An enclosed passageway that limits travel to a single path:",
+      "options": [
+        "Corridor",
+        "Hallway",
+        "Lobby",
+        "Tunnel"
+      ],
+      "answer": "Corridor"
+    },
+    {
+      "id": 3,
+      "q": "For immediately dangerous to life or health (IDLH), the maximum concentration from which unprotected persons are able to escape within _________ without escape-impairing symptoms or irreversible health effects:",
+      "options": [
+        "15 min",
+        "1 min",
+        "20 min",
+        "30 min"
+      ],
+      "answer": "30 min"
+    },
+    {
+      "id": 4,
+      "q": "The volume as determined from internal dimensions of the container with no allowance for the volume of internal parts:",
+      "options": [
+        "Internal allowance",
+        "Internal gross volume",
+        "Internal interference volume",
+        "Internal fits volume"
+      ],
+      "answer": "Internal gross volume"
+    },
+    {
+      "id": 5,
+      "q": "A waiting room or large hallway serving as a waiting room:",
+      "options": [
+        "Terrace",
+        "Rest room",
+        "Compound room",
+        "Lobby"
+      ],
+      "answer": "Lobby"
+    },
+    {
+      "id": 6,
+      "q": "A continuous and unobstructed path of travel from any point in a building or structure to a public way:",
+      "options": [
+        "Avenue of egress",
+        "Means of egress",
+        "Hallway of egress",
+        "Pathway of egress"
+      ],
+      "answer": "Means of egress"
+    },
+    {
+      "id": 7,
+      "q": "A service valve for dual pressure-relief devices that allows using one device while isolating the other from the system, maintaining one valve in operation at all times:",
+      "options": [
+        "Three-way valve",
+        "Two-way valve",
+        "One-way valve",
+        "Four-way valve"
+      ],
+      "answer": "Three-way valve"
+    },
+    {
+      "id": 8,
+      "q": "Tubing that is unenclosed and therefore exposed to crushing, abrasion, puncture, or similar damage after installation:",
+      "options": [
+        "Protected tubing",
+        "Bare tubing",
+        "Open tubing",
+        "Unprotected tubing"
+      ],
+      "answer": "Unprotected tubing"
+    },
+    {
+      "id": 9,
+      "q": "A premises or part of a premises from which, because they are disabled, debilitated, or confined, occupants cannot readily leave without the assistance of others:",
+      "options": [
+        "Institutional occupancy",
+        "Public assembly occupancy",
+        "Residential occupancy",
+        "Commercial occupancy"
+      ],
+      "answer": "Institutional occupancy"
+    },
+    {
+      "id": 10,
+      "q": "When the air duct system serves several enclosed spaces, the permissible quantity of refrigerant in the system shall not exceed the amount determined by using the total volume of those spaces in which the airflow cannot be reduced to less than _________ of its maximum when the fan is operating.",
+      "options": [
+        "One-quarter",
+        "One-half",
+        "Three-quarters",
+        "One-eighth"
+      ],
+      "answer": "One-quarter"
+    },
+    {
+      "id": 11,
+      "q": "The space above a suspended ceiling shall not be included in calculating the permissible quantity of refrigerant in the system unless such space is continuous and is part of the air return system:",
+      "options": [
+        "Partition",
+        "Plenums",
+        "Separator",
+        "Plate divider"
+      ],
+      "answer": "Plenums"
+    },
+    {
+      "id": 12,
+      "q": "Joints and all refrigerant-containing parts of a refrigerating system located in an air duct carrying conditioned air to and from an occupied space shall be constructed to withstand a temperature of _________ without leakage into the airstream.",
+      "options": [
+        "$550°\\text{F}$",
+        "$600°\\text{F}$",
+        "$650°\\text{F}$",
+        "$700°\\text{F}$"
+      ],
+      "answer": "$700°\\text{F}$"
+    },
+    {
+      "id": 13,
+      "q": "Refrigerant piping crossing an open space that affords a passageway in any building shall be not less than _________ above the floor unless the piping is located against the ceiling of such space and is permitted by the authority having jurisdiction.",
+      "options": [
+        "2.2 m",
+        "3.2 m",
+        "4.2 m",
+        "5.2 m"
+      ],
+      "answer": "2.2 m"
+    },
+    {
+      "id": 14,
+      "q": "Methyl chloride shall not be in contact with:",
+      "options": [
+        "Aluminum",
+        "Zinc",
+        "Magnesium",
+        "All of these"
+      ],
+      "answer": "All of these",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "q": "Shall not be in contact with any halogenated refrigerants:",
+      "options": [
+        "Aluminum",
+        "Zinc",
+        "Magnesium",
+        "All of these"
+      ],
+      "answer": "Magnesium",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "q": "Which of the following is suitable for use in an ammonia system?",
+      "options": [
+        "Copper",
+        "Aluminum and its alloy",
+        "Plastic",
+        "Cast iron"
+      ],
+      "answer": "Aluminum and its alloy"
+    },
+    {
+      "id": 17,
+      "q": "If a pressure-relief device is used to protect a pressure vessel having an inside dimension of 6 in. or less, the ultimate strength of the pressure vessel so protected shall be sufficient to withstand a pressure at least _________ the design pressure.",
+      "options": [
+        "2 times",
+        "3 times",
+        "4 times",
+        "5 times"
+      ],
+      "answer": "3 times"
+    },
+    {
+      "id": 18,
+      "q": "Seats and discs shall be limited in distortion, by pressure or other cause, to a set pressure change of not more than _________ in a span of five years.",
+      "options": [
+        "1%",
+        "5%",
+        "10%",
+        "50%"
+      ],
+      "answer": "5%"
+    },
+    {
+      "id": 19,
+      "q": "Liquid receivers, if used, or parts of a system designed to receive the refrigerant charge during pumpdown: the liquid shall not occupy more than _________ of the volume when the temperature of the refrigerant is $90°\\text{F}$.",
+      "options": [
+        "80%",
+        "85%",
+        "90%",
+        "95%"
+      ],
+      "answer": "90%"
+    },
+    {
+      "id": 20,
+      "q": "The discharge line (B4) shall be vented to the atmosphere through a _________ fitted to its upper extremity.",
+      "options": [
+        "Nozzle",
+        "Convergent-divergent nozzle",
+        "Pipe",
+        "Diffuser"
+      ],
+      "answer": "Diffuser"
+    }
+  ]
+}

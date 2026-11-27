@@ -1,0 +1,157 @@
+{
+  "id": "mcq_pipe_cns_06_boilers_power",
+  "title": "Boilers & Steam Power Generation",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-06",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A type of boiler designed and used for supercritical pressure operation above 22.1 MPa:",
+      "options": [
+        "La Mont boiler",
+        "Once-through circulation boiler",
+        "Forced-circulation boiler",
+        "Natural-circulation boiler"
+      ],
+      "answer": "Once-through circulation boiler"
+    },
+    {
+      "id": 2,
+      "q": "The economizer in a water-tube boiler is heated by:",
+      "options": [
+        "Electric furnace",
+        "Electric current",
+        "Incoming flue gas",
+        "Outgoing flue gas"
+      ],
+      "answer": "Outgoing flue gas"
+    },
+    {
+      "id": 3,
+      "q": "A type of boiler superheater that receives heat partly by convection and partly by radiation from furnace gases:",
+      "options": [
+        "Radiant superheater",
+        "Desuperheater",
+        "Convective superheater",
+        "Pendant superheater"
+      ],
+      "answer": "Pendant superheater"
+    },
+    {
+      "id": 4,
+      "q": "A regenerative heat exchanger that stores thermal energy alternately in a solid packing medium is called a:",
+      "options": [
+        "Matrix",
+        "Regenerator",
+        "Boiler",
+        "Recuperator"
+      ],
+      "answer": "Matrix"
+    },
+    {
+      "id": 5,
+      "q": "It is used as a working fluid in high-temperature applications of binary vapor power cycles:",
+      "options": [
+        "Helium",
+        "Deuterium",
+        "Mercury",
+        "Water"
+      ],
+      "answer": "Mercury"
+    },
+    {
+      "id": 6,
+      "q": "When superheated vapor enters a steam turbine and expands isentropically while driving the shaft, which properties drop during the process?",
+      "options": [
+        "Density only",
+        "Viscosity of steam",
+        "Temperature and pressure",
+        "None of these"
+      ],
+      "answer": "Temperature and pressure",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 7,
+      "q": "Transfers heat directly into electrical energy by utilizing thermionic emission:",
+      "options": [
+        "Thermionic motor",
+        "Thermionic generator",
+        "Thermionic converter",
+        "Thermionic cell"
+      ],
+      "answer": "Thermionic generator"
+    },
+    {
+      "id": 8,
+      "q": "In a water-tube boiler, the water passes:",
+      "options": [
+        "Inside the tubes",
+        "Outside the tubes",
+        "Inside the shell",
+        "Outside the shell"
+      ],
+      "answer": "Inside the tubes"
+    },
+    {
+      "id": 9,
+      "q": "A safety fitting that prevents damage to a steam boiler by melting to give warning of dangerously low water level:",
+      "options": [
+        "Safety valve",
+        "Fusible plug",
+        "Relief valve",
+        "Try cocks"
+      ],
+      "answer": "Fusible plug"
+    },
+    {
+      "id": 10,
+      "q": "It has several functions: emptying the boiler for inspection or repair, blowing out mud, scale, or sediment, and preventing excessive concentration of soluble impurities:",
+      "options": [
+        "Blow-down line",
+        "Boiler feedwater pump",
+        "Main steam valve",
+        "None of the above"
+      ],
+      "answer": "Blow-down line",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 11,
+      "q": "A system of furnace cooling tubes that extends the evaporative capacity of a water-tube boiler while protecting the furnace refractory walls from high temperatures:",
+      "options": [
+        "Reheater",
+        "Waterwalls",
+        "Superheater",
+        "Feedwater heater"
+      ],
+      "answer": "Waterwalls"
+    },
+    {
+      "id": 12,
+      "q": "One boiler horsepower is defined as the evaporation of 34.5 lb/hr of water from and at $212°\\text{F}$, which is equivalent to:",
+      "options": [
+        "33,475 Btu/hr (approx. 33,500 Btu/hr)",
+        "2,545 Btu/hr",
+        "42.4 Btu/min",
+        "12,000 Btu/hr"
+      ],
+      "answer": "33,475 Btu/hr (approx. 33,500 Btu/hr)"
+    },
+    {
+      "id": 13,
+      "q": "It prevents steam boiler pressure from rising above a predetermined safe limit by opening automatically to allow excess steam to escape:",
+      "options": [
+        "Relief valve",
+        "Safety valve",
+        "Fusible plug",
+        "Pressure switch"
+      ],
+      "answer": "Safety valve"
+    }
+  ]
+}

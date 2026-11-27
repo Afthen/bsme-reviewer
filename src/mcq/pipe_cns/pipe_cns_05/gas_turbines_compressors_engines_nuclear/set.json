@@ -1,0 +1,312 @@
+{
+  "id": "mcq_pipe_cns_05_gt_compressors_nuclear",
+  "title": "Gas Turbines, Compressors, IC Engines & Nuclear",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-05",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The transfer of heat energy from exhaust gases to compressed air flowing between the compressor and combustion chamber:",
+      "options": [
+        "Intercooling",
+        "Convection",
+        "Regeneration",
+        "Economics"
+      ],
+      "answer": "Regeneration"
+    },
+    {
+      "id": 2,
+      "q": "The removal of heat from compressed air between stages of compression:",
+      "options": [
+        "Regeneration",
+        "Exhaustion",
+        "Heat evacuation",
+        "Intercooling"
+      ],
+      "answer": "Intercooling"
+    },
+    {
+      "id": 3,
+      "q": "Which of the following is basically a jet engine that exhausts into a turbine generator?",
+      "options": [
+        "Aeroderivative gas turbine",
+        "Brayton engine",
+        "Industrial gas turbine",
+        "Joule turbine"
+      ],
+      "answer": "Aeroderivative gas turbine"
+    },
+    {
+      "id": 4,
+      "q": "In a pressurized water reactor (PWR):",
+      "options": [
+        "The coolant water is pressurized to work as moderator",
+        "The coolant water boils in the core of the reactor",
+        "The coolant water is pressurized to prevent boiling of water in the core",
+        "No moderator is used"
+      ],
+      "answer": "The coolant water is pressurized to prevent boiling of water in the core"
+    },
+    {
+      "id": 5,
+      "q": "A patented device combining expansion and compression functions in a single rotor permitting higher cycle temperatures:",
+      "options": [
+        "Comprex",
+        "Compressor",
+        "Expander",
+        "Single-shaft"
+      ],
+      "answer": "Comprex"
+    },
+    {
+      "id": 6,
+      "q": "A rough measure of the physical size of the equipment which must handle the specified quantity of the fluid:",
+      "options": [
+        "Pressure ratio",
+        "Fuel rate",
+        "Thermal efficiency",
+        "Air ratio"
+      ],
+      "answer": "Air ratio"
+    },
+    {
+      "id": 7,
+      "q": "The ratio of the highest main compressor discharge pressure to the lowest main compressor inlet pressure:",
+      "options": [
+        "Cycle pressure ratio",
+        "Cycle pressure level",
+        "Work ratio",
+        "Air ratio"
+      ],
+      "answer": "Cycle pressure ratio"
+    },
+    {
+      "id": 8,
+      "q": "The ratio of the maximum pressure in the cycle to the atmospheric pressure:",
+      "options": [
+        "Cycle pressure ratio",
+        "Cycle pressure level",
+        "Regenerator effectiveness",
+        "Thermal efficiency"
+      ],
+      "answer": "Cycle pressure level"
+    },
+    {
+      "id": 9,
+      "q": "A cooled heat exchanger that transfers heat from compressed air to cooler air:",
+      "options": [
+        "Intercooler",
+        "Refrigerator",
+        "Economizer",
+        "Aftercooler"
+      ],
+      "answer": "Aftercooler"
+    },
+    {
+      "id": 10,
+      "q": "Reflectors of a nuclear reactor are made up of:",
+      "options": [
+        "Boron",
+        "Cast iron",
+        "Beryllium",
+        "Steel"
+      ],
+      "answer": "Beryllium"
+    },
+    {
+      "id": 11,
+      "q": "The function of a moderator in a nuclear reactor is:",
+      "options": [
+        "To slow down the fast-moving neutrons",
+        "To speed up the slow-moving neutrons",
+        "To start the chain reaction",
+        "To transfer the heat produced inside the reactor to a heat exchanger"
+      ],
+      "answer": "To slow down the fast-moving neutrons"
+    },
+    {
+      "id": 12,
+      "q": "Which of the following is the most commonly used moderator?",
+      "options": [
+        "Graphite",
+        "Sodium",
+        "Deuterium",
+        "Heavy water"
+      ],
+      "answer": "Graphite"
+    },
+    {
+      "id": 13,
+      "q": "Which of the following is the major consideration while selecting a nuclear power plant?",
+      "options": [
+        "Safety",
+        "Load center",
+        "Disposal of waste",
+        "Availability of water"
+      ],
+      "answer": "Disposal of waste"
+    },
+    {
+      "id": 14,
+      "q": "A moderator is used to:",
+      "options": [
+        "Slow down neutrons",
+        "Slow down electrons",
+        "Accelerate neutrons",
+        "Direct flow of electrons"
+      ],
+      "answer": "Slow down neutrons"
+    },
+    {
+      "id": 15,
+      "q": "Which of the following materials is not used as a moderator?",
+      "options": [
+        "Graphite",
+        "Beryllium",
+        "Aluminum",
+        "Light water"
+      ],
+      "answer": "Aluminum"
+    },
+    {
+      "id": 16,
+      "q": "In a nuclear power plant, which of the following is used to slow down fast neutrons?",
+      "options": [
+        "Reflector",
+        "Shield",
+        "Control rod",
+        "Moderator"
+      ],
+      "answer": "Moderator"
+    },
+    {
+      "id": 17,
+      "q": "Control rods for nuclear reactors are made of:",
+      "options": [
+        "Graphite",
+        "Concrete",
+        "Cadmium",
+        "Lead"
+      ],
+      "answer": "Cadmium"
+    },
+    {
+      "id": 18,
+      "q": "The reactor in which fissionable fuel produced is more than the fuel consumed is known as:",
+      "options": [
+        "Fast reactor",
+        "Breeder reactor",
+        "Thermal reactor",
+        "None of the above"
+      ],
+      "answer": "Breeder reactor",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 19,
+      "q": "Heavy-duty gas turbines typically have:",
+      "options": [
+        "Double shaft",
+        "Triple shaft",
+        "Single shaft",
+        "Quadruple shaft"
+      ],
+      "answer": "Single shaft"
+    },
+    {
+      "id": 20,
+      "q": "The degrees of power interval in a 4-stroke cycle of a six-cylinder engine are:",
+      "options": [
+        "$60°$",
+        "$180°$",
+        "$90°$",
+        "$120°$"
+      ],
+      "answer": "$120°$"
+    },
+    {
+      "id": 21,
+      "q": "A car engine with a power output of 65 hp has a thermal efficiency of 24%. Determine the fuel consumption rate of this car if the fuel has a heating value of $19{,}000\\text{ Btu/lb}_m$.",
+      "options": [
+        "36.28 lb/hr",
+        "37.28 lb/hr",
+        "38.28 lb/hr",
+        "35.30 lb/hr"
+      ],
+      "answer": "36.28 lb/hr"
+    },
+    {
+      "id": 22,
+      "q": "An air compressor consumed 1,200 kW-hr per day of energy. The electric motor driving the compressor has an efficiency of 80%. If indicated power of the compressor is 34 kW, find the mechanical efficiency of the compressor.",
+      "options": [
+        "117.65%",
+        "75%",
+        "85%",
+        "90%"
+      ],
+      "answer": "85%"
+    },
+    {
+      "id": 23,
+      "q": "An air compressor has a power of 40 kW at 4% clearance. If clearance increases to 7%, what is the new power?",
+      "options": [
+        "70 kW",
+        "40 kW",
+        "53 kW",
+        "60 kW"
+      ],
+      "answer": "40 kW"
+    },
+    {
+      "id": 24,
+      "q": "A $200\\text{ mm} \\times 250\\text{ mm}$, 8-cylinder, 4-stroke diesel engine has a brake power of 150 kW. The mechanical efficiency is 80%. If two of the cylinders were accidentally cut off, what will be the new friction power?",
+      "options": [
+        "31.50 kW",
+        "33.50 kW",
+        "35.50 kW",
+        "37.50 kW"
+      ],
+      "answer": "37.50 kW"
+    },
+    {
+      "id": 25,
+      "q": "A three-stage air compressor compresses air from 100 kPa to 1,000 kPa. Find the intercooler pressure between the first and second stage.",
+      "options": [
+        "505.44 kPa",
+        "108.44 kPa",
+        "316.23 kPa",
+        "215.44 kPa"
+      ],
+      "answer": "215.44 kPa"
+    },
+    {
+      "id": 26,
+      "q": "A 10-stage air compressor compresses air from 100 kPa to 800 kPa. Find the intercooler pressure between the first and second stage.",
+      "options": [
+        "282.82 kPa",
+        "113.21 kPa",
+        "123.11 kPa",
+        "333.51 kPa"
+      ],
+      "answer": "123.11 kPa"
+    },
+    {
+      "id": 27,
+      "q": "A 3-stage air compressor compresses air from 100 kPa to 700 kPa. Find the intercooler pressure between the 2nd and 3rd stage.",
+      "options": [
+        "365.88 kPa",
+        "375.88 kPa",
+        "385.88 kPa",
+        "395.88 kPa"
+      ],
+      "answer": "365.88 kPa"
+    }
+  ]
+}

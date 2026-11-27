@@ -1,0 +1,609 @@
+{
+  "id": "mcq_pipe_cns_03_boilers_psme_code",
+  "title": "Boilers, Power Plant Operations & PSME Code",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The percent rating of a water-tube boiler is 200%, factor of evaporation is 1.10, and heating surface is $400\\text{ ft}^2$. Determine the rate of evaporation, in kg/hr.",
+      "options": [
+        "1,831 kg/hr",
+        "1,138 kg/hr",
+        "1,381 kg/hr",
+        "1,813 kg/hr"
+      ],
+      "answer": "1,138 kg/hr"
+    },
+    {
+      "id": 2,
+      "q": "In a geothermal power plant, the mass flow rate of ground water is 4,000 kg/s and the quality after throttling is 20%. If the turbine power is 80 MW, what is the change in enthalpy of steam between the inlet and outlet of the turbine?",
+      "options": [
+        "120 kJ/kg",
+        "100 kJ/kg",
+        "200 kJ/kg",
+        "150 kJ/kg"
+      ],
+      "answer": "100 kJ/kg"
+    },
+    {
+      "id": 3,
+      "q": "A boiler operates at 82% efficiency while the mass of steam generated is 490,200 kg in 6 hours. The enthalpy of steam is 3,187 kJ/kg and feedwater enthalpy is 604.83 kJ/kg, while the fuel used has a heating value of 32,567.85 kJ/kg. Find the mass of fuel needed per day in metric tons.",
+      "options": [
+        "179.6 metric tons",
+        "198.6 metric tons",
+        "189.6 metric tons",
+        "169.8 metric tons"
+      ],
+      "answer": "189.6 metric tons"
+    },
+    {
+      "id": 4,
+      "q": "An 80 MW power plant has an average load of 34,500 kW and a load factor of 0.75. Find the reserve power over peak load power.",
+      "options": [
+        "14,000 kW",
+        "24,000 kW",
+        "34,000 kW",
+        "4,000 kW"
+      ],
+      "answer": "34,000 kW"
+    },
+    {
+      "id": 5,
+      "q": "Which of the following is one of the main purposes of refractory in a boiler furnace?",
+      "options": [
+        "Help preheat the air for the furnace",
+        "Help preheat the feedwater",
+        "Protect economizer from excessive heat",
+        "Prevent excessive furnace heat losses"
+      ],
+      "answer": "Prevent excessive furnace heat losses"
+    },
+    {
+      "id": 6,
+      "q": "A 145,000-kW turbo-generator requires 690,000 kg/hr of steam at rated load and 23,000 kg/hr of steam at zero load. Determine the steam rate, in kg/kW-hr, at 75% of its rated load.",
+      "options": [
+        "4.81 kg/kW-hr",
+        "5.81 kg/kW-hr",
+        "3.81 kg/kW-hr",
+        "2.81 kg/kW-hr"
+      ],
+      "answer": "4.81 kg/kW-hr"
+    },
+    {
+      "id": 7,
+      "q": "Why is a boiler feed tank heated to approximately $85°\\text{C}$?",
+      "options": [
+        "To reduce the energy required to raise steam",
+        "To reduce the content of total dissolved solids in the water supplied to the boiler",
+        "To reduce the gas content of the water",
+        "To reduce the content of suspended solids in the water"
+      ],
+      "answer": "To reduce the gas content of the water"
+    },
+    {
+      "id": 8,
+      "q": "What causes water hammer in the boiler?",
+      "options": [
+        "Suspended water droplets",
+        "An air/water mixture",
+        "Strainers fitted on their sides",
+        "Slugs of water in the steam"
+      ],
+      "answer": "Slugs of water in the steam"
+    },
+    {
+      "id": 9,
+      "q": "How does air enter a steam system?",
+      "options": [
+        "Through joints on shut-down of the steam system",
+        "With make-up water to the boiler feedtank",
+        "With condensate entering the boiler feedtank",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 10,
+      "q": "Why should strainers installed on steam lines be fitted on their sides?",
+      "options": [
+        "To prevent the build-up of water in the strainer body",
+        "To trap more dirt",
+        "To reduce the frequency of cleaning",
+        "To provide maximum screening area for the steam"
+      ],
+      "answer": "To prevent the build-up of water in the strainer body"
+    },
+    {
+      "id": 11,
+      "q": "A boiler installed where the atmospheric pressure is 752 mm Hg has a gage pressure of $12\\text{ kg/cm}^2$. Find the absolute pressure, in kPaa.",
+      "options": [
+        "1,277.05 kPaa",
+        "1,772.05 kPaa",
+        "1,727.05 kPaa",
+        "1,572.07 kPaa"
+      ],
+      "answer": "1,277.05 kPaa"
+    },
+    {
+      "id": 12,
+      "q": "What is the advantage of a pressurized deaerator over an atmospheric deaerator?",
+      "options": [
+        "A boiler feed tank is no longer required",
+        "Less overall energy will be required to produce the steam",
+        "It can be fitted at ground level",
+        "It removes more oxygen"
+      ],
+      "answer": "It removes more oxygen"
+    },
+    {
+      "id": 13,
+      "q": "Assume that you are checking the water level in a boiler which is on the line in a power plant. Upon opening the gage cocks, you determine that the water level was above the top gage cock. Of the following actions, the best one to take first in this situation would be to:",
+      "options": [
+        "Shut off the fuel and air supply",
+        "Surface-blow the boiler",
+        "Close the steam outlet valve from the boiler",
+        "Increase the speed of the feedwater"
+      ],
+      "answer": "Close the steam outlet valve from the boiler"
+    },
+    {
+      "id": 14,
+      "q": "As used in the Revised PSME Code for Boilers and Pressure Vessels, it is any boiler which does not exceed any of the following limits: 405 mm inside diameter, 1,065 mm overall length of outside-to-outside heads at center, $1.85\\text{ m}^2$ of water heating surface, and $7.03\\text{ kg/cm}^2$ maximum allowable working pressure. What is this boiler?",
+      "options": [
+        "Power boiler",
+        "Miniature boiler",
+        "Portable boiler",
+        "Locomotive boiler"
+      ],
+      "answer": "Miniature boiler"
+    },
+    {
+      "id": 15,
+      "q": "It is a closed vessel in which steam or other vapor (to be used externally to itself) is generated by the direct application of heat used for power generation. How do you call this boiler?",
+      "options": [
+        "Power boiler",
+        "Oil-fired boiler",
+        "Portable boiler",
+        "Miniature boiler"
+      ],
+      "answer": "Power boiler"
+    },
+    {
+      "id": 16,
+      "q": "It is a closed vessel intended for use in heating water or for application of heat to generate steam or other vapor to be used externally from it. What do you call this pressure vessel?",
+      "options": [
+        "Boiler or steam generator",
+        "Unfired pressure vessel",
+        "Fired pressure vessel",
+        "Pressurized tank"
+      ],
+      "answer": "Boiler or steam generator"
+    },
+    {
+      "id": 17,
+      "q": "What do you call a vessel in which pressure is obtained from external sources, or from an indirect application of heat?",
+      "options": [
+        "Boiler or steam generator",
+        "Unfired pressure vessel",
+        "Fired pressure vessel",
+        "Pressurized tank"
+      ],
+      "answer": "Unfired pressure vessel"
+    },
+    {
+      "id": 18,
+      "q": "It is any boiler or unfired pressure vessel constructed, installed, and placed in operation, subject to annual inspection. What do you call this?",
+      "options": [
+        "Miniature boiler",
+        "New boiler",
+        "Existing installation",
+        "Portable boiler"
+      ],
+      "answer": "Existing installation"
+    },
+    {
+      "id": 19,
+      "q": "It is a boiler that has been inspected and declared unsafe to operate or disqualified, stamped and marked indicating its rejection. How do you call this boiler?",
+      "options": [
+        "Second hand boiler",
+        "Condemned boiler",
+        "Reinstalled boiler",
+        "Unfired boiler"
+      ],
+      "answer": "Condemned boiler"
+    },
+    {
+      "id": 20,
+      "q": "When new boilers are installed in either existing or new buildings, a minimum height of at least _________ shall be provided between the top of the boiler proper and the ceiling.",
+      "options": [
+        "1,050 mm",
+        "1,250 mm",
+        "2,130 mm",
+        "2,050 mm"
+      ],
+      "answer": "2,130 mm"
+    },
+    {
+      "id": 21,
+      "q": "For power boilers, when the tensile strength of steel is not known, it shall be taken as 379 MPa and which of the following for wrought iron?",
+      "options": [
+        "$379\\text{ N/mm}^2$",
+        "450 MPa",
+        "310 MPa",
+        "$521\\text{ N/mm}^2$"
+      ],
+      "answer": "310 MPa"
+    },
+    {
+      "id": 22,
+      "q": "Name the principal cause of waterhammer:",
+      "options": [
+        "Water particles suspended in steam",
+        "Water allowed to build up in pipes",
+        "Water droplets carried along the insides of pipes",
+        "Wet steam passing through steam traps"
+      ],
+      "answer": "Water allowed to build up in pipes"
+    },
+    {
+      "id": 23,
+      "q": "What do you call a boiler of which both the location and ownership have been changed after primary use?",
+      "options": [
+        "Second hand boiler",
+        "Miniature boiler",
+        "Surplus boiler",
+        "Reinstalled boiler"
+      ],
+      "answer": "Second hand boiler"
+    },
+    {
+      "id": 24,
+      "q": "It is a boiler removed from its original setting and re-erected at the same location or erected at a location without change of ownership. How do you call this boiler?",
+      "options": [
+        "Second hand boiler",
+        "Miniature boiler",
+        "Surplus boiler",
+        "Reinstalled boiler"
+      ],
+      "answer": "Reinstalled boiler"
+    },
+    {
+      "id": 25,
+      "q": "Each miniature boiler shall be equipped with which of the following for the determination of water level?",
+      "options": [
+        "Safety valve",
+        "Water gage glass",
+        "Fusible plug",
+        "Pressure gages"
+      ],
+      "answer": "Water gage glass"
+    },
+    {
+      "id": 26,
+      "q": "The maximum allowable working pressure of a non-code steel or wrought iron heating boiler of welded construction shall not exceed which of the following pressures?",
+      "options": [
+        "1 atmosphere",
+        "100 kPa",
+        "1 bar",
+        "2 bar gage"
+      ],
+      "answer": "1 bar"
+    },
+    {
+      "id": 27,
+      "q": "What do you call the method used to evaluate all welds performed on pressure parts of boiler tube materials?",
+      "options": [
+        "Radiographic test",
+        "Vacuum test",
+        "Hydrostatic test",
+        "Orsat analysis"
+      ],
+      "answer": "Radiographic test"
+    },
+    {
+      "id": 28,
+      "q": "It is a boiler testing method used to verify the microstructure of boiler tubes using optical microscopes. How do you call this method?",
+      "options": [
+        "Tube sampling",
+        "Radiographic testing",
+        "Metallurgic replication",
+        "Optical testing"
+      ],
+      "answer": "Metallurgic replication"
+    },
+    {
+      "id": 29,
+      "q": "Generally, steam turbines in power stations operate at which of the following speeds?",
+      "options": [
+        "3,000 rpm",
+        "4,000 rpm",
+        "1,000 rpm",
+        "500 rpm"
+      ],
+      "answer": "3,000 rpm"
+    },
+    {
+      "id": 30,
+      "q": "Tidal power is the power generated from which of the following?",
+      "options": [
+        "Waves of the ocean",
+        "Thermal energy of ocean water",
+        "Raw sea water",
+        "Rise and fall of tides"
+      ],
+      "answer": "Rise and fall of tides"
+    },
+    {
+      "id": 31,
+      "q": "Upon entering the boiler room, you find the water out of the glass, the safety valve blowing off strongly, and a fire under the boiler. Your first action would be to:",
+      "options": [
+        "Remove the fire with draft and damper open",
+        "Cool the boiler down completely",
+        "Prevent priming by not raising the safety valve or making changes in operating engines or boiler",
+        "Cool the boiler down completely and prevent priming by not raising the safety valve"
+      ],
+      "answer": "Remove the fire with draft and damper open"
+    },
+    {
+      "id": 32,
+      "q": "The ASME Boiler Code for boiler shells requires a tensile strength of which of the following, in psi?",
+      "options": [
+        "10,000 to 20,000",
+        "55,000 to 63,000",
+        "25,000 to 45,000",
+        "70,000 to 85,000"
+      ],
+      "answer": "55,000 to 63,000"
+    },
+    {
+      "id": 33,
+      "q": "The best time to blow a boiler down is:",
+      "options": [
+        "Once a day when the load is lightest",
+        "Once a day under full load",
+        "When the chemical concentration is greatest",
+        "Once a shift"
+      ],
+      "answer": "When the chemical concentration is greatest"
+    },
+    {
+      "id": 34,
+      "q": "In performing a hydrostatic test on an existing power boiler, the required test pressure must be controlled so that it is not exceeded by more than:",
+      "options": [
+        "2%",
+        "6%",
+        "4%",
+        "8%"
+      ],
+      "answer": "2%"
+    },
+    {
+      "id": 35,
+      "q": "One of the two types of non-material nuclear radiation is:",
+      "options": [
+        "Gamma radiation",
+        "Walton radiation",
+        "Transmutation radiation",
+        "Betatron radiation"
+      ],
+      "answer": "Gamma radiation"
+    },
+    {
+      "id": 36,
+      "q": "Which of the following is NOT a qualification for an applicant for the ME board examination?",
+      "options": [
+        "A certified plant mechanic",
+        "At least 18 years old",
+        "A holder of BSME degree",
+        "A citizen of the Philippines"
+      ],
+      "answer": "A certified plant mechanic"
+    },
+    {
+      "id": 37,
+      "q": "A thermohydraulic feedwater regulator is used to regulate the flow of water to a drum-type boiler. The amount of water input to the boiler is controlled in proportion to the:",
+      "options": [
+        "Boiler load",
+        "Setting of the feed pump relief valve",
+        "Amount of water in the outer tube that flashes into steam",
+        "Water level in the drum"
+      ],
+      "answer": "Water level in the drum"
+    },
+    {
+      "id": 38,
+      "q": "Economical partial-load operation of steam turbines is obtained by minimizing throttling losses. This is accomplished by:",
+      "options": [
+        "Reducing the boiler pressure and temperature",
+        "Throttling the steam flow into the uncontrolled set of nozzles",
+        "Dividing the first-stage nozzles into several groups and providing a steam control valve for each group",
+        "Controlling the fuel flow to the steam generator"
+      ],
+      "answer": "Dividing the first-stage nozzles into several groups and providing a steam control valve for each group"
+    },
+    {
+      "id": 39,
+      "q": "The main advantage of operating a steam engine or steam turbine \"condensing\" is that it:",
+      "options": [
+        "Increases the mean effective pressure in the prime mover",
+        "Decreases the condensate temperature",
+        "Permits the use of exhaust steam to drive auxiliary equipment",
+        "Eliminates the need for separating non-condensables from the steam"
+      ],
+      "answer": "Increases the mean effective pressure in the prime mover"
+    },
+    {
+      "id": 40,
+      "q": "The automatic shut-off valves for a water gage installed on a high-pressure boiler must be:",
+      "options": [
+        "Horizontal swing-check valves",
+        "Vertical swing-check valves",
+        "Ball-check valves",
+        "Spring-loaded check valves"
+      ],
+      "answer": "Ball-check valves"
+    },
+    {
+      "id": 41,
+      "q": "The efficiency of a riveted joint is defined as the ratio of the:",
+      "options": [
+        "Plate thickness to the rivet diameter",
+        "Strength of the riveted joint to the strength of a welded joint",
+        "Strength of the riveted joint to the strength of the solid plate",
+        "Number of rivets in the first row of the joint to the total number of rivets on one side of the joint"
+      ],
+      "answer": "Strength of the riveted joint to the strength of the solid plate"
+    },
+    {
+      "id": 42,
+      "q": "What is the advantage of an internal water level control over an external one?",
+      "options": [
+        "The external control is in a 'dead' area",
+        "It is less likely to scale up",
+        "It will respond more quickly to changes in water level",
+        "Daily testing of the level control chamber is not required"
+      ],
+      "answer": "Daily testing of the level control chamber is not required"
+    },
+    {
+      "id": 43,
+      "q": "What is the purpose of testing gauge glasses?",
+      "options": [
+        "To ensure the gauge cocks are operative",
+        "To ensure there is sufficient water over the top fire tube",
+        "To ensure the boiler water level is being properly sensed",
+        "To check the boiler 1st and 2nd low water level alarms"
+      ],
+      "answer": "To ensure the gauge cocks are operative"
+    },
+    {
+      "id": 44,
+      "q": "What is the effect of an overloaded boiler?",
+      "options": [
+        "Water level rises and lock-out occurs",
+        "Reduced steam production",
+        "Water level drops and lock-out occurs",
+        "Steam velocity reduces and separator efficiency drops"
+      ],
+      "answer": "Water level drops and lock-out occurs"
+    },
+    {
+      "id": 45,
+      "q": "Why is slow, controlled warm-up of a steam system essential?",
+      "options": [
+        "To make it easier to open the boiler main stop valve",
+        "To minimize undue stresses and eliminate damage",
+        "To permit separators to remove more water",
+        "To prevent stress on the boiler"
+      ],
+      "answer": "To minimize undue stresses and eliminate damage"
+    },
+    {
+      "id": 46,
+      "q": "Which of the following is the main purpose of the steam distribution manifold?",
+      "options": [
+        "It replaces the need for a separator after the boiler",
+        "To remove air from the steam system",
+        "To provide an extra separating function",
+        "It is a requirement of the pressure systems regulations"
+      ],
+      "answer": "To provide an extra separating function"
+    },
+    {
+      "id": 47,
+      "q": "Priming of a boiler is:",
+      "options": [
+        "Getting a boiler prepared for start-up",
+        "A reduction in boiler pressure and carryover of water",
+        "Occurrence of excessive TDS and carryover of water",
+        "Balancing of boilers in a multi-boiler installation"
+      ],
+      "answer": "Occurrence of excessive TDS and carryover of water"
+    },
+    {
+      "id": 48,
+      "q": "What is the advantage of an interruptible tariff?",
+      "options": [
+        "Quick and easy to change to heavy fuel oil when required",
+        "Price of fuel",
+        "Price of interruptible gas is lower than fixed supply",
+        "Convenience of supply"
+      ],
+      "answer": "Price of interruptible gas is lower than fixed supply"
+    },
+    {
+      "id": 49,
+      "q": "At what pressure should a boiler safety valve be set?",
+      "options": [
+        "Maximum working pressure",
+        "Normal working pressure",
+        "Hydraulic test pressure",
+        "Feed pump maximum pressure"
+      ],
+      "answer": "Maximum working pressure"
+    },
+    {
+      "id": 50,
+      "q": "What is the purpose of a bottom blowdown valve?",
+      "options": [
+        "To control water level",
+        "To drain the boiler",
+        "To maintain TDS",
+        "To remove sludge"
+      ],
+      "answer": "To remove sludge"
+    },
+    {
+      "id": 51,
+      "q": "How often, as a minimum, should gauge glasses be tested?",
+      "options": [
+        "Once a shift",
+        "Once a day",
+        "Twice a day",
+        "Once a week"
+      ],
+      "answer": "Once a day"
+    },
+    {
+      "id": 52,
+      "q": "Why are two gauge glasses often fitted?",
+      "options": [
+        "One is a check against the other",
+        "One is a reserve",
+        "It is a legal requirement",
+        "To increase periods between maintenance"
+      ],
+      "answer": "It is a legal requirement"
+    },
+    {
+      "id": 53,
+      "q": "What does MAWP stand for?",
+      "options": [
+        "Maximum attenuated working pressure",
+        "Maximum allowable working pressure",
+        "Maximum allowable with pressure",
+        "Minimum allowable working pressure"
+      ],
+      "answer": "Maximum allowable working pressure"
+    },
+    {
+      "id": 54,
+      "q": "The bottom blowdown on a boiler is used to:",
+      "options": [
+        "Remove mud drum water impurities",
+        "Increase boiler priming",
+        "Reduce steam pressure in the header",
+        "Increase the boiler water level"
+      ],
+      "answer": "Remove mud drum water impurities"
+    }
+  ]
+}

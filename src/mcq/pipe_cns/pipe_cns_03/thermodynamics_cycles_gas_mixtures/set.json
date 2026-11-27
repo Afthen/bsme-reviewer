@@ -1,0 +1,470 @@
+{
+  "id": "mcq_pipe_cns_03_thermodynamics",
+  "title": "Thermodynamics, Cycles & Gas Mixtures",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "In an ideal standard Brayton cycle, 1.5 kg/s of air at 101 kPaa and $27°\\text{C}$ is compressed isentropically to a certain pressure and temperature, after which heat is added until the temperature becomes $1{,}027°\\text{C}$. Isentropic expansion occurs in the turbine. Determine the maximum net power produced by the cycle.",
+      "options": [
+        "629.56 kW",
+        "529.76 kW",
+        "592.65 kW",
+        "579.26 kW"
+      ],
+      "answer": "529.76 kW"
+    },
+    {
+      "id": 2,
+      "q": "In an air-standard Otto cycle, the clearance volume is 12% of the displacement volume. What is the thermal efficiency?",
+      "options": [
+        "57%",
+        "58%",
+        "59%",
+        "60%"
+      ],
+      "answer": "59%"
+    },
+    {
+      "id": 3,
+      "q": "In an air-standard Brayton cycle, air enters the compressor at 1 bar and $15°\\text{C}$. The pressure leaving the compressor is 0.6 MPaa and the maximum temperature of the cycle is $1{,}000°\\text{C}$. What is the maximum net work, in kJ/kg?",
+      "options": [
+        "319.52 kJ/kg",
+        "315.29 kJ/kg",
+        "392.51 kJ/kg",
+        "352.19 kJ/kg"
+      ],
+      "answer": "352.19 kJ/kg"
+    },
+    {
+      "id": 4,
+      "q": "A Carnot cycle is represented by a rectangle in a T-s diagram that operates between temperature limits of 300 K and 650 K. Inscribed within the rectangle is an ellipse of maximum major and minor axes, representing a cycle operating at the same temperature limits. Considering that the major axis of the ellipse is two times that of its minor axis, determine the thermal efficiency of the cycle represented by the ellipse.",
+      "options": [
+        "44.88%",
+        "43.66%",
+        "48.48%",
+        "46.36%"
+      ],
+      "answer": "44.88%"
+    },
+    {
+      "id": 5,
+      "q": "Determine the partial pressure of $\\text{CO}_2$ for the following analysis of a gas mixture by weight at 101 kPaa and $25°\\text{C}$: $\\text{CO}_2 = 35\\%$ and $\\text{N}_2 = 65\\%$.",
+      "options": [
+        "25.75 kPaa",
+        "27.55 kPaa",
+        "52.75 kPaa",
+        "52.57 kPaa"
+      ],
+      "answer": "25.75 kPaa"
+    },
+    {
+      "id": 6,
+      "q": "Which of the following is a scale of temperature in which the melting point of ice is taken as $0°$ and the boiling point of water is $80°$?",
+      "options": [
+        "Reaumur Scale",
+        "Genetron Scale",
+        "Carrene Scale",
+        "Frigorie Scale"
+      ],
+      "answer": "Reaumur Scale"
+    },
+    {
+      "id": 7,
+      "q": "What is the amount of heat energy required to raise the temperature of one pound of water by one degree Fahrenheit (1/180 of the heat required to raise the temperature of one pound of water from $32°\\text{F}$ to $212°\\text{F}$ at a constant atmospheric pressure of 14.696 psi absolute)?",
+      "options": [
+        "Specific heat",
+        "British thermal unit",
+        "Calorie",
+        "Sensible heat"
+      ],
+      "answer": "British thermal unit"
+    },
+    {
+      "id": 8,
+      "q": "How do you call mixtures or substances that are used in laboratory methods of producing a drop in temperature (such as a mixture of ice and salt)?",
+      "options": [
+        "Calorific mixture",
+        "Frigorific mixture",
+        "Water-ammonia mixture",
+        "Hygroscopic mixture"
+      ],
+      "answer": "Frigorific mixture"
+    },
+    {
+      "id": 9,
+      "q": "If an airplane is flying at an altitude of 5,800 ft, what is the approximate atmospheric pressure at that altitude?",
+      "options": [
+        "12.34 psi",
+        "13.24 psi",
+        "14.7 psi",
+        "14.32 psi"
+      ],
+      "answer": "12.34 psi"
+    },
+    {
+      "id": 10,
+      "q": "It is the maximum temperature of any gas or vapor at which it may be condensed into a liquid; above this temperature, it is impossible to condense regardless of the pressure applied. How do you call this temperature?",
+      "options": [
+        "Saturation temperature",
+        "Critical temperature",
+        "Superheated temperature",
+        "Dew point temperature"
+      ],
+      "answer": "Critical temperature"
+    },
+    {
+      "id": 11,
+      "q": "Air at 1 MPaa and $310°\\text{C}$ is expanded to 250 kPaa in accordance with the relation $pV^{1.25} = C$. Determine the work done.",
+      "options": [
+        "$+162.11\\text{ kJ/kg}$",
+        "$+126.11\\text{ kJ/kg}$",
+        "$-162.11\\text{ kJ/kg}$",
+        "$-126.11\\text{ kJ/kg}$"
+      ],
+      "answer": "$+162.11\\text{ kJ/kg}$"
+    },
+    {
+      "id": 12,
+      "q": "A Rankine cycle operates with a thermal efficiency of 40% and the factor of evaporation of the boiler is 1.15. Determine the mass flow rate of steam if the cycle power output is 5.5 MW.",
+      "options": [
+        "5.3 kg/s",
+        "3.5 kg/s",
+        "4.3 kg/s",
+        "6.3 kg/s"
+      ],
+      "answer": "5.3 kg/s"
+    },
+    {
+      "id": 13,
+      "q": "A container filled with helium is dropped 3,000 m above the ground; find the change in temperature.",
+      "options": [
+        "$12.43°\\text{C}$",
+        "$15.43°\\text{C}$",
+        "$9.43°\\text{C}$",
+        "$8.43°\\text{C}$"
+      ],
+      "answer": "$9.43°\\text{C}$"
+    },
+    {
+      "id": 14,
+      "q": "A 3,153-lb car is accelerated from 32 fps to 55 fps in 10 seconds. Determine the work done, in Btu.",
+      "options": [
+        "125.92 Btu",
+        "152.92 Btu",
+        "192.52 Btu",
+        "129.52 Btu"
+      ],
+      "answer": "125.92 Btu"
+    },
+    {
+      "id": 15,
+      "q": "In a Rankine cycle, steam enters the turbine at 2.5 MPa ($h = 2{,}803.1\\text{ kJ/kg}$, $s = 6.2575\\text{ kJ/kg·K}$) and expands isentropically to a condenser pressure of 50 kPaa ($h_f = 340.49\\text{ kJ/kg}$, $h_{fg} = 2{,}305.4\\text{ kJ/kg}$, $v_f = 0.00103\\text{ m}^3/\\text{kg}$, $s_f = 1.0910\\text{ kJ/kg·K}$, $s_{fg} = 6.5029\\text{ kJ/kg·K}$). What is the quality of steam at the turbine exhaust?",
+      "options": [
+        "79.45%",
+        "59.75%",
+        "97.45%",
+        "95.55%"
+      ],
+      "answer": "79.45%"
+    },
+    {
+      "id": 16,
+      "q": "An adiabatic steam turbine receives steam at a pressure of 7.0 MPa and $550°\\text{C}$ ($h = 3{,}531\\text{ kJ/kg}$) and exhausts at a condenser pressure of 20 kPa ($h = 2{,}290\\text{ kJ/kg}$). The turbine inlet is 3 m higher than the exit, inlet steam velocity is 15 m/s, and the exit velocity is 300 m/s. Calculate the turbine work in kJ/kg.",
+      "options": [
+        "1,296.14 kJ/kg",
+        "1,619.42 kJ/kg",
+        "1,196.24 kJ/kg",
+        "1,294.16 kJ/kg"
+      ],
+      "answer": "1,196.24 kJ/kg"
+    },
+    {
+      "id": 17,
+      "q": "2 kg of steam at 2.5 MPaa and $260°\\text{C}$ undergoes a constant-pressure process until the quality becomes 70%. Determine the heat rejected, in Btu. At 2.5 MPaa and $260°\\text{C}$: $h = 2{,}907.4\\text{ kJ/kg}$; at 2.5 MPaa: $h_f = 962.11\\text{ kJ/kg}$ and $h_g = 2{,}803.1\\text{ kJ/kg}$.",
+      "options": [
+        "1,244.7 Btu",
+        "1,442.7 Btu",
+        "1,424.7 Btu",
+        "1,274.4 Btu"
+      ],
+      "answer": "1,244.7 Btu"
+    },
+    {
+      "id": 18,
+      "q": "Helium is used in a Carnot engine where the volumes beginning with the constant-temperature heat addition are $V_1 = 0.3565\\text{ m}^3$, $V_2 = 0.5130\\text{ m}^3$, $V_3 = 8.0\\text{ m}^3$, and $V_4 = 5.57\\text{ m}^3$. Determine the thermal efficiency if $k = 1.666$.",
+      "options": [
+        "83.95%",
+        "85.93%",
+        "89.35%",
+        "85.39%"
+      ],
+      "answer": "83.95%"
+    },
+    {
+      "id": 19,
+      "q": "The temperature inside a furnace is $320°\\text{C}$ and the outside temperature is $-10°\\text{C}$. What is the temperature difference in °R?",
+      "options": [
+        "$495°\\text{R}$",
+        "$594°\\text{R}$",
+        "$945°\\text{R}$",
+        "$596°\\text{R}$"
+      ],
+      "answer": "$594°\\text{R}$"
+    },
+    {
+      "id": 20,
+      "q": "A gaseous mixture of propane ($\\text{C}_3\\text{H}_8$), methane ($\\text{CH}_4$), and ethane ($\\text{C}_2\\text{H}_6$) has partial pressures of 50 kPa, 95 kPa, and 115 kPa, respectively. Determine the mass percentage of propane.",
+      "options": [
+        "30.68%",
+        "21.68%",
+        "28.68%",
+        "32.68%"
+      ],
+      "answer": "30.68%"
+    },
+    {
+      "id": 21,
+      "q": "An engineer claims to have created a heat engine that produces 15 kW of power for a 20 kW input while operating between energy reservoirs at $37°\\text{C}$ and $400°\\text{C}$. Is the engineer's claim valid?",
+      "options": [
+        "Valid",
+        "Probably",
+        "Not valid",
+        "May be valid"
+      ],
+      "answer": "Not valid"
+    },
+    {
+      "id": 22,
+      "q": "What always accompanies an isentropic expansion of steam?",
+      "options": [
+        "An increase in entropy",
+        "An increase in enthalpy",
+        "A decrease in entropy",
+        "A decrease in enthalpy"
+      ],
+      "answer": "A decrease in enthalpy"
+    },
+    {
+      "id": 23,
+      "q": "At standard atmospheric conditions, what is the approximate speed of sound?",
+      "options": [
+        "336 m/s",
+        "633 m/s",
+        "363 m/s",
+        "346 m/s"
+      ],
+      "answer": "336 m/s"
+    },
+    {
+      "id": 24,
+      "q": "The speed of sound is also called:",
+      "options": [
+        "Sound velocity",
+        "Subsonic velocity",
+        "Acoustic velocity",
+        "Critical velocity"
+      ],
+      "answer": "Acoustic velocity"
+    },
+    {
+      "id": 25,
+      "q": "This is the velocity at which a small pressure wave moves through a fluid. How do you call this velocity?",
+      "options": [
+        "Sonic velocity",
+        "Supersonic velocity",
+        "Subsonic velocity",
+        "Hypersonic velocity"
+      ],
+      "answer": "Sonic velocity"
+    },
+    {
+      "id": 26,
+      "q": "Which of the following is the speed of light?",
+      "options": [
+        "$2.998 \\times 10^8\\text{ m/s}$",
+        "$2.998 \\times 10^{10}\\text{ m/s}$",
+        "$2.998 \\times 10^9\\text{ m/s}$",
+        "$2.998 \\times 10^7\\text{ m/s}$"
+      ],
+      "answer": "$2.998 \\times 10^8\\text{ m/s}$"
+    },
+    {
+      "id": 27,
+      "q": "What can you say about entropy in the universe?",
+      "options": [
+        "Entropy is always increasing",
+        "Entropy is decreasing",
+        "Entropy will be zero at the end of time",
+        "Entropy is stagnating"
+      ],
+      "answer": "Entropy is always increasing"
+    },
+    {
+      "id": 28,
+      "q": "It is a measure of the lack of potential or quality of energy; once that energy has been exchanged or converted, it cannot revert back to a higher level. What is this?",
+      "options": [
+        "Specific heat",
+        "Internal energy",
+        "Entropy",
+        "Molecular energy"
+      ],
+      "answer": "Entropy"
+    },
+    {
+      "id": 29,
+      "q": "The second law of thermodynamics says that whenever energy is exchanged or converted from one form to another, the potential for energy to do work will be _________.",
+      "options": [
+        "Decreased",
+        "Zero",
+        "Increased",
+        "Stagnant"
+      ],
+      "answer": "Decreased"
+    },
+    {
+      "id": 30,
+      "q": "What is true about steam as it condenses?",
+      "options": [
+        "It does so at constant entropy and temperature",
+        "It does so at constant enthalpy and reducing temperature",
+        "Both enthalpy and entropy reduce and temperature remains constant",
+        "Both enthalpy and entropy increase"
+      ],
+      "answer": "Both enthalpy and entropy reduce and temperature remains constant"
+    },
+    {
+      "id": 31,
+      "q": "A manufacturer claims that a refrigerator has a COP of 2.0 when cooling food at $5°\\text{C}$ using ambient air at $30°\\text{C}$ as a heat sink. Is the claim of the manufacturer valid?",
+      "options": [
+        "Yes",
+        "No",
+        "Probably",
+        "It needs experimental verification"
+      ],
+      "answer": "Yes"
+    },
+    {
+      "id": 32,
+      "q": "At the critical point of a pure substance, what is the value of latent heat?",
+      "options": [
+        "Maximum",
+        "Zero",
+        "Minimum",
+        "Below zero"
+      ],
+      "answer": "Zero"
+    },
+    {
+      "id": 33,
+      "q": "Which of the following is a function of a steam nozzle?",
+      "options": [
+        "Converts kinetic energy into heat energy",
+        "Changes internal energy into kinetic energy",
+        "Converts potential energy into heat energy",
+        "Changes enthalpic energy into kinetic energy"
+      ],
+      "answer": "Changes enthalpic energy into kinetic energy"
+    },
+    {
+      "id": 34,
+      "q": "It is the ratio of the amount of heat taken up by a substance to the temperature at which the substance exists. How do you call this?",
+      "options": [
+        "Internal energy",
+        "Enthalpy",
+        "Flow energy",
+        "Entropy"
+      ],
+      "answer": "Entropy"
+    },
+    {
+      "id": 35,
+      "q": "How do you call a device or engine which continually and indefinitely discharges more energy than it receives?",
+      "options": [
+        "Carnot engine",
+        "Stirling engine",
+        "Generating machine",
+        "Perpetual motion machine"
+      ],
+      "answer": "Perpetual motion machine"
+    },
+    {
+      "id": 36,
+      "q": "When the expansion or compression of gas takes place without transfer of heat to or from the gas, the process is called:",
+      "options": [
+        "Reversible",
+        "Polytropic",
+        "Adiabatic",
+        "Isothermal"
+      ],
+      "answer": "Adiabatic"
+    },
+    {
+      "id": 37,
+      "q": "How do you compare superheated steam to saturated steam at the same pressure?",
+      "options": [
+        "Contains more heat energy",
+        "Has a greater enthalpy of evaporation",
+        "Has a smaller specific volume",
+        "Condenses at a higher temperature"
+      ],
+      "answer": "Contains more heat energy"
+    },
+    {
+      "id": 38,
+      "q": "Which of the following is not a characteristic of superheated steam?",
+      "options": [
+        "It contains no water droplets",
+        "It causes severe erosion in pipes",
+        "It may cause uneven heating of a product",
+        "It has a temperature greater than $165°\\text{C}$"
+      ],
+      "answer": "It causes severe erosion in pipes"
+    },
+    {
+      "id": 39,
+      "q": "Superheated steam at a pressure of 6 bar g:",
+      "options": [
+        "Has a larger specific heat capacity than water",
+        "Has a dryness fraction of 0.99",
+        "Must not be used as a heat transfer medium",
+        "Has a temperature greater than $165°\\text{C}$"
+      ],
+      "answer": "Has a temperature greater than $165°\\text{C}$"
+    },
+    {
+      "id": 40,
+      "q": "How do you call a process in which superheated steam is either restored to its saturated state or its superheated temperature is reduced?",
+      "options": [
+        "Superheating",
+        "Regenerative heating",
+        "Reheating",
+        "Desuperheating"
+      ],
+      "answer": "Desuperheating"
+    },
+    {
+      "id": 41,
+      "q": "In a Brayton cycle or gas turbine cycle, what do you call the heat exchanger that passes exhaust heat to the compressed air prior to combustion?",
+      "options": [
+        "Reheater",
+        "Heater",
+        "Recuperator",
+        "Heat exchanger"
+      ],
+      "answer": "Recuperator"
+    },
+    {
+      "id": 42,
+      "q": "The heat rejected by the working substance to the regenerator in the Stirling cycle is:",
+      "options": [
+        "Equal to the heat absorbed by the working substance from the regenerator",
+        "Not equal to the heat absorbed by the working substance from the regenerator",
+        "Dependent on the value of temperature in the heat addition process",
+        "Measured during the constant temperature heat rejection process"
+      ],
+      "answer": "Equal to the heat absorbed by the working substance from the regenerator"
+    }
+  ]
+}

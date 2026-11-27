@@ -1,0 +1,304 @@
+{
+  "id": "mcq_pipe_cns_01_power_systems",
+  "title": "Power Systems, IC Engines, Geothermal & Nuclear",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-01",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The peak power that can be produced on an occasional basis:",
+      "options": [
+        "Brake power",
+        "Intermittent rating",
+        "Continuous duty rating",
+        "Power rating"
+      ],
+      "answer": "Intermittent rating"
+    },
+    {
+      "id": 2,
+      "q": "A value of a property that includes the effect of friction is known as:",
+      "options": [
+        "Brake value",
+        "Indicated value",
+        "Friction value",
+        "Actual value"
+      ],
+      "answer": "Brake value"
+    },
+    {
+      "id": 3,
+      "q": "It is a device used for atomizing or cracking fuel oil and through which the fuel oil is injected into the working cylinders of diesel engines:",
+      "options": [
+        "Atomizer",
+        "Injector",
+        "Fuel spray nozzle",
+        "Cracker"
+      ],
+      "answer": "Atomizer"
+    },
+    {
+      "id": 4,
+      "q": "Underground system of hot water and/or steam:",
+      "options": [
+        "Hydrothermal resource",
+        "Geothermal resource",
+        "Hot water resource",
+        "High-pressure water system"
+      ],
+      "answer": "Hydrothermal resource"
+    },
+    {
+      "id": 5,
+      "q": "The process of returning spent geothermal fluids to the subsurface is called:",
+      "options": [
+        "Injection",
+        "Returning",
+        "Rejection",
+        "Exhaustion"
+      ],
+      "answer": "Injection"
+    },
+    {
+      "id": 6,
+      "q": "The simultaneous demand of all customers required at any specified point in an electric power system is called:",
+      "options": [
+        "Demand",
+        "Electrical demand",
+        "Power demand",
+        "Load"
+      ],
+      "answer": "Load"
+    },
+    {
+      "id": 7,
+      "q": "The electricity generating plants that are operated to meet the peak or maximum load on the system are called:",
+      "options": [
+        "Peaking plants",
+        "High-load plants",
+        "High-demanding plants",
+        "Add-on plants"
+      ],
+      "answer": "Peaking plants"
+    },
+    {
+      "id": 8,
+      "q": "The electromagnetic radiation emitted from the daughter nucleus when an alpha particle leaves the parent atom:",
+      "options": [
+        "Neutron",
+        "Positron",
+        "Gamma ray",
+        "K-capture"
+      ],
+      "answer": "Gamma ray"
+    },
+    {
+      "id": 9,
+      "q": "Which of the following is a scheme for energy storage?",
+      "options": [
+        "Pumped hydro",
+        "Magnetic energy storage",
+        "Thermal energy storage",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 10,
+      "q": "A reactor that employs fast or high-energy neutrons and contains no moderator is called:",
+      "options": [
+        "High-energy reactor",
+        "Fast reactor",
+        "High-speed reactor",
+        "Turbo reactor"
+      ],
+      "answer": "Fast reactor"
+    },
+    {
+      "id": 11,
+      "q": "A reactor that utilizes slow-moving neutrons:",
+      "options": [
+        "Slow reactor",
+        "Intermediate reactor",
+        "Thermal reactor",
+        "Slow-speed reactor"
+      ],
+      "answer": "Thermal reactor"
+    },
+    {
+      "id": 12,
+      "q": "The electricity generating units that are operated to meet the constant or minimum load on the system are called:",
+      "options": [
+        "Constant load plants",
+        "Baseload plants",
+        "Invariable load plants",
+        "Steady load plants"
+      ],
+      "answer": "Baseload plants"
+    },
+    {
+      "id": 13,
+      "q": "What are the main components in a combined cycle power plant?",
+      "options": [
+        "Diesel engine and air compressor",
+        "Steam boiler and turbine",
+        "Gas turbine and waste heat boiler",
+        "Nuclear reactor and steam boiler"
+      ],
+      "answer": "Gas turbine and waste heat boiler"
+    },
+    {
+      "id": 14,
+      "q": "The geothermal electricity generating plants that employ a closed-loop heat exchange system in which the heat of the primary fluid is transferred to a secondary fluid, which is thereby vaporized and used to drive a turbine generator set:",
+      "options": [
+        "Binary cycle plant",
+        "Dual cycle plant",
+        "Double cycle plant",
+        "Cascade cycle"
+      ],
+      "answer": "Binary cycle plant"
+    },
+    {
+      "id": 15,
+      "q": "The geothermal solution which contains appreciable amounts of sodium chloride or other salts is called:",
+      "options": [
+        "Sulfur dioxide",
+        "Potassium silicate",
+        "Sea water",
+        "Brine"
+      ],
+      "answer": "Brine"
+    },
+    {
+      "id": 16,
+      "q": "The process that uses a stream of geothermal hot water or steam to perform successive tasks requiring lower temperatures is called:",
+      "options": [
+        "Diminishing heat",
+        "Decreasing heat",
+        "Cascading heat",
+        "Negative gradient process"
+      ],
+      "answer": "Cascading heat"
+    },
+    {
+      "id": 17,
+      "q": "The steam produced when the pressure on a geothermal liquid is reduced:",
+      "options": [
+        "Low-pressure steam",
+        "High-quality steam",
+        "Sub-pressure steam",
+        "Flashed steam"
+      ],
+      "answer": "Flashed steam"
+    },
+    {
+      "id": 18,
+      "q": "The vent or hole in the Earth's surface, usually in a volcanic region, from which gaseous vapors or hot gases issue:",
+      "options": [
+        "Fumaroles",
+        "Crater",
+        "Hot spot",
+        "Hot spring"
+      ],
+      "answer": "Fumaroles"
+    },
+    {
+      "id": 19,
+      "q": "The Earth's interior heat made available to man by extracting it from hot water or rocks:",
+      "options": [
+        "Geological heat",
+        "Geothermal heat",
+        "Volcanic heat",
+        "None of these"
+      ],
+      "answer": "Geothermal heat",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 20,
+      "q": "A device that takes advantage of the relatively constant temperature of the Earth's interior, using it as a source and sink of heat for both heating and cooling:",
+      "options": [
+        "Geothermal devices",
+        "Geothermal generator",
+        "Geothermal heat pumps",
+        "Geothermal turbines"
+      ],
+      "answer": "Geothermal heat pumps"
+    },
+    {
+      "id": 21,
+      "q": "The spring that shoots jets of hot water and steam into the air is called:",
+      "options": [
+        "Geyser",
+        "Hot jet",
+        "Thermal jet",
+        "Guyshen"
+      ],
+      "answer": "Geyser"
+    },
+    {
+      "id": 22,
+      "q": "A device which automatically governs or controls the speed of an engine:",
+      "options": [
+        "Servomotor",
+        "Indicator",
+        "Governors",
+        "Speedometer"
+      ],
+      "answer": "Governors"
+    },
+    {
+      "id": 23,
+      "q": "Used to describe the act of blowing the exhaust products out with the air-fuel mixture:",
+      "options": [
+        "Supercharging",
+        "Scavenging",
+        "Honing",
+        "Choking"
+      ],
+      "answer": "Scavenging"
+    },
+    {
+      "id": 24,
+      "q": "A form of supercharging in which the exhaust gases drive the supercharger:",
+      "options": [
+        "Lugging",
+        "Honing",
+        "Turbocharging",
+        "Blower charging"
+      ],
+      "answer": "Turbocharging"
+    },
+    {
+      "id": 25,
+      "q": "Which of the following statements is false when gasoline is used as diesel fuel?",
+      "options": [
+        "Gasoline does not ignite",
+        "Gasoline wears the fuel-injection pumps because of its low viscosity",
+        "Addition of lubrication oil to gasoline will just worsen the situation",
+        "All of the above"
+      ],
+      "answer": "Addition of lubrication oil to gasoline will just worsen the situation",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    }
+  ]
+}

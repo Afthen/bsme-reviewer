@@ -1,0 +1,414 @@
+{
+  "id": "mcq_pipe_cns_04_power_plants_boilers",
+  "title": "Power Plants, Boilers & Renewable/Nuclear Energy",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "This is a vent or hole in the earth's surface, usually in a volcanic region, from which steam, gaseous vapors, or hot gases issue.",
+      "options": [
+        "Magma",
+        "Geyser",
+        "Fumarole",
+        "Fault"
+      ],
+      "answer": "Fumarole"
+    },
+    {
+      "id": 2,
+      "q": "The typical depth of a geothermal production well in meters:",
+      "options": [
+        "1,000 m",
+        "3,000 m",
+        "1,500 m",
+        "4,000 m"
+      ],
+      "answer": "3,000 m"
+    },
+    {
+      "id": 3,
+      "q": "A wind energy system transforms the _________ of the wind into mechanical or electrical energy that can be harnessed for practical use.",
+      "options": [
+        "Potential Energy",
+        "Heat Energy",
+        "Internal Energy",
+        "Kinetic Energy"
+      ],
+      "answer": "Kinetic Energy"
+    },
+    {
+      "id": 4,
+      "q": "It is the rhythmic rise and fall of the ocean waters.",
+      "options": [
+        "Tide range",
+        "Tide",
+        "Wave",
+        "Water current"
+      ],
+      "answer": "Tide"
+    },
+    {
+      "id": 5,
+      "q": "The power available in the wind is proportional to the _________ of its speed.",
+      "options": [
+        "Cube",
+        "Fourth Power",
+        "Square",
+        "All of the above"
+      ],
+      "answer": "Cube",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 6,
+      "q": "It is the maximum tidal range.",
+      "options": [
+        "Neap tides",
+        "Ebb tide",
+        "Spring tide",
+        "Tidal wave"
+      ],
+      "answer": "Spring tide"
+    },
+    {
+      "id": 7,
+      "q": "In this type of reactor, water is heated by the nuclear fuel and boils to steam directly inside the reactor vessel. It is then piped directly to the turbine, which spins to drive the electrical generator.",
+      "options": [
+        "Heavy Water Reactor",
+        "Pressurized Water Reactor",
+        "Boiling Water Reactor",
+        "All of the above"
+      ],
+      "answer": "Boiling Water Reactor",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 8,
+      "q": "It is an air pollution control device that works by electrically charging the particles of fly ash in the flue gas and collecting them by attraction to charged metal plates.",
+      "options": [
+        "Wet scrubber",
+        "Bag houses",
+        "Electrostatic Precipitator",
+        "Cyclone Separator"
+      ],
+      "answer": "Electrostatic Precipitator"
+    },
+    {
+      "id": 9,
+      "q": "This nuclear reactor component, which is made up of carbon and beryllium, slows down the fast neutrons that are born during the fission process.",
+      "options": [
+        "Control Rods",
+        "Coolant",
+        "Moderator",
+        "Reflector"
+      ],
+      "answer": "Moderator"
+    },
+    {
+      "id": 10,
+      "q": "These boron-coated steel rods are used to regulate the rate of fission chain reaction. They are withdrawn from the core to start the chain reaction and inserted all the way into the core to stop it.",
+      "options": [
+        "Control Rods",
+        "Coolant",
+        "Moderator",
+        "Reflector"
+      ],
+      "answer": "Control Rods"
+    },
+    {
+      "id": 11,
+      "q": "In general usage, the term \"combined cycle power plant\" describes the combination of a gas turbine generator(s) (_________ cycle) with turbine exhaust waste boiler(s) and steam turbine generator(s) (Rankine cycle) for the production of electrical power.",
+      "options": [
+        "Diesel Cycle",
+        "Reheat Cycle",
+        "Otto Cycle",
+        "Brayton Cycle"
+      ],
+      "answer": "Brayton Cycle"
+    },
+    {
+      "id": 12,
+      "q": "It means using the same energy source for more than one purpose, such as using the waste heat from an engine for space heating.",
+      "options": [
+        "Superposing",
+        "Cogeneration",
+        "Topping",
+        "Combined Cycle Plant"
+      ],
+      "answer": "Cogeneration"
+    },
+    {
+      "id": 13,
+      "q": "An \"attemperator\" is another name for:",
+      "options": [
+        "Dry pipe",
+        "Superheater",
+        "Reheater",
+        "Desuperheater"
+      ],
+      "answer": "Desuperheater"
+    },
+    {
+      "id": 14,
+      "q": "Why were older types of economizers constructed invariably of cast iron?",
+      "options": [
+        "Because cast iron resists corrosion better than mild steel and the pressures were comparatively low.",
+        "Because it is cheap.",
+        "Because cast iron is more abundant than any other type of steel.",
+        "Because its thermal conductivity is very small and it gives greater efficiency to the system."
+      ],
+      "answer": "Because cast iron resists corrosion better than mild steel and the pressures were comparatively low."
+    },
+    {
+      "id": 15,
+      "q": "It is an accessory often installed on modern boilers to preheat air for combustion before it enters the boiler furnace.",
+      "options": [
+        "Economizer",
+        "Reheater",
+        "Air preheater",
+        "Forced-draft fan"
+      ],
+      "answer": "Air preheater"
+    },
+    {
+      "id": 16,
+      "q": "The ratio of the average load to the peak load over a designated period of time:",
+      "options": [
+        "Demand Factor",
+        "Load Factor",
+        "Capacity Factor",
+        "Diversity Factor",
+        "Output Factor"
+      ],
+      "answer": "Load Factor"
+    },
+    {
+      "id": 17,
+      "q": "The ratio of the sum of individual maximum demands of the system to the overall maximum demand of the whole system:",
+      "options": [
+        "Demand Factor",
+        "Load Factor",
+        "Capacity Factor",
+        "Diversity Factor"
+      ],
+      "answer": "Diversity Factor"
+    },
+    {
+      "id": 18,
+      "q": "The sum of the continuous ratings of all the equipment and outlets on the customer's circuit:",
+      "options": [
+        "Reserve load",
+        "Peak load",
+        "Maximum demand",
+        "Connected load"
+      ],
+      "answer": "Connected load"
+    },
+    {
+      "id": 19,
+      "q": "The ratio of the duration of the actual service of a machine or equipment to the total duration of the period of time considered:",
+      "options": [
+        "Operation factor",
+        "Demand factor",
+        "Utilization factor",
+        "Capacity factor"
+      ],
+      "answer": "Operation factor"
+    },
+    {
+      "id": 20,
+      "q": "The ratio of the combined engine efficiency to the brake engine efficiency:",
+      "options": [
+        "Combined engine efficiency",
+        "Combined thermal efficiency",
+        "Generator efficiency",
+        "Brake engine efficiency"
+      ],
+      "answer": "Generator efficiency"
+    },
+    {
+      "id": 21,
+      "q": "The ratio of the peak load to the connected load is known as:",
+      "options": [
+        "Output factor",
+        "Load factor",
+        "Demand factor",
+        "Capacity factor"
+      ],
+      "answer": "Demand factor"
+    },
+    {
+      "id": 22,
+      "q": "The difference between the power plant installed capacity and the peak load is called:",
+      "options": [
+        "Average load",
+        "Reserve over peak",
+        "Connected load",
+        "None of the above"
+      ],
+      "answer": "Reserve over peak",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 23,
+      "q": "A boiler steam pressure gage should have a range of at least _________ times the maximum allowable working pressure.",
+      "options": [
+        "1.0",
+        "1.50",
+        "1.25",
+        "1.75"
+      ],
+      "answer": "1.50"
+    },
+    {
+      "id": 24,
+      "q": "In this type of boiler, the water passes through the tubes while the flue gases burn outside the tubes.",
+      "options": [
+        "Water-tube boiler",
+        "Steam generator",
+        "Fire-tube boiler",
+        "Electric boiler"
+      ],
+      "answer": "Water-tube boiler"
+    },
+    {
+      "id": 25,
+      "q": "It shows the water level in the boiler drum.",
+      "options": [
+        "Water column",
+        "Gauge glass",
+        "Try cocks",
+        "All of the above"
+      ],
+      "answer": "Gauge glass",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 26,
+      "q": "It prevents damage to the boiler by giving warning of low water.",
+      "options": [
+        "Safety valve",
+        "Relief valve",
+        "Fusible plug",
+        "Try cocks"
+      ],
+      "answer": "Fusible plug"
+    },
+    {
+      "id": 27,
+      "q": "It has several functions: when necessary it empties the boiler for cleaning, inspection, or repair; it blows out mud, scale, or sediment when the boiler is in operation; and it prevents excessive concentration of soluble impurities in the boiler.",
+      "options": [
+        "Blow-down line",
+        "Steam valve",
+        "Boiler feedwater pump",
+        "None of the above"
+      ],
+      "answer": "Blow-down line",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 28,
+      "q": "It is a heat exchanger which utilizes the heat of the flue gases to preheat the air needed for combustion.",
+      "options": [
+        "Economizer",
+        "Reheater",
+        "Feedwater heater",
+        "Air preheater"
+      ],
+      "answer": "Air preheater"
+    },
+    {
+      "id": 29,
+      "q": "It is a feedwater preheating and waste heat recovery device which utilizes the heat of the flue gases.",
+      "options": [
+        "Economizer",
+        "Closed heater",
+        "Open heater",
+        "Waterwalls"
+      ],
+      "answer": "Economizer"
+    },
+    {
+      "id": 30,
+      "q": "It is a system of furnace cooling tubes which can extend the evaporative capacity of the water-tube boiler and at the same time protect the furnace walls from high temperature.",
+      "options": [
+        "Reheater",
+        "Superheater",
+        "Waterwalls",
+        "Feedwater heater"
+      ],
+      "answer": "Waterwalls"
+    },
+    {
+      "id": 31,
+      "q": "It is based on the generation of 34.5 lbm/hr of steam from water at $212°\\text{F}$ to steam at $212°\\text{F}$ and is equivalent to 33,500 Btu/hr.",
+      "options": [
+        "One horsepower",
+        "One boiler horsepower",
+        "One kilowatt",
+        "None of the above"
+      ],
+      "answer": "One boiler horsepower",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 32,
+      "q": "It prevents boiler pressure from rising above a certain predetermined pressure by opening to allow excess steam to escape into the atmosphere when that point is reached, thus guarding against a possible explosion through excessive pressure.",
+      "options": [
+        "Relief valve",
+        "Fusible plug",
+        "Safety valve",
+        "Pressure switches"
+      ],
+      "answer": "Safety valve"
+    },
+    {
+      "id": 33,
+      "q": "In a water-tube boiler, the water passes through _________.",
+      "options": [
+        "Inside the tubes",
+        "Inside the shell",
+        "Outside the tubes",
+        "Outside the shell"
+      ],
+      "answer": "Inside the tubes"
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+{
+  "id": "mcq_pipe_cns_05_heat_transfer",
+  "title": "Heat Transfer & Insulation",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-05",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Calculate the net radiation heat flux exchange between two bodies with surface temperatures of $120°\\text{C}$ and $25°\\text{C}$. The radiation heat transfer coefficient is $7.0\\text{ W/m}^2\\text{·K}$.",
+      "options": [
+        "$700\\text{ W/m}^2$",
+        "$750\\text{ W/m}^2$",
+        "$665\\text{ W/m}^2$",
+        "$650\\text{ W/m}^2$"
+      ],
+      "answer": "$665\\text{ W/m}^2$"
+    },
+    {
+      "id": 2,
+      "q": "A pipe with a 4 cm inside diameter and 12 cm outer diameter is insulated with asbestos ($k = 0.54\\text{ W/m·K}$). The inside wall temperature of the pipe is maintained at $500°\\text{C}$ while the outside surface of the asbestos is at $90°\\text{C}$. Calculate the heat loss per meter length.",
+      "options": [
+        "1,265 W/m",
+        "1,500 W/m",
+        "1,400 W/m",
+        "1,100 W/m"
+      ],
+      "answer": "1,265 W/m"
+    },
+    {
+      "id": 3,
+      "q": "A 5 m thick flat plane ($k = 60\\text{ W/m·K}$) is well insulated on its sides, while the top and bottom surfaces are maintained at $150°\\text{C}$ and $80°\\text{C}$, respectively. Assuming steady-state heat conduction, calculate the temperature 4 m below the top surface.",
+      "options": [
+        "$100°\\text{C}$",
+        "$120°\\text{C}$",
+        "$94°\\text{C}$",
+        "$80°\\text{C}$"
+      ],
+      "answer": "$94°\\text{C}$"
+    },
+    {
+      "id": 4,
+      "q": "A solid sphere of diameter $D = 0.5\\text{ m}$ and surface emissivity of 0.8 contains electronics that dissipate 100 W of heat. If it does not receive radiation from the surroundings, what is the surface temperature?",
+      "options": [
+        "300 K",
+        "280 K",
+        "230 K",
+        "270 K"
+      ],
+      "answer": "230 K"
+    },
+    {
+      "id": 5,
+      "q": "In heat transfer by conduction, due to symmetry the heat flow at a point is perpendicular to the isothermal surface through the point. This mode of conduction is a characteristic of:",
+      "options": [
+        "Non-isotropic solids",
+        "Isotropic solids",
+        "Insulators",
+        "Conductors"
+      ],
+      "answer": "Isotropic solids"
+    },
+    {
+      "id": 6,
+      "q": "The heat transferred radially across an insulated pipe per unit area:",
+      "options": [
+        "Remains constant",
+        "Inversely proportional to the thermal conductivity",
+        "Decreases from pipe wall to insulated surface",
+        "Increases from pipe wall to insulated surface"
+      ],
+      "answer": "Decreases from pipe wall to insulated surface"
+    },
+    {
+      "id": 7,
+      "q": "If a man touches two metals which were kept together at room temperature, why would one metal feel colder than the other?",
+      "options": [
+        "One has a high temperature coefficient",
+        "One has a lower temperature",
+        "One has a high thermal conductivity",
+        "One has a high temperature"
+      ],
+      "answer": "One has a high thermal conductivity"
+    },
+    {
+      "id": 8,
+      "q": "The ratio of the internal thermal resistance of a solid to the boundary layer thermal resistance is described by:",
+      "options": [
+        "Biot number",
+        "Nusselt number",
+        "Prandtl number",
+        "Reynolds number"
+      ],
+      "answer": "Biot number"
+    },
+    {
+      "id": 9,
+      "q": "A hot block is cooled by blowing cool air over its top surface. The heat that is first transferred to the air layer close to the block is by conduction. It is eventually carried away from the surface by:",
+      "options": [
+        "Convection",
+        "Radiation",
+        "Conduction",
+        "Thermal diffusion"
+      ],
+      "answer": "Convection"
+    },
+    {
+      "id": 10,
+      "q": "The effectiveness of a body as a thermal radiator at a given temperature:",
+      "options": [
+        "Absorptivity",
+        "Emissivity",
+        "Conductivity",
+        "Reflectivity"
+      ],
+      "answer": "Emissivity"
+    },
+    {
+      "id": 11,
+      "q": "What part of heat exchangers are classified as radiant convection and placed near the furnace, where they receive the bulk of the radiation from the flame?",
+      "options": [
+        "Radiant superheaters",
+        "Condenser",
+        "Radiator",
+        "Evaporators"
+      ],
+      "answer": "Radiant superheaters"
+    },
+    {
+      "id": 12,
+      "q": "Which of the following statements is not a key feature of Fourier's heat conduction?",
+      "options": [
+        "It is phenomenological",
+        "It defines an important material property called thermal conductance",
+        "It is a vector expression indicating that the heat flux is normal and in the direction of decreasing temperature",
+        "Assumes that the thermal conductivity is constant with respect to temperature of the material"
+      ],
+      "answer": "Assumes that the thermal conductivity is constant with respect to temperature of the material"
+    },
+    {
+      "id": 13,
+      "q": "Three hundred kilojoules of heat flow by conduction from the outside to the inside of a cold storage in one hour. If the temperature and all other conditions are the same, what is the heat flowing through the cold storage room in two hours?",
+      "options": [
+        "600 kJ",
+        "900 kJ",
+        "300 kJ",
+        "1,200 kJ"
+      ],
+      "answer": "600 kJ"
+    }
+  ]
+}

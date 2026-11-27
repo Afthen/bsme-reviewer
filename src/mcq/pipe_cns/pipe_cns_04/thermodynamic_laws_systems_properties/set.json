@@ -1,0 +1,437 @@
+{
+  "id": "mcq_pipe_cns_04_thermo_laws_properties",
+  "title": "Thermodynamic Laws, Systems & Properties",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A system in which the mass inflow and outflow are not equal or vary with time and in which the mass within the system changes with time:",
+      "options": [
+        "Steady flow system",
+        "Unsteady state, unsteady flow system",
+        "Steady state system",
+        "Steady flow, steady state system"
+      ],
+      "answer": "Unsteady state, unsteady flow system"
+    },
+    {
+      "id": 2,
+      "q": "A form of energy that is a sole function of temperature for perfect gases and a strong function of temperature and weak function of pressure for non-perfect gases, vapors, and liquids:",
+      "options": [
+        "Internal energy",
+        "Flow work",
+        "Enthalpy",
+        "Pressure energy"
+      ],
+      "answer": "Internal energy"
+    },
+    {
+      "id": 3,
+      "q": "It is that portion of the universe, an atom, a certain quantity of matter, or a certain volume in space that one wishes to study.",
+      "options": [
+        "Heat",
+        "System",
+        "Work",
+        "Efficiency"
+      ],
+      "answer": "System"
+    },
+    {
+      "id": 4,
+      "q": "It is the force of gravity per unit volume of a substance.",
+      "options": [
+        "Density",
+        "Specific volume",
+        "Specific weight",
+        "Specific gravity"
+      ],
+      "answer": "Specific weight"
+    },
+    {
+      "id": 5,
+      "q": "It is a kind of thermodynamic system whose mass does not cross its boundaries.",
+      "options": [
+        "Open system",
+        "Closed system",
+        "Steady flow system",
+        "Transient flow"
+      ],
+      "answer": "Closed system"
+    },
+    {
+      "id": 6,
+      "q": "Which law states that \"the acceleration of a particular body is directly proportional to the resultant force acting on it and inversely proportional to its mass\"?",
+      "options": [
+        "Zeroth Law of Thermodynamics",
+        "First Law of Thermodynamics",
+        "Second Law of Thermodynamics",
+        "Newton's Second Law of Motion"
+      ],
+      "answer": "Newton's Second Law of Motion"
+    },
+    {
+      "id": 7,
+      "q": "A substance that receives, transports, and transfers energy:",
+      "options": [
+        "Reservoir",
+        "Engine",
+        "Working substance",
+        "Heat sink"
+      ],
+      "answer": "Working substance"
+    },
+    {
+      "id": 8,
+      "q": "A system where energy and mass cross its boundaries:",
+      "options": [
+        "Open system",
+        "Closed system",
+        "Isolated system",
+        "Transient flow system"
+      ],
+      "answer": "Open system"
+    },
+    {
+      "id": 9,
+      "q": "The law of thermodynamics that deals with the law of conservation of energy, which states that energy can neither be created nor destroyed:",
+      "options": [
+        "Zeroth Law of Thermodynamics",
+        "First Law of Thermodynamics",
+        "Second Law of Thermodynamics",
+        "Third Law of Thermodynamics"
+      ],
+      "answer": "First Law of Thermodynamics"
+    },
+    {
+      "id": 10,
+      "q": "It states that in any mechanical mixture of gases and vapors (those that do not combine chemically) the total pressure of the gaseous mixture such as moist air is equal to the sum of the partial pressures exerted by the individual gases or vapors.",
+      "options": [
+        "Joule's Law",
+        "Amagat's Law",
+        "Dalton's Law",
+        "Charles' Law"
+      ],
+      "answer": "Dalton's Law"
+    },
+    {
+      "id": 11,
+      "q": "It is a substance existing in the gaseous phase but relatively near its saturation temperature.",
+      "options": [
+        "Gas",
+        "Vapor",
+        "Air",
+        "Oxygen"
+      ],
+      "answer": "Vapor"
+    },
+    {
+      "id": 12,
+      "q": "The point at which the saturated liquid and saturated vapor states are identical:",
+      "options": [
+        "Critical point",
+        "Saturated liquid-vapor point",
+        "Triple point",
+        "Saturation point"
+      ],
+      "answer": "Critical point"
+    },
+    {
+      "id": 13,
+      "q": "The point at which heat transfer stops:",
+      "options": [
+        "Steady-flow",
+        "Thermal equilibrium",
+        "Thermodynamic equilibrium",
+        "Steady-state"
+      ],
+      "answer": "Thermal equilibrium"
+    },
+    {
+      "id": 14,
+      "q": "It refers to the temperature at which all molecular motion ceases according to the kinetic theory of heat.",
+      "options": [
+        "0 K",
+        "$-273°\\text{C}$",
+        "$0°\\text{R}$",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 15,
+      "q": "A form of energy that is transferred between two systems by virtue of temperature difference:",
+      "options": [
+        "Heat",
+        "Potential Energy",
+        "Kinetic Energy",
+        "Electrical Energy"
+      ],
+      "answer": "Heat"
+    },
+    {
+      "id": 16,
+      "q": "An energy interaction that is not caused by a temperature difference between a system and its surroundings:",
+      "options": [
+        "Work",
+        "Convection",
+        "Conduction",
+        "Heat"
+      ],
+      "answer": "Work"
+    },
+    {
+      "id": 17,
+      "q": "Changing of solid directly to vapor, without passing through the liquid state, is called:",
+      "options": [
+        "Sublimation",
+        "Evaporation",
+        "Condensation",
+        "Vaporization"
+      ],
+      "answer": "Sublimation"
+    },
+    {
+      "id": 18,
+      "q": "The sum of all the energies of all the molecules in a system, energies that appear in several complex forms:",
+      "options": [
+        "Enthalpy",
+        "Kinetic Energy",
+        "Internal Energy",
+        "Potential Energy",
+        "External Energy",
+        "Flow Work"
+      ],
+      "answer": "Internal Energy"
+    },
+    {
+      "id": 19,
+      "q": "It is a liquid whose temperature is below the saturation temperature corresponding to its pressure.",
+      "options": [
+        "Saturated liquid",
+        "Subcooled liquid",
+        "Superheated liquid",
+        "Unsaturated liquid",
+        "Water"
+      ],
+      "answer": "Subcooled liquid"
+    },
+    {
+      "id": 20,
+      "q": "The fact that the total energy in any one energy system remains constant is called the principle of _________.",
+      "options": [
+        "Conservation of Energy",
+        "Conservation of Mass",
+        "Second Law of Thermodynamics",
+        "Zeroth Law of Thermodynamics"
+      ],
+      "answer": "Conservation of Energy"
+    },
+    {
+      "id": 21,
+      "q": "A system that is completely impervious to its surroundings. Neither mass nor energy crosses its boundaries.",
+      "options": [
+        "Open system",
+        "Adiabatic system",
+        "Closed system",
+        "Isolated system"
+      ],
+      "answer": "Isolated system"
+    },
+    {
+      "id": 22,
+      "q": "A vapor having a temperature higher than the saturation temperature corresponding to its pressure:",
+      "options": [
+        "Superheated vapor",
+        "Saturated vapor",
+        "Super saturated vapor",
+        "Subcooled vapor",
+        "Wet vapor"
+      ],
+      "answer": "Superheated vapor"
+    },
+    {
+      "id": 23,
+      "q": "The energy or stored capacity for performing work possessed by a moving body, by virtue of its momentum:",
+      "options": [
+        "Internal energy",
+        "Work",
+        "Gravitational potential energy",
+        "Kinetic energy",
+        "Flow Work"
+      ],
+      "answer": "Kinetic energy"
+    },
+    {
+      "id": 24,
+      "q": "This law states that \"all energy received as heat by a heat engine cannot be converted into mechanical work\".",
+      "options": [
+        "1st Law of Thermodynamics",
+        "2nd Law of Thermodynamics",
+        "3rd Law of Thermodynamics",
+        "All of the above"
+      ],
+      "answer": "2nd Law of Thermodynamics",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 25,
+      "q": "The intensity of pressure that is measured above absolute zero is called:",
+      "options": [
+        "Gage pressure",
+        "Vacuum pressure",
+        "Absolute pressure",
+        "Saturation pressure"
+      ],
+      "answer": "Absolute pressure"
+    },
+    {
+      "id": 26,
+      "q": "Flow work is equal to pressure times _________.",
+      "options": [
+        "Temperature",
+        "Internal energy",
+        "Entropy",
+        "Specific volume"
+      ],
+      "answer": "Specific volume"
+    },
+    {
+      "id": 27,
+      "q": "This form of energy is due to the position or elevation of the body.",
+      "options": [
+        "Internal energy",
+        "Potential energy",
+        "Kinetic energy",
+        "Work"
+      ],
+      "answer": "Potential energy"
+    },
+    {
+      "id": 28,
+      "q": "It is the heat required in a constant-pressure process to completely vaporize a unit mass of liquid at a given temperature.",
+      "options": [
+        "Latent heat of vaporization",
+        "Enthalpy of vaporization",
+        "$h_{fg}$",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 29,
+      "q": "It is a commonly used device for measuring temperature differences or high temperatures.",
+      "options": [
+        "Thermistor",
+        "Bimetallic strip",
+        "Thermocouple",
+        "Mercury in glass"
+      ],
+      "answer": "Thermocouple"
+    },
+    {
+      "id": 30,
+      "q": "The science and technology concerned with precisely measuring energy and enthalpy:",
+      "options": [
+        "Thermodynamics",
+        "Chemistry",
+        "Calorimetry",
+        "None of the above"
+      ],
+      "answer": "Calorimetry",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 31,
+      "q": "The rate of doing work per unit of time:",
+      "options": [
+        "Torque",
+        "Force",
+        "Power",
+        "Moment"
+      ],
+      "answer": "Power"
+    },
+    {
+      "id": 32,
+      "q": "It is the work done in pushing a fluid across a boundary, usually into or out of a system.",
+      "options": [
+        "Mechanical work",
+        "Flow work",
+        "Nonflow work",
+        "Electrical work"
+      ],
+      "answer": "Flow work"
+    },
+    {
+      "id": 33,
+      "q": "The transfer of energy from the more energetic particles of a substance to the adjacent less energetic ones as a result of interactions between the particles:",
+      "options": [
+        "Heat transfer",
+        "Radiation",
+        "Conduction",
+        "Convection"
+      ],
+      "answer": "Conduction"
+    },
+    {
+      "id": 34,
+      "q": "It states that when two bodies are in thermal equilibrium with a third body, they are in thermal equilibrium with each other and hence are at the same temperature.",
+      "options": [
+        "1st Law of Thermodynamics",
+        "2nd Law of Thermodynamics",
+        "Zeroth Law of Thermodynamics",
+        "Boyle's Law"
+      ],
+      "answer": "Zeroth Law of Thermodynamics"
+    },
+    {
+      "id": 35,
+      "q": "It states that the change of internal energy of an ideal gas is a function of only the temperature change:",
+      "options": [
+        "Charles' Law",
+        "Boyle's Law",
+        "Joule's Law",
+        "Zeroth Law"
+      ],
+      "answer": "Joule's Law"
+    },
+    {
+      "id": 36,
+      "q": "A term expressing the combination of internal molecular energy, expansion work, and flow work:",
+      "options": [
+        "Entropy",
+        "Enthalpy",
+        "Internal Energy",
+        "Mechanical Work"
+      ],
+      "answer": "Enthalpy"
+    }
+  ]
+}

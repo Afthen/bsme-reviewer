@@ -1,0 +1,411 @@
+{
+  "id": "mcq_pipe_cns_06_thermo_review",
+  "title": "Thermodynamics & Fluid Fundamentals Review",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-06",
+  "questions": [
+    {
+      "id": 1,
+      "q": "By increasing the heat source temperature of a Carnot cycle operating with fixed heat rejection temperature and entropy limits, which parameter will not be affected?",
+      "options": [
+        "Thermal efficiency",
+        "Work output",
+        "Heat added",
+        "Heat rejected"
+      ],
+      "answer": "Heat rejected"
+    },
+    {
+      "id": 2,
+      "q": "The Stirling cycle uses what type of fluid as its working medium?",
+      "options": [
+        "Incompressible gas",
+        "Incompressible fluid",
+        "Compressible refrigerant",
+        "Compressible gas"
+      ],
+      "answer": "Compressible gas"
+    },
+    {
+      "id": 3,
+      "q": "In an ideal Stirling cycle, external heat addition occurs during an:",
+      "options": [
+        "Isobaric process",
+        "Isentropic process",
+        "Isothermal process",
+        "Isometric process"
+      ],
+      "answer": "Isothermal process"
+    },
+    {
+      "id": 4,
+      "q": "In an ideal Ericsson cycle, the regeneration process occurs during a:",
+      "options": [
+        "Constant-volume process",
+        "Constant-temperature process",
+        "Constant-pressure process",
+        "None of these"
+      ],
+      "answer": "Constant-pressure process",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 5,
+      "q": "Industrial heat exchangers operating at steady state typically involve:",
+      "options": [
+        "No work interaction ($W = 0$)",
+        "No heat interaction ($Q = 0$)",
+        "No energy interaction",
+        "None of these"
+      ],
+      "answer": "No work interaction ($W = 0$)",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 6,
+      "q": "A thermodynamic device that continuously converts heat into mechanical work is called a:",
+      "options": [
+        "Adiabatic chamber",
+        "Regenerator",
+        "Heat engine",
+        "Heat pump"
+      ],
+      "answer": "Heat engine"
+    },
+    {
+      "id": 7,
+      "q": "A hypothetical device that violates the Second Law of Thermodynamics (such as converting all absorbed heat completely into work without rejecting any heat) is called a:",
+      "options": [
+        "Perpetual motion machine of the second kind",
+        "Perpetual motion machine of the third kind",
+        "Perpetual motion machine of the first kind",
+        "None of these"
+      ],
+      "answer": "Perpetual motion machine of the second kind",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 8,
+      "q": "A process is called _________ if no irreversibilities occur outside the system boundaries during the process:",
+      "options": [
+        "Externally reversible",
+        "Internally reversible",
+        "Totally reversible",
+        "None of these"
+      ],
+      "answer": "Externally reversible",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 9,
+      "q": "An energy interaction between a closed system and its surroundings that is NOT accompanied by entropy transfer is:",
+      "options": [
+        "Internal energy",
+        "Heat",
+        "Work",
+        "Mass flow"
+      ],
+      "answer": "Work"
+    },
+    {
+      "id": 10,
+      "q": "The Carnot principle states that the efficiencies of all reversible heat engines operating between the same two thermal reservoirs:",
+      "options": [
+        "Differ depending on working fluid",
+        "Are the same",
+        "Are unequal",
+        "None of the above"
+      ],
+      "answer": "Are the same",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 11,
+      "q": "A thermodynamic process during which there is zero heat transfer between the system and its surroundings is an:",
+      "options": [
+        "Isobaric process",
+        "Adiabatic process",
+        "Isothermal process",
+        "Isometric process"
+      ],
+      "answer": "Adiabatic process"
+    },
+    {
+      "id": 12,
+      "q": "The relative density (specific gravity) of a liquid substance is defined as the ratio of its density to the density of:",
+      "options": [
+        "Mercury",
+        "Oil",
+        "Air",
+        "Water"
+      ],
+      "answer": "Water"
+    },
+    {
+      "id": 13,
+      "q": "This type of heat exchanger allows two fluids to flow across each other at right angles ($90°$):",
+      "options": [
+        "Series flow",
+        "Parallel flow",
+        "Cross flow",
+        "Counter flow"
+      ],
+      "answer": "Cross flow"
+    },
+    {
+      "id": 14,
+      "q": "The principle stating that the total energy in any isolated system remains constant over time is the:",
+      "options": [
+        "Conservation of Energy (First Law)",
+        "Second Law of Thermodynamics",
+        "Conservation of Mass",
+        "Zeroth Law of Thermodynamics"
+      ],
+      "answer": "Conservation of Energy (First Law)"
+    },
+    {
+      "id": 15,
+      "q": "A steady-flow process for which the fluid inlet and outlet enthalpies are equal ($h_1 = h_2$) is an:",
+      "options": [
+        "Isenthalpic (throttling) process",
+        "Isentropic expansion process",
+        "Isometric heating process",
+        "Isochoric process"
+      ],
+      "answer": "Isenthalpic (throttling) process"
+    },
+    {
+      "id": 16,
+      "q": "The sum of all microscopic forms of energy of the molecules in a system (kinetic, vibrational, chemical, nuclear) is termed:",
+      "options": [
+        "Kinetic energy",
+        "Internal energy",
+        "External energy",
+        "Flow work"
+      ],
+      "answer": "Internal energy"
+    },
+    {
+      "id": 17,
+      "q": "A system that is completely impervious to its surroundings, allowing neither mass nor energy to cross its boundaries, is an:",
+      "options": [
+        "Open system",
+        "Closed system",
+        "Adiabatic system",
+        "Isolated system"
+      ],
+      "answer": "Isolated system"
+    },
+    {
+      "id": 18,
+      "q": "An instrument commonly used to measure small and moderate pressure differences by liquid column displacement is a:",
+      "options": [
+        "Manometer",
+        "Bourdon gage",
+        "Barometer",
+        "Piezometer"
+      ],
+      "answer": "Manometer"
+    },
+    {
+      "id": 19,
+      "q": "A vapor existing at a temperature higher than the saturation temperature corresponding to its pressure is a:",
+      "options": [
+        "Superheated vapor",
+        "Saturated vapor",
+        "Wet vapor",
+        "Subcooled vapor"
+      ],
+      "answer": "Superheated vapor"
+    },
+    {
+      "id": 20,
+      "q": "The stored capacity for performing work possessed by a moving body by virtue of its velocity and mass:",
+      "options": [
+        "Internal energy",
+        "Flow work",
+        "Gravitational potential energy",
+        "Kinetic energy"
+      ],
+      "answer": "Kinetic energy"
+    },
+    {
+      "id": 21,
+      "q": "For an ideal gas, a process wherein temperature remains constant and the change in internal energy is zero is an:",
+      "options": [
+        "Isobaric process",
+        "Isometric process",
+        "Isothermal process",
+        "Polytropic process"
+      ],
+      "answer": "Isothermal process"
+    },
+    {
+      "id": 22,
+      "q": "The fundamental function of a pump or gas compressor in a fluid circuit is to:",
+      "options": [
+        "Transfer heat from one fluid to another",
+        "Increase the mechanical/total energy content of the flow",
+        "Extract energy from the flow",
+        "Condense the vapor to liquid"
+      ],
+      "answer": "Increase the mechanical/total energy content of the flow"
+    },
+    {
+      "id": 23,
+      "q": "Kelvin-Planck's statement of the Second Law of Thermodynamics asserts that it is impossible for any heat engine to:",
+      "options": [
+        "Receive heat from a single thermal reservoir and convert all of it into net work",
+        "Transfer heat from a cold body to a hotter body with work input",
+        "Operate without friction",
+        "Violate the conservation of mass"
+      ],
+      "answer": "Receive heat from a single thermal reservoir and convert all of it into net work"
+    },
+    {
+      "id": 24,
+      "q": "Fluid pressure measured relative to a perfect vacuum (above absolute zero pressure) is called:",
+      "options": [
+        "Gage pressure",
+        "Absolute pressure",
+        "Vacuum pressure",
+        "Differential pressure"
+      ],
+      "answer": "Absolute pressure"
+    },
+    {
+      "id": 25,
+      "q": "Flow work per unit mass required to push a fluid across a system boundary is equal to pressure multiplied by:",
+      "options": [
+        "Temperature",
+        "Entropy",
+        "Internal energy",
+        "Specific volume ($P v$)"
+      ],
+      "answer": "Specific volume ($P v$)"
+    },
+    {
+      "id": 26,
+      "q": "Energy possessed by a physical body by virtue of its elevated position in a gravitational field is:",
+      "options": [
+        "Internal energy",
+        "Kinetic energy",
+        "Potential energy",
+        "Flow energy"
+      ],
+      "answer": "Potential energy"
+    },
+    {
+      "id": 27,
+      "q": "Other accepted engineering terms for a constant-volume thermodynamic process include:",
+      "options": [
+        "Isometric",
+        "Isochoric",
+        "Isovolumic",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 28,
+      "q": "The theoretical maximum work produced by steam expanding reversibly and adiabatically in an ideal turbine is the:",
+      "options": [
+        "Brake work",
+        "Ideal (isentropic) work",
+        "Actual shaft work",
+        "Combined work"
+      ],
+      "answer": "Ideal (isentropic) work"
+    },
+    {
+      "id": 29,
+      "q": "The thermal efficiency of a Carnot cycle depends solely upon the:",
+      "options": [
+        "Pressures of the working fluid",
+        "Entropy change",
+        "Specific volume ratio",
+        "Absolute temperatures of the heat source and sink ($T_H$ and $T_L$)"
+      ],
+      "answer": "Absolute temperatures of the heat source and sink ($T_H$ and $T_L$)"
+    },
+    {
+      "id": 30,
+      "q": "A temperature sensor consisting of two dissimilar metal wires joined at one end that generates a small thermoelectric voltage proportional to temperature difference is a:",
+      "options": [
+        "Thermistor",
+        "Thermocouple",
+        "Bimetallic strip",
+        "Bourdon tube"
+      ],
+      "answer": "Thermocouple"
+    },
+    {
+      "id": 31,
+      "q": "The branch of science and experimental technology concerned with precisely measuring quantities of heat and enthalpy of reaction is:",
+      "options": [
+        "Thermodynamics",
+        "Chemistry",
+        "Calorimetry",
+        "Fluid dynamics"
+      ],
+      "answer": "Calorimetry"
+    },
+    {
+      "id": 32,
+      "q": "Power is defined as the time rate of doing:",
+      "options": [
+        "Torque",
+        "Work or transferring energy",
+        "Force",
+        "Momentum"
+      ],
+      "answer": "Work or transferring energy"
+    },
+    {
+      "id": 33,
+      "q": "The transfer of thermal energy from more energetic particles of a substance to adjacent less energetic particles as a result of direct microscopic physical contact is:",
+      "options": [
+        "Convection",
+        "Radiation",
+        "Conduction",
+        "Advection"
+      ],
+      "answer": "Conduction"
+    },
+    {
+      "id": 34,
+      "q": "The simultaneous engineering control of temperature, humidity, purity, air distribution, and air velocity in an indoor space is called:",
+      "options": [
+        "Refrigeration",
+        "Psychrometry",
+        "Air conditioning",
+        "Humidification"
+      ],
+      "answer": "Air conditioning"
+    },
+    {
+      "id": 35,
+      "q": "In psychrometric analysis, atmospheric air is treated as a binary mixture of water vapor and non-condensing:",
+      "options": [
+        "Hydrogen",
+        "Dry air",
+        "Pure oxygen",
+        "Carbon dioxide"
+      ],
+      "answer": "Dry air"
+    }
+  ]
+}

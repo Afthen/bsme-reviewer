@@ -1,0 +1,184 @@
+{
+  "id": "mcq_pipe_cns_02_engines_geothermal",
+  "title": "IC Engines, Gas Turbines & Geothermal Power",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-02",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Which of the following is NOT a cause of black smoke in a diesel engine?",
+      "options": [
+        "Fuel valve open too long",
+        "High compression pressure",
+        "Carbon in exhaust pipe",
+        "Overload on engine"
+      ],
+      "answer": "High compression pressure"
+    },
+    {
+      "id": 2,
+      "q": "Which of the following is not a method of starting a diesel engine?",
+      "options": [
+        "Manual: rope, crank, and kick",
+        "Electric (battery)",
+        "Compressed air",
+        "Using another generator"
+      ],
+      "answer": "Using another generator"
+    },
+    {
+      "id": 3,
+      "q": "A two-stroke engine performs _________ to complete one cycle.",
+      "options": [
+        "Suction and discharge stroke",
+        "Compression and power stroke",
+        "Power and exhaust stroke",
+        "Suction and exhaust stroke"
+      ],
+      "answer": "Compression and power stroke"
+    },
+    {
+      "id": 4,
+      "q": "A type of geothermal plant used when there is a presence of brine extracted from underground:",
+      "options": [
+        "Dry geothermal plant",
+        "Double-flash geothermal",
+        "Single flash geothermal plant",
+        "Binary geothermal plant"
+      ],
+      "answer": "Binary geothermal plant"
+    },
+    {
+      "id": 5,
+      "q": "In most common designs of gas turbines, the pressure ratio ranges from:",
+      "options": [
+        "10 to 12",
+        "11 to 16",
+        "12 to 18",
+        "15 to 20"
+      ],
+      "answer": "11 to 16"
+    },
+    {
+      "id": 6,
+      "q": "The fuel injection process in a diesel engine starts when the piston _________.",
+      "options": [
+        "Is at the TDC",
+        "Leaving TDC",
+        "Approaches TDC",
+        "Halfway of the stroke"
+      ],
+      "answer": "Approaches TDC"
+    },
+    {
+      "id": 7,
+      "q": "Typical compression ratio of the Otto cycle is:",
+      "options": [
+        "6",
+        "8",
+        "10",
+        "12"
+      ],
+      "answer": "8"
+    },
+    {
+      "id": 8,
+      "q": "Oil is atomized either by air blast or pressure jet at about:",
+      "options": [
+        "60 bar",
+        "70 bar",
+        "80 bar",
+        "90 bar"
+      ],
+      "answer": "70 bar"
+    },
+    {
+      "id": 9,
+      "q": "Type of solid injection that uses a single pump supplying fuel under high pressure to a fuel header:",
+      "options": [
+        "Common rail injection",
+        "Individual pump injection system",
+        "Distributor system",
+        "Single rail injection"
+      ],
+      "answer": "Common rail injection"
+    },
+    {
+      "id": 10,
+      "q": "Water flow in a diesel engine that is caused by density differential:",
+      "options": [
+        "Thermosiphon cooling",
+        "Thermostat cooling",
+        "Pressure water cooling",
+        "Evaporative cooling"
+      ],
+      "answer": "Thermosiphon cooling"
+    },
+    {
+      "id": 11,
+      "q": "Type of lubrication system in a diesel engine in which oil from the pump is carried to a separate storage tank outside the engine cylinder and used for high-capacity engines:",
+      "options": [
+        "Mist lubrication system",
+        "Wet sump lubrication",
+        "Splash system",
+        "Dry sump lubrication system"
+      ],
+      "answer": "Dry sump lubrication system"
+    },
+    {
+      "id": 12,
+      "q": "Produces extreme pressure differentials and violent gas vibration:",
+      "options": [
+        "Vibration",
+        "Detonation",
+        "Explosion",
+        "Knocking"
+      ],
+      "answer": "Detonation"
+    },
+    {
+      "id": 13,
+      "q": "In a spark ignition engine, detonation occurs near the _________.",
+      "options": [
+        "End of combustion",
+        "Middle combustion",
+        "Beginning of combustion",
+        "Beginning of interaction"
+      ],
+      "answer": "End of combustion"
+    },
+    {
+      "id": 14,
+      "q": "In a compression ignition engine, detonation occurs near the _________.",
+      "options": [
+        "End of combustion",
+        "Middle of combustion",
+        "Beginning of combustion",
+        "Beginning of interaction"
+      ],
+      "answer": "Beginning of combustion"
+    },
+    {
+      "id": 15,
+      "q": "Morse test is used to measure the _________ of a multi-cylinder engine.",
+      "options": [
+        "Brake power",
+        "Indicated power",
+        "Friction power",
+        "Motor power"
+      ],
+      "answer": "Indicated power"
+    },
+    {
+      "id": 16,
+      "q": "Ignition delay can be minimized by adding _________ to decrease engine knocking.",
+      "options": [
+        "Ethyl ether",
+        "Ethyl chloride",
+        "Ethyl nitrate",
+        "Ethyl oxide"
+      ],
+      "answer": "Ethyl nitrate"
+    }
+  ]
+}

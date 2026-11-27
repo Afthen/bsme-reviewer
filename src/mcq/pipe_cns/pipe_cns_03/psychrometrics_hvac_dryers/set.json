@@ -1,0 +1,327 @@
+{
+  "id": "mcq_pipe_cns_03_psychrometrics_hvac",
+  "title": "Psychrometrics, HVAC & Dryers",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "10 kg/s of air enters a theater at $16°\\text{C}$. The theater is to be maintained at $27°\\text{C}$ DB and $20°\\text{C}$ WB. If the sensible heat ratio is 0.71, what is the latent heat load of the theater?",
+      "options": [
+        "45.21 kW",
+        "110.682 kW",
+        "54.21 kW",
+        "42.51 kW"
+      ],
+      "answer": "45.21 kW"
+    },
+    {
+      "id": 2,
+      "q": "The approach and efficiency of a cooling tower are $10°\\text{C}$ and 65%, respectively. If the temperature of water leaving the tower is $27°\\text{C}$, determine the temperature of water entering the tower.",
+      "options": [
+        "$54.57°\\text{C}$",
+        "$45.57°\\text{C}$",
+        "$55.47°\\text{C}$",
+        "$54.75°\\text{C}$"
+      ],
+      "answer": "$45.57°\\text{C}$"
+    },
+    {
+      "id": 3,
+      "q": "An air-vapor mixture has a dry bulb temperature of $30°\\text{C}$ and a humidity ratio of 0.015 kg/kg d.a. Calculate the enthalpy of the moist air.",
+      "options": [
+        "68.527 kJ/kg d.a.",
+        "65.827 kJ/kg d.a.",
+        "86.527 kJ/kg d.a.",
+        "67.528 kJ/kg d.a."
+      ],
+      "answer": "68.527 kJ/kg d.a."
+    },
+    {
+      "id": 4,
+      "q": "Which of the following ranges of relative humidity is used for comfort air conditioning?",
+      "options": [
+        "50 to 55%",
+        "60 to 65%",
+        "55 to 60%",
+        "45 to 50%"
+      ],
+      "answer": "55 to 60%"
+    },
+    {
+      "id": 5,
+      "q": "A $5\\text{ m} \\times 4\\text{ m} \\times 4\\text{ m}$ room has an air temperature of $32°\\text{C}$ ($p_{\\text{sat}} = 4.559\\text{ kPaa}$, $h_g = 2{,}559.9\\text{ kJ/kg}$) and total pressure of 101 kPaa. The mass of water vapor in the air is 2.5 kg with $R_v = 0.45\\text{ kJ/kg·K}$. What is the relative humidity of the air?",
+      "options": [
+        "94.08%",
+        "84.08%",
+        "74.08%",
+        "64.08%"
+      ],
+      "answer": "94.08%"
+    },
+    {
+      "id": 6,
+      "q": "Which of the following parameters has the greatest limiting effect on the thermal performance of an open, evaporative cooling tower?",
+      "options": [
+        "Wet-bulb temperature",
+        "Range",
+        "Dry-bulb temperature",
+        "Approach"
+      ],
+      "answer": "Wet-bulb temperature"
+    },
+    {
+      "id": 7,
+      "q": "Air enters a cooling tower at $10°\\text{C}$ DB and $9.5°\\text{C}$ WB temperature. It leaves the tower saturated at $21°\\text{C}$. Which condition is a likely outcome of this?",
+      "options": [
+        "Sublimation",
+        "Condensation",
+        "Adsorption",
+        "Fog"
+      ],
+      "answer": "Fog"
+    },
+    {
+      "id": 8,
+      "q": "It is a space, or several rooms, or units of space having some sort of coincident loads or similar operating characteristics. It may or may not be an enclosed space, or it may consist of many partitioned rooms. How do you call this?",
+      "options": [
+        "Zone",
+        "Space",
+        "Room",
+        "Plenum"
+      ],
+      "answer": "Zone"
+    },
+    {
+      "id": 9,
+      "q": "In air conditioning, it indicates either a volume or a site without a partition or a partitioned room or group of rooms. How do you call this?",
+      "options": [
+        "Zone",
+        "Space",
+        "Room",
+        "Plenum"
+      ],
+      "answer": "Space"
+    },
+    {
+      "id": 10,
+      "q": "It is an enclosed or partitioned space that is usually treated as a single load. If conditioned, it often has an individual control system. What is this?",
+      "options": [
+        "Zone",
+        "Space",
+        "Room",
+        "Plenum"
+      ],
+      "answer": "Room"
+    },
+    {
+      "id": 11,
+      "q": "It represents the rate, in Btu/hr or W, at which heat enters a conditioned space from an external source or is released to the space from an internal source during a given time interval.",
+      "options": [
+        "Space heat gain",
+        "Space cooling load",
+        "Space heating load",
+        "Space heat extraction rate"
+      ],
+      "answer": "Space heat gain"
+    },
+    {
+      "id": 12,
+      "q": "It is the rate, in Btu/hr or W, at which heat must be removed from a conditioned space so as to maintain a constant temperature and acceptable relative humidity. Its sensible load component is equal to the sum of the convective heat transfer from the surfaces of the building envelope, furnishings, occupants, appliances, and equipment. How do you call this?",
+      "options": [
+        "Space heat gain",
+        "Space cooling load",
+        "Space heating load",
+        "Space heat extraction rate"
+      ],
+      "answer": "Space cooling load"
+    },
+    {
+      "id": 13,
+      "q": "A process that the body uses to convert energy in food into heat and work, or the process that determines the rate at which energy is converted from chemical to thermal form within the body:",
+      "options": [
+        "Metabolism",
+        "Body food processing",
+        "Eating",
+        "Blood circulation"
+      ],
+      "answer": "Metabolism"
+    },
+    {
+      "id": 14,
+      "q": "What is a body insulation that is usually described as a single equivalent uniform layer over the whole body?",
+      "options": [
+        "Skin",
+        "Clothing",
+        "Blood",
+        "Water"
+      ],
+      "answer": "Clothing"
+    },
+    {
+      "id": 15,
+      "q": "What is the insulating value of clothing?",
+      "options": [
+        "Btu unit",
+        "Calorie unit",
+        "Clo units",
+        "Frigorie unit"
+      ],
+      "answer": "Clo units"
+    },
+    {
+      "id": 16,
+      "q": "Which of the following is the value of 1 clo unit?",
+      "options": [
+        "$1\\text{ clo} = 0.880\\,\\cfrac{°\\text{F}\\cdot\\text{ft}^2\\cdot\\text{hr}}{\\text{Btu}}$",
+        "$1\\text{ clo} = 100\\,\\cfrac{°\\text{F}\\cdot\\text{m}^2}{\\text{kW}}$",
+        "$1\\text{ clo} = 0.275\\,\\cfrac{°\\text{F}\\cdot\\text{m}^2}{\\text{W}}$",
+        "$1\\text{ clo} = 190\\,\\cfrac{°\\text{F}\\cdot\\text{m}^2}{\\text{kW}}$"
+      ],
+      "answer": "$1\\text{ clo} = 0.880\\,\\cfrac{°\\text{F}\\cdot\\text{ft}^2\\cdot\\text{hr}}{\\text{Btu}}$"
+    },
+    {
+      "id": 17,
+      "q": "What is the basic index used to describe the radiant conditions in a space, defined as the mean temperature of individual exposed surfaces in the environment?",
+      "options": [
+        "Index temperature",
+        "Mean radiant temperature",
+        "Space temperature",
+        "Dry bulb temperature"
+      ],
+      "answer": "Mean radiant temperature"
+    },
+    {
+      "id": 18,
+      "q": "Substances that are particularly variable in the moisture content that they can possess at different times:",
+      "options": [
+        "Wet materials",
+        "Gross materials",
+        "Hygroscopic materials",
+        "Bone-dry-weight material"
+      ],
+      "answer": "Hygroscopic materials"
+    },
+    {
+      "id": 19,
+      "q": "The hygroscopic moisture content of a substance expressed as a percentage of the bone-dry weight of the material:",
+      "options": [
+        "Moisture content",
+        "Bone-dry weight",
+        "Regain",
+        "Gross weight"
+      ],
+      "answer": "Regain"
+    },
+    {
+      "id": 20,
+      "q": "What is the rate, in Btu/h or W, at which heat must be added to the conditioned space to maintain a constant temperature and sometimes a specified relative humidity?",
+      "options": [
+        "Space heat gain",
+        "Space cooling load",
+        "Space heating load",
+        "Space heat extraction rate"
+      ],
+      "answer": "Space heating load"
+    },
+    {
+      "id": 21,
+      "q": "$Q_{\\text{ex}}$, in Btu/h (W), is the rate at which heat is actually removed from the conditioned space by the air system. Its sensible heat rate component is equal to the sensible cooling load only when the space air temperature remains constant.",
+      "options": [
+        "Space heat gain",
+        "Space cooling load",
+        "Space heating load",
+        "Space heat extraction rate"
+      ],
+      "answer": "Space heat extraction rate"
+    },
+    {
+      "id": 22,
+      "q": "It is the rate, in Btu/h or W, of heat transfer at the coil. Its cooling load component is the rate at which heat is removed by the chilled water flowing through the coil or is absorbed by the refrigerant inside the coil. What do you call this?",
+      "options": [
+        "Coil load",
+        "Refrigerating load",
+        "Heating coil load",
+        "Cooling load"
+      ],
+      "answer": "Coil load"
+    },
+    {
+      "id": 23,
+      "q": "It is the rate, in Btu/hr or W, at which heat is added to the conditioned air from the hot water, steam, or electric heating elements inside the coil.",
+      "options": [
+        "Coil load",
+        "Refrigerating load",
+        "Heating coil load",
+        "Cooling load"
+      ],
+      "answer": "Heating coil load"
+    },
+    {
+      "id": 24,
+      "q": "What is the rate, in Btu/hr or W, at which heat is absorbed by the refrigerant at the evaporator? For central hydronic systems, it is the sum of the coil load plus the chilled water piping heat gain, pump power heat gain, and storage tank heat gain (whereas in a DX system, it equals the DX coil load).",
+      "options": [
+        "Coil load",
+        "Refrigerating load",
+        "Heating coil load",
+        "Cooling load"
+      ],
+      "answer": "Refrigerating load"
+    },
+    {
+      "id": 25,
+      "q": "It is a humidity sensor used to measure relative humidity, dew point, or absolute humidity of ambient or moving air. This device could be mechanical or electronic. How do you call this?",
+      "options": [
+        "Hydrometer",
+        "Psychrometer",
+        "Hygrometer",
+        "Barometer"
+      ],
+      "answer": "Hygrometer"
+    },
+    {
+      "id": 26,
+      "q": "If the sensible heat ratio is 0.75, what does it mean?",
+      "options": [
+        "75% latent heat and 25% sensible heat",
+        "75% sensible heat and 25% latent heat",
+        "25% latent and sensible heat and 75% latent heat",
+        "75% sensible and latent heat and 25% sensible heat"
+      ],
+      "answer": "75% sensible heat and 25% latent heat"
+    },
+    {
+      "id": 27,
+      "q": "It is a device commonly used to cool condenser water in power and refrigeration plants by rejecting heat to the atmosphere. What is this device commonly called?",
+      "options": [
+        "Condenser",
+        "Cooling tower",
+        "Cooler",
+        "Evaporator"
+      ],
+      "answer": "Cooling tower"
+    },
+    {
+      "id": 28,
+      "q": "It is a type of dryer in which the gases of combustion pass through the spaces surrounding, or in other ways heating, the drying chamber, but the gases are not allowed in contact with the material being dried. What is this dryer?",
+      "options": [
+        "Direct-heat type dryer",
+        "Indirect-heat type dryer",
+        "Steam-heated type dryer",
+        "Rotary dryer"
+      ],
+      "answer": "Indirect-heat type dryer"
+    },
+    {
+      "id": 29,
+      "q": "This is a type of dryer that consists of a vertical shaft in which the wet feed is introduced at the top and falls downward over baffles while coming in contact with hot air that rises and exhausts at the top. This dryer is used for drying palay, wheat, and grains.",
+      "options": [
+        "Rotary dryer",
+        "Tower dryer",
+        "Hearth dryer",
+        "Tray dryer"
+      ],
+      "answer": "Tower dryer"
+    }
+  ]
+}

@@ -1,0 +1,371 @@
+{
+  "id": "mcq_pipe_cns_03_traps_controls",
+  "title": "Steam Traps, Instrumentation & Process Controls",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Define a \"control valve\".",
+      "options": [
+        "The value set on the scale of the control system in order to obtain the required condition",
+        "The quantity or condition of the controlled medium",
+        "The flow or pressure of the steam (or fluid) being manipulated",
+        "The valve of the controlled condition actually maintained under steady-state conditions"
+      ],
+      "answer": "The valve of the controlled condition actually maintained under steady-state conditions"
+    },
+    {
+      "id": 2,
+      "q": "A pneumatic temperature control is used on the steam supply to a non-storage heat exchanger that heats water serving an office heating system. What is referred to as the \"manipulated variable\"?",
+      "options": [
+        "The water being heated",
+        "The air signal from the controller to the valve actuator",
+        "The steam supply",
+        "The temperature of the air being heated"
+      ],
+      "answer": "The steam supply"
+    },
+    {
+      "id": 3,
+      "q": "Which of the following valves is designed to allow a fluid to pass through in one direction?",
+      "options": [
+        "Globe valve",
+        "Float valve",
+        "Gate valve",
+        "Check valve"
+      ],
+      "answer": "Check valve"
+    },
+    {
+      "id": 4,
+      "q": "How do you classify a solenoid valve?",
+      "options": [
+        "A thermal valve",
+        "A bellows valve",
+        "A magnetic stop valve",
+        "A bimetallic valve"
+      ],
+      "answer": "A magnetic stop valve"
+    },
+    {
+      "id": 5,
+      "q": "What is a thermostat?",
+      "options": [
+        "A temperature-operated switch",
+        "A pressure-operated switch",
+        "A superheat-operated switch",
+        "A back-pressure-operated switch"
+      ],
+      "answer": "A temperature-operated switch"
+    },
+    {
+      "id": 6,
+      "q": "Balanced pressure traps are what type of steam trap?",
+      "options": [
+        "Thermodynamic",
+        "Mechanical",
+        "Thermostatic",
+        "They do not belong to any specific type of trap family"
+      ],
+      "answer": "Thermostatic"
+    },
+    {
+      "id": 7,
+      "q": "What is a characteristic feature of thermodynamic steam traps?",
+      "options": [
+        "They pass condensate at steam temperature",
+        "They operate by holding back condensate until it has cooled",
+        "They cannot be fitted outside",
+        "They can only be fitted on low-pressure steam systems"
+      ],
+      "answer": "They pass condensate at steam temperature"
+    },
+    {
+      "id": 8,
+      "q": "What are the main considerations for steam trap selection?",
+      "options": [
+        "Price",
+        "Air venting, plant performance, flow capacity, and reliability",
+        "Connections",
+        "The trap must be the same size as the condensate drain line"
+      ],
+      "answer": "Air venting, plant performance, flow capacity, and reliability"
+    },
+    {
+      "id": 9,
+      "q": "Can temperature-controlled applications be trapped?",
+      "options": [
+        "Traps should not be fitted under any circumstances",
+        "Only if there is no lift after the trap",
+        "If the pressure on the trap is always higher than back pressure",
+        "Pumps should always be fitted to remove condensate"
+      ],
+      "answer": "If the pressure on the trap is always higher than back pressure"
+    },
+    {
+      "id": 10,
+      "q": "Unless they are designed to flood, what is important when removing condensate from heat exchangers?",
+      "options": [
+        "Condensate is allowed to sub-cool before reaching the trap",
+        "Condensate is removed at steam temperature",
+        "Condensate should back up into the steam pipe",
+        "The trap is fitted level with or above the heater outlet"
+      ],
+      "answer": "Condensate is removed at steam temperature"
+    },
+    {
+      "id": 11,
+      "q": "How is flash steam produced?",
+      "options": [
+        "From condensate passing from high to low pressure systems",
+        "From saturated steam",
+        "From superheated steam",
+        "From steam mixed with high-temperature air"
+      ],
+      "answer": "From condensate passing from high to low pressure systems"
+    },
+    {
+      "id": 12,
+      "q": "Are steam traps required to pass air?",
+      "options": [
+        "Steam traps should not pass air under any circumstances",
+        "Only when the trap has passed all the condensate",
+        "Air should be removed as soon as it reaches the trap",
+        "Only on high-pressure steam systems"
+      ],
+      "answer": "Air should be removed as soon as it reaches the trap"
+    },
+    {
+      "id": 13,
+      "q": "How do you call a system employing open sprinklers attached to a piping system connected to a water supply through a valve opened by the operation of a fire detection system installed in the same area as the sprinklers?",
+      "options": [
+        "Mechanical sprinkler",
+        "Wet pipe system",
+        "Automatic system",
+        "Deluge system"
+      ],
+      "answer": "Deluge system"
+    },
+    {
+      "id": 14,
+      "q": "What is probably the first consideration when selecting a control system?",
+      "options": [
+        "What degree of accuracy is required?",
+        "Is the control for heating or cooling?",
+        "Is a two- or three-port valve required?",
+        "In the event of power failure, must the valve fail-open or fail-closed?"
+      ],
+      "answer": "In the event of power failure, must the valve fail-open or fail-closed?"
+    },
+    {
+      "id": 15,
+      "q": "It is a device designed to control the flow of steam, water, gas, or other fluids. It can be considered a variable orifice positioned by an actuator in response to impulses or signals from the controller, equipped with a throttling plug, V-port, or rotating ball. How do you call this device?",
+      "options": [
+        "Automatic valve",
+        "Thermostat",
+        "Automatic flow meter",
+        "Pyrometer"
+      ],
+      "answer": "Automatic valve"
+    },
+    {
+      "id": 16,
+      "q": "Name one characteristic feature of mechanical steam traps.",
+      "options": [
+        "They pass condensate at steam temperature",
+        "They operate by sensing condensate temperature",
+        "They can be fitted into any position",
+        "They are not affected by increasing back pressure"
+      ],
+      "answer": "They pass condensate at steam temperature"
+    },
+    {
+      "id": 17,
+      "q": "In a mechanical steam trap, why is a float trap better at venting air than an inverted bucket trap?",
+      "options": [
+        "A float can quickly adjust to the presence of air",
+        "A float is fitted with an automatic air vent",
+        "A float trap does not vent air better than a bucket trap",
+        "The air vent orifice is adjustable on a float trap"
+      ],
+      "answer": "A float is fitted with an automatic air vent"
+    },
+    {
+      "id": 18,
+      "q": "In a mechanical steam trap, what added benefit does the automatic air vent offer to a float trap?",
+      "options": [
+        "It stops the trap from freezing in cold weather",
+        "The trap can be used on larger backpressures",
+        "It significantly increases the cold start-up capacity of the trap",
+        "The condensate orifice can be the same size for all pressure ranges"
+      ],
+      "answer": "It significantly increases the cold start-up capacity of the trap"
+    },
+    {
+      "id": 19,
+      "q": "In a mechanical steam trap, what advantage does a bucket trap have over a float type?",
+      "options": [
+        "It is able to withstand waterhammer",
+        "It can be used on higher pressure",
+        "It can discharge air freely",
+        "It cannot lose its water seal"
+      ],
+      "answer": "It can be used on higher pressure"
+    },
+    {
+      "id": 20,
+      "q": "A heat exchanger is designed to operate without waterlogging of the steam space. What is the usual choice of trap for its drainage?",
+      "options": [
+        "Thermostatic trap",
+        "Inverted bucket trap",
+        "Thermodynamic trap",
+        "Float trap with thermostatic air vent"
+      ],
+      "answer": "Float trap with thermostatic air vent"
+    },
+    {
+      "id": 21,
+      "q": "Which is the best trap to use when steam locking can occur?",
+      "options": [
+        "An inverted bucket trap with an internal check valve mechanism",
+        "A balanced pressure steam trap",
+        "A float trap with automatic air vent",
+        "A float trap with steam lock release mechanism"
+      ],
+      "answer": "A float trap with steam lock release mechanism"
+    },
+    {
+      "id": 22,
+      "q": "What is a common cause of waterhammer in drying coils?",
+      "options": [
+        "Wet steam supplied to the coil",
+        "Too low a steam pressure onto the coil",
+        "Condensate has to lift after the steam trap",
+        "The coil falling in the direction of steam flow"
+      ],
+      "answer": "Condensate has to lift after the steam trap"
+    },
+    {
+      "id": 23,
+      "q": "Which of the following statements is true?",
+      "options": [
+        "Bimetallic steam traps are an ideal choice for rotating cylinders",
+        "Rotating cylinders cannot suffer from steam locking",
+        "Strainers cannot be fitted to float traps which have a steam lock release",
+        "Air vents around thermodynamic and inverted bucket traps can considerably improve start-up times"
+      ],
+      "answer": "Air vents around thermodynamic and inverted bucket traps can considerably improve start-up times"
+    },
+    {
+      "id": 24,
+      "q": "What effect does steam locking have on rotating machinery?",
+      "options": [
+        "None at all",
+        "It reduces the drying rate of drying cylinders",
+        "It increases the drying rate of drying cylinders",
+        "It causes the steam trap to air bind"
+      ],
+      "answer": "It reduces the drying rate of drying cylinders"
+    },
+    {
+      "id": 25,
+      "q": "The first step to take in planning a preventive maintenance program is to:",
+      "options": [
+        "Replace all electric wiring",
+        "Make an equipment inventory",
+        "Replace all pump seals",
+        "Repair all equipment which is not in operation"
+      ],
+      "answer": "Make an equipment inventory"
+    },
+    {
+      "id": 26,
+      "q": "Which of the following is the most important consideration in a fire prevention program?",
+      "options": [
+        "Train the staff to place flammables in fireproof containers",
+        "Know how to attack fires regardless of size",
+        "See that halls, corridors, and exits are not blocked",
+        "Detect and eliminate every possible fire hazard"
+      ],
+      "answer": "Detect and eliminate every possible fire hazard"
+    },
+    {
+      "id": 27,
+      "q": "Which of the following types of portable fire extinguisher is recommended as most effective for putting out oil fires?",
+      "options": [
+        "Pump tank type",
+        "Cartridge-actuated type",
+        "Soda acid type",
+        "Foam type"
+      ],
+      "answer": "Foam type"
+    },
+    {
+      "id": 28,
+      "q": "Assume that one of your assistants was near a Freon 11 refrigeration system when a liquid Freon line ruptured and some liquid got into his right eye. Of the following actions, the one which you should NOT take is to:",
+      "options": [
+        "Immediately call for an eye doctor specialist (medical doctor)",
+        "Gently and quickly rub the Freon 11 out of the eye",
+        "Use a boric-acid solution to clean out the Freon 11 from his eye",
+        "Wash the eye by gently blowing the Freon 11 out of his eye with air"
+      ],
+      "answer": "Gently and quickly rub the Freon 11 out of the eye"
+    },
+    {
+      "id": 29,
+      "q": "In accordance with recommended maintenance practice, thermostats used in a pneumatic temperature control system should be checked:",
+      "options": [
+        "Weekly",
+        "Monthly",
+        "Bi-monthly",
+        "Once a year"
+      ],
+      "answer": "Once a year"
+    },
+    {
+      "id": 30,
+      "q": "In a thermal plant, name the components of a self-acting temperature control system.",
+      "options": [
+        "Control valve and actuator",
+        "Control valve, actuator, and sensor",
+        "Control valve, actuator, capillary tube, and sensor",
+        "Control valve, actuator, and capillary tube"
+      ],
+      "answer": "Control valve, actuator, capillary tube, and sensor"
+    },
+    {
+      "id": 31,
+      "q": "What is the purpose of over-temperature protection within a self-acting control system?",
+      "options": [
+        "To protect the valve from high-temperature steam",
+        "To protect the liquid fill in the capillary from boiling",
+        "To protect the control system from irreversible damage",
+        "To protect the application from overtemperature"
+      ],
+      "answer": "To protect the control system from irreversible damage"
+    },
+    {
+      "id": 32,
+      "q": "Why are three-port self-acting control valves used in an industrial steam thermal system?",
+      "options": [
+        "To mix or divert liquids, especially water",
+        "To dump steam to waste under fault conditions",
+        "Where cooling applications are required",
+        "When large valves are required to meet large capacities"
+      ],
+      "answer": "To mix or divert liquids, especially water"
+    },
+    {
+      "id": 33,
+      "q": "Name one disadvantage of a direct-acting pressure reducing valve.",
+      "options": [
+        "It only has proportional control",
+        "It has proportional and integral control but no derivative control",
+        "It operates in an on/off fashion",
+        "An external power source is required for it to operate"
+      ],
+      "answer": "It only has proportional control"
+    }
+  ]
+}

@@ -1,0 +1,280 @@
+{
+  "id": "mcq_pipe_cns_05_psychrometrics_hvac",
+  "title": "Psychrometrics, Air Conditioning & Dryers",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-05",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Why should you avoid bending or twisting of fan blades in an air conditioning unit?",
+      "options": [
+        "It will cause ice build-up",
+        "It will wear out the motor bearings and cause noise",
+        "It may slice the suction line",
+        "It decreases the volume flow of refrigerant"
+      ],
+      "answer": "It will wear out the motor bearings and cause noise"
+    },
+    {
+      "id": 2,
+      "q": "Under normal operating conditions, when a solid material to be dried is placed inside a batch tray dryer, the material is usually subjected:",
+      "options": [
+        "Under constant drying conditions",
+        "Under variable drying conditions",
+        "Under high temperature drying",
+        "Under low temperature drying"
+      ],
+      "answer": "Under constant drying conditions"
+    },
+    {
+      "id": 3,
+      "q": "In terms of heat transfer, the use of a cooling tower is said to be more efficient and more economical compared to an ordinary heat exchanger since:",
+      "options": [
+        "Large volume of air is available and free",
+        "Temperature profiles of air and water can cross each other",
+        "Large amount of water can be processed",
+        "A cooling tower is much smaller and cheaper than a heat exchanger"
+      ],
+      "answer": "Temperature profiles of air and water can cross each other"
+    },
+    {
+      "id": 4,
+      "q": "It is a form of oxygen photochemically produced in nature:",
+      "options": [
+        "Ozone",
+        "Oxidizing agent",
+        "Oxidation",
+        "D02"
+      ],
+      "answer": "Ozone"
+    },
+    {
+      "id": 5,
+      "q": "What is the chemical formula of ozone?",
+      "options": [
+        "$\\text{O}_3$",
+        "$\\text{D}_3\\text{O}$",
+        "$\\text{O}_7$",
+        "$\\text{O}_1$"
+      ],
+      "answer": "$\\text{O}_3$"
+    },
+    {
+      "id": 6,
+      "q": "In the upper atmosphere, ozone is made by ultraviolet light reacting with:",
+      "options": [
+        "Oxygen",
+        "Nitrogen",
+        "Hydrogen",
+        "Water vapor"
+      ],
+      "answer": "Oxygen"
+    },
+    {
+      "id": 7,
+      "q": "An ozone concentration of 0.1 parts per million (ppm) is generally considered the maximum permissible for how many hours of exposure?",
+      "options": [
+        "8 hrs",
+        "7 hrs",
+        "4 hrs",
+        "3 hrs"
+      ],
+      "answer": "8 hrs"
+    },
+    {
+      "id": 8,
+      "q": "How may moisture be removed from air?",
+      "options": [
+        "Condensation",
+        "Adsorption",
+        "A and B",
+        "None of these"
+      ],
+      "answer": "A and B",
+      "shuffle": []
+    },
+    {
+      "id": 9,
+      "q": "In a cooling cycle, when the dry bulb temperature (DB) of the air is lowered, what happens to the relative humidity?",
+      "options": [
+        "Increases",
+        "Decreases",
+        "Remains constant",
+        "Increases or decreases depending on the temperature at which it is cooled"
+      ],
+      "answer": "Increases"
+    },
+    {
+      "id": 10,
+      "q": "The ratio of the actual partial pressure exerted by the water vapor in any volume of air to the partial pressure that would be exerted by the water vapor if the air is saturated at the temperature of the air:",
+      "options": [
+        "Relative humidity",
+        "Absolute humidity",
+        "Humidity ratio",
+        "Saturation ratio"
+      ],
+      "answer": "Relative humidity"
+    },
+    {
+      "id": 11,
+      "q": "In sensible heating, the absolute humidity remains constant, but the relative humidity:",
+      "options": [
+        "Increases",
+        "Remains constant",
+        "Decreases",
+        "Zero"
+      ],
+      "answer": "Decreases"
+    },
+    {
+      "id": 12,
+      "q": "The point where the relative humidity becomes 100% and where the water vapor starts to condense:",
+      "options": [
+        "Dew point",
+        "Saturation point",
+        "Cloud point",
+        "Critical point"
+      ],
+      "answer": "Dew point"
+    },
+    {
+      "id": 13,
+      "q": "Large-bulb alcohol thermometer used to measure air speed or atmospheric condition by means of cooling:",
+      "options": [
+        "Kata thermometer",
+        "J.J. Thomson thermometer",
+        "Kelvin thermometer",
+        "Wet bulb thermometer"
+      ],
+      "answer": "Kata thermometer"
+    },
+    {
+      "id": 14,
+      "q": "The phenomenon that warm air rises and cold air settles is called:",
+      "options": [
+        "Stratification",
+        "Settling",
+        "Sedimentation",
+        "Ventilation"
+      ],
+      "answer": "Stratification"
+    },
+    {
+      "id": 15,
+      "q": "Which of the following components of a window air conditioning system are cleaned annually?",
+      "options": [
+        "Evaporator and condenser",
+        "Fan blades and fan motor",
+        "Motor and compressor",
+        "All of these"
+      ],
+      "answer": "Evaporator and condenser",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "q": "An office air conditioning system drew in hot air from outside, cooled it to $1°\\text{C}$, and mixed it with the internal air of a building. Care was taken to supply enough fresh air to eliminate objectionable odors. The temperature of the space was maintained constant, and yet some people became uncomfortable in the afternoon. Why?",
+      "options": [
+        "The relative humidity had dropped",
+        "When a person spends a long time at a constant temperature that person becomes uncomfortable",
+        "Radiant heat from others in the office made the space uncomfortable",
+        "The complainers were not really uncomfortable, they were just bored"
+      ],
+      "answer": "The relative humidity had dropped"
+    },
+    {
+      "id": 17,
+      "q": "Equipment designed to reduce the amount of water vapor in the ambient atmosphere:",
+      "options": [
+        "Blower",
+        "Condenser",
+        "Dehumidifier",
+        "Cooling tower"
+      ],
+      "answer": "Dehumidifier"
+    },
+    {
+      "id": 18,
+      "q": "When a solid material is said to be \"dry\", it means that:",
+      "options": [
+        "The solid does not contain any moisture",
+        "The solid still contains a very small amount of moisture",
+        "The solid contains equilibrium moisture",
+        "The weight of the solid is the same as the bone-dry weight"
+      ],
+      "answer": "The solid still contains a very small amount of moisture"
+    },
+    {
+      "id": 19,
+      "q": "When drying banana chips under the sun, the rate of drying is faster:",
+      "options": [
+        "On a slightly breezy day",
+        "On a calm day",
+        "On a cloudy day",
+        "On a hot and windy day"
+      ],
+      "answer": "On a hot and windy day"
+    },
+    {
+      "id": 20,
+      "q": "In a cooling tower, the water is cooled mainly by:",
+      "options": [
+        "Condensation",
+        "Evaporation",
+        "Convection",
+        "Conduction"
+      ],
+      "answer": "Evaporation"
+    },
+    {
+      "id": 21,
+      "q": "The portion of sunlight, rich in ultraviolet rays, which has a strong effect on a photographic plate:",
+      "options": [
+        "Gamma rays",
+        "X-rays",
+        "Beta rays",
+        "Actinic rays"
+      ],
+      "answer": "Actinic rays"
+    },
+    {
+      "id": 22,
+      "q": "Compute the humidity ratio of air at 70% relative humidity and $25°\\text{C}$ when the barometric pressure is 101.325 kPa. From steam tables: $p_{\\text{sat}}$ at $25°\\text{C} = 3.169\\text{ kPa}$.",
+      "options": [
+        "0.014 kg water vapor/kg dry air",
+        "0.14 kg water vapor/kg dry air",
+        "1.4 kg water vapor/kg dry air",
+        "0.0014 kg water vapor/kg dry air"
+      ],
+      "answer": "0.014 kg water vapor/kg dry air"
+    },
+    {
+      "id": 23,
+      "q": "Wet material, containing 220% moisture (dry basis), is to be dried at the rate of 1.5 kg/s in a continuous dryer to give a product containing 10% moisture (dry basis). Find the moisture removed in kg/hr.",
+      "options": [
+        "3,543.75 kg/hr",
+        "3,513.75 kg/hr",
+        "3,563.75 kg/hr",
+        "3,593.75 kg/hr"
+      ],
+      "answer": "3,543.75 kg/hr"
+    },
+    {
+      "id": 24,
+      "q": "Copra enters a dryer containing 70% moisture and leaves at 7% moisture. Find the moisture removed on each pound of solid in the final product.",
+      "options": [
+        "6.258 lb",
+        "1.258 lb",
+        "4.258 lb",
+        "2.258 lb"
+      ],
+      "answer": "2.258 lb"
+    }
+  ]
+}

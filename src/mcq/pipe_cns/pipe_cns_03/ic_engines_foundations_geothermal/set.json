@@ -1,0 +1,217 @@
+{
+  "id": "mcq_pipe_cns_03_engines_misc",
+  "title": "IC Engines, Machine Foundations & Geothermal",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Determine the indicated power of a four-cylinder, 4-stroke, diesel engine with a 20-cm bore and 30-cm stroke running at 1,000 rpm and having a reading of 450 kPa mean effective pressure on the indicator diagram.",
+      "options": [
+        "159.83 Hp",
+        "158.93 Hp",
+        "189.53 Hp",
+        "198.53 Hp"
+      ],
+      "answer": "189.53 Hp"
+    },
+    {
+      "id": 2,
+      "q": "Determine the indicated mean effective pressure of an engine, in psi, having a brake mean effective pressure of 750 kPa and 80% mechanical efficiency.",
+      "options": [
+        "138 psi",
+        "136 psi",
+        "137 psi",
+        "135 psi"
+      ],
+      "answer": "136 psi"
+    },
+    {
+      "id": 3,
+      "q": "The indicator card (actual p-V diagram) of an engine in a diesel power plant indicates an area of $0.06\\text{ m}^2$ and length of 300 mm, with a spring scale of 2,500 kPa/m. The engine was tested using a Prony brake with a lever arm of 3 m and tare weight of 8 kN. Determine the mechanical efficiency if the engine is running at 600 rpm. The engine is 2-stroke and has 12 cylinders, 300 mm bore, and 450 mm stroke.",
+      "options": [
+        "78.01%",
+        "82.01%",
+        "79.01%",
+        "76.01%"
+      ],
+      "answer": "79.01%"
+    },
+    {
+      "id": 4,
+      "q": "A 1.5 MW diesel power generating unit has a generator efficiency of 85%. Determine the volume flow rate, in lps, of cooling water required for the engine at an $18°\\text{C}$ temperature rise.",
+      "options": [
+        "21 lps",
+        "22 lps",
+        "19 lps",
+        "23 lps"
+      ],
+      "answer": "21 lps"
+    },
+    {
+      "id": 5,
+      "q": "Indicator test shows that the area of the card is $33\\text{ mm}^2$ and length of the card is 50 mm. If the spring scale is 1.72 MPa per mm, determine the MEP:",
+      "options": [
+        "1.781 MPa",
+        "1.135 MPa",
+        "33 MPa",
+        "50 MPa"
+      ],
+      "answer": "1.135 MPa"
+    },
+    {
+      "id": 6,
+      "q": "Calculate the thermal efficiency of an air-standard diesel cycle engine operating at a volumetric compression ratio of 23:1 with a cut-off ratio of 2.25.",
+      "options": [
+        "62.6%",
+        "65.6%",
+        "60.6%",
+        "67.6%"
+      ],
+      "answer": "65.6%"
+    },
+    {
+      "id": 7,
+      "q": "Determine the friction power of an engine if the frictional torque developed is 0.30 kN·m running at 1,200 rpm.",
+      "options": [
+        "47.7 kW",
+        "43.3 kW",
+        "37.7 kW",
+        "33.3 kW"
+      ],
+      "answer": "37.7 kW"
+    },
+    {
+      "id": 8,
+      "q": "A 500 kW diesel engine operates at 101.3 kPaa and $27°\\text{C}$ in Calamba City. If the engine operates in Baguio City at 93 kPaa and $23°\\text{C}$, what new brake power will be developed if mechanical efficiency is 85%?",
+      "options": [
+        "455.96 kW",
+        "954.1 kW",
+        "549.10 kW",
+        "495.1 kW"
+      ],
+      "answer": "455.96 kW"
+    },
+    {
+      "id": 9,
+      "q": "How do you call an opening where a hot source of energy from the earth is harnessed?",
+      "options": [
+        "Crater",
+        "Fumarole",
+        "Hot water source",
+        "Volcano opening"
+      ],
+      "answer": "Fumarole"
+    },
+    {
+      "id": 10,
+      "q": "Which of the following is true regarding the relation of $r_k$ and $r_e$ for a spark-ignition engine, where $r_k$ = compression ratio and $r_e$ = expansion ratio?",
+      "options": [
+        "$r_k > r_e$",
+        "$r_k < r_e$",
+        "$r_k = r_e$",
+        "$r_e$ is not considered in the spark-ignition engine"
+      ],
+      "answer": "$r_k = r_e$"
+    },
+    {
+      "id": 11,
+      "q": "It represents the loss due to mechanical friction of the moving parts of the engine, expressed as horsepower. How do you call this?",
+      "options": [
+        "Indicated Hp",
+        "Combined Hp",
+        "Brake Hp",
+        "Friction Hp"
+      ],
+      "answer": "Friction Hp"
+    },
+    {
+      "id": 12,
+      "q": "In plotting the bHp versus speed in a wide-open throttle test for a spark-ignition engine, the bHp curve:",
+      "options": [
+        "Is a straight line",
+        "Tends to concave downward",
+        "Has no characteristic shape",
+        "Tends to concave upward"
+      ],
+      "answer": "Tends to concave downward"
+    },
+    {
+      "id": 13,
+      "q": "To protect the engine bearings adequately, what type and arrangement of lubricating oil filter is most practical?",
+      "options": [
+        "Full-flow type filter installed between the lubricating oil pump and bearings",
+        "Splash lubricating system in the crankcase",
+        "Duplex filter installed before the lubricating pump",
+        "Bypass filter with cleanable and replaceable elements"
+      ],
+      "answer": "Full-flow type filter installed between the lubricating oil pump and bearings"
+    },
+    {
+      "id": 14,
+      "q": "The effect of a voltage variation to 90% of normal voltage, for a compound-wound DC motor, on the full-load current is:",
+      "options": [
+        "Increase in the full-load current approximately by 10%",
+        "Zero",
+        "A decrease in the full-load current of approximately 10%",
+        "A decrease in the full-load current of 20%"
+      ],
+      "answer": "Increase in the full-load current approximately by 10%"
+    },
+    {
+      "id": 15,
+      "q": "What is the recommended weight of a machine foundation?",
+      "options": [
+        "3 to 5 times the machine weight",
+        "4 to 6 times the machine weight",
+        "2 to 4 times the machine weight",
+        "5 to 7 times the machine weight"
+      ],
+      "answer": "3 to 5 times the machine weight"
+    },
+    {
+      "id": 16,
+      "q": "It is an engine in which the connecting rod is directly connected to the piston wristpin, and the side thrust caused by the angularity of the connecting rod is taken by the piston bearing against the cylinder wall.",
+      "options": [
+        "Opposed-piston engine",
+        "Trunk piston engine",
+        "Crosshead engine",
+        "2-stroke engine"
+      ],
+      "answer": "Trunk piston engine"
+    },
+    {
+      "id": 17,
+      "q": "It is an internal combustion engine wherein the ignition of the fuel is not accomplished solely by the heat developed from the compression of the combustion air supplied but partly or entirely by other heat sources, such as an uncooled tube, plate, bulb, or an electric resistance coil.",
+      "options": [
+        "Spark-ignition engine",
+        "Compression-ignition engine",
+        "Surface-ignition engine",
+        "Dual combustion engine"
+      ],
+      "answer": "Surface-ignition engine"
+    },
+    {
+      "id": 18,
+      "q": "This is the condition in a geothermal plant wherein the ground surface where the well is drilled is depressed or subsides due to depletion. What do you call this?",
+      "options": [
+        "Ground subsidence",
+        "Chemical pollution",
+        "Thermal pollution",
+        "Dissolved solids"
+      ],
+      "answer": "Ground subsidence"
+    },
+    {
+      "id": 19,
+      "q": "During engine operation, to vary the air quantity and also to vary the air-fuel mixture, this is used to open and close the inlet manifold:",
+      "options": [
+        "Throttle valve",
+        "Choke valve",
+        "Check valve",
+        "Gate valve"
+      ],
+      "answer": "Throttle valve"
+    }
+  ]
+}

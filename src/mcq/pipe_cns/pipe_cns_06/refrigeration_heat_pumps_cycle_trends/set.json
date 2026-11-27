@@ -1,0 +1,212 @@
+{
+  "id": "mcq_pipe_cns_06_refrigeration_trends",
+  "title": "Refrigeration, Heat Pumps & Cycle Trends",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-06",
+  "questions": [
+    {
+      "id": 1,
+      "q": "By superheating the suction refrigerant in a vapor-compression cycle with useful cooling, which of the following will increase? (Per unit mass analysis)",
+      "options": [
+        "Condenser pressure",
+        "Evaporator pressure",
+        "Quality after expansion",
+        "Heat rejected from condenser"
+      ],
+      "answer": "Heat rejected from condenser"
+    },
+    {
+      "id": 2,
+      "q": "By superheating the refrigerant in a vapor-compression cycle with useful cooling, which of the following will decrease for a fixed refrigerating capacity?",
+      "options": [
+        "Refrigerating effect per kg",
+        "COP",
+        "Compressor power",
+        "Refrigerant mass flow rate"
+      ],
+      "answer": "Refrigerant mass flow rate"
+    },
+    {
+      "id": 3,
+      "q": "By superheating the refrigerant in a vapor-compression cycle without useful cooling (e.g. heat gain in the piping), which of the following will decrease?",
+      "options": [
+        "Heat rejected",
+        "Coefficient of Performance (COP)",
+        "Compressor power",
+        "Specific volume at suction"
+      ],
+      "answer": "Coefficient of Performance (COP)"
+    },
+    {
+      "id": 4,
+      "q": "By superheating the refrigerant in a vapor-compression cycle without useful cooling, which of the following will increase?",
+      "options": [
+        "Heat rejected",
+        "COP",
+        "Compressor power",
+        "Specific volume at suction"
+      ],
+      "answer": "Compressor power"
+    },
+    {
+      "id": 5,
+      "q": "By superheating the refrigerant in a vapor-compression cycle without useful cooling (superheating occurring entirely outside the refrigerated space), which of the following will not be affected?",
+      "options": [
+        "Refrigerated effect",
+        "COP",
+        "Compressor power",
+        "Mass flow rate"
+      ],
+      "answer": "Refrigerated effect"
+    },
+    {
+      "id": 6,
+      "q": "By subcooling the liquid refrigerant in a vapor-compression cycle at the condenser exit, which of the following will increase?",
+      "options": [
+        "Refrigerated effect",
+        "Specific volume at suction",
+        "Compressor power per kg",
+        "Mass flow rate for a given capacity"
+      ],
+      "answer": "Refrigerated effect"
+    },
+    {
+      "id": 7,
+      "q": "By subcooling the refrigerant in a vapor-compression cycle at the condenser exit, which of the following will decrease for a fixed refrigerating capacity?",
+      "options": [
+        "Refrigerated effect",
+        "Specific volume at suction",
+        "Compressor power",
+        "Refrigerant mass flow rate"
+      ],
+      "answer": "Refrigerant mass flow rate"
+    },
+    {
+      "id": 8,
+      "q": "By increasing the vaporizing (evaporating) temperature in a vapor-compression cycle, which of the following will increase?",
+      "options": [
+        "Mass flow rate",
+        "Coefficient of Performance (COP)",
+        "Specific volume at suction",
+        "Compressor work per kg"
+      ],
+      "answer": "Coefficient of Performance (COP)"
+    },
+    {
+      "id": 9,
+      "q": "By increasing the vaporizing temperature in a vapor-compression cycle, which of the following will decrease?",
+      "options": [
+        "Refrigeration effect",
+        "COP",
+        "Evaporator temperature",
+        "Temperature difference between evaporator and condenser"
+      ],
+      "answer": "Temperature difference between evaporator and condenser"
+    },
+    {
+      "id": 10,
+      "q": "By increasing the condenser pressure in a vapor-compression cycle, which of the following will increase?",
+      "options": [
+        "Moisture content after expansion (flashing percentage)",
+        "Compressor power",
+        "Heat rejected from condenser",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 11,
+      "q": "If the pressure drop due to friction in the condenser increases in a vapor-compression cycle, which of the following will increase?",
+      "options": [
+        "Mass flow rate",
+        "Compressor power",
+        "Heat rejected in the condenser",
+        "Specific volume of suction"
+      ],
+      "answer": "Heat rejected in the condenser"
+    },
+    {
+      "id": 12,
+      "q": "If the pressure drop in the condenser increases in a vapor-compression cycle, which of the following will decrease for a constant load?",
+      "options": [
+        "Refrigeration effect",
+        "Mass flow rate",
+        "Heat rejected in the condenser",
+        "Compressor power"
+      ],
+      "answer": "Mass flow rate"
+    },
+    {
+      "id": 13,
+      "q": "If the pressure drop in the evaporator increases in a vapor-compression cycle, which of the following will decrease?",
+      "options": [
+        "Specific volume at suction",
+        "Compressor power",
+        "Heat rejected in the condenser",
+        "Coefficient of Performance (COP)"
+      ],
+      "answer": "Coefficient of Performance (COP)"
+    },
+    {
+      "id": 14,
+      "q": "A common rule of thumb in refrigeration is that the COP improves by _________ for each $1°\\text{C}$ that the evaporating temperature is raised or condensing temperature is lowered:",
+      "options": [
+        "2 to 4%",
+        "6 to 7%",
+        "1 to 5%",
+        "6 to 10%"
+      ],
+      "answer": "2 to 4%"
+    },
+    {
+      "id": 15,
+      "q": "A device which transfers heat from a lower-temperature medium to a higher-temperature space for the purpose of heating:",
+      "options": [
+        "Adiabatic cooler",
+        "Refrigerator",
+        "Heat exchanger",
+        "Heat pump"
+      ],
+      "answer": "Heat pump"
+    },
+    {
+      "id": 16,
+      "q": "The primary objective of a heat pump is to maintain a heated space at:",
+      "options": [
+        "Low temperature",
+        "High temperature",
+        "Medium temperature",
+        "None of these"
+      ],
+      "answer": "High temperature",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 17,
+      "q": "In the common ammonia-water absorption refrigeration system, water serves as the:",
+      "options": [
+        "Coolant",
+        "Refrigerant",
+        "Absorbent (transport medium)",
+        "Lubricant"
+      ],
+      "answer": "Absorbent (transport medium)"
+    },
+    {
+      "id": 18,
+      "q": "What is the pressure of the refrigerant between the expansion valve outlet and the intake of the compressor in a refrigeration system?",
+      "options": [
+        "High-side pressure",
+        "Discharge pressure",
+        "Condensing pressure",
+        "Low-side pressure"
+      ],
+      "answer": "Low-side pressure"
+    }
+  ]
+}

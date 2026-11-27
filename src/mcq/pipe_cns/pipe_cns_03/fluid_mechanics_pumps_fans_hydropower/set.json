@@ -1,0 +1,327 @@
+{
+  "id": "mcq_pipe_cns_03_fluids_hydropower",
+  "title": "Fluid Mechanics, Pumps, Fans & Hydropower",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A hiker carried an aneroid barometer from the foot of Mount Banahaw to the camp of NPA leader Ka Roger. At the foot of the mountain, the barometer reads 30.150 in. Hg, and at the camp, nearly at the top of the mountain, it reads 28.607 in. Hg. Assume that the average atmospheric air density was 0.075 pcf; estimate the height of the mountain, in ft.",
+      "options": [
+        "1,455.54 ft",
+        "1,554.54 ft",
+        "1,545.54 ft",
+        "1,455.55 ft"
+      ],
+      "answer": "1,455.54 ft"
+    },
+    {
+      "id": 2,
+      "q": "A turbine has a peripheral coefficient of 0.6. Find the runner diameter of the turbine if it operates at 450 rpm and a head of 60 m.",
+      "options": [
+        "0.874 m",
+        "0.478 m",
+        "0.784 m",
+        "0.748 m"
+      ],
+      "answer": "0.874 m"
+    },
+    {
+      "id": 3,
+      "q": "Find the air Hp of an industrial fan that delivers $25\\text{ m}^3/\\text{s}$ of air through a 900 mm by 1,200 mm outlet. Static pressure is 127 mm of water gage and air density is $1.18\\text{ kg/m}^3$.",
+      "options": [
+        "52.3 Hp",
+        "42.3 Hp",
+        "35.2 Hp",
+        "34.2 Hp"
+      ],
+      "answer": "52.3 Hp"
+    },
+    {
+      "id": 4,
+      "q": "What is used to dry air?",
+      "options": [
+        "A separator",
+        "A steam trap",
+        "A strainer",
+        "A tee piece"
+      ],
+      "answer": "A separator"
+    },
+    {
+      "id": 5,
+      "q": "A Pelton wheel has a capacity of 25,000 kW with a head of 290 m. What is the number of jets needed for this turbine if the nozzle jet diameter is 200 mm?",
+      "options": [
+        "3",
+        "2",
+        "4",
+        "1"
+      ],
+      "answer": "4"
+    },
+    {
+      "id": 6,
+      "q": "The water turbine of a 5-MW hydropower plant has a specific speed of 40 rpm and a discharge of 2,020 lps. What is the approximate diameter of the jet?",
+      "options": [
+        "191 mm",
+        "181 mm",
+        "171 mm",
+        "161 mm"
+      ],
+      "answer": "191 mm"
+    },
+    {
+      "id": 7,
+      "q": "A standard 25-mm outside-diameter steel tube (with wall thickness of 1.65 mm) is carrying 0.34 lps of oil. Determine the velocity of flow of oil inside the tube.",
+      "options": [
+        "191 fpm",
+        "171 fpm",
+        "181 fpm",
+        "161 fpm"
+      ],
+      "answer": "181 fpm"
+    },
+    {
+      "id": 8,
+      "q": "If the velocity of discharge from a fire hose is 15 m/s and the hose is oriented $45°$ from the horizontal, disregarding air friction, determine the maximum range of the discharge.",
+      "options": [
+        "14 m",
+        "24 m",
+        "33 m",
+        "23 m"
+      ],
+      "answer": "23 m"
+    },
+    {
+      "id": 9,
+      "q": "A full cylindrical tank 12 m high has a constant diameter of 6 m. The tank has a 100 mm diameter hole in its bottom. The coefficient of discharge for the hole is 0.98. How long will it take for the water level to drop from 12 m to 6 m?",
+      "options": [
+        "16 minutes",
+        "24 minutes",
+        "20 minutes",
+        "28 minutes"
+      ],
+      "answer": "28 minutes"
+    },
+    {
+      "id": 10,
+      "q": "A pump delivering 230 lps of water whose absolute viscosity is 0.0114 poise has a 300 mm diameter suction pipe and 254 mm diameter discharge pipe. Determine the friction factor in the suction line if the pipe material is cast iron.",
+      "options": [
+        "0.02068",
+        "0.2013",
+        "0.0199",
+        "0.0299"
+      ],
+      "answer": "0.0199"
+    },
+    {
+      "id": 11,
+      "q": "In order to avoid cavitation in a centrifugal pump, which of the following is true?",
+      "options": [
+        "Installation NPSH $\\ge$ pump NPSH",
+        "Installation NPSH $\\le$ pump NPSH",
+        "Installation NPSH < pump NPSH",
+        "Installation NPSH should be negative"
+      ],
+      "answer": "Installation NPSH $\\ge$ pump NPSH"
+    },
+    {
+      "id": 12,
+      "q": "It is a component in a hydro plant that absorbs water hammer during load fluctuations and serves as an auxiliary reservoir during high load demands. What is this component?",
+      "options": [
+        "Spillway",
+        "Surge tank",
+        "Dam",
+        "Penstock"
+      ],
+      "answer": "Surge tank"
+    },
+    {
+      "id": 13,
+      "q": "What is the molecular attraction of layers of unlike matter?",
+      "options": [
+        "Adhesion",
+        "Advection",
+        "Cohesion",
+        "Convection"
+      ],
+      "answer": "Adhesion"
+    },
+    {
+      "id": 14,
+      "q": "It is an increase in fluid pressure in a long pipe caused by a sudden velocity decrease, where the sudden decrease in velocity is caused by a valve closing.",
+      "options": [
+        "Aerodynamics",
+        "Terminal velocity",
+        "Water hammer",
+        "Drag"
+      ],
+      "answer": "Water hammer"
+    },
+    {
+      "id": 15,
+      "q": "It is an upward force exerted on an object (like a flat plate, airfoil, rotating cylinder, etc.) as the object passes through a fluid. What do you call this?",
+      "options": [
+        "Drag",
+        "Aero horsepower",
+        "Lift",
+        "Terminal velocity"
+      ],
+      "answer": "Lift"
+    },
+    {
+      "id": 16,
+      "q": "What is a frictional force that acts parallel but opposite to the direction of motion of a fluid?",
+      "options": [
+        "Drag",
+        "Aero horsepower",
+        "Lift",
+        "Terminal velocity"
+      ],
+      "answer": "Drag"
+    },
+    {
+      "id": 17,
+      "q": "It is a term used by automobile manufacturers to designate the power required to move a car horizontally at 50 mi/hr against the drag force. What is this?",
+      "options": [
+        "Mechanical horsepower",
+        "Fuel power",
+        "Aero horsepower",
+        "Fluid power"
+      ],
+      "answer": "Aero horsepower"
+    },
+    {
+      "id": 18,
+      "q": "What can you say about the velocity of fluid at the center of a pipe section?",
+      "options": [
+        "Maximum",
+        "Minimum",
+        "Average",
+        "Zero"
+      ],
+      "answer": "Maximum"
+    },
+    {
+      "id": 19,
+      "q": "The continuity equation is based on which principle?",
+      "options": [
+        "Viscous and inviscid fluids",
+        "Compressibility of fluids",
+        "Conservation of mass",
+        "Steady and unsteady flows"
+      ],
+      "answer": "Conservation of mass"
+    },
+    {
+      "id": 20,
+      "q": "A hydrometer is an instrument used to determine which of the following?",
+      "options": [
+        "Viscosity of liquids",
+        "Specific gravity of gases",
+        "Specific gravity of liquids",
+        "Specific gravity of solids"
+      ],
+      "answer": "Specific gravity of liquids"
+    },
+    {
+      "id": 21,
+      "q": "Which of the following is a type of water turbine where a jet of water is made to fall on the blades or buckets and due to the impulse of water the turbine starts moving?",
+      "options": [
+        "Reaction turbine",
+        "Francis turbine",
+        "Steam turbine",
+        "Pelton wheel"
+      ],
+      "answer": "Pelton wheel"
+    },
+    {
+      "id": 22,
+      "q": "What do you call a fan in which the fluid is accelerated parallel to the fan axis?",
+      "options": [
+        "Axial flow fan",
+        "Mixed-flow centrifugal fan",
+        "Radial centrifugal fan",
+        "Francis type fan"
+      ],
+      "answer": "Axial flow fan"
+    },
+    {
+      "id": 23,
+      "q": "As compared to a power-driven triplex single-acting pump of the same size and operating at the same speed, a steam-driven duplex double-acting pump will:",
+      "options": [
+        "Pump more water per minute",
+        "Give a more uniform discharge",
+        "Have a higher first cost",
+        "Be more economical to operate"
+      ],
+      "answer": "Pump more water per minute"
+    },
+    {
+      "id": 24,
+      "q": "In deep well installation or operation, the difference between static water level and operating water level is called:",
+      "options": [
+        "Suction lift",
+        "Priming level",
+        "Drawdown",
+        "Clogging"
+      ],
+      "answer": "Drawdown"
+    },
+    {
+      "id": 25,
+      "q": "Which of the following is a characteristic of an impulse turbine?",
+      "options": [
+        "Steam striking blades at an angle",
+        "No steam reaction to velocity",
+        "No pressure drop across moving blades",
+        "Steam reversing direction"
+      ],
+      "answer": "No pressure drop across moving blades"
+    },
+    {
+      "id": 26,
+      "q": "You are supervising the installation of a steam-driven reciprocating pump. The pump's air chamber is missing and you have to replace it with one from several salvaged ones. The salvaged air chamber selected should have a volume equal to, most nearly:",
+      "options": [
+        "Half of the piston displacement of the pump",
+        "1 1/2 times the piston displacement of the pump",
+        "2 times the piston displacement of the pump",
+        "2 1/2 times the piston displacement of the pump"
+      ],
+      "answer": "2 1/2 times the piston displacement of the pump"
+    },
+    {
+      "id": 27,
+      "q": "Fans used to withdraw air under suction, where the resistance to gas flow is imposed primarily upon the inlet:",
+      "options": [
+        "Blowers",
+        "Industrial fans",
+        "Exhauster",
+        "Domestic fans"
+      ],
+      "answer": "Exhauster"
+    },
+    {
+      "id": 28,
+      "q": "The phenomenon of rising water in a tube of small diameter is called:",
+      "options": [
+        "Surface tension",
+        "Water gage rise",
+        "Capillary rise",
+        "Fluid column rise"
+      ],
+      "answer": "Capillary rise"
+    },
+    {
+      "id": 29,
+      "q": "A Pitot tube is used to measure:",
+      "options": [
+        "Height",
+        "Viscosity",
+        "Velocity",
+        "Density"
+      ],
+      "answer": "Velocity"
+    }
+  ]
+}

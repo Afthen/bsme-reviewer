@@ -1,0 +1,443 @@
+{
+  "id": "mcq_pipe_cns_02_refrigeration",
+  "title": "Refrigeration Cycles, Components & Compressors",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-02",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The refrigerant used in steam jet cooling is:",
+      "options": [
+        "Steam",
+        "R-11",
+        "Ammonia",
+        "Water"
+      ],
+      "answer": "Water"
+    },
+    {
+      "id": 2,
+      "q": "Boiling point of Freon-12 (R-12) at atmospheric pressure is approximately:",
+      "options": [
+        "$-21°\\text{F}$",
+        "$-15°\\text{F}$",
+        "$-5°\\text{F}$",
+        "$-28°\\text{F}$"
+      ],
+      "answer": "$-21°\\text{F}$"
+    },
+    {
+      "id": 3,
+      "q": "Which of the following is NOT a type of water-cooled condenser in refrigeration?",
+      "options": [
+        "Double pipe",
+        "Double shell",
+        "Shell and coil",
+        "Shell and tube"
+      ],
+      "answer": "Double shell"
+    },
+    {
+      "id": 4,
+      "q": "Component of an absorption refrigeration system in which the solution is cooled by cooling water:",
+      "options": [
+        "Rectifier",
+        "Generator",
+        "Evaporator",
+        "Absorber"
+      ],
+      "answer": "Absorber"
+    },
+    {
+      "id": 5,
+      "q": "Cascade refrigeration cycle is often used in industrial processes where objects must be cooled to a temperature below:",
+      "options": [
+        "$-46°\\text{C}$",
+        "$-56°\\text{C}$",
+        "$-66°\\text{C}$",
+        "$-76°\\text{C}$"
+      ],
+      "answer": "$-46°\\text{C}$"
+    },
+    {
+      "id": 6,
+      "q": "Type of refrigerant control designed to maintain a pressure difference while the compressor is operating:",
+      "options": [
+        "Thermostatic expansion valve",
+        "Low-side float flooded system",
+        "Automatic expansion valve",
+        "Capillary tube"
+      ],
+      "answer": "Capillary tube"
+    },
+    {
+      "id": 7,
+      "q": "Refrigerant consisting of mixtures of two or more different chemical compounds, often used individually as refrigerants for other applications:",
+      "options": [
+        "Suspension",
+        "Compound reaction",
+        "Blends",
+        "Mixing of refrigerant"
+      ],
+      "answer": "Blends"
+    },
+    {
+      "id": 8,
+      "q": "Any device or portion of the equipment used to increase refrigerant pressure:",
+      "options": [
+        "Pressure relief device",
+        "Pressure-imposing element",
+        "Pressure lift device",
+        "Pressure limiting device"
+      ],
+      "answer": "Pressure-imposing element"
+    },
+    {
+      "id": 9,
+      "q": "The quantity of refrigerant stored at some point in the refrigeration system for operational, service, or standby purposes:",
+      "options": [
+        "Pressure vessel",
+        "Pumpdown charge",
+        "Liquid receiver",
+        "Accumulator"
+      ],
+      "answer": "Pumpdown charge"
+    },
+    {
+      "id": 10,
+      "q": "A secondary refrigerant is a liquid used for the transmission of heat, without a change of state, and having no flash point or a flash point above _________ as determined from ASTM:",
+      "options": [
+        "$150°\\text{F}$",
+        "$160°\\text{F}$",
+        "$180°\\text{F}$",
+        "$200°\\text{F}$"
+      ],
+      "answer": "$150°\\text{F}$"
+    },
+    {
+      "id": 11,
+      "q": "Refers to blends comprising multiple components of different volatilities that, when used in refrigeration cycles, change volumetric composition and saturation temperature as they evaporate (boil) or condense at constant pressure:",
+      "options": [
+        "Zeolite",
+        "Blending",
+        "Composition",
+        "Zeotropic"
+      ],
+      "answer": "Zeotropic"
+    },
+    {
+      "id": 12,
+      "q": "A system in which a secondary coolant is in direct contact with the air or other substance to be cooled or heated:",
+      "options": [
+        "Double indirect open spray system",
+        "Indirect open spray system",
+        "Indirect closed system",
+        "Indirect vented closed system"
+      ],
+      "answer": "Indirect open spray system"
+    },
+    {
+      "id": 13,
+      "q": "Refrigerant number R-744 is:",
+      "options": [
+        "Butane",
+        "Carbon monoxide",
+        "Propane",
+        "Carbon dioxide"
+      ],
+      "answer": "Carbon dioxide"
+    },
+    {
+      "id": 14,
+      "q": "Refrigerant number R-1150 is:",
+      "options": [
+        "Propylene",
+        "Ethene",
+        "Ethane",
+        "Methyl formate"
+      ],
+      "answer": "Ethene"
+    },
+    {
+      "id": 15,
+      "q": "Refrigerant R-40 is:",
+      "options": [
+        "Chlorodifluoromethane",
+        "Difluoromethane",
+        "Ammonia",
+        "Chloromethane"
+      ],
+      "answer": "Chloromethane"
+    },
+    {
+      "id": 16,
+      "q": "Which of the following is not a possible location of a service valve?",
+      "options": [
+        "Suction of compressor",
+        "Discharge of compressor",
+        "Outlet of liquid receiver",
+        "Outlet of condenser"
+      ],
+      "answer": "Outlet of condenser"
+    },
+    {
+      "id": 17,
+      "q": "A coil in series with the evaporator that is used to prevent liquid refrigerant from entering the compressor:",
+      "options": [
+        "Accumulator",
+        "Liquid superheater",
+        "Drier loop",
+        "Liquid-suction heat exchanger"
+      ],
+      "answer": "Drier loop"
+    },
+    {
+      "id": 18,
+      "q": "A type of valve connected from the discharge of a compressor directly to suction that is normally closed and will open automatically only if there is high discharge pressure:",
+      "options": [
+        "Check valve",
+        "Solenoid valve",
+        "King valve",
+        "Relief valve"
+      ],
+      "answer": "Solenoid valve"
+    },
+    {
+      "id": 19,
+      "q": "Used to increase the capacity of a condenser:",
+      "options": [
+        "Water regulating valve",
+        "Desuperheating coils",
+        "Liquid-suction heat exchanger",
+        "Condenser heating coils"
+      ],
+      "answer": "Desuperheating coils"
+    },
+    {
+      "id": 20,
+      "q": "Used to subcool the refrigerant from the condenser:",
+      "options": [
+        "Liquid line",
+        "Condenser subcooler",
+        "Desuperheating coils",
+        "Liquid receiver"
+      ],
+      "answer": "Condenser subcooler"
+    },
+    {
+      "id": 21,
+      "q": "Which of the following is part of the low-pressure side in a refrigeration system?",
+      "options": [
+        "Compressor discharge",
+        "Condenser",
+        "Liquid line",
+        "Suction line"
+      ],
+      "answer": "Suction line"
+    },
+    {
+      "id": 22,
+      "q": "Which of the following is NOT a part of a condensing unit?",
+      "options": [
+        "Compressor",
+        "Discharge line",
+        "Condenser",
+        "Liquid line"
+      ],
+      "answer": "Liquid line"
+    },
+    {
+      "id": 23,
+      "q": "By subcooling the refrigerant in a refrigeration system, the compressor power per unit mass will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Remains the same",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 24,
+      "q": "By superheating the refrigerant in a refrigeration system, the specific volume at compressor suction will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Increase",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 25,
+      "q": "By subcooling the refrigerant in a refrigeration system, the specific volume at compressor suction will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Remains the same",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 26,
+      "q": "With pressure loss due to friction at the condenser, the compressor power per unit mass will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Remains the same",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 27,
+      "q": "Which of the following is NOT a type of air-cooled condenser?",
+      "options": [
+        "Shell and tube",
+        "Natural draft",
+        "Forced draft",
+        "Induced draft"
+      ],
+      "answer": "Shell and tube"
+    },
+    {
+      "id": 28,
+      "q": "A type of refrigerant control typically used in household refrigeration:",
+      "options": [
+        "Thermostatic expansion valve",
+        "Automatic expansion valve",
+        "Capillary tube",
+        "High side float"
+      ],
+      "answer": "Capillary tube"
+    },
+    {
+      "id": 29,
+      "q": "Type of condenser that operates like a cooling tower:",
+      "options": [
+        "Air-cooled condenser",
+        "Evaporative condenser",
+        "Shell and tube condenser",
+        "Water-cooled condenser"
+      ],
+      "answer": "Evaporative condenser"
+    },
+    {
+      "id": 30,
+      "q": "The major problem of a heat pump is:",
+      "options": [
+        "Refrigerant used",
+        "Outside air",
+        "Supply air",
+        "Frosting"
+      ],
+      "answer": "Frosting"
+    },
+    {
+      "id": 31,
+      "q": "Dominant refrigerant used in commercial refrigeration systems:",
+      "options": [
+        "R-11",
+        "R-22",
+        "R-12",
+        "R-502"
+      ],
+      "answer": "R-502"
+    },
+    {
+      "id": 32,
+      "q": "Cascade refrigeration systems are connected in:",
+      "options": [
+        "Series",
+        "Parallel",
+        "Series-parallel",
+        "Compound"
+      ],
+      "answer": "Series"
+    },
+    {
+      "id": 33,
+      "q": "Used to heat up the solution partially before entering the generator in an absorption refrigeration system:",
+      "options": [
+        "Rectifier",
+        "Absorber",
+        "Regenerator",
+        "Pump"
+      ],
+      "answer": "Regenerator"
+    },
+    {
+      "id": 34,
+      "q": "The COP of an actual absorption refrigeration system is usually:",
+      "options": [
+        "Less than 1",
+        "Less than 2",
+        "Less than 3",
+        "Less than 4"
+      ],
+      "answer": "Less than 1"
+    },
+    {
+      "id": 35,
+      "q": "Sight glass is often located at:",
+      "options": [
+        "Discharge line",
+        "Liquid line",
+        "Between condenser and liquid receiver",
+        "Suction line"
+      ],
+      "answer": "Liquid line"
+    },
+    {
+      "id": 36,
+      "q": "Used to detect a variation in current caused by the ionization of decomposed refrigerant between two oppositely charged platinum electrodes:",
+      "options": [
+        "Electronic detector",
+        "Halide torch",
+        "Bubble method",
+        "Pressurizing"
+      ],
+      "answer": "Electronic detector"
+    },
+    {
+      "id": 37,
+      "q": "The ability of oil to mix with refrigerants:",
+      "options": [
+        "Carbonization",
+        "Purging",
+        "Mixing",
+        "Miscibility"
+      ],
+      "answer": "Miscibility"
+    }
+  ]
+}

@@ -1,0 +1,360 @@
+{
+  "id": "mcq_pipe_cns_03_refrigeration",
+  "title": "Refrigeration Systems, Controls & Calculations",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "In refrigeration, how do you call a heat exchanger in which low-pressure refrigerant boils or vaporizes, thus absorbing heat that was removed from the refrigerated area by a cooling medium (water)?",
+      "options": [
+        "Evaporator",
+        "Cooler",
+        "Chiller",
+        "Flooded evaporator"
+      ],
+      "answer": "Chiller"
+    },
+    {
+      "id": 2,
+      "q": "It is a type of refrigeration system where only part of the circulated refrigerant is evaporated, with the remainder being separated from the vapor and then recirculated. How do you call this system?",
+      "options": [
+        "Absorption refrigeration system",
+        "Vacuum refrigeration system",
+        "Vapor-compression refrigeration system",
+        "Flooded refrigeration system"
+      ],
+      "answer": "Flooded refrigeration system"
+    },
+    {
+      "id": 3,
+      "q": "How do you call ice formation in a refrigeration system at the expansion device, making the device inoperative?",
+      "options": [
+        "Ice formation",
+        "Freezing",
+        "Freeze-up",
+        "Pump-down"
+      ],
+      "answer": "Freeze-up"
+    },
+    {
+      "id": 4,
+      "q": "What is the clearance volumetric efficiency of an ammonia compressor designed with 4% clearance and operating between a condenser temperature of $30°\\text{C}$ ($p_{\\text{sat}} = 1.1672\\text{ MPaa}$) and an evaporator temperature of $4°\\text{C}$ ($p_{\\text{sat}} = 497.48\\text{ kPaa}$)?",
+      "options": [
+        "93.61%",
+        "96.31%",
+        "93.68%",
+        "96.83%"
+      ],
+      "answer": "96.31%"
+    },
+    {
+      "id": 5,
+      "q": "In a lithium bromide solution absorption refrigeration system, which of the following is the function of water?",
+      "options": [
+        "Refrigerant",
+        "Coolant",
+        "Absorbent",
+        "Analyzer"
+      ],
+      "answer": "Refrigerant"
+    },
+    {
+      "id": 6,
+      "q": "In an absorption refrigeration system, this is a pressure vessel mounted above the generator through which the vapor leaving the generator passes. How do you call this component?",
+      "options": [
+        "Absorber",
+        "Rectifier",
+        "Analyzer",
+        "Reflux"
+      ],
+      "answer": "Analyzer"
+    },
+    {
+      "id": 7,
+      "q": "In an absorption refrigeration system, it is the inlet part of the condenser, cooled by a separate circuit of cooling water or strong aqua. It condenses a small part of the vapor leaving the bubble column and returns it as a liquid to the top of the baffle plate, lowering the vapor temperature and enriching it in ammonia. What is this component?",
+      "options": [
+        "Reflux",
+        "Rectifier",
+        "Analyzer",
+        "Absorber"
+      ],
+      "answer": "Rectifier"
+    },
+    {
+      "id": 8,
+      "q": "Any refrigerant that exists as a liquid under normal atmospheric pressure and temperature must be vaporized in an evaporator under a pressure below atmospheric. This is sometimes referred to as:",
+      "options": [
+        "Halogenated refrigerant",
+        "Vacuum refrigerant",
+        "Freon refrigerant",
+        "Halocarbon refrigerant"
+      ],
+      "answer": "Vacuum refrigerant"
+    },
+    {
+      "id": 9,
+      "q": "It is any one of a group of refrigerants that have been developed since about 1925 to overcome the irritating or toxic effects of refrigerants such as ammonia and sulfur dioxide and the high condensing pressures required with carbon dioxide. How do you call these refrigerants?",
+      "options": [
+        "Halogenated refrigerants",
+        "Vacuum refrigerants",
+        "Freon refrigerants",
+        "Halocarbon refrigerants"
+      ],
+      "answer": "Halogenated refrigerants"
+    },
+    {
+      "id": 10,
+      "q": "This refrigeration system component combines the functions of a cooling tower and a condenser. It consists of a casing enclosing a fan or blower section, water eliminators, refrigerant condensing coil, water pan, float valve, and spray pump outside the casing. How do you call this component?",
+      "options": [
+        "Water-cooled condenser",
+        "Atmospheric condenser",
+        "Evaporative condenser",
+        "Chiller"
+      ],
+      "answer": "Evaporative condenser"
+    },
+    {
+      "id": 11,
+      "q": "It is a refrigeration system evaporator arranged with a tank or a single drum (accumulator) located above the coil so that the inside of the evaporator is full of refrigerant. How do you call this type of evaporator?",
+      "options": [
+        "Flooded evaporator",
+        "Cooling coil evaporator",
+        "Dry evaporator",
+        "Headered coil evaporator"
+      ],
+      "answer": "Flooded evaporator"
+    },
+    {
+      "id": 12,
+      "q": "What is the standardized term used by the industry to describe any device that meters or regulates the flow of liquid refrigerant to an evaporator?",
+      "options": [
+        "Refrigerant control",
+        "Expansion valve",
+        "Throttling valve",
+        "Capillary tube"
+      ],
+      "answer": "Expansion valve"
+    },
+    {
+      "id": 13,
+      "q": "When adding refrigerant to a refrigeration system, it shall be charged into which of the following parts of the system?",
+      "options": [
+        "High pressure side",
+        "Low and high pressure side",
+        "Low pressure side",
+        "Compressor discharge line"
+      ],
+      "answer": "Low pressure side"
+    },
+    {
+      "id": 14,
+      "q": "A Carnot refrigerator is to remove heat from a cooled space at a rate of 18,000 kJ/hr to maintain the temperature at $-8°\\text{C}$. If the air surrounding the refrigerator is $25°\\text{C}$, determine the minimum power required for the refrigerator.",
+      "options": [
+        "0.723 kW",
+        "0.623 kW",
+        "0.523 kW",
+        "0.423 kW"
+      ],
+      "answer": "0.623 kW"
+    },
+    {
+      "id": 15,
+      "q": "The existing 2,000 TR chiller at a large hospital, where you are assigned as Engineer, must be replaced. Which of the following types is most likely to be installed?",
+      "options": [
+        "Screw chiller",
+        "Reciprocating chiller",
+        "Scroll chiller",
+        "Centrifugal chiller"
+      ],
+      "answer": "Centrifugal chiller"
+    },
+    {
+      "id": 16,
+      "q": "Refrigeration condensers are rated based upon their ability to reject the total heat that comes from which of the following?",
+      "options": [
+        "Compressor work and net refrigeration effect",
+        "Superheating",
+        "Subcooling",
+        "Compressor work"
+      ],
+      "answer": "Compressor work and net refrigeration effect"
+    },
+    {
+      "id": 17,
+      "q": "Fish weighing 11,000 kg with a temperature of $20°\\text{C}$ is brought to a cold storage to be cooled to $-10°\\text{C}$ in 11 hours. Find the required plant refrigerating capacity in TR if the specific heat of fish is $0.7\\text{ kcal/kg·°C}$ above freezing and $0.30\\text{ kcal/kg·°C}$ below the freezing point of $-3°\\text{C}$. The latent heat of freezing is $55.5\\text{ kcal/kg}$.",
+      "options": [
+        "25.26 TR",
+        "15.26 TR",
+        "14.38 TR",
+        "24.38 TR"
+      ],
+      "answer": "24.38 TR"
+    },
+    {
+      "id": 18,
+      "q": "A refrigeration system operates on the reversed Carnot cycle. The minimum and maximum temperatures are $-25°\\text{C}$ and $72°\\text{C}$, respectively. If the heat rejected at the condenser is 6,000 kJ/min, find the tons of refrigeration required.",
+      "options": [
+        "20.44 TR",
+        "42.20 TR",
+        "24.40 TR",
+        "44.20 TR"
+      ],
+      "answer": "20.44 TR"
+    },
+    {
+      "id": 19,
+      "q": "What do you call a refrigeration system in which the refrigerant gas evolved in the evaporator is taken up in an absorber and released in a generator upon the application of heat?",
+      "options": [
+        "Absorption refrigeration system",
+        "Cascade refrigeration system",
+        "Flooded refrigeration system",
+        "Steam jet refrigeration system"
+      ],
+      "answer": "Absorption refrigeration system"
+    },
+    {
+      "id": 20,
+      "q": "What do you call a shut-off valve other than a valve for controlling the flow of refrigerant in a refrigeration system?",
+      "options": [
+        "Fusible valve",
+        "Check valve",
+        "Stop valve",
+        "Relief valve"
+      ],
+      "answer": "Stop valve"
+    },
+    {
+      "id": 21,
+      "q": "What is a device used in a refrigeration system having a predetermined temperature fusible member for the relief of pressure?",
+      "options": [
+        "Fusible valve",
+        "Check valve",
+        "Stop valve",
+        "Relief valve"
+      ],
+      "answer": "Fusible valve"
+    },
+    {
+      "id": 22,
+      "q": "Which of the following is an expression or equivalent of horsepower per ton of refrigeration?",
+      "options": [
+        "$\\cfrac{4.715}{\\text{COP}}$",
+        "$\\text{COP} \\times 4.715$",
+        "$\\cfrac{\\text{COP}}{4.715}$",
+        "$\\cfrac{1}{4.715 \\times \\text{COP}}$"
+      ],
+      "answer": "$\\cfrac{4.715}{\\text{COP}}$"
+    },
+    {
+      "id": 23,
+      "q": "The standard capacity rating conditions for any refrigeration compressor are:",
+      "options": [
+        "$5°\\text{F}$, 19.6 psig for the suction; $86°\\text{F}$, 154.5 psig for the discharge",
+        "$5°\\text{F}$, 9.6 psig for the suction; $96°\\text{F}$, 154.5 psig for the discharge",
+        "$10°\\text{F}$, 9.6 psig for the suction; $96°\\text{F}$, 144.5 psig for the discharge",
+        "$5°\\text{F}$, 19.6 psig for the suction; $96°\\text{F}$, 134.5 psig for the discharge"
+      ],
+      "answer": "$5°\\text{F}$, 19.6 psig for the suction; $86°\\text{F}$, 154.5 psig for the discharge"
+    },
+    {
+      "id": 24,
+      "q": "In a refrigeration system, which of the following would cause a high suction pressure?",
+      "options": [
+        "Expansion valve not open wide enough",
+        "Expansion valve open too wide",
+        "King valve not open wide enough",
+        "Dirty dehydrator"
+      ],
+      "answer": "Expansion valve open too wide"
+    },
+    {
+      "id": 25,
+      "q": "Which of the following is another name for the liquid valve?",
+      "options": [
+        "Freon valve",
+        "King valve",
+        "Shut-off valve",
+        "Master valve"
+      ],
+      "answer": "King valve"
+    },
+    {
+      "id": 26,
+      "q": "Of the following, the best method used to determine the moisture level in a refrigeration system is to:",
+      "options": [
+        "Weigh the drier after it has been in the system for a period of time",
+        "Use a moisture indicator",
+        "Visually check the sight glass for particles of corrosion",
+        "Test a sample of lubricating oil with phosphorus pentoxide"
+      ],
+      "answer": "Use a moisture indicator"
+    },
+    {
+      "id": 27,
+      "q": "A full-flow drier is usually recommended in a hermetic refrigeration compressor system to keep the system dry and to:",
+      "options": [
+        "Prevent the products of decomposition from getting into the evaporator in the event of motor burn-out",
+        "Condense out liquid refrigerant during compressor off cycles and compressor start-up",
+        "Prevent the compressor unit from decreasing in capacity",
+        "Prevent the liquid from dumping into the compressor crankcase"
+      ],
+      "answer": "Prevent the products of decomposition from getting into the evaporator in the event of motor burn-out"
+    },
+    {
+      "id": 28,
+      "q": "Of the following, the main purpose of a sub-cooler in a refrigerant piping system for a two-stage system is to:",
+      "options": [
+        "Reduce the total power requirements and total heat rejection to the second stage",
+        "Reduce the total power requirements and return oil to the compressor",
+        "Improve the flow of evaporator gas per ton and increase the temperature",
+        "Increase the heat rejection per ton and avoid system shutdown"
+      ],
+      "answer": "Reduce the total power requirements and total heat rejection to the second stage"
+    },
+    {
+      "id": 29,
+      "q": "In large refrigeration systems, the usual location for charging the refrigeration system is into the:",
+      "options": [
+        "Suction line",
+        "Liquid line between the receiver shut-off valve and the expansion valve",
+        "Line between the condenser and the compressor",
+        "Line between the high-pressure cut-off switch and the expansion valve"
+      ],
+      "answer": "Liquid line between the receiver shut-off valve and the expansion valve"
+    },
+    {
+      "id": 30,
+      "q": "It corresponds to a heat absorption rate of 237.6 Btu/min (4.175 kW) with inlet and outlet pressures corresponding to saturation temperatures of $23°\\text{F}$ ($-5°\\text{C}$) and $59°\\text{F}$ ($15°\\text{C}$), respectively. How do you call this absorption rate?",
+      "options": [
+        "American Unit of refrigeration",
+        "British Unit of refrigeration",
+        "European Unit of refrigeration",
+        "Standard Unit of refrigeration"
+      ],
+      "answer": "British Unit of refrigeration"
+    },
+    {
+      "id": 31,
+      "q": "How do you call a device that converts liquid refrigerant to vapor, with the help of surrounding heat?",
+      "options": [
+        "Condenser",
+        "Compressor",
+        "Expansion valve",
+        "Evaporator"
+      ],
+      "answer": "Evaporator"
+    },
+    {
+      "id": 32,
+      "q": "In a gas compressor, when the volumetric efficiency increases, the piston displacement has:",
+      "options": [
+        "Not been changed",
+        "Been increased",
+        "Been decreased",
+        "Insufficient data"
+      ],
+      "answer": "Been decreased"
+    }
+  ]
+}

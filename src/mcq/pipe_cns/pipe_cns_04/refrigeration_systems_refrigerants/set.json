@@ -1,0 +1,487 @@
+{
+  "id": "mcq_pipe_cns_04_refrigeration",
+  "title": "Refrigeration Systems & Refrigerants",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-04",
+  "questions": [
+    {
+      "id": 1,
+      "q": "Which is not a major hardware component of the vapor compression system?",
+      "options": [
+        "Compressor",
+        "Evaporator",
+        "Condenser",
+        "Refrigerant"
+      ],
+      "answer": "Refrigerant"
+    },
+    {
+      "id": 2,
+      "q": "This system combines two vapor-compression units, with the condenser of the low-temperature system discharging its heat to the evaporator of the high-temperature system.",
+      "options": [
+        "Cascade systems",
+        "Multi-stage system",
+        "Binary system",
+        "Multi-pressure system"
+      ],
+      "answer": "Cascade systems"
+    },
+    {
+      "id": 3,
+      "q": "It is the index of performance of a refrigeration system which is a dimensionless quantity.",
+      "options": [
+        "Coefficient of Performance",
+        "Energy Ratio",
+        "Energy Efficiency Ratio",
+        "Performance Ratio"
+      ],
+      "answer": "Coefficient of Performance"
+    },
+    {
+      "id": 4,
+      "q": "It is simply the compression of the gas in two or more cylinders in place of a single-cylinder compressor.",
+      "options": [
+        "Intercooled Compression",
+        "Multistage Compression",
+        "Efficient Compression",
+        "High Power Compression"
+      ],
+      "answer": "Multistage Compression"
+    },
+    {
+      "id": 5,
+      "q": "The substance used for heat transfer in a vapor compression refrigerating system. It picks up heat by evaporating at a low temperature and pressure and gives up this heat by condensing at a higher temperature and pressure.",
+      "options": [
+        "Water",
+        "Air",
+        "Ammonia",
+        "Gas"
+      ],
+      "answer": "Ammonia"
+    },
+    {
+      "id": 6,
+      "q": "What is the pressure of the refrigerant between the expansion valve and the intake of the compressor in a multi-pressure refrigeration system?",
+      "options": [
+        "High-side pressure",
+        "Discharge pressure",
+        "Condensing pressure",
+        "Low-side pressure"
+      ],
+      "answer": "Low-side pressure"
+    },
+    {
+      "id": 7,
+      "q": "A refrigerating machine that is classified as a one-ton machine has the capacity to produce a cooling effect of:",
+      "options": [
+        "3.517 kW",
+        "12,000 Btu/hr",
+        "211 kJ/min",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 8,
+      "q": "A type of condenser that combines the functions of a condenser and cooling tower is called:",
+      "options": [
+        "Air-cooled condenser",
+        "Water-cooled condenser",
+        "Ground-cooling condenser",
+        "Evaporative condenser"
+      ],
+      "answer": "Evaporative condenser"
+    },
+    {
+      "id": 9,
+      "q": "An expansion valve with a fluid-charged remote bulb that maintains a constant degree of superheat in the evaporator is called:",
+      "options": [
+        "Thermostatic expansion valve",
+        "Capillary tube",
+        "Automatic expansion valve",
+        "Float valve"
+      ],
+      "answer": "Thermostatic expansion valve"
+    },
+    {
+      "id": 10,
+      "q": "A refrigeration system ideally suited for use in aircraft because it is light in weight and requires less space is called:",
+      "options": [
+        "Mechanical vapor-compression",
+        "Steam-jet",
+        "Air cycle",
+        "Vapor absorption"
+      ],
+      "answer": "Air cycle"
+    },
+    {
+      "id": 11,
+      "q": "Refrigerant with chemical formula $\\text{CHClF}_2$ is designated by:",
+      "options": [
+        "R134a",
+        "R12",
+        "R11",
+        "R22"
+      ],
+      "answer": "R22"
+    },
+    {
+      "id": 12,
+      "q": "Refrigerant with chemical formula $\\text{CF}_3\\text{CH}_2\\text{F}$ is designated by:",
+      "options": [
+        "R134a",
+        "R12",
+        "R11",
+        "R22"
+      ],
+      "answer": "R134a"
+    },
+    {
+      "id": 13,
+      "q": "Which refrigerant does not belong to the group?",
+      "options": [
+        "Ammonia",
+        "Propane",
+        "Methane",
+        "Isobutane"
+      ],
+      "answer": "Ammonia"
+    },
+    {
+      "id": 14,
+      "q": "Carbon dioxide refrigerant is designated by:",
+      "options": [
+        "R717",
+        "R744",
+        "R600",
+        "R718"
+      ],
+      "answer": "R744"
+    },
+    {
+      "id": 15,
+      "q": "Piping, fittings, and valve materials found suitable for use with ammonia refrigerant are manufactured from:",
+      "options": [
+        "Copper",
+        "Aluminum",
+        "Iron and Steel",
+        "Brass"
+      ],
+      "answer": "Iron and Steel"
+    },
+    {
+      "id": 16,
+      "q": "Which statement is correct for a water-cooled shell-and-tube condenser?",
+      "options": [
+        "Refrigerant condensing inside tubes and water flowing in the shell.",
+        "Water flowing through passes inside tubes and the refrigerant condensing in the shell.",
+        "Both refrigerant and water flowing through passes inside tubes and refrigerant condensing.",
+        "A, B, and C are correct."
+      ],
+      "answer": "Water flowing through passes inside tubes and the refrigerant condensing in the shell.",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 17,
+      "q": "In a vapor-absorption refrigeration system utilizing ammonia as refrigerant, the absorbent is:",
+      "options": [
+        "Water",
+        "Carbon dioxide",
+        "Lithium Bromide",
+        "Air"
+      ],
+      "answer": "Water"
+    },
+    {
+      "id": 18,
+      "q": "The most common secondary refrigerant medium used in indirect refrigeration systems such as industrial ice plants and cold storages:",
+      "options": [
+        "Hydrocarbon",
+        "Carbon dioxide",
+        "Air",
+        "Brine"
+      ],
+      "answer": "Brine"
+    },
+    {
+      "id": 19,
+      "q": "A constant-restriction expansion device in a refrigeration system which is merely a long tube with narrow bore is called:",
+      "options": [
+        "Thermostatic expansion valve",
+        "Automatic expansion valve",
+        "Capillary tube",
+        "Float valve"
+      ],
+      "answer": "Capillary tube"
+    },
+    {
+      "id": 20,
+      "q": "Mixtures of refrigerants which behave like a pure substance are called:",
+      "options": [
+        "Isomers",
+        "Hydrocarbons",
+        "Azeotropes",
+        "CFC"
+      ],
+      "answer": "Azeotropes"
+    },
+    {
+      "id": 21,
+      "q": "In refrigeration, a compressor that has an electric motor and a compressor built into an integral housing is commonly called:",
+      "options": [
+        "Hermetic compressor",
+        "Combined compressor",
+        "Open type compressor",
+        "Packaged compressor"
+      ],
+      "answer": "Hermetic compressor"
+    },
+    {
+      "id": 22,
+      "q": "Compounds with the same chemical formula but different molecular structure (such as R134 and R134a) are called:",
+      "options": [
+        "Brominated",
+        "Hydrocarbons",
+        "Azeotropes",
+        "Isomers"
+      ],
+      "answer": "Isomers"
+    },
+    {
+      "id": 23,
+      "q": "Which of the following refrigerants does not belong to the group?",
+      "options": [
+        "Carbon dioxide",
+        "Ammonia",
+        "Water",
+        "Isobutane"
+      ],
+      "answer": "Isobutane"
+    },
+    {
+      "id": 24,
+      "q": "An expansion valve used for a flooded type of evaporator in a refrigeration system is called:",
+      "options": [
+        "Thermostatic expansion valve",
+        "Capillary tube",
+        "Automatic expansion valve",
+        "Float valve"
+      ],
+      "answer": "Float valve"
+    },
+    {
+      "id": 25,
+      "q": "An atom in the refrigerant molecule considered responsible for the depletion of the ozone layer in the upper atmosphere (stratosphere):",
+      "options": [
+        "Cl atom",
+        "H atom",
+        "F atom",
+        "C atom"
+      ],
+      "answer": "Cl atom"
+    },
+    {
+      "id": 26,
+      "q": "A vapor compression system used for production of low temperatures in which a series of refrigerants with progressively lower boiling points are used in series of single-stage units is called:",
+      "options": [
+        "Multipressure system",
+        "Single-stage system",
+        "Cascade system",
+        "Series system"
+      ],
+      "answer": "Cascade system"
+    },
+    {
+      "id": 27,
+      "q": "Which statement is correct on the effect of liquid subcooling in a vapor compression system?",
+      "options": [
+        "Subcooling both increases flashing of the liquid during expansion and the refrigerating effect.",
+        "Subcooling increases flashing of the liquid during expansion and increases the refrigerating effect.",
+        "Subcooling both decreases flashing of the liquid during expansion and the refrigerating effect.",
+        "Subcooling decreases flashing of the liquid during expansion and increases the refrigerating effect."
+      ],
+      "answer": "Subcooling decreases flashing of the liquid during expansion and increases the refrigerating effect."
+    },
+    {
+      "id": 28,
+      "q": "Which statement is correct on the effect of suction vapor superheating in a vapor compression system?",
+      "options": [
+        "Superheating both increases specific compressor work and the refrigerating effect.",
+        "Superheating both decreases specific compressor work and the refrigerating effect.",
+        "Superheating increases specific compressor work and decreases the refrigerating effect.",
+        "Superheating decreases specific compressor work and increases the refrigerating effect."
+      ],
+      "answer": "Superheating both increases specific compressor work and the refrigerating effect."
+    },
+    {
+      "id": 29,
+      "q": "Which statement is correct on the effect of increasing condensing pressure in a vapor compression system?",
+      "options": [
+        "Increasing condensing pressure both increases specific compressor work and the refrigerating effect.",
+        "Increasing condensing pressure both decreases specific compressor work and the refrigerating effect.",
+        "Increasing condensing pressure increases specific compressor work and decreases the refrigerating effect.",
+        "Increasing condensing pressure decreases specific compressor work and increases the refrigerating effect."
+      ],
+      "answer": "Increasing condensing pressure increases specific compressor work and decreases the refrigerating effect."
+    },
+    {
+      "id": 30,
+      "q": "Freezing method that utilizes the combined effects of low temperature and high air velocity to produce a high rate of heat transfer from the product is called:",
+      "options": [
+        "Indirect contact freezing",
+        "Immersion freezing",
+        "Blast freezing",
+        "Spray freezing"
+      ],
+      "answer": "Blast freezing"
+    },
+    {
+      "id": 31,
+      "q": "A component installed in a refrigeration system to ensure that no liquid enters the compressor and to subcool the liquid from the condenser to prevent bubbles of vapor from impeding the flow of refrigerant through the expansion valve is called:",
+      "options": [
+        "Liquid-to-suction heat exchanger",
+        "Flash chamber",
+        "Subcooler",
+        "Drier"
+      ],
+      "answer": "Liquid-to-suction heat exchanger"
+    },
+    {
+      "id": 32,
+      "q": "Refrigerant used in steam-jet refrigeration is:",
+      "options": [
+        "Ammonia",
+        "Carbon dioxide",
+        "Water",
+        "Air"
+      ],
+      "answer": "Water"
+    },
+    {
+      "id": 33,
+      "q": "Which refrigerant is completely miscible with oil?",
+      "options": [
+        "Ammonia",
+        "Carbon dioxide",
+        "R12",
+        "R134a"
+      ],
+      "answer": "R12"
+    },
+    {
+      "id": 34,
+      "q": "Ammonia is not used in domestic refrigeration and comfort air-conditioning because:",
+      "options": [
+        "Ammonia is highly soluble in water.",
+        "Ammonia is the cheapest refrigerant.",
+        "Ammonia is flammable and toxic.",
+        "Ammonia has zero ozone depletion potential."
+      ],
+      "answer": "Ammonia is flammable and toxic."
+    },
+    {
+      "id": 35,
+      "q": "Refrigerant 22 (R22), which is an HCFC, has $1/20\\text{th}$ the ozone depletion potential (ODP) of R11 and R12. However, all of these have global warming potential (GWP). Because of this, R22 will have to be phased out under the Montreal Protocol by year:",
+      "options": [
+        "2010 AD",
+        "2030 AD",
+        "2020",
+        "2040"
+      ],
+      "answer": "2030 AD"
+    },
+    {
+      "id": 36,
+      "q": "Which of the statements is incorrect regarding the functions of the liquid receiver?",
+      "options": [
+        "Stores unused refrigerant returning from condenser",
+        "Stores refrigerant to be evaporated by the expansion valve",
+        "Provides a place to store refrigerant when pumping out the evaporator during maintenance operations",
+        "Stores oil that is carried along with refrigerant"
+      ],
+      "answer": "Stores oil that is carried along with refrigerant"
+    },
+    {
+      "id": 37,
+      "q": "A shutoff valve that is actuated by an electromagnetic coil is called:",
+      "options": [
+        "Solenoid valve",
+        "Float valve",
+        "Float switch",
+        "Holdback valve"
+      ],
+      "answer": "Solenoid valve"
+    },
+    {
+      "id": 38,
+      "q": "Which of the following statements is not false?",
+      "options": [
+        "One ton of refrigeration is also known as one ton of refrigerant.",
+        "The low-pressure part of the refrigeration system is composed of the discharge line of the expansion valve to the suction of the compressor.",
+        "A system operating in a cycle and producing a net quantity of work from a supply system is known as a refrigerator.",
+        "Multistaging of the compressor will increase the work."
+      ],
+      "answer": "The low-pressure part of the refrigeration system is composed of the discharge line of the expansion valve to the suction of the compressor."
+    },
+    {
+      "id": 39,
+      "q": "A refrigeration system has a capacity of 2 tons. Which of the following statements is correct?",
+      "options": [
+        "The system has a COP of 2.",
+        "The system has a refrigeration load of 400 Btu/min.",
+        "The system uses 2 tons of refrigerant.",
+        "None of these is correct."
+      ],
+      "answer": "The system has a refrigeration load of 400 Btu/min.",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 40,
+      "q": "The combination of two refrigerants which cannot be separated by a distillation process:",
+      "options": [
+        "Hydrocarbon",
+        "Isotopes",
+        "Azeotropes",
+        "Zeotropes"
+      ],
+      "answer": "Azeotropes"
+    },
+    {
+      "id": 41,
+      "q": "R-600 is what refrigerant?",
+      "options": [
+        "Methane",
+        "Nonane",
+        "Butane",
+        "None of these"
+      ],
+      "answer": "Butane",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    }
+  ]
+}

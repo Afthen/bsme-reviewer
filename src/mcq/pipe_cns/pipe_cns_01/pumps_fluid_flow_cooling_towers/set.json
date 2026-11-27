@@ -1,0 +1,349 @@
+{
+  "id": "mcq_pipe_cns_01_pumps_cooling_towers",
+  "title": "Pumps, Fluid Flow & Cooling Towers",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-01",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A vertical turbine pump with the pump and motor close-coupled and designed to be installed underground, as in the case of a deepwell pump:",
+      "options": [
+        "Horizontal split case pump",
+        "Booster pump",
+        "Submersible pump",
+        "Vertical shaft turbine pump"
+      ],
+      "answer": "Submersible pump"
+    },
+    {
+      "id": 2,
+      "q": "An underground formation that contains sufficient saturated permeable material to yield significant quantities of water:",
+      "options": [
+        "Aquifer",
+        "Ground water",
+        "Wet pit",
+        "Well water"
+      ],
+      "answer": "Aquifer"
+    },
+    {
+      "id": 3,
+      "q": "A timber, concrete, or masonry enclosure having a screened inlet kept partially filled with water by an open body of water such as a pond, lake, or stream:",
+      "options": [
+        "Aquifer",
+        "Ground water",
+        "Wet pit",
+        "Well water"
+      ],
+      "answer": "Wet pit"
+    },
+    {
+      "id": 4,
+      "q": "Water which is available from a well driven into water-bearing subsurface strata (aquifer):",
+      "options": [
+        "Aquifer",
+        "Ground water",
+        "Wet pit",
+        "Well water"
+      ],
+      "answer": "Well water"
+    },
+    {
+      "id": 5,
+      "q": "Imparts velocity to the liquid, resulting from centrifugal force as the impeller is rotated:",
+      "options": [
+        "Impeller",
+        "Stuffing box",
+        "Casing",
+        "Shaft sleeve"
+      ],
+      "answer": "Impeller"
+    },
+    {
+      "id": 6,
+      "q": "A means of throttling the leakage which would otherwise occur at the point of entry of the shaft into the casing:",
+      "options": [
+        "Impeller",
+        "Stuffing box",
+        "Casing",
+        "Shaft sleeve"
+      ],
+      "answer": "Stuffing box"
+    },
+    {
+      "id": 7,
+      "q": "Protects the shaft where it passes through the stuffing box:",
+      "options": [
+        "Impeller",
+        "Stuffing box",
+        "Casing",
+        "Shaft sleeve"
+      ],
+      "answer": "Shaft sleeve"
+    },
+    {
+      "id": 8,
+      "q": "The minimum fluid energy required at the pump inlet for satisfactory operation is known as:",
+      "options": [
+        "NPSHR",
+        "NPSHA",
+        "Velocity head",
+        "Friction head"
+      ],
+      "answer": "NPSHR"
+    },
+    {
+      "id": 9,
+      "q": "Throttling the input line to a pump and venting or evacuating the receiving tank:",
+      "options": [
+        "Both increase cavitation",
+        "Both decrease cavitation",
+        "Both eliminate cavitation",
+        "Both drive cavitation"
+      ],
+      "answer": "Both increase cavitation"
+    },
+    {
+      "id": 10,
+      "q": "Traditional reciprocating pumps with pistons and rods can be either single-acting or double-acting and are suitable up to approximately:",
+      "options": [
+        "2,000 psi",
+        "4,000 psi",
+        "8,000 psi",
+        "10,000 psi"
+      ],
+      "answer": "2,000 psi"
+    },
+    {
+      "id": 11,
+      "q": "The capacity of a substance to transmit a fluid is called:",
+      "options": [
+        "Fluidity",
+        "Permeability",
+        "Porosity",
+        "Smoothness"
+      ],
+      "answer": "Permeability"
+    },
+    {
+      "id": 12,
+      "q": "The ratio of the aggregate volume of pore spaces in rock or soil to its total volume is called:",
+      "options": [
+        "Porosity",
+        "Sphericity",
+        "Permeability",
+        "Salinity"
+      ],
+      "answer": "Porosity"
+    },
+    {
+      "id": 13,
+      "q": "Cooling efficiency is typically:",
+      "options": [
+        "75 to 80%",
+        "50 to 70%",
+        "80 to 85%",
+        "90 to 95%"
+      ],
+      "answer": "50 to 70%"
+    },
+    {
+      "id": 14,
+      "q": "Forced draft towers can cool the water to within:",
+      "options": [
+        "10 to 12°F",
+        "5 to 6°F",
+        "20 to 24°F",
+        "2.5 to 3°F"
+      ],
+      "answer": "5 to 6°F"
+    },
+    {
+      "id": 15,
+      "q": "The higher the wet bulb temperature:",
+      "options": [
+        "The higher the efficiency",
+        "The lower the efficiency",
+        "The efficiency is limited",
+        "The efficiency is maximum"
+      ],
+      "answer": "The lower the efficiency"
+    },
+    {
+      "id": 16,
+      "q": "Defines the relative difficulty in cooling, essentially the relative amount of contact area or fill volume required:",
+      "options": [
+        "Heat load",
+        "Tower load",
+        "Cooling duty",
+        "Rating factor"
+      ],
+      "answer": "Rating factor"
+    },
+    {
+      "id": 17,
+      "q": "Evaporation loss can be calculated from the humidity ratio increase and is approximately _________ decrease in water temperature.",
+      "options": [
+        "0.18% per °C",
+        "0.25% per °C",
+        "0.10% per °C",
+        "0.30% per °C"
+      ],
+      "answer": "0.18% per °C"
+    },
+    {
+      "id": 18,
+      "q": "Water lost in small droplets and carried away by the air flow:",
+      "options": [
+        "Range",
+        "Approach",
+        "Drift",
+        "Bleed-off"
+      ],
+      "answer": "Drift"
+    },
+    {
+      "id": 19,
+      "q": "The ratio of total dissolved solids in the recirculating water to the total dissolved solids in the make-up water:",
+      "options": [
+        "Ratio of concentration",
+        "Cooling efficiency",
+        "Coil efficiency",
+        "Bypass factor"
+      ],
+      "answer": "Ratio of concentration"
+    },
+    {
+      "id": 20,
+      "q": "A dry-cooling tower where steam travels through large-diameter \"trunks\" to a cross-flow heat exchanger where it is condensed and cooled by the cooler air:",
+      "options": [
+        "Direct condensing tower",
+        "Indirect condensing dry cooling tower",
+        "Evaporative cooling tower",
+        "Atmospheric cooling tower"
+      ],
+      "answer": "Direct condensing tower"
+    },
+    {
+      "id": 21,
+      "q": "The actual fluid energy at the inlet:",
+      "options": [
+        "NPSHR",
+        "NPSHA",
+        "Velocity head",
+        "Friction head"
+      ],
+      "answer": "NPSHA"
+    },
+    {
+      "id": 22,
+      "q": "Plunger pumps are only single-acting and are suitable up to approximately:",
+      "options": [
+        "2,000 psi",
+        "4,000 psi",
+        "8,000 psi",
+        "10,000 psi"
+      ],
+      "answer": "10,000 psi"
+    },
+    {
+      "id": 23,
+      "q": "The water-bearing stratum of permeable sand, rock, or gravel is called:",
+      "options": [
+        "Reservoir",
+        "Water source",
+        "Aquifer",
+        "Well"
+      ],
+      "answer": "Aquifer"
+    },
+    {
+      "id": 24,
+      "q": "The size of a steam reciprocating pump is generally designated by a three-digit number such as 646. The first digit designates:",
+      "options": [
+        "Stroke of the pump in inches",
+        "Inside diameter of the steam cylinder measured in inches",
+        "Percent clearance",
+        "Number of cylinders"
+      ],
+      "answer": "Inside diameter of the steam cylinder measured in inches"
+    },
+    {
+      "id": 25,
+      "q": "The power required to deliver a given quantity of fluid against a given head with no losses in the pump is called:",
+      "options": [
+        "Wheel power",
+        "Brake power",
+        "Hydraulic power",
+        "Indicated power"
+      ],
+      "answer": "Hydraulic power"
+    },
+    {
+      "id": 26,
+      "q": "Fluids that are pumped in processing work are frequently more viscous than water. Which of the following statements is correct?",
+      "options": [
+        "Reynolds number varies directly as the viscosity",
+        "Efficiency of a pump increases as the viscosity increases",
+        "Increased fluid friction between the pump parts and the passing fluid decreases useful work",
+        "Working head increases as the viscosity"
+      ],
+      "answer": "Increased fluid friction between the pump parts and the passing fluid decreases useful work"
+    },
+    {
+      "id": 27,
+      "q": "A structure that removes heat from condenser cooling water is called:",
+      "options": [
+        "Desuperheater",
+        "Cooling tower",
+        "Evaporator",
+        "Condenser"
+      ],
+      "answer": "Cooling tower"
+    },
+    {
+      "id": 28,
+      "q": "The spontaneous vaporization of the fluid, resulting in a degradation of pump performance:",
+      "options": [
+        "Cavitation",
+        "Vapor lock",
+        "Available head",
+        "Net head"
+      ],
+      "answer": "Cavitation"
+    },
+    {
+      "id": 29,
+      "q": "A dry cooling tower where steam is condensed by cold water jets (surface or jet condenser):",
+      "options": [
+        "Direct condensing tower",
+        "Indirect condensing dry cooling tower",
+        "Evaporative cooling tower",
+        "Atmospheric cooling tower"
+      ],
+      "answer": "Indirect condensing dry cooling tower"
+    },
+    {
+      "id": 30,
+      "q": "Weight per unit volume is termed as:",
+      "options": [
+        "Specific gravity",
+        "Specific density",
+        "Weight density",
+        "Pressure"
+      ],
+      "answer": "Weight density"
+    },
+    {
+      "id": 31,
+      "q": "A manometer is an instrument that is used to measure:",
+      "options": [
+        "Air pressure",
+        "Condensate water level",
+        "Heat radiation",
+        "Air volume"
+      ],
+      "answer": "Air pressure"
+    }
+  ]
+}

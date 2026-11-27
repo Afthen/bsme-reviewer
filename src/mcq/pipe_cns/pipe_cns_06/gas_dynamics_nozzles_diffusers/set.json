@@ -1,0 +1,119 @@
+{
+  "id": "mcq_pipe_cns_06_gas_dynamics",
+  "title": "Gas Dynamics, Nozzles & Diffusers",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-06",
+  "questions": [
+    {
+      "id": 1,
+      "q": "As air passes through an expanding subsonic nozzle, which of the following will increase?",
+      "options": [
+        "Temperature",
+        "Enthalpy",
+        "Internal energy",
+        "Mach number"
+      ],
+      "answer": "Mach number"
+    },
+    {
+      "id": 2,
+      "q": "As air passes through a subsonic diffuser, which of the following will decrease?",
+      "options": [
+        "Temperature",
+        "Enthalpy",
+        "Internal energy",
+        "Mach number"
+      ],
+      "answer": "Mach number"
+    },
+    {
+      "id": 3,
+      "q": "As air passes through a nozzle during an expansion process, which of the following will decrease?",
+      "options": [
+        "Temperature",
+        "Enthalpy",
+        "Internal energy",
+        "Mach number"
+      ],
+      "answer": "Internal energy"
+    },
+    {
+      "id": 4,
+      "q": "As air passes through a diffuser, which of the following will increase?",
+      "options": [
+        "Density",
+        "Entropy",
+        "Mach number",
+        "Velocity"
+      ],
+      "answer": "Density"
+    },
+    {
+      "id": 5,
+      "q": "As air passes through an ideal isentropic diffuser, which of the following will NOT be affected?",
+      "options": [
+        "Density",
+        "Entropy",
+        "Mach number",
+        "Velocity"
+      ],
+      "answer": "Entropy"
+    },
+    {
+      "id": 6,
+      "q": "After passing through a convergent-divergent supersonic nozzle, the temperature of air will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Decrease",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 7,
+      "q": "After passing through a convergent-divergent supersonic nozzle, the density of air will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Decrease",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 8,
+      "q": "After passing through a convergent-divergent supersonic nozzle operating at design pressure ratio, the Mach number of air will:",
+      "options": [
+        "Increase",
+        "Decrease",
+        "Remains the same",
+        "None of these"
+      ],
+      "answer": "Increase",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    },
+    {
+      "id": 9,
+      "q": "In a steady-flow engineering system, the only devices where changes in kinetic energy are the primary intended effect are:",
+      "options": [
+        "Compressors",
+        "Pumps",
+        "Nozzles and diffusers",
+        "None of these"
+      ],
+      "answer": "Nozzles and diffusers",
+      "shuffle": [
+        [0, 1, 2]
+      ]
+    }
+  ]
+}

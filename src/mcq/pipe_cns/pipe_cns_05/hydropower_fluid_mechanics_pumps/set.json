@@ -1,0 +1,306 @@
+{
+  "id": "mcq_pipe_cns_05_fluids_pumps",
+  "title": "Hydropower, Fluid Mechanics & Pumps",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-05",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The sum of the pressure head and velocity head:",
+      "options": [
+        "Static head",
+        "Pressure head",
+        "Velocity head",
+        "Dynamic head"
+      ],
+      "answer": "Dynamic head"
+    },
+    {
+      "id": 2,
+      "q": "The height of the surface of the water above the gage point:",
+      "options": [
+        "Pressure head",
+        "Velocity head",
+        "Dynamic head",
+        "Static head"
+      ],
+      "answer": "Static head"
+    },
+    {
+      "id": 3,
+      "q": "The head required to produce a flow of water:",
+      "options": [
+        "Static head",
+        "Pressure head",
+        "Velocity head",
+        "Dynamic head"
+      ],
+      "answer": "Velocity head"
+    },
+    {
+      "id": 4,
+      "q": "The total suction head of the liquid at pump suction less the vapor pressure corresponding to the temperature at the same point, converted to liquid head:",
+      "options": [
+        "NPSH",
+        "Specific head",
+        "Pump operating head",
+        "Suction head"
+      ],
+      "answer": "NPSH"
+    },
+    {
+      "id": 5,
+      "q": "The algebraic difference of the discharge and suction heads:",
+      "options": [
+        "Pump operating head",
+        "TDH",
+        "A and B",
+        "NPSH"
+      ],
+      "answer": "A and B",
+      "shuffle": []
+    },
+    {
+      "id": 6,
+      "q": "The phenomenon in which air enters a submerged suction pipe from the water surface is called a:",
+      "options": [
+        "Whirlpool",
+        "Vacuum",
+        "Vortex",
+        "Thixotropic"
+      ],
+      "answer": "Vortex"
+    },
+    {
+      "id": 7,
+      "q": "A pump used for drawing water directly from a public service main or private-use water system:",
+      "options": [
+        "Horizontal split case pump",
+        "Vertical shaft turbine pump",
+        "Booster pump",
+        "Submersible pump"
+      ],
+      "answer": "Booster pump"
+    },
+    {
+      "id": 8,
+      "q": "A small fitting with a double offset, or shaped like the letter U with the ends turned out:",
+      "options": [
+        "Elbow tee",
+        "Expansion loop",
+        "Spigot joint",
+        "Cross-over"
+      ],
+      "answer": "Cross-over"
+    },
+    {
+      "id": 9,
+      "q": "It is referred to as the maximum continuous power available from a hydroelectric power plant even under the most adverse hydraulic condition:",
+      "options": [
+        "Primary power",
+        "Continuous base power",
+        "Continuous peak power",
+        "Firm power"
+      ],
+      "answer": "Firm power"
+    },
+    {
+      "id": 10,
+      "q": "A turbine setting where one disadvantage is the difficulty of lubricating the operating mechanism, with consequent relatively rapid wear:",
+      "options": [
+        "Siphon setting",
+        "Open flume setting",
+        "Cast setting",
+        "Capacity setting"
+      ],
+      "answer": "Open flume setting"
+    },
+    {
+      "id": 11,
+      "q": "At the control stand, pitch of the turbine blades must be adjusted manually by a:",
+      "options": [
+        "Sensor",
+        "Float valve",
+        "Gate",
+        "Switch"
+      ],
+      "answer": "Sensor"
+    },
+    {
+      "id": 12,
+      "q": "The most commonly used adjustable-blade propeller turbine:",
+      "options": [
+        "Francis turbine",
+        "Kaplan turbine",
+        "Impulse turbine",
+        "Pelton wheel"
+      ],
+      "answer": "Kaplan turbine"
+    },
+    {
+      "id": 13,
+      "q": "Runner blades are adjusted automatically in synchronism with turbine wicket gates by a/an:",
+      "options": [
+        "Control valve",
+        "Governor",
+        "Oil servomotor",
+        "Manual operation"
+      ],
+      "answer": "Oil servomotor"
+    },
+    {
+      "id": 14,
+      "q": "What is supplied to the servomotor from the turbine governor oil system through the generator shaft and through a control valve?",
+      "options": [
+        "Water",
+        "Air",
+        "Steam",
+        "Oil"
+      ],
+      "answer": "Oil"
+    },
+    {
+      "id": 15,
+      "q": "Used to exhaust air from the casing for starting:",
+      "options": [
+        "Ejectors",
+        "Deaerator",
+        "Injector",
+        "Blower"
+      ],
+      "answer": "Ejectors"
+    },
+    {
+      "id": 16,
+      "q": "Advantage for propeller turbines of all types:",
+      "options": [
+        "Open flume setting",
+        "Siphon setting",
+        "Cost setting",
+        "Capacity setting"
+      ],
+      "answer": "Siphon setting"
+    },
+    {
+      "id": 17,
+      "q": "The volumetric output of a centrifugal pump is reduced by closing a valve part way on the intake side of the pump, throttling the intake. The reduction of flow is accompanied by \"popping\" noises which seem to come from inside the case. What is the probable cause?",
+      "options": [
+        "The impeller has broken",
+        "Dirt particles have got into the pump intake",
+        "The intake valve flow seal is loose and vibrates",
+        "The fluid is cavitating"
+      ],
+      "answer": "The fluid is cavitating"
+    },
+    {
+      "id": 18,
+      "q": "The measure of a fluid's resistance to flow (the internal friction of a fluid) as temperature changes:",
+      "options": [
+        "Density",
+        "Viscosity",
+        "Specific gravity",
+        "Temperature"
+      ],
+      "answer": "Viscosity"
+    },
+    {
+      "id": 19,
+      "q": "A flow meter in which fluid flows upward through a tapered tube lifting a shaped weight to a position where the upward force just balances the weight:",
+      "options": [
+        "Rotameter",
+        "Thermometer",
+        "Viscometer",
+        "Ammeter"
+      ],
+      "answer": "Rotameter"
+    },
+    {
+      "id": 20,
+      "q": "An instrument that registers total pressure and static pressure, used to determine velocity:",
+      "options": [
+        "Ammeter",
+        "Rotameter",
+        "Pitot tube",
+        "Pour point"
+      ],
+      "answer": "Pitot tube"
+    },
+    {
+      "id": 21,
+      "q": "Determine the specific weight of air at 760 mmHg absolute and $22°\\text{C}$.",
+      "options": [
+        "$11.73\\text{ N/m}^3$",
+        "$10.73\\text{ N/m}^3$",
+        "$12.73\\text{ N/m}^3$",
+        "$9.73\\text{ N/m}^3$"
+      ],
+      "answer": "$11.73\\text{ N/m}^3$"
+    },
+    {
+      "id": 22,
+      "q": "What is the hydraulic gradient of a 1-mile, 17-in. inside diameter pipe when 3,300 gal/min of water flow with $f = 0.03$?",
+      "options": [
+        "0.00714",
+        "0.00614",
+        "0.00234",
+        "0.00187"
+      ],
+      "answer": "0.00714"
+    },
+    {
+      "id": 23,
+      "q": "Find the loss of head in a square-edged pipe entrance if speed of flow is 10 m/s.",
+      "options": [
+        "5.10 m",
+        "10.2 m",
+        "17.4 m",
+        "2.55 m"
+      ],
+      "answer": "2.55 m"
+    },
+    {
+      "id": 24,
+      "q": "A $1\\text{ m} \\times 1.5\\text{ m}$ cylindrical tank is full of oil with SG = 0.92. Find the force acting at the bottom of the tank in dynes.",
+      "options": [
+        "$106.33 \\times 10^3\\text{ dynes}$",
+        "$106.33 \\times 10^4\\text{ dynes}$",
+        "$106.33 \\times 10^5\\text{ dynes}$",
+        "$106.33 \\times 10^6\\text{ dynes}$"
+      ],
+      "answer": "$106.33 \\times 10^6\\text{ dynes}$"
+    },
+    {
+      "id": 25,
+      "q": "Find the pressure at a 100-fathom depth of water in kPag.",
+      "options": [
+        "1,793.96 kPag",
+        "1,893.96 kPag",
+        "1,993.96 kPag",
+        "1,693.96 kPag"
+      ],
+      "answer": "1,793.96 kPag"
+    },
+    {
+      "id": 26,
+      "q": "Find the depth in furlongs of the ocean (SG = 1.03) if the pressure at the seabed is 2,032.56 kPag.",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "answer": "1"
+    },
+    {
+      "id": 27,
+      "q": "Find the mass of 10 quarts of water.",
+      "options": [
+        "10.46 kg",
+        "9.46 kg",
+        "11.46 kg",
+        "8.46 kg"
+      ],
+      "answer": "9.46 kg"
+    }
+  ]
+}

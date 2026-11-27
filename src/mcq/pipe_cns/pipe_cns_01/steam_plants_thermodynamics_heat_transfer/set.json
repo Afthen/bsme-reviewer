@@ -1,0 +1,294 @@
+{
+  "id": "mcq_pipe_cns_01_steam_thermo",
+  "title": "Steam Plants, Thermodynamics & Heat Transfer",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-01",
+  "questions": [
+    {
+      "id": 1,
+      "q": "The fluid pressure difference created by a column of heated gas, as by a chimney, is called:",
+      "options": [
+        "Natural draft",
+        "Forced draft",
+        "Induced draft",
+        "Required draft"
+      ],
+      "answer": "Natural draft"
+    },
+    {
+      "id": 2,
+      "q": "The pressure rise from a greater to a lesser vacuum, created in a gas loop between a steam generator outlet and chimney by means of a fan, is called:",
+      "options": [
+        "Forced draft",
+        "Induced draft",
+        "Required draft",
+        "Balanced draft"
+      ],
+      "answer": "Induced draft"
+    },
+    {
+      "id": 3,
+      "q": "Forced draft fans are run at relatively high speeds in the range of:",
+      "options": [
+        "1,200 to 1,800 rpm",
+        "1,500 to 2,000 rpm",
+        "1,000 to 1,600 rpm",
+        "900 to 1,500 rpm"
+      ],
+      "answer": "1,200 to 1,800 rpm"
+    },
+    {
+      "id": 4,
+      "q": "Chimneys that rely on natural draft are sometimes referred to as:",
+      "options": [
+        "Natural chimney",
+        "Normal chimney",
+        "Gravity chimney",
+        "Stack"
+      ],
+      "answer": "Gravity chimney"
+    },
+    {
+      "id": 5,
+      "q": "For realistic problems, the achievable stack effect probably should be considered to be:",
+      "options": [
+        "75% of the ideal",
+        "Equal to the ideal",
+        "80% of the ideal",
+        "Half the ideal"
+      ],
+      "answer": "80% of the ideal"
+    },
+    {
+      "id": 6,
+      "q": "In a balanced system, the available draft is:",
+      "options": [
+        "Unity",
+        "100",
+        "Zero",
+        "Infinite"
+      ],
+      "answer": "Zero"
+    },
+    {
+      "id": 7,
+      "q": "The device that transfers thermal energy from one fluid to another:",
+      "options": [
+        "Condenser",
+        "Feedwater",
+        "Evaporator",
+        "Heat exchanger"
+      ],
+      "answer": "Heat exchanger"
+    },
+    {
+      "id": 8,
+      "q": "The ratio of the actual to the ideal heat transfer coefficient:",
+      "options": [
+        "Fouling factor",
+        "Sensible heat ratio",
+        "Cleanliness factor",
+        "Biot number"
+      ],
+      "answer": "Cleanliness factor"
+    },
+    {
+      "id": 9,
+      "q": "The ratio of the maximum to minimum mass steam flow rates at which the temperature can be accurately controlled by the desuperheater:",
+      "options": [
+        "Cleanliness factor",
+        "Capacity factor",
+        "Turndown ratio",
+        "Fouling factor"
+      ],
+      "answer": "Turndown ratio"
+    },
+    {
+      "id": 10,
+      "q": "With a reversible regenerator, the thermal efficiency of the Ericsson cycle is _________ to that of the Carnot cycle.",
+      "options": [
+        "Less than",
+        "Greater than",
+        "Proportional",
+        "Equal"
+      ],
+      "answer": "Equal"
+    },
+    {
+      "id": 11,
+      "q": "The effectiveness of a body as a thermal radiator at a given temperature:",
+      "options": [
+        "Absorptivity",
+        "Conductivity",
+        "Emissivity",
+        "Reflectivity"
+      ],
+      "answer": "Emissivity"
+    },
+    {
+      "id": 12,
+      "q": "The law that states: \"Entropy of all perfect crystalline solids is zero at absolute zero temperature.\"",
+      "options": [
+        "Zeroth law of thermodynamics",
+        "First law of thermodynamics",
+        "Second law of thermodynamics",
+        "Third law of thermodynamics"
+      ],
+      "answer": "Third law of thermodynamics"
+    },
+    {
+      "id": 13,
+      "q": "The locus of states that have the same value of stagnation enthalpy and mass flux is called:",
+      "options": [
+        "Fanno line",
+        "Rayleigh line",
+        "Willans line",
+        "Mollier line"
+      ],
+      "answer": "Fanno line"
+    },
+    {
+      "id": 14,
+      "q": "Combining the conservation of mass and momentum equations into a single equation and plotting it on the h-s diagram yields a curve called:",
+      "options": [
+        "Fanno line",
+        "Rayleigh line",
+        "Willans line",
+        "Mollier line"
+      ],
+      "answer": "Rayleigh line"
+    },
+    {
+      "id": 15,
+      "q": "Across a shock, the stagnation temperature of an ideal gas:",
+      "options": [
+        "Increases",
+        "Decreases",
+        "Remains constant",
+        "Proportional"
+      ],
+      "answer": "Remains constant"
+    },
+    {
+      "id": 16,
+      "q": "When two bodies, isolated from other environments, are in thermal equilibrium with a third body, the two are in thermal equilibrium with each other.",
+      "options": [
+        "Zeroth law of thermodynamics",
+        "First law of thermodynamics",
+        "Second law of thermodynamics",
+        "Third law of thermodynamics"
+      ],
+      "answer": "Zeroth law of thermodynamics"
+    },
+    {
+      "id": 17,
+      "q": "The sum of the energies of all the molecules in a system where energies appear in several complex forms is the:",
+      "options": [
+        "Kinetic energy",
+        "Internal energy",
+        "Potential energy",
+        "Friction energy"
+      ],
+      "answer": "Internal energy"
+    },
+    {
+      "id": 18,
+      "q": "The maximum possible work that can be obtained from a cycle operating between two reservoirs is found from:",
+      "options": [
+        "Process irreversibility",
+        "Carnot efficiency",
+        "Availability",
+        "Reversible work"
+      ],
+      "answer": "Carnot efficiency"
+    },
+    {
+      "id": 19,
+      "q": "The following factors are necessary to define a thermodynamic cycle except:",
+      "options": [
+        "The working substance",
+        "High and low temperature reservoirs",
+        "The time it takes to complete the cycle",
+        "The means of doing work on the system"
+      ],
+      "answer": "The time it takes to complete the cycle"
+    },
+    {
+      "id": 20,
+      "q": "A temperature above which a given gas cannot be liquefied:",
+      "options": [
+        "Cryogenic temperature",
+        "Absolute temperature",
+        "Vaporization temperature",
+        "Critical temperature"
+      ],
+      "answer": "Critical temperature"
+    },
+    {
+      "id": 21,
+      "q": "The quantity of heat required to raise the temperature of one pound of water one degree Fahrenheit at standard conditions:",
+      "options": [
+        "Btu",
+        "Calorie",
+        "Joule",
+        "Centigrade"
+      ],
+      "answer": "Btu"
+    },
+    {
+      "id": 22,
+      "q": "The water formed by condensation of steam is called:",
+      "options": [
+        "Distilled water",
+        "Condensate",
+        "Dew",
+        "Condenser"
+      ],
+      "answer": "Condensate"
+    },
+    {
+      "id": 23,
+      "q": "A boiler operated at a pressure not exceeding $1.055\\text{ kg/cm}^2$ gage steam, or water temperature not exceeding $121°\\text{C}$:",
+      "options": [
+        "Low pressure heating boiler",
+        "Hot water supply boiler",
+        "Miniature",
+        "Power boiler"
+      ],
+      "answer": "Low pressure heating boiler"
+    },
+    {
+      "id": 24,
+      "q": "The very hot steam that doesn't occur with a liquid:",
+      "options": [
+        "Pure steam",
+        "Saturated vapor",
+        "Critical steam",
+        "Dry steam"
+      ],
+      "answer": "Dry steam"
+    },
+    {
+      "id": 25,
+      "q": "What is the power seat width of a spray valve?",
+      "options": [
+        "1/16 in.",
+        "1/32 in.",
+        "1/8 in.",
+        "1/4 in."
+      ],
+      "answer": "1/16 in."
+    },
+    {
+      "id": 26,
+      "q": "Measure of hotness or coldness of a body:",
+      "options": [
+        "Pressure",
+        "Temperature",
+        "Energy",
+        "Entropy"
+      ],
+      "answer": "Temperature"
+    }
+  ]
+}

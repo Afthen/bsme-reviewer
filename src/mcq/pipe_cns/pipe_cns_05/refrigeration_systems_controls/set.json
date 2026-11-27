@@ -1,0 +1,378 @@
+{
+  "id": "mcq_pipe_cns_05_refrigeration",
+  "title": "Refrigeration Systems, Controls & Calculations",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-05",
+  "questions": [
+    {
+      "id": 1,
+      "q": "As a general rule, the cooling water side of the condenser should be scheduled for inspection every:",
+      "options": [
+        "Month",
+        "3 months",
+        "6 months",
+        "Year"
+      ],
+      "answer": "3 months"
+    },
+    {
+      "id": 2,
+      "q": "If the compressor runs continually, the cause might be the:",
+      "options": [
+        "High-pressure cutout switch is jammed shut",
+        "Low-pressure switch is jammed shut",
+        "Thermal bulb is not operating properly",
+        "Scale trap is clogged"
+      ],
+      "answer": "Low-pressure switch is jammed shut"
+    },
+    {
+      "id": 3,
+      "q": "If the temperature in the icebox is too high, the trouble could be:",
+      "options": [
+        "A clogged scale trap",
+        "Air in the system",
+        "Automatic controls not functioning properly",
+        "Insufficient cooling water to the condenser"
+      ],
+      "answer": "Automatic controls not functioning properly"
+    },
+    {
+      "id": 4,
+      "q": "If frost forms on the cylinders, the cause would be:",
+      "options": [
+        "Expansion valve not open wide enough",
+        "Charging valve open too wide",
+        "Expansion valve open too wide",
+        "Dehydrator not working properly"
+      ],
+      "answer": "Expansion valve open too wide"
+    },
+    {
+      "id": 5,
+      "q": "The most likely cause of high superheat would be:",
+      "options": [
+        "Too much refrigerant",
+        "Expansion valve open too wide",
+        "Expansion valve closed too far",
+        "Back-pressure valve set too high"
+      ],
+      "answer": "Expansion valve closed too far"
+    },
+    {
+      "id": 6,
+      "q": "Short-cycling means that the machine:",
+      "options": [
+        "Grounds out frequently",
+        "Stops and starts frequently",
+        "Runs too fast",
+        "Runs too slow"
+      ],
+      "answer": "Stops and starts frequently"
+    },
+    {
+      "id": 7,
+      "q": "If the cooling water to the condenser should suddenly fail:",
+      "options": [
+        "The solenoid valve will close",
+        "The compressor will shut down",
+        "The expansion valve will close",
+        "An alarm will ring to notify the engineer"
+      ],
+      "answer": "The compressor will shut down"
+    },
+    {
+      "id": 8,
+      "q": "Air can be prevented from getting into the system by:",
+      "options": [
+        "Keeping all glands and stuffing boxes on the high-pressure side tight",
+        "Keeping the dehydrator clean at all times",
+        "Keeping all glands and stuffing boxes on the low-pressure side tight",
+        "Running the refrigerant through an aerator"
+      ],
+      "answer": "Keeping all glands and stuffing boxes on the low-pressure side tight"
+    },
+    {
+      "id": 9,
+      "q": "An excessively high head pressure could be caused by:",
+      "options": [
+        "Solenoid valve shut off",
+        "Insufficient cooling water to the condenser",
+        "Insufficient cooling water to the evaporator coils",
+        "Too much cooling water to the condenser"
+      ],
+      "answer": "Insufficient cooling water to the condenser"
+    },
+    {
+      "id": 10,
+      "q": "The solenoid valve is controlled by:",
+      "options": [
+        "The amount of liquid in the system",
+        "The amount of gas in the system",
+        "The temperature in the condenser",
+        "The thermal switch operated by the icebox temperature"
+      ],
+      "answer": "The thermal switch operated by the icebox temperature"
+    },
+    {
+      "id": 11,
+      "q": "If the discharge side of the thermal expansion valve is warmer than the inlet side:",
+      "options": [
+        "Expansion valve is working normally",
+        "Expansion valve is not working normally",
+        "Solenoid valve is not working normally",
+        "Scale trap is dirty"
+      ],
+      "answer": "Expansion valve is not working normally"
+    },
+    {
+      "id": 12,
+      "q": "If the pressure is too high:",
+      "options": [
+        "The relief valve should open before the high-pressure cutout",
+        "The relief valve should open and let excess refrigerant go to receiver",
+        "The high-pressure cutout switch should operate before the relief valve",
+        "Close in on the suction valve"
+      ],
+      "answer": "The high-pressure cutout switch should operate before the relief valve"
+    },
+    {
+      "id": 13,
+      "q": "What is the effect of superheating the refrigerant?",
+      "options": [
+        "It increases the coefficient of performance",
+        "It decreases the coefficient of performance",
+        "It lowers the boiling point of the refrigerant",
+        "It increases the suction pressure of the refrigerant"
+      ],
+      "answer": "It increases the coefficient of performance"
+    },
+    {
+      "id": 14,
+      "q": "A type of refrigerant that will not damage the ozone layer:",
+      "options": [
+        "Hydrofluorocarbons (HFCs)",
+        "R-22",
+        "Hydrochlorofluorocarbons (HCFCs)",
+        "R-12"
+      ],
+      "answer": "Hydrofluorocarbons (HFCs)"
+    },
+    {
+      "id": 15,
+      "q": "Which of the following is a type of refrigerant that damages the ozone layer?",
+      "options": [
+        "Hydrochlorofluorocarbons (HCFCs)",
+        "R-22",
+        "R-12",
+        "All of these"
+      ],
+      "answer": "All of these",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "q": "In a refrigerator, this is a chamber for storing low-side liquid refrigerant in a system, which also serves as a surge drum:",
+      "options": [
+        "Condenser",
+        "Evaporator",
+        "Compressor",
+        "Accumulator"
+      ],
+      "answer": "Accumulator"
+    },
+    {
+      "id": 17,
+      "q": "Ammonia leaks in the condenser can be detected by:",
+      "options": [
+        "Smelling the discharge water",
+        "Applying litmus paper to the circulating water discharge",
+        "Adding oil of peppermint to the system and tracing the smell",
+        "Applying a soapy mixture to the condenser heads and looking for bubbles"
+      ],
+      "answer": "Applying litmus paper to the circulating water discharge"
+    },
+    {
+      "id": 18,
+      "q": "A refrigerant control valve that maintains a constant pressure in an evaporator:",
+      "options": [
+        "Bleed valve",
+        "Angle valve",
+        "Automatic expansion valve",
+        "Ball check valve"
+      ],
+      "answer": "Automatic expansion valve"
+    },
+    {
+      "id": 19,
+      "q": "Vapor pumps that raise the pressure of the refrigerant to a level that permits sufficient heat rejection to the condensing medium:",
+      "options": [
+        "Fans",
+        "Blower",
+        "Compressor",
+        "Suction"
+      ],
+      "answer": "Compressor"
+    },
+    {
+      "id": 20,
+      "q": "Low-temperature heat exchanger that is used to absorb heat from the refrigerated space and transfer it to the refrigerant in its tubes so that it can be transported to another location and released:",
+      "options": [
+        "Condenser",
+        "Evaporator",
+        "Capillary tube",
+        "Compressor"
+      ],
+      "answer": "Evaporator"
+    },
+    {
+      "id": 21,
+      "q": "The substance employed as a cooling effect to absorb heat from the refrigerated space is called:",
+      "options": [
+        "Condensate",
+        "Feedwater",
+        "Refrigerant",
+        "Moisture"
+      ],
+      "answer": "Refrigerant"
+    },
+    {
+      "id": 22,
+      "q": "The refrigerant volume flow rate at the entrance of the compressor was obtained from a test on a twin-cylinder, single-acting $15\\text{ cm} \\times 20\\text{ cm}$, 320 rpm ammonia refrigerating plant to be 33 L/s. Determine the volumetric efficiency of the compressor.",
+      "options": [
+        "77.65%",
+        "87.6%",
+        "97.6%",
+        "65.65%"
+      ],
+      "answer": "87.6%"
+    },
+    {
+      "id": 23,
+      "q": "A twin-cylinder ammonia compressor with volume displacement of $14{,}726\\text{ cm}^3$ per cylinder operates at 300 rpm. Condenser and evaporator pressures are 1,200 kPa and 227 kPa, respectively. Specific volume of refrigerant at the entrance of the compressor is 528.26 L/kg. The compression process is polytropic with $n = 1.2$ and the clearance factor of the compressor is 2%. Determine the horsepower required.",
+      "options": [
+        "60 hp",
+        "70 hp",
+        "80 hp",
+        "90 hp"
+      ],
+      "answer": "80 hp"
+    },
+    {
+      "id": 24,
+      "q": "Three thousand cubic feet per minute of air are circulated over an air-cooled condenser. If the load on the condenser is 64,800 Btu/hr, compute the temperature rise of the air passing over the condenser. Specific volume of standard air is $13.34\\text{ ft}^3/\\text{lb}$.",
+      "options": [
+        "$10°\\text{F}$",
+        "$15°\\text{F}$",
+        "$20°\\text{F}$",
+        "$25°\\text{F}$"
+      ],
+      "answer": "$20°\\text{F}$"
+    },
+    {
+      "id": 25,
+      "q": "A reversed Carnot cycle has a refrigerating COP of 2.5. Determine the ratio $T_H / T_L$.",
+      "options": [
+        "1.4",
+        "1.5",
+        "1.25",
+        "1.2"
+      ],
+      "answer": "1.4"
+    },
+    {
+      "id": 26,
+      "q": "Saturated vapor ammonia at $-16°\\text{C}$ ($h_7 = 1{,}442.60\\text{ kJ/kg}$) leaves the evaporator and enters the compressor at $-6°\\text{C}$ ($h_1 = 1{,}465\\text{ kJ/kg}$). The refrigerant leaves the condenser as saturated liquid at $40°\\text{C}$ ($h_4 = 390.6\\text{ kJ/kg}$). Heat rejected from the condenser amounts to 205 kW. The work to the compressor is 208 kJ/kg, while the heat loss from the compressor is 33 kJ/kg. If 9.5 kJ/kg of heat are lost in the piping between the compressor discharge and condenser inlet, determine the refrigerating capacity of the system.",
+      "options": [
+        "49.5 TR",
+        "46.61 TR",
+        "12.88 TR",
+        "13.24 TR"
+      ],
+      "answer": "49.5 TR"
+    },
+    {
+      "id": 27,
+      "q": "Compute the air flow in $\\text{ft}^3/\\text{min}$ of mechanical ventilation required to exhaust an accumulation of refrigerant due to leaks from a machinery room for a mass of 4 lb of refrigerant.",
+      "options": [
+        "200",
+        "210",
+        "220",
+        "230"
+      ],
+      "answer": "200"
+    },
+    {
+      "id": 28,
+      "q": "Compute the free aperture cross section in $\\text{m}^2$ for the ventilation of a machinery room if the mass of refrigerant is 9 kg.",
+      "options": [
+        "0.314",
+        "0.414",
+        "0.514",
+        "0.614"
+      ],
+      "answer": "0.414"
+    },
+    {
+      "id": 29,
+      "q": "A $29.53\\text{ in.} \\times 39.37\\text{ in.}$ pressure vessel contains ammonia with $f = 0.041$. Compute the minimum required discharge capacity of the relief device in kg/hr.",
+      "options": [
+        "106.71 kg/hr",
+        "108.71 kg/hr",
+        "110.71 kg/hr",
+        "112.71 kg/hr"
+      ],
+      "answer": "110.71 kg/hr"
+    },
+    {
+      "id": 30,
+      "q": "Compute the maximum length of the discharge pipe installed on the outlet of a pressure-relief device in feet for an internal pipe diameter of 0.5 in. and rated discharge capacity of 8 lb/min of air. The rated pressure of the relief valve is 16 psig.",
+      "options": [
+        "0.286 ft",
+        "0.386 ft",
+        "0.486 ft",
+        "0.586 ft"
+      ],
+      "answer": "0.286 ft"
+    },
+    {
+      "id": 31,
+      "q": "A refrigeration system consumed 28,800 kW-hr per month of energy. 20% of the energy is lost due to the cooling system of the compressor and the motor efficiency is 90%. If the COP of the system is 6, find the tons of refrigeration of the system.",
+      "options": [
+        "43.15 TR",
+        "46.15 TR",
+        "49.15 TR",
+        "41.15 TR"
+      ],
+      "answer": "49.15 TR"
+    },
+    {
+      "id": 32,
+      "q": "A 23-ton refrigeration system has a heat rejected of 100 kW. Find the energy efficiency ratio of the system.",
+      "options": [
+        "13.42",
+        "14.42",
+        "15.42",
+        "16.42"
+      ],
+      "answer": "14.42"
+    },
+    {
+      "id": 33,
+      "q": "If the energy efficiency ratio of a refrigeration system is 12.6, what is the COP of the system?",
+      "options": [
+        "3.69",
+        "4.23",
+        "5.92",
+        "6.83"
+      ],
+      "answer": "3.69"
+    }
+  ]
+}

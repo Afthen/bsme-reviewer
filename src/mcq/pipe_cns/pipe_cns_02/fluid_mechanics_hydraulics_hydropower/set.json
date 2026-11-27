@@ -1,0 +1,308 @@
+{
+  "id": "mcq_pipe_cns_02_fluids_hydropower",
+  "title": "Fluid Mechanics, Hydraulics & Hydropower",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-02",
+  "questions": [
+    {
+      "id": 1,
+      "q": "As a rule of thumb, for a specified amount of compressed air, the power consumption of the compressor decreases by _________ for each $3°\\text{C}$ drop in the inlet air temperature to the compressor.",
+      "options": [
+        "1%",
+        "1.5%",
+        "2%",
+        "2.5%"
+      ],
+      "answer": "1%"
+    },
+    {
+      "id": 2,
+      "q": "Modern way of detecting an air compressor leak is by using:",
+      "options": [
+        "Soap and water",
+        "Air leak detector",
+        "Acoustic leak detector",
+        "Ammonia leak detector"
+      ],
+      "answer": "Acoustic leak detector"
+    },
+    {
+      "id": 3,
+      "q": "Type of turbine that has a specific speed below 5:",
+      "options": [
+        "Impulse turbine",
+        "Propeller turbine",
+        "Francis turbine",
+        "Deriaz turbine"
+      ],
+      "answer": "Impulse turbine"
+    },
+    {
+      "id": 4,
+      "q": "A high-discharge type of turbine:",
+      "options": [
+        "Impulse turbine",
+        "Propeller turbine",
+        "Francis turbine",
+        "Deriaz turbine"
+      ],
+      "answer": "Propeller turbine"
+    },
+    {
+      "id": 5,
+      "q": "Used to minimize the speed rise due to a sudden load rejection:",
+      "options": [
+        "Needle valve",
+        "Wicket gate shut-off",
+        "Shut-off valve",
+        "Jet deflector"
+      ],
+      "answer": "Jet deflector"
+    },
+    {
+      "id": 6,
+      "q": "Is the speed of a turbine when the head on the turbine is one meter:",
+      "options": [
+        "Specific speed",
+        "Rated speed",
+        "Utilized speed",
+        "Unit speed"
+      ],
+      "answer": "Unit speed"
+    },
+    {
+      "id": 7,
+      "q": "A fluid property which refers to the intermolecular attraction by which the separate particles of the fluid are held together:",
+      "options": [
+        "Cohesion",
+        "Adhesion",
+        "Surface tension",
+        "Hypertension"
+      ],
+      "answer": "Cohesion"
+    },
+    {
+      "id": 8,
+      "q": "Tranquil flow must always occur:",
+      "options": [
+        "Above the normal depth",
+        "Above the critical depth",
+        "Below the normal depth",
+        "Below the critical depth"
+      ],
+      "answer": "Above the critical depth"
+    },
+    {
+      "id": 9,
+      "q": "Which of the following has the highest head loss coefficient among the types of entrance?",
+      "options": [
+        "Bell mouth",
+        "Square edge",
+        "Reentrant",
+        "It depends"
+      ],
+      "answer": "Reentrant"
+    },
+    {
+      "id": 10,
+      "q": "In dynamic similitude, the relation which represents the ratio of inertia force to pressure force is:",
+      "options": [
+        "Froude number",
+        "Cauchy number",
+        "Euler number",
+        "Reynolds number"
+      ],
+      "answer": "Euler number"
+    },
+    {
+      "id": 11,
+      "q": "What is the minimum velocity in a sewer flowing full?",
+      "options": [
+        "0.6 m/s",
+        "0.9 m/s",
+        "1.2 m/s",
+        "1.8 m/s"
+      ],
+      "answer": "0.6 m/s"
+    },
+    {
+      "id": 12,
+      "q": "A temporary structure constructed to exclude water from the side of the foundation during its excavation and construction is called:",
+      "options": [
+        "Caisson",
+        "Retaining wall",
+        "Coffer dam",
+        "Earth dam"
+      ],
+      "answer": "Coffer dam"
+    },
+    {
+      "id": 13,
+      "q": "Which dam is best for a weak foundation?",
+      "options": [
+        "Gravity",
+        "Arch",
+        "Buttress",
+        "Earth"
+      ],
+      "answer": "Earth"
+    },
+    {
+      "id": 14,
+      "q": "What is the volume of water which will drain freely from the aquifer?",
+      "options": [
+        "Specific yield",
+        "Reservoir yield",
+        "Safe yield",
+        "Secondary yield"
+      ],
+      "answer": "Specific yield"
+    },
+    {
+      "id": 15,
+      "q": "What is the line defined by the water level in a group of artesian wells?",
+      "options": [
+        "Water table",
+        "Piezometric surface",
+        "Specific yield",
+        "All of the above"
+      ],
+      "answer": "Piezometric surface",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 16,
+      "q": "Shows the variation of river flow (discharge) with time:",
+      "options": [
+        "Hydrograph",
+        "Hyetograph",
+        "Mass curve",
+        "Flow duration curve"
+      ],
+      "answer": "Hydrograph"
+    },
+    {
+      "id": 17,
+      "q": "An open channel erected on a surface above the ground:",
+      "options": [
+        "Canal",
+        "Tunnel",
+        "Penstock",
+        "Flume"
+      ],
+      "answer": "Flume"
+    },
+    {
+      "id": 18,
+      "q": "Type of turbine used up to 300 m head:",
+      "options": [
+        "Impulse turbine",
+        "Francis turbine",
+        "Propeller turbine",
+        "Deriaz turbine"
+      ],
+      "answer": "Francis turbine"
+    },
+    {
+      "id": 19,
+      "q": "At any point in a fluid at rest, the pressure is the same in all directions. This principle is known as:",
+      "options": [
+        "Bernoulli principle",
+        "Archimedes principle",
+        "Pascal's law",
+        "Torricelli's law"
+      ],
+      "answer": "Pascal's law"
+    },
+    {
+      "id": 20,
+      "q": "The hot-wire anemometer is used to measure:",
+      "options": [
+        "Pressure in gases",
+        "Pressure in fluids",
+        "Wind velocities at airports",
+        "Gas velocities"
+      ],
+      "answer": "Gas velocities"
+    },
+    {
+      "id": 21,
+      "q": "The Pitot-static tube measures:",
+      "options": [
+        "The static pressure",
+        "The gage pressure",
+        "The total pressure",
+        "The dynamic pressure"
+      ],
+      "answer": "The dynamic pressure"
+    },
+    {
+      "id": 22,
+      "q": "The terminal velocity of a small sphere settling in a viscous fluid varies as the:",
+      "options": [
+        "First power of its diameter",
+        "Inverse of fluid viscosity",
+        "Inverse square of the diameter",
+        "Inverse of the diameter"
+      ],
+      "answer": "Inverse of fluid viscosity"
+    },
+    {
+      "id": 23,
+      "q": "Pressure drag results from:",
+      "options": [
+        "Skin friction",
+        "Deformation drag",
+        "Breakdown of potential flow near the forward stagnation point",
+        "Occurrences of wake"
+      ],
+      "answer": "Occurrences of wake"
+    },
+    {
+      "id": 24,
+      "q": "The pressure coefficient is the ratio of pressure forces to:",
+      "options": [
+        "Viscous forces",
+        "Inertia forces",
+        "Gravity forces",
+        "Surface tension force"
+      ],
+      "answer": "Inertia forces"
+    },
+    {
+      "id": 25,
+      "q": "Entrance losses between tank and pipe or losses through elbows, fittings, and valves are generally expressed as a function of:",
+      "options": [
+        "Kinetic energy",
+        "Pipe diameter",
+        "Friction factor",
+        "Volume flow rate"
+      ],
+      "answer": "Kinetic energy"
+    },
+    {
+      "id": 26,
+      "q": "The velocity of fluid is zero at the wall and maximum at the center because of the:",
+      "options": [
+        "Velocity effect",
+        "Viscous effect",
+        "Temperature effect",
+        "None of these"
+      ],
+      "answer": "Viscous effect",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    }
+  ]
+}

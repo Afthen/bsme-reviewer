@@ -1,0 +1,357 @@
+{
+  "id": "mcq_pipe_cns_01_refrigeration",
+  "title": "Refrigeration & Phase Change",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-01",
+  "questions": [
+    {
+      "id": 1,
+      "q": "For efficient operation, the condensing temperature should not be lower than:",
+      "options": [
+        "$5°\\text{C}$",
+        "$17°\\text{C}$",
+        "$10°\\text{C}$",
+        "$20°\\text{C}$"
+      ],
+      "answer": "$5°\\text{C}$"
+    },
+    {
+      "id": 2,
+      "q": "For efficient operation, the condensing temperature should not be more than:",
+      "options": [
+        "$5°\\text{C}$",
+        "$17°\\text{C}$",
+        "$10°\\text{C}$",
+        "$20°\\text{C}$"
+      ],
+      "answer": "$17°\\text{C}$"
+    },
+    {
+      "id": 3,
+      "q": "Which of the following cycles is bulky and involves toxic fluids, hence it is unsuitable for home and auto cooling?",
+      "options": [
+        "Carnot refrigeration cycle",
+        "Absorption cycle",
+        "Vapor compression cycle",
+        "Air refrigeration cycle"
+      ],
+      "answer": "Absorption cycle"
+    },
+    {
+      "id": 4,
+      "q": "Which of the following refrigeration cycles is practical when large quantities of waste or inexpensive heat energy are available?",
+      "options": [
+        "Carnot refrigeration cycle",
+        "Vapor compression cycle",
+        "Air refrigeration cycle",
+        "Absorption cycle"
+      ],
+      "answer": "Absorption cycle"
+    },
+    {
+      "id": 5,
+      "q": "Condensers used in small and medium-sized refrigerators up to approximately 100 tons:",
+      "options": [
+        "Air-cooled condensers",
+        "Water-cooled condensers",
+        "High-side condensers",
+        "Low-side condensers"
+      ],
+      "answer": "Air-cooled condensers"
+    },
+    {
+      "id": 6,
+      "q": "An evaporator in a refrigeration unit makes use of which heat transfer modes?",
+      "options": [
+        "Conduction",
+        "Convection",
+        "Radiation",
+        "All of the above"
+      ],
+      "answer": "All of the above",
+      "shuffle": [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": 7,
+      "q": "Energy added to a vapor is known as:",
+      "options": [
+        "Latent heat of vaporization",
+        "Sensible heat of vapor",
+        "Superheat",
+        "B and C"
+      ],
+      "answer": "Superheat",
+      "shuffle": []
+    },
+    {
+      "id": 8,
+      "q": "The vaporization process that occurs at a temperature below the triple point of a substance is called:",
+      "options": [
+        "Evaporation",
+        "Boiling",
+        "Sublimation",
+        "Condensation"
+      ],
+      "answer": "Sublimation"
+    },
+    {
+      "id": 9,
+      "q": "As the pressure increases, the amount of work it can do increases and its enthalpy:",
+      "options": [
+        "Increases",
+        "Remains the same",
+        "Decreases",
+        "Pressure and enthalpy have no relation at all"
+      ],
+      "answer": "Increases"
+    },
+    {
+      "id": 10,
+      "q": "During the compression process, the internal energy of the refrigerant vapor:",
+      "options": [
+        "Increases",
+        "Decreases",
+        "Remains the same",
+        "Internal energy has no relation to the compression process"
+      ],
+      "answer": "Increases"
+    },
+    {
+      "id": 11,
+      "q": "The measure of the amount of thermal energy transfer occurring within the evaporator per unit mass under stated conditions:",
+      "options": [
+        "Refrigeration capacity",
+        "Heat capacity",
+        "Refrigeration effect",
+        "Heat absorptivity"
+      ],
+      "answer": "Refrigeration effect"
+    },
+    {
+      "id": 12,
+      "q": "The Carnot refrigeration cycle includes all of the following processes except:",
+      "options": [
+        "Isentropic expansion",
+        "Isenthalpic expansion",
+        "Isothermal expansion",
+        "Isentropic compression"
+      ],
+      "answer": "Isenthalpic expansion"
+    },
+    {
+      "id": 13,
+      "q": "If heat is being removed from water, the device is known as:",
+      "options": [
+        "Chiller",
+        "Cooler",
+        "Air conditioner",
+        "Air cooler"
+      ],
+      "answer": "Chiller"
+    },
+    {
+      "id": 14,
+      "q": "Which of the following is the refrigerant \"of choice\" in unitary air conditioners?",
+      "options": [
+        "R-22",
+        "R-123",
+        "R-11",
+        "R-502"
+      ],
+      "answer": "R-22"
+    },
+    {
+      "id": 15,
+      "q": "In new equipment, which of the following replaces R-11?",
+      "options": [
+        "R-12",
+        "R-123",
+        "R-502",
+        "R-22"
+      ],
+      "answer": "R-123"
+    },
+    {
+      "id": 16,
+      "q": "The mass flow rate produced by the compressor is:",
+      "options": [
+        "Proportional to the mass of the suction vapor that the compressor takes in at the suction inlet per unit time",
+        "Equal to the mass of the suction vapor that the compressor takes in at the suction inlet per unit time",
+        "Less than the mass of the suction vapor that the compressor takes in at the suction inlet per unit time",
+        "Greater than the mass of the suction vapor that the compressor takes in at the suction inlet per unit time"
+      ],
+      "answer": "Equal to the mass of the suction vapor that the compressor takes in at the suction inlet per unit time"
+    },
+    {
+      "id": 17,
+      "q": "The useful energy transfer in Btu/hr divided by input power in watts (the coefficient of performance expressed in mixed units):",
+      "options": [
+        "Energy efficiency ratio",
+        "Coil efficiency",
+        "Bypass factor",
+        "Sensible heat ratio"
+      ],
+      "answer": "Energy efficiency ratio"
+    },
+    {
+      "id": 18,
+      "q": "If EER is the energy efficiency ratio and COP is the coefficient of performance, then:",
+      "options": [
+        "$\\text{EER} = 3.41\\,\\text{COP}$",
+        "$\\text{COP} = 3.41\\,\\text{EER}$",
+        "$\\text{EER} \\times \\text{COP} = 3.41$",
+        "$3.41\\,\\text{EER} \\times \\text{COP} = 1$"
+      ],
+      "answer": "$\\text{EER} = 3.41\\,\\text{COP}$"
+    },
+    {
+      "id": 19,
+      "q": "Which of the following is a reversed Rankine vapor cycle?",
+      "options": [
+        "Carnot refrigeration cycle",
+        "Vapor refrigeration cycle",
+        "Air refrigeration cycle",
+        "Absorption cycle"
+      ],
+      "answer": "Vapor refrigeration cycle"
+    },
+    {
+      "id": 20,
+      "q": "The most common type of refrigeration cycle, finding application in household refrigerators, air conditioners for cars and houses, chillers, and so on:",
+      "options": [
+        "Carnot refrigeration cycle",
+        "Vapor refrigeration cycle",
+        "Air refrigeration cycle",
+        "Absorption cycle"
+      ],
+      "answer": "Vapor refrigeration cycle"
+    },
+    {
+      "id": 21,
+      "q": "Which of the following is a reversed Brayton cycle?",
+      "options": [
+        "Carnot refrigeration cycle",
+        "Vapor refrigeration cycle",
+        "Air refrigeration cycle",
+        "Absorption cycle"
+      ],
+      "answer": "Air refrigeration cycle"
+    },
+    {
+      "id": 22,
+      "q": "100 kg of ice at $0°\\text{C}$ is heated by supplying 2,000 kJ of heat to it. If the heat of fusion is 335 kJ/kg, how many kilograms of ice will melt into water?",
+      "options": [
+        "8 kg",
+        "10 kg",
+        "6 kg",
+        "3 kg"
+      ],
+      "answer": "6 kg"
+    },
+    {
+      "id": 23,
+      "q": "Determine the quantity of latent heat transferred to an evaporator when 5 kg of water changes from a liquid at $0°\\text{C}$ to ice at $0°\\text{C}$.",
+      "options": [
+        "1,300 kJ",
+        "1,675 kJ",
+        "1,450 kJ",
+        "1,800 kJ"
+      ],
+      "answer": "1,675 kJ"
+    },
+    {
+      "id": 24,
+      "q": "Compute the rate of heat transfer by melting ice at a rate of 50 kg/hr.",
+      "options": [
+        "8 kJ/s",
+        "10 kJ/s",
+        "5 kJ/s",
+        "12 kJ/s"
+      ],
+      "answer": "5 kJ/s"
+    },
+    {
+      "id": 25,
+      "q": "10 kg of water at $60°\\text{C}$ receives 42,000 kJ of heat from the surroundings. Assuming it is open to the atmosphere, how many kilograms of water will be vaporized?",
+      "options": [
+        "18 kg",
+        "15 kg",
+        "10 kg",
+        "20 kg"
+      ],
+      "answer": "18 kg"
+    },
+    {
+      "id": 26,
+      "q": "As a liquid changes phase to vapor, its enthalpy:",
+      "options": [
+        "Increases",
+        "Decreases",
+        "Remains constant",
+        "Enthalpy has no relation to phase change"
+      ],
+      "answer": "Increases"
+    },
+    {
+      "id": 27,
+      "q": "Which of the following processes does not alter the kinetic energy level of a substance?",
+      "options": [
+        "Fusion",
+        "Adding sensible heat to a solid",
+        "Adding sensible heat to a liquid",
+        "Superheating a vapor"
+      ],
+      "answer": "Fusion"
+    },
+    {
+      "id": 28,
+      "q": "Condensers used for larger capacity refrigerators:",
+      "options": [
+        "Air-cooled condensers",
+        "Water-cooled condensers",
+        "High-side condensers",
+        "Low-side condensers"
+      ],
+      "answer": "Water-cooled condensers"
+    },
+    {
+      "id": 29,
+      "q": "Coolers and chillers for water generally operate with an average temperature difference of:",
+      "options": [
+        "3 to 11°C",
+        "5 to 8°C",
+        "6 to 22°C",
+        "10 to 16°C"
+      ],
+      "answer": "3 to 11°C"
+    },
+    {
+      "id": 30,
+      "q": "To avoid freezing problems, entering refrigerant should be:",
+      "options": [
+        "Below $-2°\\text{C}$",
+        "Above $-2°\\text{C}$",
+        "Equal to $-2°\\text{C}$",
+        "$0°\\text{C}$"
+      ],
+      "answer": "Above $-2°\\text{C}$"
+    },
+    {
+      "id": 31,
+      "q": "Suction lines should not be sized too large, as reasonable velocity is needed to carry oil from the evaporator back to the compressor. For horizontal suction lines, the recommended minimum velocity is:",
+      "options": [
+        "3.8 m/s",
+        "6.1 m/s",
+        "7.1 m/s",
+        "4.8 m/s"
+      ],
+      "answer": "3.8 m/s"
+    }
+  ]
+}

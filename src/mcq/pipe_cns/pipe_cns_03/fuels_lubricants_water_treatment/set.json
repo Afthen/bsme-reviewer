@@ -1,0 +1,514 @@
+{
+  "id": "mcq_pipe_cns_03_fuels_lubricants_water",
+  "title": "Fuels, Lubricants & Water Treatment",
+  "subject": "PIPE-CNS",
+  "category": "PIPE-CNS-03",
+  "questions": [
+    {
+      "id": 1,
+      "q": "A certain coal has the following ultimate analysis by weight: C = 67%, Ash = 5%, Moisture = 8%, N = 6%, H = 3%, Sulfur = 7%, O = 4%. Calculate the higher heating value in Btu/lb.",
+      "options": [
+        "15,179 Btu/lb",
+        "17,519 Btu/lb",
+        "11,579 Btu/lb",
+        "19,517 Btu/lb"
+      ],
+      "answer": "11,579 Btu/lb"
+    },
+    {
+      "id": 2,
+      "q": "Determine the heating value of a certain fuel with SG = 0.997.",
+      "options": [
+        "42,975 kJ/kg",
+        "42,795 kJ/kg",
+        "42,597 kJ/kg",
+        "42,579 kJ/kg"
+      ],
+      "answer": "42,975 kJ/kg"
+    },
+    {
+      "id": 3,
+      "q": "What is the specific gravity of a fuel at $28°$ Baumé?",
+      "options": [
+        "0.868",
+        "0.886",
+        "0.688",
+        "0.986"
+      ],
+      "answer": "0.886"
+    },
+    {
+      "id": 4,
+      "q": "A steam generator burns fuel oil with 25% excess air. The fuel may be represented by $\\text{C}_{14}\\text{H}_{30}$. Calculate the actual air-fuel ratio.",
+      "options": [
+        "17.63",
+        "16.63",
+        "18.63",
+        "15.63"
+      ],
+      "answer": "18.63"
+    },
+    {
+      "id": 5,
+      "q": "Determine the equivalence ratio of the following mixture: 4 grams of butane, $\\text{C}_4\\text{H}_{10}$, and 75 grams of air.",
+      "options": [
+        "0.72",
+        "0.62",
+        "0.92",
+        "0.82"
+      ],
+      "answer": "0.82"
+    },
+    {
+      "id": 6,
+      "q": "There are 20 kg of exhaust gas formed per kg of fuel oil burned in the combustion of diesoline $\\text{C}_{16}\\text{H}_{32}$. What is the excess air percent?",
+      "options": [
+        "30.1%",
+        "21.5%",
+        "29.16%",
+        "30.6%"
+      ],
+      "answer": "29.16%"
+    },
+    {
+      "id": 7,
+      "q": "A diesel power plant uses fuel with a heating value of 45,038.8 kJ/kg. What is the density of the fuel at $30°\\text{C}$?",
+      "options": [
+        "0.7882 kg/L",
+        "0.9887 kg/L",
+        "0.8782 kg/L",
+        "0.8878 kg/L"
+      ],
+      "answer": "0.8782 kg/L"
+    },
+    {
+      "id": 8,
+      "q": "In proximate analysis, the coal analysis consists of moisture content, fixed carbon, ash, and which of the following?",
+      "options": [
+        "Sulfur",
+        "Nitrogen",
+        "Hydrogen",
+        "Volatile matter"
+      ],
+      "answer": "Volatile matter"
+    },
+    {
+      "id": 9,
+      "q": "How do you call the heating value of a fuel if the water in the products of combustion is in the liquid state?",
+      "options": [
+        "Higher heating value",
+        "Proximate heating value",
+        "Lower heating value",
+        "Gravimetric heating value"
+      ],
+      "answer": "Higher heating value"
+    },
+    {
+      "id": 10,
+      "q": "It is a bituminous coal that contains plenty of hydrocarbons, forming lumped masses when burned. This coal is ideal for forming carbonaceous gases for reduction of ore. What do you call this coal?",
+      "options": [
+        "Caking or coking coal",
+        "Peat coal",
+        "Free-burning coal",
+        "Lignite coal"
+      ],
+      "answer": "Caking or coking coal"
+    },
+    {
+      "id": 11,
+      "q": "It is the temperature at which oil vapors will continue to burn when ignited.",
+      "options": [
+        "Fire point",
+        "Ignition temperature",
+        "Flash point",
+        "Creep temperature"
+      ],
+      "answer": "Fire point"
+    },
+    {
+      "id": 12,
+      "q": "It is the temperature to which oil has to be heated until sufficient flammable vapor is driven off to flash when brought into momentary contact with a flame. How do you call this temperature?",
+      "options": [
+        "Fire point",
+        "Ignition temperature",
+        "Flash point",
+        "Creep temperature"
+      ],
+      "answer": "Flash point"
+    },
+    {
+      "id": 13,
+      "q": "The color of a lubricating oil is obtained by reference to transmitted light; the color by reflected light is referred to as:",
+      "options": [
+        "Bloom",
+        "Deflection",
+        "Reflection",
+        "Residue"
+      ],
+      "answer": "Bloom"
+    },
+    {
+      "id": 14,
+      "q": "How do you call the material left after heating an oil under specified conditions at high temperature, useful as a quality control tool in the refining of viscous oils, particularly residual oils?",
+      "options": [
+        "Ash",
+        "Carbon residue",
+        "Color",
+        "Coke"
+      ],
+      "answer": "Carbon residue"
+    },
+    {
+      "id": 15,
+      "q": "Petroleum oils, when cooled, may become plastic solids, either from wax formation or from the fluid congealing. With some oils, initial wax crystal formation becomes visible at temperatures slightly above the solidification point. That temperature under specific test conditions is known as the:",
+      "options": [
+        "Cloud point",
+        "Creep point",
+        "Pour point",
+        "Flash point"
+      ],
+      "answer": "Cloud point"
+    },
+    {
+      "id": 16,
+      "q": "It is the temperature at which cooled oil will just flow under specific test conditions, indicating the lowest temperature at which a lubricant can readily flow from its container. How do you call this temperature?",
+      "options": [
+        "Cloud point",
+        "Creep point",
+        "Pour point",
+        "Flash point"
+      ],
+      "answer": "Pour point"
+    },
+    {
+      "id": 17,
+      "q": "It is a term indicating the measure of acidic components in oils; its original intent was to indicate the degree of refining in new oils and to follow the development of oxidation in service, with its effects on deposit formation and corrosion. What is this?",
+      "options": [
+        "Neutralization number",
+        "Total base number",
+        "Total acid number",
+        "Neutralization number and total acid number"
+      ],
+      "answer": "Neutralization number and total acid number"
+    },
+    {
+      "id": 18,
+      "q": "How do you call a measure of alkaline components in oils, especially those additives used in engine oils to neutralize acids formed during fuel combustion?",
+      "options": [
+        "Neutralization number",
+        "Total base number",
+        "Total acid number",
+        "Neutralization number and total acid number"
+      ],
+      "answer": "Total base number"
+    },
+    {
+      "id": 19,
+      "q": "These are materials with low coefficients of friction compared to metals, used to reduce friction and wear in a variety of applications (including graphite, molybdenum disulfide, polytetrafluoroethylene, talc, graphite fluoride, polymers, and certain metal salts). How do you call these materials?",
+      "options": [
+        "Greases",
+        "Liquid lubricants",
+        "Solid lubricants",
+        "Powder lubricants"
+      ],
+      "answer": "Solid lubricants"
+    },
+    {
+      "id": 20,
+      "q": "These are engine oil additives used to help keep the engine clean by solubilizing and dispersing sludge, soot, and deposit precursors. How do you call these oil additives?",
+      "options": [
+        "Detergents",
+        "Oxidation inhibitors",
+        "Dispersants",
+        "Corrosion inhibitors"
+      ],
+      "answer": "Dispersants"
+    },
+    {
+      "id": 21,
+      "q": "How do you call engine oil additives used to prevent attack on sensitive bearing metals?",
+      "options": [
+        "Detergents",
+        "Oxidation inhibitors",
+        "Dispersants",
+        "Corrosion inhibitors"
+      ],
+      "answer": "Corrosion inhibitors"
+    },
+    {
+      "id": 22,
+      "q": "These are engine oil additives used to prevent or reduce deposits and corrosion by neutralizing combustion by-product acids. What are these additives?",
+      "options": [
+        "Detergents",
+        "Oxidation inhibitors",
+        "Dispersants",
+        "Corrosion inhibitors"
+      ],
+      "answer": "Detergents"
+    },
+    {
+      "id": 23,
+      "q": "How do you call engine oil additives used to prevent attack on iron and steel surfaces by condensed moisture and acidic corrosion products, aggravated by low-temperature stop-and-go operation?",
+      "options": [
+        "Detergents",
+        "Oxidation inhibitors",
+        "Dispersants",
+        "Rust inhibitors"
+      ],
+      "answer": "Rust inhibitors"
+    },
+    {
+      "id": 24,
+      "q": "How do you call engine oil additives used to help enable adequate low-temperature flow along with sufficient viscosity at high temperatures?",
+      "options": [
+        "Viscosity-index improvers",
+        "Pour point dispersants",
+        "Oxidation inhibitors",
+        "Rust inhibitors"
+      ],
+      "answer": "Viscosity-index improvers"
+    },
+    {
+      "id": 25,
+      "q": "These oil additives are used to minimize wear under boundary lubrication conditions, such as cam and lifter, and cylinder-wall and piston-ring surfaces:",
+      "options": [
+        "Anti-wear additives",
+        "Pour point dispersants",
+        "Oxidation inhibitors",
+        "Rust inhibitors"
+      ],
+      "answer": "Anti-wear additives"
+    },
+    {
+      "id": 26,
+      "q": "These are engine oil additives used to allow air to break away easily from the oil:",
+      "options": [
+        "Anti-wear additives",
+        "Defoamants",
+        "Oxidation inhibitors",
+        "Rust inhibitors"
+      ],
+      "answer": "Defoamants"
+    },
+    {
+      "id": 27,
+      "q": "These engine oil additives are used to improve fuel efficiency by reducing friction at rubbing surfaces. How do you call these oil additives?",
+      "options": [
+        "Anti-wear additives",
+        "Oxidation inhibitors",
+        "Friction modifiers",
+        "Rust inhibitors"
+      ],
+      "answer": "Friction modifiers"
+    },
+    {
+      "id": 28,
+      "q": "Which of the following is the chemical formula of butane?",
+      "options": [
+        "$\\text{C}_2\\text{H}_5$",
+        "$\\text{C}_4\\text{H}_{10}$",
+        "$\\text{C}_{10}\\text{H}_{16}$",
+        "$\\text{C}_3\\text{H}_6$"
+      ],
+      "answer": "$\\text{C}_4\\text{H}_{10}$"
+    },
+    {
+      "id": 29,
+      "q": "The hardness of ground water required as feedwater for a boiler is 0 to 10 ppm (parts per million); which of the following is the range of alkalinity requirement?",
+      "options": [
+        "pH 9 to pH 10",
+        "pH 10 to pH 11",
+        "pH 6 to pH 10",
+        "pH 8 to pH 10"
+      ],
+      "answer": "pH 10 to pH 11"
+    },
+    {
+      "id": 30,
+      "q": "It is the generic term given to a family of solid fuels with high carbon content. How do you call this?",
+      "options": [
+        "Solid fuel",
+        "Anthracite",
+        "Coal",
+        "Bituminous"
+      ],
+      "answer": "Coal"
+    },
+    {
+      "id": 31,
+      "q": "It is a boiler fuel created from the residue produced from crude petroleum after it has been distilled to produce lighter oils like gasoline, paraffin, kerosene, diesel, or gas oil. What is this fuel?",
+      "options": [
+        "Oil",
+        "Coke",
+        "Kerosene",
+        "Peat"
+      ],
+      "answer": "Oil"
+    },
+    {
+      "id": 32,
+      "q": "What do you call a form of boiler fuel that is easy to burn, with very little excess air?",
+      "options": [
+        "Coal",
+        "Gas",
+        "Oil",
+        "Bunker"
+      ],
+      "answer": "Gas"
+    },
+    {
+      "id": 33,
+      "q": "Which of the following are the four stages of the warning system designated by the high air pollution alert warning system?",
+      "options": [
+        "Initial, chronic, acute, penetrating",
+        "Forecast, alert, warning, emergency",
+        "Light, medium, heavy, extra heavy",
+        "Early, moderate, severe, toxic"
+      ],
+      "answer": "Forecast, alert, warning, emergency"
+    },
+    {
+      "id": 34,
+      "q": "The chemical most commonly used to speed sedimentation of sewage is known as:",
+      "options": [
+        "Lime",
+        "Sulfuric acid",
+        "Copper sulfate",
+        "Methylene blue"
+      ],
+      "answer": "Lime"
+    },
+    {
+      "id": 35,
+      "q": "Most of the bacteria in sewage are:",
+      "options": [
+        "Saprophytic",
+        "Parasitic",
+        "Dangerous",
+        "Pathogenic"
+      ],
+      "answer": "Saprophytic"
+    },
+    {
+      "id": 36,
+      "q": "In accordance with the air pollution control code, no person shall cause or permit the emission of air contaminants from a boiler with a capacity of 500 million Btu/hr with a sulfur dioxide content of more than:",
+      "options": [
+        "300 parts per million by volume of undiluted emissions measured at 15% excess air",
+        "200 parts per million by volume of undiluted emissions measured at 10% excess air",
+        "200 parts per million by volume of undiluted emissions measured at 15% excess air",
+        "300 parts per million by volume of undiluted emissions measured at 10% excess air"
+      ],
+      "answer": "200 parts per million by volume of undiluted emissions measured at 10% excess air"
+    },
+    {
+      "id": 37,
+      "q": "Gas produced by the combustion of fuel oil that cannot be found in the flue gases is:",
+      "options": [
+        "Carbon dioxide",
+        "Oxygen",
+        "Hydrogen",
+        "Nitrogen"
+      ],
+      "answer": "Hydrogen"
+    },
+    {
+      "id": 38,
+      "q": "Scale in a boiler can:",
+      "options": [
+        "Create low steam quality",
+        "Cause foaming",
+        "Overheat blow-off line",
+        "Inhibit circulation and heat transfer"
+      ],
+      "answer": "Inhibit circulation and heat transfer"
+    },
+    {
+      "id": 39,
+      "q": "Temporary hardness salts are reduced by:",
+      "options": [
+        "Raising the water temperature",
+        "Lowering the water temperature",
+        "Raising the pH value",
+        "Letting the water settle"
+      ],
+      "answer": "Raising the water temperature"
+    },
+    {
+      "id": 40,
+      "q": "What is the effect of $\\text{CO}_2$ in a steam system?",
+      "options": [
+        "The formation of scale",
+        "The formation of sludge",
+        "Corrosion",
+        "Acidity"
+      ],
+      "answer": "Corrosion"
+    },
+    {
+      "id": 41,
+      "q": "Which of the following forms soft scale or sludge?",
+      "options": [
+        "Magnesium sulphate",
+        "Sodium bicarbonate",
+        "Sodium carbonate",
+        "Calcium bicarbonate"
+      ],
+      "answer": "Calcium bicarbonate"
+    },
+    {
+      "id": 42,
+      "q": "Which of the following are principal dissolved solids that are scale forming?",
+      "options": [
+        "Carbonates and sulphates of sodium",
+        "Calcium bicarbonate",
+        "Carbonates and sulphates of magnesium",
+        "Bicarbonates of sodium and magnesium"
+      ],
+      "answer": "Carbonates and sulphates of magnesium"
+    },
+    {
+      "id": 43,
+      "q": "What is the effect of temperature on calcium and magnesium sulphates?",
+      "options": [
+        "They separate out as soft scale and sludge",
+        "They precipitate out of solution and form hard scale",
+        "Foaming and carryover occur",
+        "The TDS is increased"
+      ],
+      "answer": "They precipitate out of solution and form hard scale"
+    },
+    {
+      "id": 44,
+      "q": "What is the treatment for scale-forming salts in boiler feedwater?",
+      "options": [
+        "They are chemically treated to modify the pH",
+        "The feedwater tank is raised to at least $85°\\text{C}$",
+        "They are chemically treated to produce suspended solids",
+        "They are removed by filtration means"
+      ],
+      "answer": "They are chemically treated to produce suspended solids"
+    },
+    {
+      "id": 45,
+      "q": "Which of the following types of alcohol is most frequently considered as fuel for an internal combustion engine?",
+      "options": [
+        "Methyl alcohol",
+        "Ethyl alcohol",
+        "Isopropyl alcohol",
+        "Alcogas"
+      ],
+      "answer": "Ethyl alcohol"
+    },
+    {
+      "id": 46,
+      "q": "It is dust removal equipment that consists of a cylindrical tank structure provided with a tangential opening at one end for gas passage and a spray manifold at the center made of a vertical pipe with spray nozzles where water is introduced at the bottom. As gas revolves and contacts the water spray, dust and fly ash are wetted and separated while clean gas leaves at the top.",
+      "options": [
+        "Cinder trap or catcher",
+        "Cyclone separator",
+        "Cyclonic spray scrubber",
+        "Electrostatic precipitator"
+      ],
+      "answer": "Cyclonic spray scrubber"
+    }
+  ]
+}
