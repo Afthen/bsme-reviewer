@@ -179,7 +179,7 @@ Software engineering in this repository is governed by physical/mathematical inv
 - **R6. Declare empirical exceptions.**
   - Empirical correlations valid only in specific units: declare `requiredUnits: { token: "unit", targetVar: "unit" }`.
   - Differing mathematical formulations between SI and US: declare `variants.SI` and `variants.US`.
-- **R7. Register every unit.** Every unit string must exist in `src/cas/units/definitions.js`. Unknown units fail validation.
+- **R7. Register every unit.** Every unit string must exist in `src/cas/units/definitions.js`. Unknown units fail validation. Prefixes are registry data: a base accepts an SI prefix only if its entry lists the code in `prefixes`.
 - **R8. Thermodynamic Temperature Consistency.**
   - Ideal-gas and isentropic relations requiring absolute temperatures ($T_2 = T_1 r_k^{k-1}$) strictly evaluate in absolute scales ($\text{K}$ in SI, $^\circ\text{R}$ in US).
   - All state point temperatures of a cycle share an identical unit when appearing as deliverables.
@@ -681,7 +681,7 @@ Run `npm test` (regenerates registries and executes all suites with the quiet re
 ```bash
 node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/run_hygiene_test.js \
   test/derivation_matrix_test.js test/rate_parts_test.js test/patch_test.js test/trace_test.js \
-  test/section_d_test.js test/sibling_markup_test.js test/memo_equivalence_test.js test/unit_catalog_test.js test/xmb_model_test.js test/patch_format_test.js test/ctx_test.js test/reporter_test.js
+  test/section_d_test.js test/sibling_markup_test.js test/memo_equivalence_test.js test/unit_catalog_test.js test/xmb_model_test.js test/patch_format_test.js test/prefix_policy_test.js test/ctx_test.js test/reporter_test.js
 ```
 
 | Suite | Invariant Verified |
@@ -695,6 +695,7 @@ node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/ru
 | `test/xmb_model_test.js` | XMB motion model: simultaneous two-axis drag, continuity, per-column memory, settling on integers, frame-rate independence, wheel, keys, reduced motion. |
 | `test/memo_equivalence_test.js` | Cached `isolateVariable` and `resolveUnitToken` equal their uncached computations; unit lookup tables match the legacy first-match scans; cached values are frozen. |
 | `test/sibling_markup_test.js` | Tokens appearing only in later terms of a sum receive the sibling analysis's cancelled markup, not the main-pass placeholder. |
+| `test/prefix_policy_test.js` | Prefix permission is registry data: a (prefix, base) pair resolves exactly when listed in `prefixes`; non-standard strings (`ks`, `kBtu`) are unknown; every palette unit still parses. |
 | `test/patch_format_test.js` | Unified patch format: path in the fence info string, many hunks per block, per-hunk `expect=N`, directory paths, legacy forms, dry-run staging, failure atomicity. |
 | `test/patch_test.js` | Patch parser & applier: `diff`, `subst` exact counts, atomicity, N+1 fences, headers |
 | `test/reporter_test.js` | Quiet test reporter: suppresses passing tests, prints leaf failures without suite wrapper duplication |

@@ -26,39 +26,39 @@ export const PREFIXES = Object.freeze({
  * This prevents "Dimensionless Orphans" by forcing every unit to declare its 7D vector.
  */
 const RAW_BASE_UNITS = {
-  "gram":           { baseScale: 0.001, symbol: "g", dimMap: { M: 1 }, forceCompanion: "gram_force" },
+  "gram":           { baseScale: 0.001, symbol: "g", prefixes: "pnumckdMG", dimMap: { M: 1 }, forceCompanion: "gram_force" },
   "gram_force":     { baseScale: 0.001 * 9.80665, symbol: "g_f", dimMap: { M: 1, L: 1, T: -2 }, massCompanion: "gram" },
   "pound_mass":     { baseScale: 0.45359237, symbol: "lb_m", dimMap: { M: 1 }, forceCompanion: "pound_force" },
   "pound_force":    { baseScale: 0.45359237 * 9.80665, symbol: "lb_f", dimMap: { M: 1, L: 1, T: -2 }, massCompanion: "pound_mass" },
   "kilogram_force": { baseScale: 9.80665, symbol: "kg_f", dimMap: { M: 1, L: 1, T: -2 }, massCompanion: "gram" },
-  "newton":         { baseScale: 1.0, symbol: "N", dimMap: { M: 1, L: 1, T: -2 } },
-  "meter":          { baseScale: 1.0, symbol: "m", dimMap: { L: 1 } },
-  "second":         { baseScale: 1.0, symbol: "s", dimMap: { T: 1 } },
+  "newton":         { baseScale: 1.0, symbol: "N", prefixes: "mkMG", dimMap: { M: 1, L: 1, T: -2 } },
+  "meter":          { baseScale: 1.0, symbol: "m", prefixes: "pnumckdMG", dimMap: { L: 1 } },
+  "second":         { baseScale: 1.0, symbol: "s", prefixes: "munp", dimMap: { T: 1 } },
   "percent":        { baseScale: 0.01, symbol: "%", dimMap: { Pct: 1 } },
   "Kelvin":         { baseScale: 1.0, symbol: "K", dimMap: { Th: 1 } },
   "Celsius":        { baseScale: 1.0, symbol: "°C", dimMap: { Th: 1 }, offset: 273.15, absCompanion: "Kelvin" },
   "Fahrenheit":     { baseScale: 5/9, symbol: "°F", dimMap: { Th: 1 }, offset: 459.67, absCompanion: "Rankine" },
   "Rankine":        { baseScale: 5/9, symbol: "°R", dimMap: { Th: 1 } },
   "Btu":            { baseScale: 1055.056, symbol: "Btu", dimMap: { M: 1, L: 2, T: -2 } },
-  "Joule":          { baseScale: 1.0, symbol: "J", dimMap: { M: 1, L: 2, T: -2 } },
-  "Watt":           { baseScale: 1.0, symbol: "W", dimMap: { M: 1, L: 2, T: -3 } },
-  "Pascal":         { baseScale: 1.0, symbol: "Pa", dimMap: { M: 1, L: -1, T: -2 } },
+  "Joule":          { baseScale: 1.0, symbol: "J", prefixes: "mkMG", dimMap: { M: 1, L: 2, T: -2 } },
+  "Watt":           { baseScale: 1.0, symbol: "W", prefixes: "mkMG", dimMap: { M: 1, L: 2, T: -3 } },
+  "Pascal":         { baseScale: 1.0, symbol: "Pa", prefixes: "mkMG", dimMap: { M: 1, L: -1, T: -2 } },
   "teeth":          { baseScale: 1.0, symbol: "teeth", dimMap: { C: 1 } },
   "rad":            { baseScale: 1.0, symbol: "rad", dimMap: { Ang: 1 } },
   "rev":            { baseScale: 1.0, symbol: "rev", dimMap: { C: 1 } },
   "deg":            { baseScale: Math.PI / 180, symbol: "°", dimMap: { Ang: 1 } },
   "minute":         { baseScale: 60.0, symbol: "min", dimMap: { T: 1 } },
   "hour":           { baseScale: 3600.0, symbol: "h", dimMap: { T: 1 } },
-  "inch":           { baseScale: 0.0254, symbol: "in", dimMap: { L: 1 } },
+  "inch":           { baseScale: 0.0254, symbol: "in", prefixes: "u", dimMap: { L: 1 } },
   "foot":           { baseScale: 0.3048, symbol: "ft", dimMap: { L: 1 } },
   "yard":           { baseScale: 0.9144, symbol: "yd", dimMap: { L: 1 } },
   "horsepower":     { baseScale: 745.69987, symbol: "hp", dimMap: { M: 1, L: 2, T: -3 } },
   "kWh":            { baseScale: 3600000.0, symbol: "kWh", dimMap: { M: 1, L: 2, T: -2 } },
-  "bar":            { baseScale: 100000.0, symbol: "bar", dimMap: { M: 1, L: -1, T: -2 } },
-  "litre":          { baseScale: 0.001, symbol: "L", dimMap: { L: 3 } },
+  "bar":            { baseScale: 100000.0, symbol: "bar", prefixes: "mk", dimMap: { M: 1, L: -1, T: -2 } },
+  "litre":          { baseScale: 0.001, symbol: "L", prefixes: "mcd", dimMap: { L: 3 } },
   "gallon":         { baseScale: 0.003785411784, symbol: "gal", dimMap: { L: 3 } },
   "rpm":            { baseScale: 1/60, symbol: "rpm", dimMap: { C: 1, T: -1 } },
-  "hertz":          { baseScale: 1.0, symbol: "Hz", dimMap: { T: -1 } },
+  "hertz":          { baseScale: 1.0, symbol: "Hz", prefixes: "kMG", dimMap: { T: -1 } },
   "cfm":            { baseScale: 0.3048**3 / 60, symbol: "cfm", dimMap: { L: 3, T: -1 } },
   "gpm":            { baseScale: 0.003785411784 / 60, symbol: "gpm", dimMap: { L: 3, T: -1 } }
 };
@@ -112,6 +112,9 @@ for (const bKey of Object.keys(BASE_UNITS)) {
 export const findExactBase = name => EXACT_BASE_BY_NAME.get(name);
 export const findPrefixedBase = name => PREFIXED_BASE_BY_NAME.get(name);
 
+// SSOT: a prefix is valid only if the registry entry lists its code in `prefixes`.
+const prefixAllowed = (baseKey, code) => !!BASE_UNITS[baseKey]?.prefixes?.includes(code);
+
 function resolveBaseStem(stem, dimension = null) {
   if (stem === "hr") return { prefix: null, base: "hour" };
   if (stem === "kip" || stem === "kips" || stem === "klb") return { prefix: "kilo", base: "pound_force" };
@@ -143,7 +146,7 @@ function resolveBaseStem(stem, dimension = null) {
         return { prefix: pMeta.name, base: lbBase };
       }
       const foundBase = PREFIXED_BASE_BY_NAME.get(possibleBase);
-      if (foundBase) return { prefix: pMeta.name, base: foundBase };
+      if (foundBase && prefixAllowed(foundBase, pCode)) return { prefix: pMeta.name, base: foundBase };
     }
   }
 
