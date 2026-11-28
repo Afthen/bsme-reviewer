@@ -709,7 +709,7 @@ Run `npm test` (regenerates registries and executes all suites with the quiet re
 
 ```bash
 node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/run_hygiene_test.js \
-  test/derivation_matrix_test.js test/rate_parts_test.js test/patch_test.js test/trace_test.js \
+  test/derivation_matrix_test.js test/rate_parts_test.js test/shared_token_sum_test.js test/patch_test.js test/trace_test.js \
   test/section_d_test.js test/sibling_markup_test.js test/memo_equivalence_test.js test/unit_catalog_test.js test/xmb_model_test.js test/patch_format_test.js test/prefix_policy_test.js test/ctx_test.js test/reporter_test.js
 ```
 
@@ -728,6 +728,7 @@ set MATRIX_TOPIC=<topic_id>&& node --test test/derivation_matrix_test.js && set 
 | `test/run_hygiene_test.js` | Zero legacy shadows, exact $\phi$/Fibonacci progressions, zero schema orphan variables, zero duplicate formulas within topics, zero alias collisions across `varsDb`, cross-subject commonality rules, and native `°` symbols (no `\circ`). |
 | `test/derivation_matrix_test.js` | **Derivation Matrix:** Layer 1 re-runs every topic x system x relation x solvable target under pairwise (2-wise) unit coverage; Layer 2 runs seeded `generateProblem` trials across SI, US, and MIXED systems and mastery levels. Both verify `evaluatePhysicalAST`, `validateDerivationLatex`, numerical derivation match (`latex_oracle.js`), and `isCanonicalScaleFactor`. All failures are collected and grouped; each carries `seed=N` for `TRACE`. |
 | `test/rate_parts_test.js` | Parenthesised rate targets (`ft-lb_f/(lb_m)`, `kJ/(s)`) decompose into canonical numerator and denominator ratios; a `1/(...)` target is not split into a unit-less numerator. |
+| `test/shared_token_sum_test.js` | A token shared by a sum's sibling term and the rest of the expression keeps the target unit (restating `I` to in^4 must not leave the derivation in inches). |
 | `test/section_d_test.js` | Atom-soup targets route to the per-atom compound builder; `Q_s / (Q_s + Q_l)` with `Btu/h` and `kW` yields only canonical scalars. |
 | `test/unit_catalog_test.js` | Unit catalog derived from the registry (one category per base unit, chip round-trips), canonical factor trains checked by the LaTeX oracle, affine and refusal cases, interactive-unit statement spans. |
 | `test/xmb_model_test.js` | XMB motion model: simultaneous two-axis drag, continuity, per-column memory, settling on integers, frame-rate independence, wheel, keys, reduced motion. |

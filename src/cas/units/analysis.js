@@ -679,6 +679,33 @@ export function solveUnitAlgebra(
       return d ? `${n || "1"}/(${d})` : (n || "dimless");
     };
 
+    // Conversions are per token, so a conversion a sibling term adopts for a token the main
+    // pass left alone applies at every occurrence and shifts the main net unit by
+    // (U_sub / U_main)^exp. One canonical factor restores the target unit.
+    const compensateSharedToken = (k, subUnit) => {
+      const e = exps[k];
+      if (forceInSitu || !subUnit || !e || !Number.isInteger(e)) return;
+      const cK = resolveCanonicalKey(k, varsDb);
+      const m = varsDb[cK] || varsDb[k] || {};
+      const mainUnit = resolvedUnitByTok[k] || S._u?.[cK] || S._u?.[k] || m.unit || "";
+      if (!mainUnit || mainUnit === subUnit) return;
+      const single = (u) => {
+        const atoms = parseUnitToSemanticAST(u, m.dimension);
+        return atoms.length === 1 && atoms[0].power === 1;
+      };
+      if (!single(mainUnit) || !single(subUnit)) return;
+      const sMain = getUnitAtomBag(mainUnit, m.dimension).scale;
+      const sSub = getUnitAtomBag(subUnit, m.dimension).scale;
+      if (!(sMain > 0) || !(sSub > 0) || Math.abs(sSub / sMain - 1) < 1e-6) return;
+      const n = Math.abs(e);
+      const pw = (u) => (n === 1 ? u : `${u}^${n}`);
+      const [from, to] = e > 0 ? [subUnit, mainUnit] : [mainUnit, subUnit];
+      const conv = formatPairConversion(pw(from), pw(to), m.dimension, m.dimension, "whole");
+      if (!conv.tex) return;
+      globalConversionTex += conv.tex;
+      conversionScalars.push(...(conv.scalars || (conv.scalar !== null ? [conv.scalar] : [])));
+    };
+
     const mergeSubAnalysis = (sub) => {
       for (const [k, m] of Object.entries(sub.tokenMarkup || {})) {
         if (tokenMarkup[k] !== undefined && !placeholderMarkup.has(k)) continue;
@@ -690,6 +717,7 @@ export function solveUnitAlgebra(
         if (tokenConversions[k]) continue;
         const kDepth = getFormulaFractionDepth(branchAst, k) || 0;
         tokenConversions[k] = kDepth >= 2 ? list.map(c => c.replaceAll("\\cfrac", "\\tfrac")) : list;
+        if (list.length > 0) compensateSharedToken(k, sub.resolvedUnitByTok?.[k]);
       }
       conversionScalars.push(...(sub.conversionScalars || []));
     };
@@ -778,7 +806,8 @@ export function solveUnitAlgebra(
     globalConversionTex,
     preConversions,
     tokenConversions,
-    conversionScalars
+    conversionScalars,
+    resolvedUnitByTok
   };
 }
 
