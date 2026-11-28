@@ -254,6 +254,18 @@ export function sampleSystemMode(requestedSys = null) {
   return "MIXED";
 }
 
+/**
+ * Weighted-random permutation of candidates (Efraimidis–Spirakis): key = r^(1/w) with
+ * w = 1/tokens, so atom-soup/gravitational units (high token count) sort later. Consumes
+ * exactly one draw per candidate, giving a deterministic per-variable draw budget.
+ */
+export function weightedCandidateOrder(candidateList = []) {
+  return [...candidateList]
+    .map(c => ({ c, key: Math.pow(Math.random(), Math.max(1, c.tokens || 1)) }))
+    .sort((a, b) => b.key - a.key)
+    .map(x => x.c);
+}
+
 export function sampleByInverseTokens(candidateList = []) {
   if (!candidateList || candidateList.length === 0) return null;
   if (candidateList.length === 1) return candidateList[0].unit;
@@ -398,8 +410,7 @@ export function planProblemUnits(varsDb = {}, forcedMode = null) {
     const meta = varsDb[k];
     const mid = valueToCoherentBase((meta.typical[0] + meta.typical[1]) / 2, meta.unit, meta.dimension);
     const candidates = candidateUnitsFor(i < usCount ? "US" : "SI", meta.dimension, meta.unit);
-    const chosen = [...candidates]
-      .sort(() => Math.random() - 0.5)
+    const chosen = weightedCandidateOrder(candidates)
       .find(p => retainsSufficientSigFigs(formatValueInUnit(mid, p.unit, meta.dimension)));
     plan[k] = chosen ? chosen.unit : meta.unit;
   });
@@ -551,7 +562,7 @@ export function applyProblemUnitSampling(S, varsDb = {}, forcedMode = null, unit
     const validCandidates = candidateUnitsFor(targetSys, meta.dimension, canonUnit);
     if (validCandidates.length === 0) return;
 
-    const shuffledCandidates = [...validCandidates].sort(() => Math.random() - 0.5);
+    const shuffledCandidates = weightedCandidateOrder(validCandidates);
     let chosenUnit = null;
 
     for (const cand of shuffledCandidates) {

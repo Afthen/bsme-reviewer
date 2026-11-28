@@ -325,6 +325,14 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
   const astHasDim = (ast, dMap) => ast.some(a => isDimEqual(BASE_UNITS[a.base]?.dimMap, dMap));
 
   const rawTargetAst = parseUnitToSemanticAST(targetUnit, targetDim);
+  // Remember one working atom per dimension family from the ORIGINAL target, before the
+  // matching pass consumes target atoms. Residual same-family sources must align to this
+  // atom even after consumption, so every term of an additive group shares one frame.
+  const targetFamilyAtom = new Map();
+  for (const a of rawTargetAst) {
+    const fam = getBaseFamilyKey(BASE_UNITS[a.base]?.dimMap || {});
+    if (fam && !targetFamilyAtom.has(fam)) targetFamilyAtom.set(fam, { prefix: a.prefix, base: a.base, power: 1 });
+  }
   const entryAsts = tokenEntries.map(e => parseUnitToSemanticAST(e.uName, e.dim));
 
   const targetHasEnergy = astHasDim(rawTargetAst, ENERGY_DIM);
@@ -950,7 +958,29 @@ export function buildCompoundTokenConversions(tokenEntries, targetUnit, targetDi
         }
       } else {
         const netFamPower = list.reduce((s, x) => s + x.netPower, 0);
-        if (Math.abs(netFamPower) < 1e-6) {
+        const remembered = targetFamilyAtom.get(fam);
+        if (remembered) {
+          // Target owns this family: align every residual source to the target's atom (even
+          // though the matching pass consumed it), so additive siblings share one length/frame.
+          const tgtBaseDim = BASE_UNITS[remembered.base]?.dimMap || {};
+          const tgtUnitAtom = { prefix: remembered.prefix, base: remembered.base, power: 1 };
+          for (const src of list) {
+            const srcBaseDim = BASE_UNITS[src.atom.base]?.dimMap || {};
+            const factor = Object.keys(srcBaseDim).reduce((acc, k) => {
+              return (tgtBaseDim[k] && srcBaseDim[k]) ? (srcBaseDim[k] * Math.abs(src.atom.power)) / tgtBaseDim[k] : acc;
+            }, Math.abs(src.atom.power));
+            const tgtPow = Math.max(1, Math.round(Math.abs(factor)));
+            const srcStr = atomToPoweredUnitString(src.atom, Math.abs(src.atom.power));
+            const tgtStr = atomToPoweredUnitString(tgtUnitAtom, tgtPow);
+            const expPow = isDimEqual(srcBaseDim, tgtBaseDim) ? Math.min(Math.abs(src.atom.power), tgtPow) : 1;
+            const cancelBoth = !!cancelTokens?.has(src.tok);
+            if (emitSingleUnitConversion(src.tok, srcStr, tgtStr, src.atom.power, expPow, cancelBoth) || cancelBoth) {
+              markCancelled(src.tok, src.origIndex);
+            }
+            src.resolvedUnit = tgtStr;
+            src.matched = true;
+          }
+        } else if (Math.abs(netFamPower) < 1e-6) {
           // Family sums to zero across unmatched sources: align all to the first/canonical unit in family
           const canonSrc = list.find(s => !s.atom.prefix) || list[0];
           const canonBaseDim = BASE_UNITS[canonSrc.atom.base]?.dimMap || {};

@@ -45,7 +45,7 @@ import { DIMENSION_TOKEN_PALETTES, COUPLED_VARIABLE_GROUPS } from "../../src/cor
 import { solveDAG, canSolveTarget } from "../../src/core/graph_solver.js";
 import { buildAlignedDerivation } from "../../src/core/derivation.js";
 import { generateProblem } from "../../src/core/problem_gen.js";
-import { withSeededRandom, mulberry32, unitLevels, coveringRows, restate, collectSteps, SEEDS } from "../../test/matrix_helpers.js";
+import { withSeededRandom, restate, collectSteps } from "../../test/matrix_helpers.js";
 import { assertDerivationMatchesAnswer } from "../../test/latex_oracle.js";
 import { runMatrixForTopicIds } from "../../test/matrix_worker.js";
 

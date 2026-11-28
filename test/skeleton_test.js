@@ -32,6 +32,10 @@ describe("repo_skeleton modes", () => {
     write("README.md", README);
     write("src/core/dimensions.js", "export const DIMENSIONS = {};");
     write(
+      "src/core/many.js",
+      Array.from({ length: 12 }, (_, i) => `export function fn${i}() { return ${i}; }`).join("\n")
+    );
+    write(
       "src/core/work.js",
       "export function main() { return 1; }\nfunction helperOne() { return 1; }\nfunction helperTwo() { return 2; }"
     );
@@ -83,5 +87,13 @@ describe("repo_skeleton modes", () => {
     const out = skeleton("core/work");
     assert.match(out, /FILE: src\/core\/work\.js/);
     assert.match(out, /local fn helperOne/);
+  });
+
+  test("slim mode lists every export name (navigation keys are never elided)", () => {
+    const out = skeleton();
+    const line = out.split("\n").find((l) => l.startsWith("src/core/many.js"));
+    assert.ok(line, "many.js slim line present");
+    assert.match(line, /exports: fn0.*fn11/);
+    assert.doesNotMatch(line, /\+\d+/);
   });
 });

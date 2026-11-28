@@ -229,7 +229,9 @@ const files = ROOTS.flatMap(r => collectJsFiles(r))
   .map(analyzeFile)
   .filter(f => !FILTER || f.rel.includes(FILTER));
 
-const SLIM_EXPORT_CAP = 8;
+// Exports are the lookup keys for `READ path#symbol`; eliding them costs a round trip
+// (a wrong-file guess only answers "symbol not found"), so slim mode lists every export.
+const SLIM_EXPORT_CAP = Infinity;
 const SLIM_LOCAL_CAP = 40;
 const TOPIC_LEAF_FILES = ["index.js", "schema.js", "relations.js", "system.js"];
 const README_ALWAYS = new Set([0, 1, 2, 3, 10, 11, 12]);

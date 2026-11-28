@@ -11,6 +11,41 @@ import { SEEDS, withSeededRandom, restate, collectSteps } from "../test/matrix_h
 import { parseCase } from "./lib/trace_parse.js";
 import { recordNumericPushes } from "./lib/trace_hooks.js";
 
+/**
+ * Scalars visible in rendered conversion TeX: strips unit names and unit powers, removes
+ * thousands separators, and expands (x)^p into p copies, so the result is comparable with
+ * the planned conversionScalars list.
+ */
+function texScalars(tex) {
+  const cleaned = String(tex)
+    .replaceAll("{,}", "")
+    .replace(/\\text\s*\{[^{}]*\}/g, " ")
+    .replace(/\^\s*\{[^{}]*\}/g, " ");
+  const out = [];
+  const flat = cleaned.replace(/\((\d+(?:\.\d+)?)\)\^(\d+)/g, (_m, num, pow) => {
+    for (let i = 0; i < Number(pow); i++) out.push(Number(num));
+    return " ";
+  });
+  for (const m of flat.matchAll(/\d+(?:\.\d+)?/g)) out.push(Number(m[0]));
+  return out;
+}
+
+/**
+ * Planned scalars with no counterpart in the rendered conversions. A non-empty list means a
+ * conversion was computed and then discarded (clobbered train, dropped sibling merge), which
+ * leaves additive terms in different frames even when every scalar is canonical.
+ */
+function orphanScalars(planned, rendered) {
+  const pool = [...rendered];
+  const orphans = [];
+  for (const s of planned) {
+    const i = pool.findIndex((r) => Math.abs(r - s) <= 1e-6 * Math.max(1, Math.abs(s)));
+    if (i >= 0) pool.splice(i, 1);
+    else orphans.push(s);
+  }
+  return orphans;
+}
+
 const isAlien = (v) => v > 0 && !(Number.isInteger(v) && v < 1000) && !isCanonicalScaleFactor(v);
 const shortFrame = (l) => l.replace(/\(?file:\/\/.*?\/((?:src|test)\/[^)]*)\)?/, "$1");
 
@@ -50,6 +85,17 @@ for (const seed of c.seed === null ? SEEDS : [c.seed]) {
         }
       });
     }
+    const renderedTex = [
+      ua.globalConversionTex || "",
+      ...Object.values(ua.tokenConversions || {}).flatMap((list) => list || [])
+    ].join(" ");
+    const orphans = orphanScalars(scalars, texScalars(renderedTex));
+    const resolved = Object.entries(ua.resolvedUnitByTok || {}).map(([k, u]) => `${k}:${u}`).join(", ");
+    console.log(`resolvedUnitByTok: ${resolved || "(none)"}`);
+    console.log(orphans.length
+      ? `ORPHAN SCALARS planned but absent from rendered conversions: ${orphans.join(", ")}`
+      : "orphan scalars: (none)");
+
     const seen = new Set();
     for (const h of hits) {
       const k = `${h.kind}|${h.value}|${h.frames[0]}`;

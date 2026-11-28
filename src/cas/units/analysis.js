@@ -3,7 +3,7 @@
  * AST-Driven Unit Analysis, In-Situ Conversion, and Factor-Label Markup Engine.
  */
 
-import { parseMathAST, evalAST, getAstIdentifiers } from "../ast.js";
+import { parseMathAST, evalAST, getAstIdentifiers, astHasVariable, countVariableOccurrences } from "../ast.js";
 import { resolveCanonicalKey, isReservedMathToken } from "../algebra.js";
 import { DIMENSIONS } from "../../core/dimensions.js";
 import {
@@ -326,8 +326,31 @@ export function solveUnitAlgebra(
     return false;
   }
 
+  // A token propagates a trailing factor linearly only when it occurs once, at local
+  // exponent +1, with no enclosing +, -, ^, or call (sqrt/abs/trig). Used to decide whether
+  // a net-result factor may attach in-situ instead of binding the branch root.
+  function isTokenTopLevelFactor(node, targetTok) {
+    if (!node) return false;
+    if (node.type === "group") return isTokenTopLevelFactor(node.expr, targetTok);
+    if (node.type === "id") return node.name === targetTok;
+    if (node.type === "call") return false;
+    if (node.type === "binary") {
+      if (node.op === "+" || node.op === "-" || node.op === "^") return false;
+      if (node.op === "/") return !astHasVariable(node.right, targetTok) && isTokenTopLevelFactor(node.left, targetTok);
+      if (node.op === "*") {
+        const inL = astHasVariable(node.left, targetTok);
+        const inR = astHasVariable(node.right, targetTok);
+        if (inL && inR) return false;
+        return isTokenTopLevelFactor(inL ? node.left : node.right, targetTok);
+      }
+    }
+    return false;
+  }
+
   const branches = collectAdditiveBranches(ast);
   const isMultiBranch = branches.length > 1;
+
+  const resolvedUnitByTok = {};
 
   // A dimensionless physical ratio projected into a percentage target must
   // acquire the target unit's scale. Percentage is intentionally distinct
@@ -391,8 +414,6 @@ export function solveUnitAlgebra(
         }
       }
     }
-    const resolvedUnitByTok = {};
-
     const findCounterpart = (tok, sameAdditiveOnly = false) => {
       const myInfo = tokenBags[tok];
       if (!myInfo || myInfo.exp === 0) return null;
@@ -625,14 +646,18 @@ export function solveUnitAlgebra(
         }
         Object.assign(resolvedUnitByTok, resolvedUnitsByToken || {});
         if (globalConvTex) {
-          const anyInAdd = entries.some(e => isTokenInAdditiveSubtree(branchAst, e.tok));
-          if (forceInSitu || isMultiBranch || anyInAdd) {
-            const attachTok = entries.find(e => e.exp === 1)?.tok;
-            if (attachTok) {
-              if (!tokenConversions[attachTok]) tokenConversions[attachTok] = [];
-              const aDepth = getFormulaFractionDepth(branchAst, attachTok) || 0;
-              tokenConversions[attachTok].push(aDepth >= 2 ? globalConvTex.replaceAll("\\cfrac", "\\tfrac") : globalConvTex);
-            }
+          // The compound builder's globalConvTex is a net-result -> target factor: it binds the
+          // whole branch, never an operand under a power/sqrt/sum. For a single branch the branch
+          // IS the RHS, so it routes to globalConversionTex (the renderer binds the root). Only a
+          // multi-branch / forced-in-situ analysis may attach it in-situ, and only to a token that
+          // propagates it linearly (single occurrence, top multiplicative level, net exp +1).
+          const attachTok = (forceInSitu || isMultiBranch)
+            ? entries.find(e => e.exp === 1 && countVariableOccurrences(branchAst, e.tok) === 1 && isTokenTopLevelFactor(branchAst, e.tok))?.tok
+            : null;
+          if (attachTok) {
+            if (!tokenConversions[attachTok]) tokenConversions[attachTok] = [];
+            const aDepth = getFormulaFractionDepth(branchAst, attachTok) || 0;
+            tokenConversions[attachTok].push(aDepth >= 2 ? globalConvTex.replaceAll("\\cfrac", "\\tfrac") : globalConvTex);
           } else {
             globalConversionTex += globalConvTex;
           }

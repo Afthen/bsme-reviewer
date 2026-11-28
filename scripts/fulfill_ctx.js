@@ -152,33 +152,71 @@ function refuse(rel, f, needed, remaining) {
   };
 }
 
-function readSymbols(rel, f, names, remaining) {
+/** rel -> Set of top-level symbol names; built lazily so a miss costs one repo scan. */
+const symbolHomeCache = new Map();
+
+/** Repo-relative files that declare `name` at top level, excluding `excludeRel`. */
+function findSymbolHomes(root, name, excludeRel) {
+  const homes = [];
+  for (const entry of SEARCH_ROOTS) {
+    for (const abs of collectFiles(path.resolve(root, entry))) {
+      if (!abs.endsWith(".js")) continue;
+      const rel = path.relative(root, abs).split(path.sep).join("/");
+      if (rel === excludeRel) continue;
+      let names = symbolHomeCache.get(rel);
+      if (!names) {
+        const f = loadFile(root, rel);
+        names = new Set((f.error ? [] : symbolsOf(rel, f.text)).map((s) => s.name));
+        symbolHomeCache.set(rel, names);
+      }
+      if (names.has(name)) homes.push(rel);
+    }
+  }
+  return homes;
+}
+
+function readSymbols(rel, f, names, remaining, root = null) {
   const syms = symbolsOf(rel, f.text);
   const blocks = [];
   const picked = [];
   for (const name of names) {
     const hits = syms.filter((s) => s.name === name);
-    if (hits.length === 0) {
-      const near = syms.filter((s) => s.name.toLowerCase().includes(name.toLowerCase())).map((s) => s.name);
-      const pool = near.length ? near : syms.slice(0, 30).map((s) => s.name);
-      blocks.push(`FILE: ${rel}#${name}\n[ERROR: symbol not found. ${near.length ? "Similar" : "Available"}: ${pool.join(", ") || "(none)"}]\n`);
-    } else picked.push(...hits);
+    if (hits.length > 0) {
+      for (const s of hits) picked.push({ rel, f, s });
+      continue;
+    }
+    // Imports and re-exports make the declaring file easy to guess wrong. When exactly one
+    // other file declares the symbol, deliver it from there instead of costing a round trip.
+    const homes = root ? findSymbolHomes(root, name, rel) : [];
+    if (homes.length === 1) {
+      const hf = loadFile(root, homes[0]);
+      const homeHits = hf.error ? [] : symbolsOf(homes[0], hf.text).filter((s) => s.name === name);
+      if (!hf.error && homeHits.length > 0) {
+        blocks.push(`FILE: ${rel}#${name}\n[REDIRECT: not declared here; delivered from ${homes[0]}]\n`);
+        for (const s of homeHits) picked.push({ rel: homes[0], f: hf, s });
+        continue;
+      }
+    }
+    const near = syms.filter((s) => s.name.toLowerCase().includes(name.toLowerCase())).map((s) => s.name);
+    const pool = near.length ? near : syms.slice(0, 30).map((s) => s.name);
+    const homeHint = homes.length > 1 ? ` Declared in: ${homes.map((h) => `${h}#${name}`).join(", ")}.` : "";
+    blocks.push(`FILE: ${rel}#${name}\n[ERROR: symbol not found.${homeHint} ${near.length ? "Similar" : "Available"}: ${pool.join(", ") || "(none)"}]\n`);
   }
   const invalidCount = blocks.length;
   const uniquePicked = [...new Map(
-    picked.map((s) => [`${s.name}:${s.start}:${s.end}`, s])
+    picked.map((p) => [`${p.rel}:${p.s.name}:${p.s.start}:${p.s.end}`, p])
   ).values()];
-  const needed = uniquePicked.reduce((n, s) => n + (s.end - s.start + 1), 0);
-  if (needed > remaining) return refuse(rel, f, needed, remaining);
+  const needed = uniquePicked.reduce((n, p) => n + (p.s.end - p.s.start + 1), 0);
+  if (needed > remaining) return refuse(uniquePicked[0]?.rel || rel, uniquePicked[0]?.f || f, needed, remaining);
 
   const refs = [];
   let offset = blocks.reduce((n, block) => n + block.split("\n").length, 0);
   for (let i = 0; i < uniquePicked.length; i++) {
-    const s = uniquePicked[i];
+    const { rel: symRel, f: symFile, s } = uniquePicked[i];
     const block = sourceBlock(
-      rel,
-      `FILE: ${rel}#${s.name} (lines ${s.start}-${s.end} of ${f.lines.length})`,
-      f.lines,
+      symRel,
+      `FILE: ${symRel}#${s.name} (lines ${s.start}-${s.end} of ${symFile.lines.length})`,
+      symFile.lines,
       s.start,
       s.end,
       { group: i }
@@ -232,7 +270,7 @@ function handleRead(arg, { root, remaining }) {
   if (f.error) return errorBlock(rel, f.error);
   const N = f.lines.length;
 
-  if (m[2]) return readSymbols(rel, f, m[2].split(","), remaining);
+  if (m[2]) return readSymbols(rel, f, m[2].split(","), remaining, root);
 
   if (!m[4]) {
     if (N > LIMITS.FULL_READ_MAX) {
