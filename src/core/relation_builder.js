@@ -160,8 +160,10 @@ function compileSingleEquation(spec, formulaStr, count, varsDb, idOverride = nul
   function buildInstantiatedEdge(i, baseFormula, canonicalTex) {
     return {
       id: `${spec.id}__${i}`,
-      masteryId: spec.id,
+      masteryId: spec.masteryId || spec.id,
       name: spec.name,
+      principle: spec.principle || null,
+      application: spec.application || null,
       canonicalTex,
       baseFormula,
       nodes: extractNodesFromFormula(baseFormula),
@@ -208,8 +210,10 @@ function compileSingleEquation(spec, formulaStr, count, varsDb, idOverride = nul
 
   return [{
     id: idOverride || spec.id,
-    masteryId: masteryIdOverride || spec.id,
+    masteryId: masteryIdOverride || spec.masteryId || spec.id,
     name: spec.name,
+    principle: spec.principle || null,
+    application: spec.application || null,
     canonicalTex,
     baseFormula,
     nodes: extractNodesFromFormula(baseFormula),
@@ -228,7 +232,7 @@ function compileVariantMap(variantsSpec, count, varsDb, spec) {
       count,
       varsDb,
       spec.id,
-      spec.id,
+      spec.masteryId || spec.id,
       vSpec.canonicalTex || null
     );
     compiled[sysKey] = {
@@ -263,7 +267,7 @@ export function defineRelation(spec, options = {}) {
     for (let j = 1; j < segments.length; j++) {
       const subFormula = `${segments[0]} = ${segments[j]}`;
       const subId = `${spec.id}__${j}`;
-      const entries = compileSingleEquation(spec, subFormula, count, varsDb, subId, subId, chainTex);
+      const entries = compileSingleEquation(spec, subFormula, count, varsDb, subId, spec.masteryId || subId, chainTex);
       entries.forEach(e => {
         if (compiledVariants) e.variants = compiledVariants;
         out.push(e);
@@ -272,7 +276,7 @@ export function defineRelation(spec, options = {}) {
     return out;
   }
 
-  const entries = compileSingleEquation(spec, rawFormula, count, varsDb, spec.id, spec.id, spec.canonicalTex || null);
+  const entries = compileSingleEquation(spec, rawFormula, count, varsDb, spec.id, spec.masteryId || spec.id, spec.canonicalTex || null);
   entries.forEach(e => {
     if (compiledVariants) e.variants = compiledVariants;
   });

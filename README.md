@@ -1,182 +1,174 @@
 # BSME Reviewer
 
-A graph-based engineering problem generator, symbolic solver, and spaced-repetition reviewer for Mechanical Engineering board-exam subjects (Machine Design, Air Conditioning / HVAC, and Powerplant Design). Every equation is a node in a graph. The engine chains equations into multi-step problems, checks numerical answers, renders textbook-grade derivations, and models cognitive memory curves using golden-ratio ($\phi$) and Fibonacci decay functions.
+A browser-based engineering study application with two modes: **generated engineering problems** and **multiple-choice review/exams**. The problem engine builds multi-step questions from topic relation graphs, uses an in-repository AST-based algebra and unit engine, checks answers, and renders worked LaTeX derivations. The MCQ mode runs repository question banks and user-imported banks. A mastery system records learning activity and influences problem selection and cognitive fading.
 
-- **Stack:** Native ES modules, no bundler, KaTeX (CDN). State persists in `localStorage` (and `IndexedDB` for custom uploaded MCQ sets).
-- **Run:** Serve statically (`python3 -m http.server`) and open `index.html` (ES modules require HTTP/S).
-- **Test:** `npm test` (regenerates `src/topics/index.js` + `src/mcq/index.js` and runs `test/run_test.js`, `test/run_hygiene_test.js`, `test/derivation_matrix_test.js` and the regression suites in Node 22).
-- **Repo Map:** `npm run skeleton` (prints resolved import graph + function/object signatures for AI context).
-- **Context Loop:** `npm run ctx` (fulfills `READ` / `OUTLINE` / `GREP` / `TRACE` requests from `tmp/ctx_req.txt` into `tmp/ctx_res.txt`; tracks delivered context in `tmp/ctx_cache.txt`).
+The current topic catalog is focused on Mechanical Engineering subjects, including Machine Design, HVAC/Air Conditioning, and Powerplant Design. The MCQ system is a separate question-bank format and is not inherently limited to those topics.
+
+- **Runtime:** Browser application using native ES modules; no bundler is required. KaTeX is loaded from a CDN.
+- **Persistence:** Browser-local state uses `localStorage`; user-imported MCQ banks use `IndexedDB`. This is not a server-backed multi-user service.
+- **Run locally:** From the repository root, run `python3 -m http.server` and open `http://localhost:8000`.
+- **Node version:** Use Node.js 22 for the test/tooling workflow.
+- **Canonical verification:** `npm test` regenerates the topic/MCQ registries and runs the configured test suites.
+- **AI context map:** `npm run skeleton` emits a compact repository map. It is an index, not the source code: use the context commands below to inspect implementations.
+- **AI context loop:** `npm run ctx` processes directives in `tmp/ctx_req.txt`, writes results to `tmp/ctx_res.txt`, and maintains the delivery ledger in `tmp/ctx_cache.txt`.
+- **Registry maintenance:** `npm run clean:mcqs` sanitizes repository MCQ data; `npm run gen:registry` regenerates the topic and MCQ manifests. `npm test` runs the configured pipeline.
+- **Patch application:** `npm run apply` applies a patch bundle from `tmp/patch.txt` by default.
 
 ---
 
-## 0. Using this file with an AI model
+## 0. Working with an AI model: repository tools and workflow
 
-When modifying this repository, prompt the model with:
+This section is the quick-start manual for the repository's own AI-assisted workflow. It exists so a model can inspect the relevant implementation and diagnostics early, rather than spending turns asking what tools exist.
+
+### 0.1 What context the model receives
+
+The generated repository skeleton is intentionally slim: normally one line per file, with imports/exports and selected symbol names. It does **not** include full function bodies, complete signatures, or reliable line ranges. The skeleton also embeds a **dynamically trimmed README excerpt**; that excerpt is not this complete README. In the current slim mode it retains the overview, AI tools, engineering rules, architecture, testing, Definition of Done, and commit guidance, while omitting the detailed domain sections 4–9. Treat this file as the full project guide and request the relevant omitted section with `READ README.md:a-b` when needed.
+
+The context loop is a deterministic repository interface for an external AI workflow, not an LLM or autonomous agent embedded in the application. The model supplies directives; the local workflow runs them against this checkout and returns the result. Do not infer implementation details from a filename, symbol name, skeleton summary, or README example. They are navigation hints. Read the real implementation before proposing a code change, and read the exact target before constructing a patch.
+
+### 0.2 Sending context requests
+
+When using the `npm run ctx` workflow, send repository-inspection requests as **one fenced `text` block**, one directive per line, then stop. Do not wrap the directives in XML or explain the request in prose. Batch related requests to reduce round trips.
+
+The current request limits are **16 directives** and **1,024 output lines**. Directives beyond the limit are not run; output beyond the line budget is truncated or refused by the relevant handler. The response header reports the budget used.
+
+Example:
 
 ```text
-You are modifying the BSME Reviewer repository.
-1. Read README.md completely before writing any code. It overrides your defaults.
-2. Always stay in brainstorm mode first: analyze root causes, design general invariants,
-   and confirm alignment. Never write code or emit diffs until given explicit permission
-   to proceed.
-3. Before coding, state: (a) which Hard Rules (section 2) apply, (b) the files you
-   will touch, (c) which tests will prove the change works.
-4. Obey the Engineering Philosophy (section 1): fix root causes, write general invariants,
-   avoid tunnel vision, and never patch symptoms.
-5. Context requests: You only see the Repo Skeleton by default. Request context with a
-   single fenced `text` block, one directive per line, then stop. No XML tags; never
-   ask in prose. Each request has a budget of 16 directives and 1024 output lines.
-   Batch related requests instead of repeatedly requesting context you already have.
-
-   **Everyday navigation (preferred):**
-   - READ path#symbol[,symbol2]   exact function/const bodies; prefer this over line numbers
-   - OUTLINE path                 exact symbol line ranges for one file
-   - GREP [-C n] [-i] [-E] term [@ path[:a-b][,path2[:c-d]...]]
-                                  literal search (regex with -E) with context lines and optional comma-separated scopes;
-                                  an invalid regex or a missing scope is reported by name
-
-   **Domain inspection:**
-   - TOPIC topic                  one-page summary of varsDb, dimensions, relations, and contracts
-   - REGISTRY [units|prefixes|dims|constants|palettes|coupled ...]
-                                  live engine registries; bare REGISTRY returns section row counts
-   - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
-                                  bipartite reachability, degrees of freedom, and unrolled DAG
-   - DERIVE topic rel target [{u}] [sys=SI|US]
-                                  single-step derivation with 4-row tower height and oracle verification
-
-   **Failure investigation:**
-   - FAILURES [topic]             runs the real derivation matrix (same code path as npm test; all topics is slow) and clusters failures by relation and target, with a TRACE-ready minimal example and the boxed/derivation ratio
-   - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
-                                  re-runs one derivation-matrix case through solveUnitAlgebra and
-                                  reports non-canonical scalars with their creating stack frames.
-                                  Paste the failing matrix line verbatim; without seed= both matrix
-                                  seeds are tried. Output is capped at 128 lines.
-
-   **Specialized diagnostics (use when relevant):**
-   - READ path:a-b | path:-N      line range (snaps to an enclosing symbol only if that adds <= 48 lines) | last N lines
-   - READ path                    whole file (only if <= 512 lines; otherwise you get an outline)
-   - UNIT expr                    7D dimensional vector, base scale, offset, and companion
-   - CONVERT unitA -> unitB       factor-label decomposition and canonical scale verification
-   - SOLVE "formula" target       tests CAS variable isolation and isolated LaTeX
-   - HYGIENE [topic|all]          static schema validator (orphans, collisions, native °)
-   - AUDIT-LATEX [topic|"tex"]    KaTeX formatting linter (spacing, commas, %, °)
-   - AUDIT-STEP topic rel target [{u}] [sys=SI|US]
-                                  AST-native structural derivation linter
-   - RENDER-STEP topic rel target visual wireframe and phase-by-phase layout progression
-   - PROBLEM-STEPS topic [sys=SI|US] [seed=N]
-                                  full multi-step problem progression with cognitive fading
-   - STEP-AST topic rel target    AST hierarchy alongside rendered KaTeX
-   - DIFF-STEP topic rel t1 vs t2 structural comparison of isolated formulas or targets
-   - DIFF-DERIVE topic rel target SI-versus-US derivation comparison
-   - ROUNDTRIP-STEP topic rel target [{u}]
-                                  numerical fidelity: AST Physics Eval versus LaTeX Derivation
-
-   **Usage strategy:**
-   - Start with OUTLINE or GREP when the relevant implementation location is unknown.
-   - Note that `GREP` takes a single scope `@ path[:a-b]`; passing multiple paths fails
-     and locks out `GREP` until `OUTLINE` or `TRACE` runs.
-   - Prefer READ #symbol over manually calculated line ranges.
-   - Never extrapolate or guess unseen lines in a `diff` or drop-in replacement; read the
-     exact target lines first before patching an existing file.
-   - For derivation matrix failures, use FAILURES to identify patterns and TRACE to
-     inspect representative failures before theorizing.
-   - Use TOPIC for domain/schema understanding and DERIVE for a specific equation.
-   - Use specialized diagnostics only when their output directly addresses the
-     suspected failure.
-   - Never guess line numbers. Prefer #symbol, or GREP then READ the tagged symbol.
-   - Avoid requesting context already provided in the conversation.
-   - `npm run ctx` records source-line fingerprints and exact computed-output fingerprints in `tmp/ctx_cache.txt`. Repeated requests return a short cache marker; partially overlapping source requests return only unseen lines.
-   - The ledger stores hashes and delivery metadata, never source text. Full READs satisfy later excerpts, but GREP excerpts do not satisfy later full READs. Changed lines and lines moved to different positions are sent again.
-   - `npm run ctx -- --reset` clears the ledger. Running `npm run skeleton` also clears it because the skeleton starts a new context boundary.
-   - When a test fails and the cause is not obvious from reading, investigate before
-     proposing a fix; use TRACE for numerical derivation failures.
-6. Code output convention: When given permission to code, precede single-file blocks
-   with `FILE: path/to/file.ext`. Only `FILE:` lines declare target files. Subsequent
-   `diff` blocks for the same file may omit `FILE:`, whereas a full-file drop-in
-   consumes its header. A `subst` block clears any sticky `FILE:` header.
-
-   Fencing: Use 3-backtick fences for every `diff`, `subst`, and drop-in block. Let N
-   be the longest run of backticks that appears at the start of a line inside the
-   block (inline mentions mid-line do not count). If N >= 3, wrap the entire block
-   in N+1 backticks so nothing inside can close it early.
-
-   Diffs: Use ```diff with 4-character markers (<<<< ==== >>>>) for partial updates
-   (or >= 5 matching chars when the body contains literal 4-char markers).
-
-   Preferred format: put the path in the fence info string (```diff path/to/file.ext, or ```javascript path/to/new_file.js for a full file). One block may hold many hunks; a hunk opener may carry `expect=N` (`<<<< expect=3`, default 1), and a directory path applies the hunk across that scope. A hunk whose replacement is already present is a no-op. The FILE: and subst forms below stay accepted.
-
-   Batch substitutions: Use ```subst scope=<file|dir> expect=N with one literal
-   (<<<< ==== >>>>) hunk to replace all N exact matches atomically across a scope.
-7. Run: npm test (or the node --test command in section 10)
-8. Reply with: files changed.
-9. Remind the user to run the tests.
+OUTLINE src/core/problem_gen.js
+READ src/core/problem_gen.js#buildGraphPath,determineGraphDistance
+TOPIC hvac_air_properties
+GRAPH hvac_air_properties target=SHR sys=SI
 ```
 
-### Canonical Output Examples
+Use paths relative to the repository root and copy topic IDs, relation IDs, matrix cases, and other identifiers from actual output. Do not guess them.
 
-**Context Request:**
+### 0.3 Source-navigation commands
+
+| Directive | What it returns | When to use it |
+|---|---|---|
+| `READ path#symbol[,symbol2]` | Exact extracted JavaScript symbol bodies (functions/constants); multiple symbol names are allowed. | Preferred way to inspect a known implementation unit. |
+| `READ path:a-b` | Requested source-line range; it may snap outward to an enclosing JavaScript symbol when the expansion is no more than 48 lines. | Read a known region or a non-JavaScript file. |
+| `READ path:-N` | Last `N` lines of a file. | Inspect endings, exports, or configuration tails. |
+| `READ path` | Full file when it is within the 512-line full-read limit; larger files return an outline instead. | Small files only. |
+| `OUTLINE path` | JavaScript symbol names and their line ranges for one file. | Find the exact function/constant to read in a large file. |
+| `GREP [-C n] [-i] [-E] term [@ scope[,scope2...]]` | Matching lines with optional context. `-i` is case-insensitive; `-E` treats the term as a JavaScript regular expression; `-C n` adds context lines. | Find call sites, contracts, error strings, and unknown implementation locations. |
+
+`GREP` accepts **multiple comma-separated scopes**, including optional line ranges, for example:
+
 ```text
-READ app.js:1-60
-GREP parseZipArchive
-TRACE hvac_air_properties[SI] eq_shr -> SHR {SHR:dimless, Q_s:Btu/h, Q_l:kW} seed=2
+GREP -i -C 2 requiredUnits @ src/topics,src/core
+GREP -E "build(Graph|SingleGraph)Path" @ src/core/problem_gen.js:1-300
 ```
 
-**Code Diffs (one `FILE:` header per file):**
+A scope must resolve inside the repository and must exist. When no scope is supplied, `GREP` searches the script's configured search roots. If the output is truncated, narrow the scope or reduce context. The old note that multiple scopes fail or lock out `GREP` is obsolete; multi-scope search is supported and covered by `test/ctx_test.js`.
 
-FILE: path/to/file.ext
-```diff 1
+### 0.4 Domain and engine-inspection commands
+
+| Directive | What it inspects | Best use |
+|---|---|---|
+| `TOPIC topic` | One-page summary of a topic's `varsDb`, dimensions, relations, and contracts. | Understand a topic before editing its schema or equations. |
+| `REGISTRY [units\|prefixes\|dims\|constants\|palettes\|coupled ...]` | Live engine registries; bare `REGISTRY` reports section row counts. | Check whether a unit, prefix, dimension, constant, palette, or coupled-variable group already exists. |
+| `GRAPH topic [givens=A,B] [target=X] [sys=SI\|US]` | Relation-graph reachability, degrees of freedom, and an unrolled solution graph. | Check whether a topic can solve a target from candidate givens. |
+| `DERIVE topic rel target [{u}] [sys=SI\|US]` | One relation/target derivation, including the four-row layout constraint and numerical oracle check. | Inspect a single equation's solve direction and rendered conversion steps. |
+| `UNIT expr` | Unit parse, 7D dimensional vector, base scale, affine offset, and companion information. | Diagnose an unknown, malformed, or dimensionally unexpected unit. |
+| `CONVERT unitA -> unitB` | Conversion factor-label decomposition and canonical-scale verification. | Diagnose scale ratios and how a conversion should be represented. |
+| `SOLVE "formula" target` | CAS variable isolation and the isolated expression/LaTeX. | Test whether the formula grammar and algebra isolator can solve for a variable. |
+| `HYGIENE [topic\|all]` | Static topic/schema checks, including orphans, collisions, and native degree-symbol rules. | Check schema and authoring invariants without running the full matrix. |
+
+### 0.5 Failure and derivation diagnostics
+
+| Directive | What it does | Best use |
+|---|---|---|
+| `FAILURES [topic]` | Runs the derivation matrix and groups failures by relation/target; includes a minimal `TRACE`-ready case and boxed-answer/derivation information. The all-topic run can be slow. | Start here when a matrix or generation test fails without an obvious cause. |
+| `TRACE topic[SI\|US] relation -> target {tok:unit, ...} [seed=N]` | Re-runs a supplied matrix case through unit solving and reports non-canonical scalars with the stack frames that created them. Without `seed=`, it tries both matrix seeds. Output is capped at 128 lines. | Use the exact case line from `FAILURES` or test output; do not invent a case. |
+| `AUDIT-LATEX [topic\|"tex"]` | Checks KaTeX/LaTeX formatting conventions such as spacing, commas, percent signs, and degree symbols. | Inspect statement or derivation markup. |
+| `AUDIT-STEP topic rel target [{u}] [sys=SI\|US]` | AST-native structural audit of a single derivation. | Find structural issues that are hard to see in rendered output. |
+| `RENDER-STEP topic rel target` | Shows a visual wireframe and phase-by-phase layout progression for a step. | Diagnose conversion placement and fraction-tower layout. |
+| `PROBLEM-STEPS topic [sys=SI\|US] [seed=N]` | Shows a complete generated problem progression, including cognitive fading. | Inspect how a relation path becomes a learner-facing problem. |
+| `STEP-AST topic rel target` | Shows the expression AST alongside rendered KaTeX. | Compare mathematical structure with its displayed form. |
+| `DIFF-STEP topic rel target1 vs target2` | Structurally compares isolated formulas/targets. | Check whether two solve directions produce consistent structures. |
+| `DIFF-DERIVE topic rel target` | Compares SI and US derivations. | Investigate system-specific behavior. |
+| `ROUNDTRIP-STEP topic rel target [{u}]` | Compares numerical AST physics evaluation with the rendered derivation's numerical result. | Investigate a mismatch between calculation and displayed math. |
+
+The command names and accepted grammar are registered in `scripts/fulfill_ctx.js`; that handler table is the authoritative list. If this README and the handler disagree, inspect the handler and tests, then correct this README.
+
+### 0.6 Recommended investigation sequence
+
+1. **Locate:** Run `OUTLINE` on the likely file, or `GREP` when the implementation location is unknown.
+2. **Understand:** Read the exact symbol with `READ path#symbol`. For topic-level questions, use `TOPIC`, `GRAPH`, and `REGISTRY` as appropriate.
+3. **Reproduce/measure:** Use the narrowest relevant test. For matrix failures, use `FAILURES` and then pass a real failing case to `TRACE`. For derivation layout, use `DERIVE`, `AUDIT-STEP`, `RENDER-STEP`, or `STEP-AST`.
+4. **Design first:** Explain the root cause, general invariant, affected files, and regression test. Stay in brainstorm mode until the user explicitly authorizes code.
+5. **Patch safely:** Read the exact target code before emitting a diff or full-file replacement. Never reconstruct unseen code from the skeleton or from a partial excerpt.
+6. **Verify:** Run the narrow test while iterating, then `npm test` before calling the change complete. Report what was actually run and any failures.
+
+Do not request context already present in the conversation. Prefer symbol reads over hand-calculated line ranges. Use specialized diagnostics only when their output answers the suspected failure; do not run every diagnostic by default.
+
+### 0.7 Context cache behavior
+
+`npm run ctx` maintains a delivery ledger in `tmp/ctx_cache.txt`. It stores hashes and delivery metadata, not source text. Repeated source requests can return a cache marker; overlapping `READ`/`GREP` requests return only source lines not previously delivered. Identical computed diagnostic outputs can also be marked as already delivered. Changed lines and lines at new positions are sent again.
+
+A full `READ` can satisfy a later excerpt request, but a `GREP` excerpt does not satisfy a later full `READ`. Reset the ledger with `npm run ctx -- --reset`. Running `npm run skeleton` starts a new context boundary and clears the ledger.
+
+### 0.8 Applying code changes through the repository patch tool
+
+When the model is not editing the working tree directly, it should emit the repository's patch format; the user can apply it with `npm run apply` (default input: `tmp/patch.txt`). The context directives are for inspection/diagnostics; they do not edit source files. The parser accepts `diff`, `subst`, and full-file drop-in blocks.
+
+- Use a fence labelled `diff path/to/file.ext` for partial edits. A block can contain multiple hunks. Each hunk uses `<<<<` / `====` / `>>>>`; `<<<< expect=N` asserts the exact number of matches (default `1`). A directory path applies a hunk across that scope. A hunk whose replacement is already present is a no-op.
+- Use a fence labelled `subst scope=<file|dir> expect=N` for one literal replacement applied to exactly `N` matches across a scope. It is atomic. Only `diff` and `subst` fences parse hunk markers.
+- Use a `FILE: path/to/file.ext` header followed by a language-fenced full-file block for a complete replacement. `FILE:` declares the target file; a full-file replacement consumes that header. A `subst` block clears a sticky `FILE:` header.
+- Prefer the path in the fence info string. The `FILE:` form remains accepted for full-file replacements and compatibility.
+- Use three-backtick fences for patch blocks. If a block contains a line beginning with a run of `N` backticks where `N >= 3`, fence the outer block with `N+1` backticks.
+- Use four-character hunk markers unless the block itself contains literal four-character markers; then use at least five matching marker characters.
+
+Partial-edit example:
+
+```diff path/to/file.js
 <<<<
-exact old lines
+exact existing lines
 ====
-new lines
->>>>
-```
-```diff 2
-<<<<
-exact old lines
-====
-new lines
+replacement lines
 >>>>
 ```
 
-**Full-File Replacement (use `N+1` if content has `N` backticks):**
+Full-file replacement example:
 
+````markdown
 FILE: path/to/new_file.js
 ```javascript
-// full file content
+// complete replacement file
 ```
+````
+
+The patch parser/applier lives in `scripts/lib/patch_parse.js` and `scripts/lib/patch_apply.js`; `scripts/apply_patch.js` is the CLI entry point. Do not claim a patch was applied unless the tool was actually run and its result checked.
 
 ---
 
-## 1. Engineering Philosophy: Infinite Scaling & Root Causes
+## 1. Engineering Philosophy: General Invariants & Root Causes
 
-Software engineering in this repository is governed by physical/mathematical invariants and **zero-coupling horizontal scaling**:
+The repository is designed around reusable mathematical and software invariants. Treat the following as engineering principles, not as a blanket performance guarantee:
 
-0. **O(1) Architecture (Infinite Scaling):**
-   Adding a new topic or subject must require **zero** edits to central routing, UI, or parent barrel files. Every topic is a self-contained leaf slice discovered automatically into a flat lazy registry (`src/topics/index.js`). Boot cost remains $O(1)$ regardless of curriculum size—only selected topics are fetched on demand.
-
-1. **Fix Root Causes, Never Patch Symptoms (Anti-Whack-a-Mole):**
-   When an unexpected value appears, identify the mathematical breakdown at the foundational layer. Never apply per-variable scalar patches, hardcoded string comparison branches, or localized `if (key === '...')` overrides. When the cause is not obvious, measure it (`TRACE`) instead of guessing.
-2. **Design for General Invariants (Branchless Mathematics):**
-   Prefer abstract mathematical representations over nested `if` statements. Units are affine metric spaces $(s, o)$ with 7D dimensional vectors. Scale parity, companion resolutions, and factor-label decompositions must fall out naturally from continuous equations, not system-specific switches.
-3. **Avoid Tunnel Vision:**
-   Never evaluate a formula in isolation. Ask: *How does this change affect the solution DAG? How does it behave in a MIXED unit problem? Does the derivation reflect the actual arithmetic performed? Will ancestor equations receive reinforcement?*
-4. **Anti-Pattern Blacklist:**
-   - **No string comparisons for physical scale:** Never do `if (u === "°F")` or `if (sys === "US")` to decide absolute temperature targets. Use affine space definitions.
-   - **No hardcoded conversion constants or rounded duplicates:** Never hardcode `2.205`, `3,412.14`, or bespoke test scale arrays. `definitions.js` and `scales.js` are the Single Source of Truth.
-   - **No per-variable conversion logic:** All unit conversions route through the semantic unit AST and dimensional registry.
-   - **No regex-based syntax assertions on math strings:** Tests must validate structural ASTs, balance, and KaTeX rendering. Do not write catch-all regexes like `!/,/.test()` that falsely reject valid math subscripts like $c_{p,w}$ or $m_{m,w}$.
-   - **No fragmentation of coupled state points:** Thermodynamic states of the same working fluid must never be split across incompatible units.
-   - **No bespoke solvers:** If an equation cannot be solved by `solveDAG` and `isolateVariable`, fix the algebraic graph, never write a hardcoded solver.
-   - **No grammar mismatches between producer and consumer:** Any function that emits a unit string must emit a form that every consumer of unit strings parses (see section 6.2).
+1. **Use generated registries instead of hand-maintained indexes.** Topic leaves and MCQ sets are discovered by `scripts/gen_registry.js`, which generates `src/topics/index.js` and `src/mcq/index.js`. Add content in the supported leaf/set layout, regenerate the registries, and let tests verify discovery. Do not claim constant-time startup or zero central-code changes without measuring the actual loading path.
+2. **Fix root causes, not symptoms.** When a value is unexpected, trace the mathematical or data-contract breakdown at the foundational layer. Avoid per-variable scalar patches, hardcoded string branches, and local exceptions that conceal a general defect. Use `TRACE` when the source of a numeric artifact is unclear.
+3. **Prefer general mathematical representations.** Units are represented through dimensional data and scale/offset semantics. Scale parity, affine temperature companions, and factor-label decompositions should arise from shared unit definitions and algorithms, not duplicated per-topic conversion code.
+4. **Avoid tunnel vision.** Evaluate changes across the relation graph, SI/US/MIXED behavior, numerical evaluation, rendered derivations, and mastery propagation where relevant.
+5. **Anti-patterns to avoid:**
+   - Do not branch on unit strings (for example, special-case `°F`) to determine physical scale; use registered unit semantics.
+   - Do not duplicate hardcoded conversion constants or private scale tables. `definitions.js` and `scales.js` are the relevant shared sources of unit/conversion data.
+   - Do not add per-variable conversion logic; route conversions through the unit parser, dimensions, and registry.
+   - Do not use broad regex assertions as substitutes for AST and rendered-math validation.
+   - Keep coupled thermodynamic state outputs in a coherent unit frame where the topic contract requires it.
+   - Do not add topic-specific solvers for equations that should be handled by the shared formula parser, algebra isolator, and graph/problem engine.
+   - Keep unit-string producers compatible with the grammar consumed by the unit parser and derivation builder (see section 6.2).
 
 ---
 
 ## 2. Hard Rules (Non-Negotiable)
 
+These are the repository's authoring and maintenance contracts. Some are checked directly by tests; others are design constraints that reviewers must enforce. Do not assume a rule is tested merely because it appears here. When a rule appears inconsistent with the implementation, inspect the relevant source and tests and update the documentation rather than preserving a stale claim.
+
 ### Math and Formulas
-- **R1. Formulas are nodes.** Equations are declared as relations; variables are edges. `solveDAG` finds the path dynamically. Never write bespoke "solve for X" functions or hardcoded solution orders.
+- **R1. Formulas are nodes.** Equations are declared as relations; variables are edges. The shared graph/problem engine determines usable solve paths. Never write bespoke per-topic "solve for X" functions or hardcoded solution orders.
 - **R2. AST only.** All symbolic operations pass through `src/cas/ast.js` and `src/cas/algebra.js`. No regex rewriting of formulas, no `eval` / `new Function`, no runtime CAS dependencies.
 - **R3. Obey formula language rules (section 5).** Explicit `*`, parenthesised exponents, exactly one `=`, trig arguments must be a bare angle variable.
 - **R4. Case-sensitive canonical keys.** Variable keys match `[A-Za-z][A-Za-z0-9_]*` (`P_d`, `D_P1`, `m_cw`). Never lowercase or normalize keys. LaTeX formatting belongs in `symbol`, never in the canonical key.
@@ -221,7 +213,7 @@ Software engineering in this repository is governed by physical/mathematical inv
   - **Cancellation Hierarchy:** Wrap the highest possible AST node with `\cancel{}`. Whole-unit cancellation ($\cancel{\cfrac{\text{kJ}}{\text{s}}}$) is canonical; component-level cancellation ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}}$) is used only as fallback when components cancel in separate places.
   - **No Fused Scalars:** Every displayed conversion scalar is a decade or a single registered same-dimension atom ratio (optionally raised to an integer power as `(root)^p`). A product of different ratios (e.g. $737.562 \times 0.453592 = 334.553$, or $1000 \times 3600^3$) is never emitted as one number; it is factored per atom pair.
 - **R21. Specific Energy Notation.** Quantities per unit mass ($\text{kJ/kg}$, $\text{Btu/lb}$) strictly use lowercase symbols ($q_A, q_R, w_{net}, h$), reserving uppercase ($Q, W, P$) for total energy or power.
-- **R22. Number formatting & hierarchical display floor.** Displayed values pass through `fmtSigFig` (positional up to 6 significant figures, max 6 decimal places by default); `fmtScale` delegates to it. Computation is never capped: scalars stay at 6 significant figures with no decimal cap. The sampler prefers `MIN_DISPLAY_MAGNITUDE` (0.0995) when choosing units, and non-constant displayed values target `displayFloorOk` (`|v| >= MIN_DISPLAY_FLOOR = 0.001`). When a problem value fails the display test, `generateProblem` resolves it hierarchically and recursively: (1) switch to a smaller (or larger) registered unit scale, (2) backsolve through the DAG (`isolateVariable`) and retry step 1 across all variables, then (3) collect any remaining failing numbers into `sciVars` and render them in scientific notation ($m \times 10^{k}$).
+- **R22. Number formatting & hierarchical display floor.** Displayed values pass through `fmtSigFig` (positional up to 6 significant figures, max 6 decimal places by default); `fmtScale` delegates to it. Computation is never capped: scalars stay at 6 significant figures with no decimal cap. The sampler prefers `MIN_DISPLAY_MAGNITUDE` (0.0995) when choosing units, and non-constant displayed values target `displayFloorOk` (`|v| >= MIN_DISPLAY_FLOOR = 0.001`). When a generated problem value fails the display test, the problem-generation path resolves it hierarchically and recursively: (1) switch to a smaller (or larger) registered unit scale, (2) backsolve through the DAG (`isolateVariable`) and retry step 1 across all variables, then (3) collect any remaining failing numbers into `sciVars` and render them in scientific notation ($m \times 10^{k}$).
 
 ### AI Collaboration, Testing & Process
 - **R23. Never make a red test invisible.** No renaming, skipping, narrowing globs, loosening tolerances, or deleting tests. Fix the root cause.
@@ -234,69 +226,90 @@ Software engineering in this repository is governed by physical/mathematical inv
 
 ## 3. Architecture
 
+This is a small native-ES-module browser application with a Node-based generation, diagnostics, patching, and test toolchain. The following map names the main implementation areas; use `npm run skeleton`, `OUTLINE`, and `READ` for the current exact dependency/symbol details.
+
 ```text
-app.js                       Application shell, mode switch (Problems | MCQ), dropdown & event wiring
-index.html                   DOM structure, KaTeX CDN loader
-styles/                      base.css, components.css, problem.css, mcq.css, modals.css
+app.js                       Browser application shell; Problems/MCQ mode, selectors, and event wiring
+index.html                   DOM structure and KaTeX CDN loader
+styles/                      Base, component, problem, MCQ, and modal styles
 src/
   cas/
-    ast.js                   Lexer, parser, AST walkers, evalAST
-    algebra.js               isolateVariable (onion peeler + linear-rational factoring)
-    latex.js                 AST to LaTeX serializer with explicit spacing
+    ast.js                   Formula lexer/parser, AST walkers, identifier and evaluation helpers
+    algebra.js               Symbolic manipulation and variable isolation
+    latex.js                 AST-to-LaTeX serialization
     units/
-      definitions.js         AffineScale model, 7D dimensional vectors, BASE_UNITS, unitToCancelledTex
-      scales.js              Single Source of Truth: 6-sig-fig scale computation & factor-label decomposition
-      analysis.js            solveUnitAlgebra: token inspection, 4-row tower enforcement, in-situ cancellations
-      evaluator.js           evaluatePhysicalAST: coherent base evaluation & empirical target scaling
+      ast.js                 Unit-expression tokenizer/parser and unit AST
+      definitions.js         Unit registry, dimensions, scales, affine units, and conversion primitives
+      scales.js              Conversion-scale computation and factor-label decomposition
+      analysis.js             Unit-algebra analysis and derivation conversion planning
+      evaluator.js            Physical AST evaluation in coherent units
   core/
-    graph_solver.js          solveDAG, canSolveTarget, pruneSolutionPath (cognitive fading)
-    problem_gen.js           generateProblem: autonomous graph unrolling, neatness pass, statement builder
-    unit_sampler.js          40/40/20 distribution, coupled variable coherence, inverse-token probability
-    derivation.js            buildAlignedDerivation: no-comma spacing, additive unit factoring, factor-labels
-    dimensions.js            DIMENSIONS, fmtSigFig, formatGivenValue, targetLabel
-    topic_mix.js             Tournament targeting over multi-topic review pools
-  mastery/                   constants.js (phi, fib), engine.js, storage.js
+    constants_registry.js    Registered physical constants and their units
+    dimensions.js             Dimension definitions and numeric/display tolerances
+    relation_builder.js       Formula/relation compilation and indexed-variable expansion
+    graph_solver.js           Target reachability for topic relation graphs
+    problem_gen.js            Problem path construction, generated values, and statement building
+    derivation.js              Worked derivation construction
+    unit_sampler.js            Unit-system inference, candidate selection, and problem-unit planning
+    unit_catalog.js            Unit catalog, unit chips, and conversion-card data
+    topic_mix.js               Multi-topic relation-share logic
+  mastery/
+    constants.js              Phi/Fibonacci schedules and learning thresholds
+    engine.js                 Mastery updates, decay, and ancestor reinforcement/penalties
+    storage.js                Browser-local mastery and topic-tick persistence
+    index.js                  Mastery exports
   mcq/
-    index.js                 AUTO-GENERATED flat lazy registry (MCQ_MANIFEST + loadMcqSet)
-    engine.js                Batch selection, 4-choice distractor sampling, adaptive 1x4/2x2/4x1 grid, phi mastery
-    zip_reader.js            Zero-dependency ZIP archive reader (native DecompressionStream)
-    custom_store.js          IndexedDB persistence for user-uploaded .json / .zip MCQ sets
-    <subject>/<set>/         set.json + optional assets/ images
-  ui/
-    problem_view.js          Computational problem renderer & step checker
-    mcq_view.js              Instant Check (1-by-1) & Exam Sheet (scrollable, adaptive grid, in-place grading)
-    sidebar_view.js          Oklab mastery drawer & mastery export/import
-    carousel_view.js         Formula reference & variable isolator
-    tooltip_view.js          Interactive variable tooltips
+    index.js                  Generated MCQ manifest and set loaders
+    engine.js                 Batch selection, distractors, and study/exam session data
+    zip_reader.js              Zero-dependency ZIP archive reader
+    custom_store.js             IndexedDB persistence for imported question banks
   topics/
-    index.js                 AUTO-GENERATED flat lazy registry (TOPIC_MANIFEST + loadTopic)
-    <subject>/<topic>/       index.js, schema.js, relations.js, system.js (strict leaf slices)
+    index.js                  Generated topic manifest and topic loaders
+    <subject>/<category>/<topic>/  Topic leaf data and implementation (see section 4)
+    <subject>/common/          Shared schemas and relations used by related topics
+  ui/
+    problem_view.js            Generated-problem display and step checking
+    mcq_view.js                MCQ setup, study, exam, timer, and results views
+    sidebar_view.js            Mastery sidebar and mastery visualization
+    carousel_view.js           Formula/reference carousel and variable isolation UI
+    tooltip_view.js            Variable tooltips
+    unit_card_view.js          Unit detail cards
+    unit_click_view.js         Interactive unit-click wiring
+    xmb_model.js                XMB picker interaction model
+    xmb_picker_view.js          XMB unit picker UI
 scripts/
-  apply_patch.js             Applies FILE:/diff/subst patch bundles (npm run apply, default tmp/patch.txt)
-  quiet_reporter.js          Errors-only node:test reporter emitting failing leaves + summary
-  gen_registry.js            Auto-discovers leaf topics & MCQ sets -> emits src/topics/index.js & src/mcq/index.js
-  repo_skeleton.js           Generates resolved import graph + symbol signatures
-  fulfill_ctx.js             Fulfills READ/OUTLINE/GREP/TRACE context requests into tmp/ctx_res.txt
-  trace_case.js              TRACE worker: re-runs one matrix case with push/fill hooks (spawned by fulfill_ctx.js)
+  clean_mcqs.js                Sanitizes repository MCQ sets before registry generation
+  gen_registry.js              Discovers topic leaves and MCQ sets; generates both registries
+  repo_skeleton.js             Emits the compact repository map and trimmed README excerpt
+  fulfill_ctx.js               Parses and fulfills the repository context directives
+  trace_case.js                Runs one derivation-matrix trace case
+  apply_patch.js               CLI for applying patch bundles
+  quiet_reporter.js             Compact node:test reporter
   lib/
-    patch_parse.js           Strict FILE:/diff/subst/fence parser
-    patch_apply.js           Atomic in-memory diff/subst/file applier with LF normalization
-    symbols.js               Top-level symbol extraction for READ #symbol / OUTLINE
-    trace_parse.js           Parses a matrix case line into topic, system, relation, target, units, seed
-    trace_hooks.js           recordNumericPushes: temporary Array.prototype.push/fill hooks, always restored
+    ctx_cache.js               Context-delivery fingerprint ledger
+    ctx_tools.js               Topic/registry/graph/unit/derivation diagnostic handlers
+    patch_parse.js              Patch-bundle parser
+    patch_apply.js              Patch-bundle applier
+    symbols.js                  JavaScript symbol extraction for READ/OUTLINE
+    trace_parse.js               Matrix-case parser
+    trace_hooks.js               Numeric push/fill tracing hooks
+
 test/
-  validator.js               Topic schema, dual-system AST inversion, and numerical fidelity harness
-  run_test.js                Universal property invariants, alien scale detector, derivation rendering
-  run_hygiene_test.js        In-tree dead code, invariants, schema orphans, duplicates, alias collisions
-  derivation_matrix_test.js  Every topic x system x relation x target under pairwise unit coverage
-  matrix_helpers.js          Shared seeded RNG, unit levels, covering rows, restate, collectSteps
-  latex_oracle.js            Derivation LaTeX evaluated numerically against the boxed answer
-  mcq_test.js                MCQ registry, image asset existence, grid classifier, and ZIP unpacker tests
-  ctx_test.js                fulfill_ctx.js and symbol extraction regressions
-  trace_test.js              TRACE parsing, hook restoration, malformed-request rejection
-  rate_parts_test.js         Parenthesised rate targets decompose into canonical per-part ratios
-  section_d_test.js          Atom-soup targets route to the per-atom compound builder
+  run_test.js                   Main application, solver, derivation, and integration regression suite
+  run_hygiene_test.js            Topic/schema and repository hygiene checks
+  derivation_matrix_test.js      Relation/target/system/unit derivation matrix
+  matrix_worker.js               Worker used by matrix tests and diagnostics
+  matrix_helpers.js              Seeded matrix generation and derivation assertions
+  latex_oracle.js                Numerical checks of rendered derivation LaTeX
+  validator.js                   Topic schema, equation inversion, and numerical checks
+  mcq_test.js                    MCQ registry, image, grid, and ZIP-reader test helper
+  ctx_test.js                    Context command and symbol-extraction regressions
+  trace_test.js                  TRACE parsing and hook-restoration regressions
+  Other focused tests             Unit catalog, unit-frame coherence, topic mixing, cache equivalence,
+                                 prefix/rate parsing, patch format/application, reporter, and XMB model
 ```
+
+The generated registries are outputs: **do not hand-edit** `src/topics/index.js` or `src/mcq/index.js`. Edit the leaf topic or MCQ data, then run the registry-generation/test workflow.
 
 ---
 
@@ -306,7 +319,7 @@ test/
 
 | Field | Required | Type | Meaning |
 |---|---|---|---|
-| `id` | Yes | `string` | Unique identifier; must equal its export key in `<SUBJECT>_TOPICS`. |
+| `id` | Yes | `string` | Globally unique topic identifier used by the generated `TOPIC_MANIFEST` and selectors. |
 | `title` | Yes | `string` | Dropdown label. |
 | `subject` | Yes | `string` | Dropdown level 1 (e.g. `"Powerplant Design"`). |
 | `category` | No | `string|null` | Dropdown level 2 subfolder, or `null` if standalone under subject. |
@@ -365,7 +378,7 @@ Export the topic frozen: `export const myTopic = Object.freeze({...});`.
 ```javascript
 export function createMySystem({ sys = "SI" } = {}) {
   // 1. Generate independent ground truth using textbook-friendly inputs
-  // 2. Perform explicit arithmetic by hand (never invoke solveDAG or unit engine)
+  // 2. Compute independent ground truth with explicit arithmetic; do not call the solver or unit engine
   // 3. Return sys, _names, _u, and numerical values for all non-abstract varsDb keys
   return {
     sys: "SI",
@@ -454,16 +467,21 @@ $$\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{B
 
 ## 7. Direction-Agnostic Synthesis & Natural Cognitive Fading
 
-### 7.1 Direction-Agnostic Graph Unrolling
-Topics have no fixed starting or ending variables. The generator treats every relation network as an undirected bipartite graph:
-- `generateAutonomousProblem` prioritizes the learner's weakest relations and samples any valid variable as the dynamic deliverable (`goalVar`).
-- `determineGraphDistance(mastery)` scales chain length monotonically via Fibonacci hops (`0` $\to$ `1` $\to$ `2` $\to$ `3` $\to$ `5` $\to$ `8` $\to$ `21`) as mastery increases.
-- `solveDAG` resolves paths forwards, backwards, or diagonally from the minimal pruned givens.
+### 7.1 Relation-graph problem construction
 
-### 7.2 Cognitive Fading Step Hiding
-- **Beginner ($< \text{FADING THRESHOLD} \approx 76.4\%$):** Short 0–1 hop problems; every intermediate step is actively prompted.
-- **Advanced ($\ge \text{FADING THRESHOLD}$):** Multi-hop interconnected chains; mastered intermediate steps are **literally hidden** from the solution steps and omitted from statement prompts. The learner calculates intermediate states independently to solve the dynamic active deliverable.
-- **Ancestry Propagation:** Submitting a correct active step reinforces all its faded ancestor equations. Failing or revealing an active step penalizes faded ancestors so scaffolding reappears on future problems.
+Topics provide a variable schema, relation network, and a `createSystem` ground-truth generator. The shared problem engine uses those relations and the active unit-system context to construct solvable paths and choose problem deliverables; topics should not encode a fixed sequence of givens and goals.
+
+- `canSolveTarget` in `src/core/graph_solver.js` checks whether a target is reachable from candidate givens for the active system/state.
+- `determineGraphDistance` in `src/core/problem_gen.js` uses mastery to influence the intended problem-chain depth. The progression is Fibonacci-based rather than a fixed topic-specific hop count.
+- Problem-path construction and statement building live in `src/core/problem_gen.js`. Use `PROBLEM-STEPS` to inspect the actual sequence for a topic/seed; do not infer generated behavior from the README alone.
+
+### 7.2 Cognitive fading and mastery propagation
+
+- **Lower mastery:** Problems generally expose more intermediate prompts and use shorter paths, providing more scaffolding.
+- **Higher mastery:** The engine can use longer relation chains and hide mastered intermediate steps from the learner-facing prompt/solution flow, leaving the active deliverable to be solved.
+- **Ancestry propagation:** The mastery engine exposes ancestor reinforcement and penalty logic. Correct work can reinforce faded prerequisite relations; failures or reveals can reduce ancestor mastery and allow scaffolding to return.
+
+The exact threshold and hop schedule are defined in `src/mastery/constants.js`; inspect that source before changing thresholds or describing a precise percentage. Use `PROBLEM-STEPS` and the mastery tests to verify user-visible behavior.
 
 ---
 
@@ -484,10 +502,10 @@ Topics have no fixed starting or ending variables. The generator treats every re
 
 ## 9. Authoring Guide & Blueprint for New Topics & Subjects
 
-Every topic follows a strict **4-File Domain Architecture** under `src/topics/<subject>/<topic_name>/`. New material must be mathematically closed, unit-coherent, and independently verifiable against textbook ground truth.
+New topic leaves should follow the repository's **4-file Domain Architecture** under `src/topics/<subject>/<category>/<topic_name>/` (the category segment may be omitted for standalone topics). New material must be mathematically closed, unit-coherent, and independently verifiable against textbook ground truth.
 
 ```text
-src/topics/<subject>/<topic_name>/
+src/topics/<subject>/<category>/<topic_name>/  # optional category segment
 ├── index.js       # Topic manifest, categorization, and engine wiring
 ├── schema.js      # Scoped variable dictionary (dimensions, units, aliases)
 ├── relations.js   # Invertible physics relations (nodes, baseFormula, canonicalTex)
@@ -498,14 +516,15 @@ src/topics/<subject>/<topic_name>/
 
 ```javascript
 /**
- * src/topics/<subject>/<topic>/index.js
+ * src/topics/<subject>/<category>/<topic>/index.js
+ * (omit <category> for standalone topics)
  */
 import { MY_TOPIC_VARS_DB } from "./schema.js";
 import { MY_TOPIC_RELATIONS } from "./relations.js";
 import { createMyTopicSystem } from "./system.js";
 
 export const myTopic = Object.freeze({
-  id: "<subject>_<topic_name>",             // Globally unique key, matching TOPICS export
+  id: "<subject>_<topic_name>",             // Globally unique ID used by the generated registry
   title: "Topic Display Title",             // Level 3 dropdown label
   subject: "Subject Name",                  // Level 1 dropdown category (e.g. "Powerplant Design")
   category: "Subcategory Name",             // Level 2 folder (or null if standalone under subject)
@@ -521,9 +540,10 @@ export const myTopic = Object.freeze({
 
 ```javascript
 /**
- * src/topics/<subject>/<topic>/schema.js
+ * src/topics/<subject>/<category>/<topic>/schema.js
+ * (omit <category> for standalone topics)
  */
-import { DIMENSIONS } from "../../../core/dimensions.js";
+import { DIMENSIONS } from "../../../../core/dimensions.js"; // nested category topic; standalone topics climb one fewer level
 
 export const MY_TOPIC_VARS_DB = Object.freeze({
   "P_out": {
@@ -565,7 +585,8 @@ export const MY_TOPIC_VARS_DB = Object.freeze({
 
 ```javascript
 /**
- * src/topics/<subject>/<topic>/relations.js
+ * src/topics/<subject>/<category>/<topic>/relations.js
+ * (omit <category> for standalone topics)
  */
 export const MY_TOPIC_RELATIONS = Object.freeze([
   {
@@ -613,7 +634,8 @@ export const MY_TOPIC_RELATIONS = Object.freeze([
 
 ```javascript
 /**
- * src/topics/<subject>/<topic>/system.js
+ * src/topics/<subject>/<category>/<topic>/system.js
+ * (omit <category> for standalone topics)
  */
 import { MY_TOPIC_VARS_DB } from "./schema.js";
 
@@ -640,7 +662,7 @@ export function createMyTopicSystem({ sys = "SI" } = {}) {
 ### 9.5 Automatic Discovery & Verification
 
 1. Do **not** create subject/category barrel `index.js` files or edit `src/topics/index.js` or `src/mcq/index.js` manually.
-2. Run `npm test` — `scripts/gen_registry.js` auto-registers your leaf `index.js` (and `src/mcq/` `.json` sets) and verifies 0 failures across dual-system inversion ($< 0.1\%$), zero schema orphans, zero alias collisions, zero barrel leaks, and the derivation matrix (every relation and target under pairwise unit coverage, with only canonical conversion scalars).
+2. Run `npm test` — the configured workflow cleans MCQ sets, regenerates the topic and MCQ registries, and runs the test suites. The tests cover schema hygiene, equation inversion, numerical fidelity, derivation rendering, and pairwise unit/system cases; consult the actual test output rather than assuming a blanket guarantee from the README.
 3. If the matrix reports failures, each line ends in `seed=N`; paste it into a `TRACE` directive (section 0) to see where the offending scalar is created.
 
 ### 9.6 Authoring MCQ Sets (`src/mcq/`)
@@ -705,41 +727,38 @@ src/mcq/<subject>/<set_name>/
 
 ## 10. Testing & Invariant Verification Suite
 
-Run `npm test` (regenerates registries and executes all suites with the quiet reporter):
+Run **`npm test`** as the canonical full verification command. It performs the repository's MCQ cleaning/registry-generation steps and then runs the configured Node test suites with the quiet reporter. Use Node.js 22.
+
+For a focused regression while iterating, run an individual test file directly, for example:
 
 ```bash
-node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/run_hygiene_test.js \
-  test/derivation_matrix_test.js test/rate_parts_test.js test/shared_token_sum_test.js test/patch_test.js test/trace_test.js \
-  test/section_d_test.js test/sibling_markup_test.js test/memo_equivalence_test.js test/unit_catalog_test.js test/xmb_model_test.js test/patch_format_test.js test/prefix_policy_test.js test/ctx_test.js test/reporter_test.js
+node --test test/ctx_test.js
+node --test test/unit_catalog_test.js
+node --test test/derivation_matrix_test.js
 ```
 
-On Windows `cmd.exe` (where `npm test` POSIX shell syntax does not run directly):
+`test/derivation_matrix_test.js` supports the `MATRIX_TOPIC` environment variable for a single-topic matrix run. Use the command documented in the current package scripts or inspect the test file before relying on a platform-specific shell example. `npm test` remains the final verification command.
 
-```cmd
-:: Fast pre-matrix check & single-topic matrix (<2s)
-npm run clean:mcqs && npm run gen:registry
-node --test test/run_hygiene_test.js test/unit_catalog_test.js test/run_test.js
-set MATRIX_TOPIC=<topic_id>&& node --test test/derivation_matrix_test.js && set MATRIX_TOPIC=
-```
-
-| Suite | Invariant Verified |
+| Suite or helper | Primary responsibility |
 |---|---|
-| `test/run_test.js` | **Universal Round-Trip Invariant:** $u \to \text{base} \to u$ identity across all registered units. <br>**Alien Scale Factor Detector:** Queries `scales.js` (`isCanonicalScaleFactor`) to reject any lumped or unfamiliar conversion scalars without bespoke test lists. <br>**Direction-Agnostic Synthesis:** Dynamic longest-path generation at high mastery, natural step hiding, 4-row tower cap, and encompassing cancellations. |
-| `test/run_hygiene_test.js` | Zero legacy shadows, exact $\phi$/Fibonacci progressions, zero schema orphan variables, zero duplicate formulas within topics, zero alias collisions across `varsDb`, cross-subject commonality rules, and native `°` symbols (no `\circ`). |
-| `test/derivation_matrix_test.js` | **Derivation Matrix:** Layer 1 re-runs every topic x system x relation x solvable target under pairwise (2-wise) unit coverage; Layer 2 runs seeded `generateProblem` trials across SI, US, and MIXED systems and mastery levels. Both verify `evaluatePhysicalAST`, `validateDerivationLatex`, numerical derivation match (`latex_oracle.js`), and `isCanonicalScaleFactor`. All failures are collected and grouped; each carries `seed=N` for `TRACE`. |
-| `test/rate_parts_test.js` | Parenthesised rate targets (`ft-lb_f/(lb_m)`, `kJ/(s)`) decompose into canonical numerator and denominator ratios; a `1/(...)` target is not split into a unit-less numerator. |
-| `test/shared_token_sum_test.js` | A token shared by a sum's sibling term and the rest of the expression keeps the target unit (restating `I` to in^4 must not leave the derivation in inches). |
-| `test/section_d_test.js` | Atom-soup targets route to the per-atom compound builder; `Q_s / (Q_s + Q_l)` with `Btu/h` and `kW` yields only canonical scalars. |
-| `test/unit_catalog_test.js` | Unit catalog derived from the registry (one category per base unit, chip round-trips), canonical factor trains checked by the LaTeX oracle, affine and refusal cases, interactive-unit statement spans. |
-| `test/xmb_model_test.js` | XMB motion model: simultaneous two-axis drag, continuity, per-column memory, settling on integers, frame-rate independence, wheel, keys, reduced motion. |
-| `test/memo_equivalence_test.js` | Cached `isolateVariable` and `resolveUnitToken` equal their uncached computations; unit lookup tables match the legacy first-match scans; cached values are frozen. |
-| `test/sibling_markup_test.js` | Tokens appearing only in later terms of a sum receive the sibling analysis's cancelled markup, not the main-pass placeholder. |
-| `test/prefix_policy_test.js` | Prefix permission is registry data: a (prefix, base) pair resolves exactly when listed in `prefixes`; non-standard strings (`ks`, `kBtu`) are unknown; every palette unit still parses. |
-| `test/patch_format_test.js` | Unified patch format: path in the fence info string, many hunks per block, per-hunk `expect=N`, directory paths, legacy forms, dry-run staging, failure atomicity. |
-| `test/patch_test.js` | Patch parser & applier: `diff`, `subst` exact counts, atomicity, N+1 fences, headers |
-| `test/reporter_test.js` | Quiet test reporter: suppresses passing tests, prints leaf failures without suite wrapper duplication |
-| `test/trace_test.js` | Matrix case-line parsing, numeric push/fill recording, `Array.prototype` restoration after a throw, and rejection of malformed `TRACE` requests. |
-| `test/ctx_test.js` | `fulfill_ctx.js` and symbol extraction: exact ranges, symbol-addressed `READ`, range snapping and its growth cap, budget enforcement, large-file outlining, `GREP` context, regex and multi-scope `GREP`, `REGISTRY` sections. |
+| `test/run_test.js` | Main integration/property suite: topic generation, algebra, unit behavior, derivation output, UI integration, mastery, and MCQ helper tests. |
+| `test/run_hygiene_test.js` | Topic/schema hygiene, orphan and duplicate checks, alias collisions, shared-relation rules, and notation constraints. |
+| `test/derivation_matrix_test.js` | Relation/target/system coverage under pairwise unit combinations and seeded generated-problem trials; failures include a `TRACE`-ready case. |
+| `test/matrix_worker.js`, `test/matrix_helpers.js` | Worker and shared helpers used by matrix coverage; not standalone user-facing features. |
+| `test/latex_oracle.js`, `test/validator.js` | Numerical LaTeX oracle and topic/equation validation helpers. |
+| `test/ctx_test.js` | Context directive parsing, READ/OUTLINE/GREP behavior, budgets, range snapping, multi-scope GREP, and registry sections. |
+| `test/trace_test.js` | TRACE case parsing, numeric hooks, hook restoration, and malformed-request handling. |
+| `test/mcq_test.js` | MCQ registry, image asset, grid classifier, and ZIP reader helper coverage, invoked by the main test suite. |
+| `test/unit_catalog_test.js`, `test/unit_frame_coherence_test.js` | Unit catalog behavior and coherent unit frames for coupled variables. |
+| `test/topic_mix_test.js` | Multi-topic mixing/relation-share behavior. |
+| `test/memo_equivalence_test.js` | Cached versus uncached algebra/unit lookup equivalence. |
+| `test/prefix_policy_test.js`, `test/rate_parts_test.js`, `test/section_d_test.js`, `test/shared_token_sum_test.js`, `test/sibling_markup_test.js` | Focused unit grammar, scale decomposition, sibling-term conversion, and derivation markup regressions. |
+| `test/patch_test.js`, `test/patch_format_test.js` | Patch parsing/application, supported fence formats, exact-match counts, and atomicity. |
+| `test/reporter_test.js` | Quiet reporter behavior. |
+| `test/xmb_model_test.js` | XMB picker motion/interaction model. |
+| `test/skeleton_test.js` | Repository skeleton generation/shape. |
+
+When a test fails, do not immediately edit the first line that appears suspicious. Read the failing assertion, inspect the implementation, and select the diagnostic that can distinguish competing root causes. For numerical derivation-matrix failures, start with `FAILURES` and follow with `TRACE` using the exact failing line.
 
 ---
 

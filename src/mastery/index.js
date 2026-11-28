@@ -5,4 +5,5 @@
 
 export * from "./constants.js";
 export * from "./storage.js";
+export * from "./taxonomy.js";
 export * from "./engine.js";

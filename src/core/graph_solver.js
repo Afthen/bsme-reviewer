@@ -70,6 +70,8 @@ export function solveDAG(givensArray, S, relations = [], varsDb = {}, getMastery
           id: eq.id,
           eqId: eq.id,
           masteryId: eq.masteryId || eq.id,
+          principle: eq.principle || null,
+          application: eq.application || null,
           eqName: eq.name,
           baseFormula,
           canonicalTex,
@@ -147,7 +149,13 @@ export function pruneSolutionPath(steps = [], goalVar = null, getMastery = () =>
   solution.forEach(step => {
     const isTerminal = terminalSet.has(step.targetVar);
     const mId = step.masteryId || step.eqId || step.id;
-    const eqObj = { id: mId, masteryId: mId, baseFormula: step.baseFormula };
+    const eqObj = {
+      id: mId,
+      masteryId: mId,
+      baseFormula: step.baseFormula,
+      principle: step.principle,
+      application: step.application
+    };
     const mastery = getMastery(eqObj);
 
     if (!isTerminal && mastery >= FADING_THRESHOLD) {

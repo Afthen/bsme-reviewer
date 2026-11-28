@@ -23,10 +23,11 @@ export function relationWeaknessWeight(mastery = 0) {
 }
 
 export function determineGraphDistance(mastery, maxDepth = Infinity) {
-  if (mastery < phi(-2)) return 0;
-  if (mastery < phi(-1)) return 1;
-  if (mastery < FADING_THRESHOLD) return 2;
-  if (mastery < 1 - phi(-4)) return Math.min(fib(4), maxDepth);
+  // Baseline floor of 1 hop ensures beginners encounter scaffolded multi-step problems (Option A)
+  if (mastery < phi(-2)) return Math.min(1, maxDepth);
+  if (mastery < phi(-1)) return Math.min(2, maxDepth);
+  if (mastery < FADING_THRESHOLD) return Math.min(fib(4), maxDepth);
+  if (mastery < 1 - phi(-4)) return Math.min(fib(5), maxDepth);
   if (mastery < 1 - phi(-5)) return Math.min(fib(5), maxDepth);
   if (mastery < 1 - phi(-6)) return Math.min(fib(6), maxDepth);
   return Math.min(fib(8), maxDepth);
@@ -48,7 +49,7 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
   scoredNodes.sort((a, b) => b.key - a.key);
 
   const meanMastery = scoredNodes.reduce((sum, s) => sum + s.mastery, 0) / (scoredNodes.length || 1);
-  const isHighMastery = meanMastery >= FADING_THRESHOLD;
+  const desiredHops = determineGraphDistance(meanMastery, relations.length);
   const bestCandidates = [];
 
   for (const { node: targetNode, mastery } of scoredNodes) {
@@ -62,7 +63,7 @@ export function generateAutonomousProblem(relations, S, varsDb = {}, getMastery 
 
       const problem = buildGraphPath(targetNode, goalVar, relations, S, mastery, varsDb);
       if (problem) {
-        if (!isHighMastery) return problem;
+        if (problem.hopDistance >= desiredHops) return problem;
         bestCandidates.push(problem);
       }
     }
@@ -189,7 +190,8 @@ function buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, 
 }
 
 function buildGraphPath(targetNode, goalVar, relations, S, targetMastery, varsDb = {}) {
-  const TRIALS = targetMastery >= FADING_THRESHOLD ? fib(5) : 1;
+  // Always explore multiple candidate expansion paths rather than settling for dead-end 0-hop relations
+  const TRIALS = Math.max(fib(4), targetMastery >= FADING_THRESHOLD ? fib(5) : fib(4));
   let bestOfAll = null;
   for (let t = 0; t < TRIALS; t++) {
     const prob = buildSingleGraphPath(targetNode, goalVar, relations, S, targetMastery, varsDb);

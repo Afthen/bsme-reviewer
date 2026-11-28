@@ -6,7 +6,7 @@
  * - View scope toggle: "Current Problem" vs "All Selected Topics"
  */
 
-import { FADING_THRESHOLD } from "../mastery/index.js";
+import { FADING_THRESHOLD, getRelationTaxonomy, PRINCIPLES, APPLICATIONS } from "../mastery/index.js";
 
 export const MASTERY_CHANGED_EVENT = "bsme:mastery-changed";
 
@@ -14,6 +14,7 @@ let activeCurrentRelations = [];
 let activeAllRelations = [];
 let activeGetMastery = () => 0;
 let sidebarScope = "current"; // "current" | "all"
+let sidebarViewMode = "hierarchy"; // "hierarchy" | "flat"
 let scopeLabels = { current: "Current Problem", all: "All Selected" };
 let isInitialized = false;
 
@@ -126,6 +127,12 @@ function renderMasteryView() {
     btnAll.style.flex = "1";
     btnAll.style.fontSize = "0.72rem";
 
+    const btnMode = document.createElement("button");
+    btnMode.id = "sidebar-btn-mode-toggle";
+    btnMode.className = "btn";
+    btnMode.style.flex = "0.7";
+    btnMode.style.fontSize = "0.72rem";
+
     btnCurrent.addEventListener("click", () => {
       sidebarScope = "current";
       updateBtnStyles();
@@ -138,13 +145,20 @@ function renderMasteryView() {
       renderMasteryView();
     });
 
-    toggleBar.append(btnCurrent, btnAll);
+    btnMode.addEventListener("click", () => {
+      sidebarViewMode = sidebarViewMode === "hierarchy" ? "flat" : "hierarchy";
+      updateBtnStyles();
+      renderMasteryView();
+    });
+
+    [btnCurrent, btnAll, btnMode].forEach(b => toggleBar.appendChild(b));
     el.parentElement?.prepend(toggleBar);
   }
 
   function updateBtnStyles() {
     const btnCurrent = document.getElementById("sidebar-btn-scope-current");
     const btnAll = document.getElementById("sidebar-btn-scope-all");
+    const btnMode = document.getElementById("sidebar-btn-mode-toggle");
     if (btnCurrent) {
       btnCurrent.textContent = scopeLabels.current;
       btnCurrent.style.background = sidebarScope === "current" ? "var(--border)" : "transparent";
@@ -154,6 +168,11 @@ function renderMasteryView() {
       btnAll.textContent = scopeLabels.all;
       btnAll.style.background = sidebarScope === "all" ? "var(--border)" : "transparent";
       btnAll.style.color = sidebarScope === "all" ? "#fff" : "var(--text-muted)";
+    }
+    if (btnMode) {
+      btnMode.textContent = sidebarViewMode === "hierarchy" ? "Hierarchy" : "Flat";
+      btnMode.style.background = "var(--border-subtle)";
+      btnMode.style.color = "#fff";
     }
   }
 
@@ -174,7 +193,193 @@ function renderMasteryView() {
     return activeGetMastery(a) - activeGetMastery(b);
   });
 
-  renderMasteryBars(el, sorted, activeGetMastery);
+  if (sidebarViewMode === "hierarchy") {
+    renderHierarchicalMasteryBars(el, sorted, activeGetMastery);
+  } else {
+    renderMasteryBars(el, sorted, activeGetMastery);
+  }
+}
+
+/**
+ * Renders the 3-Tier Conceptual Mastery Hierarchy:
+ *   Principle -> Application -> Concrete Instance
+ */
+export function renderHierarchicalMasteryBars(container, relations = [], getMastery = () => 0) {
+  if (!container) return;
+  container.innerHTML = "";
+
+  // Group relations by Principle and Application
+  const principleGroups = new Map();
+
+  relations.forEach(rel => {
+    const tax = getRelationTaxonomy(rel);
+    const pId = tax?.principleId || "principle_other";
+    const aId = tax?.applicationId || "app_other";
+
+    if (!principleGroups.has(pId)) {
+      principleGroups.set(pId, new Map());
+    }
+    const appMap = principleGroups.get(pId);
+    if (!appMap.has(aId)) {
+      appMap.set(aId, []);
+    }
+    appMap.get(aId).push(rel);
+  });
+
+  // Calculate aggregated scores and sort principles from weakest to strongest
+  const principleList = Array.from(principleGroups.entries()).map(([pId, appMap]) => {
+    const allRels = Array.from(appMap.values()).flat();
+    const avgMastery = allRels.reduce((sum, r) => sum + getMastery(r), 0) / (allRels.length || 1);
+    const pMeta = Object.values(PRINCIPLES).find(p => p.id === pId) || { name: "General Engineering Principle" };
+    return { pId, pName: pMeta.name, avgMastery, appMap, allRels };
+  }).sort((a, b) => a.avgMastery - b.avgMastery);
+
+  principleList.forEach(({ pId, pName, avgMastery, appMap }) => {
+    const pBox = document.createElement("div");
+    pBox.className = "mastery-principle-box";
+    pBox.style.marginBottom = "0.85rem";
+    pBox.style.border = "1px solid var(--border-subtle)";
+    pBox.style.borderRadius = "4px";
+    pBox.style.padding = "0.4rem 0.5rem";
+    pBox.style.background = "rgba(255, 255, 255, 0.02)";
+
+    const pHeader = document.createElement("div");
+    pHeader.style.display = "flex";
+    pHeader.style.justifyContent = "space-between";
+    pHeader.style.alignItems = "center";
+    pHeader.style.marginBottom = "0.25rem";
+    pHeader.style.cursor = "pointer";
+
+    const pTitle = document.createElement("strong");
+    pTitle.style.fontSize = "0.78rem";
+    pTitle.style.color = "#fff";
+    pTitle.textContent = pName;
+
+    const pPct = document.createElement("span");
+    pPct.style.fontFamily = "monospace";
+    pPct.style.fontSize = "0.75rem";
+    pPct.textContent = `${Math.round(avgMastery * 100)}%`;
+
+    pHeader.appendChild(pTitle);
+    pHeader.appendChild(pPct);
+
+    const pBarBg = document.createElement("div");
+    pBarBg.style.height = "5px";
+    pBarBg.style.background = "var(--border-subtle)";
+    pBarBg.style.borderRadius = "2px";
+    pBarBg.style.overflow = "hidden";
+    pBarBg.style.marginBottom = "0.45rem";
+
+    const pBarFill = document.createElement("div");
+    pBarFill.style.height = "100%";
+    pBarFill.style.width = `${Math.round(avgMastery * 100)}%`;
+    pBarFill.style.background = getOklabMasteryColor(avgMastery);
+    pBarBg.appendChild(pBarFill);
+
+    const appContainer = document.createElement("div");
+    appContainer.className = "mastery-app-container";
+    appContainer.style.paddingLeft = "0.5rem";
+
+    // Sort applications by average mastery
+    const appList = Array.from(appMap.entries()).map(([aId, instRels]) => {
+      const aAvg = instRels.reduce((sum, r) => sum + getMastery(r), 0) / (instRels.length || 1);
+      const aMeta = Object.values(APPLICATIONS).find(a => a.id === aId) || { name: "Application" };
+      return { aId, aName: aMeta.name, aAvg, instRels };
+    }).sort((a, b) => a.aAvg - b.aAvg);
+
+    appList.forEach(({ aName, aAvg, instRels }) => {
+      const aRow = document.createElement("div");
+      aRow.style.marginBottom = "0.35rem";
+
+      const aLabelBar = document.createElement("div");
+      aLabelBar.style.display = "flex";
+      aLabelBar.style.justifyContent = "space-between";
+      aLabelBar.style.fontSize = "0.72rem";
+      aLabelBar.style.color = "var(--text-muted)";
+
+      const aTitleSpan = document.createElement("span");
+      aTitleSpan.textContent = `↳ ${aName}`;
+
+      const aPctSpan = document.createElement("span");
+      aPctSpan.style.fontFamily = "monospace";
+      aPctSpan.textContent = `${Math.round(aAvg * 100)}%`;
+
+      aLabelBar.appendChild(aTitleSpan);
+      aLabelBar.appendChild(aPctSpan);
+
+      const aBarBg = document.createElement("div");
+      aBarBg.style.height = "3px";
+      aBarBg.style.background = "var(--border-subtle)";
+      aBarBg.style.borderRadius = "2px";
+      aBarBg.style.overflow = "hidden";
+      aBarBg.style.margin = "0.15rem 0 0.35rem 0";
+
+      const aBarFill = document.createElement("div");
+      aBarFill.style.height = "100%";
+      aBarFill.style.width = `${Math.round(aAvg * 100)}%`;
+      aBarFill.style.background = getOklabMasteryColor(aAvg);
+      aBarBg.appendChild(aBarFill);
+
+      aRow.appendChild(aLabelBar);
+      aRow.appendChild(aBarBg);
+
+      // Render instance rows under this application
+      instRels.forEach(rel => {
+        const m = getMastery(rel);
+        const row = document.createElement("div");
+        row.className = "weight-row";
+        row.style.paddingLeft = "0.6rem";
+        row.style.marginBottom = "0.25rem";
+
+        const labelBar = document.createElement("div");
+        labelBar.className = "weight-label-bar";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.style.fontSize = "0.68rem";
+        nameSpan.style.overflow = "hidden";
+        nameSpan.style.textOverflow = "ellipsis";
+        nameSpan.style.whiteSpace = "nowrap";
+        nameSpan.title = rel.name;
+        nameSpan.textContent = rel.name;
+
+        const pctSpan = document.createElement("span");
+        pctSpan.style.fontFamily = "monospace";
+        pctSpan.style.fontSize = "0.68rem";
+        pctSpan.textContent = `${Math.round(m * 100)}%`;
+
+        labelBar.appendChild(nameSpan);
+        labelBar.appendChild(pctSpan);
+
+        const barBg = document.createElement("div");
+        barBg.style.height = "2px";
+        barBg.style.background = "var(--border-subtle)";
+        barBg.style.borderRadius = "1px";
+        barBg.style.overflow = "hidden";
+
+        const barFill = document.createElement("div");
+        barFill.style.height = "100%";
+        barFill.style.width = `${Math.round(m * 100)}%`;
+        barFill.style.background = getOklabMasteryColor(m);
+
+        barBg.appendChild(barFill);
+        row.appendChild(labelBar);
+        row.appendChild(barBg);
+        aRow.appendChild(row);
+      });
+
+      appContainer.appendChild(aRow);
+    });
+
+    pHeader.addEventListener("click", () => {
+      const isHidden = appContainer.style.display === "none";
+      appContainer.style.display = isHidden ? "block" : "none";
+    });
+
+    pBox.appendChild(pHeader);
+    pBox.appendChild(pBarBg);
+    pBox.appendChild(appContainer);
+    container.appendChild(pBox);
+  });
 }
 
 export function renderMasteryBars(containerOrRelations, maybeRelations, maybeGetMastery) {

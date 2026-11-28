@@ -5,7 +5,7 @@
  */
 
 import { tokenizeExpr } from "../cas/ast.js";
-import { phi, fib, snapToFibonacci, MAX_HISTORY, PHI_INV2, PHI_INV3 } from "./constants.js";
+import { phi, fib, snapToFibonacci, MAX_HISTORY, PHI_INV, PHI_INV2, PHI_INV3 } from "./constants.js";
 import {
   getTopicTick,
   readMasteryStore,
@@ -13,6 +13,7 @@ import {
   serializeMasteryPayload,
   parseMasteryPayload
 } from "./storage.js";
+import { getRelationTaxonomy } from "./taxonomy.js";
 
 let masteryState = {};
 
@@ -61,15 +62,19 @@ export function calculateTopicLambda(topic) {
   return Math.LN2 / safeHalfLife;
 }
 
-export function getDecayedMastery(eq, topic = null) {
-  const key = eq?.masteryId || eq?.id;
-  if (!key) return 0;
-
+/**
+ * Evaluates the decayed mastery score for a single key record.
+ */
+function evaluateKeyScore(key, baseFormula = "", topic = null, isCommon = false) {
+  if (!key) return { score: 0, hasAttempts: false };
   const h = masteryState[key];
   const history = h && Array.isArray(h.attempts) ? h.attempts : [];
+  if (history.length === 0) {
+    return { score: 0, hasAttempts: false };
+  }
 
-  const tokens = tokenizeExpr(eq.baseFormula || "").length;
-  const windowSize = snapToFibonacci(tokens / Math.E);
+  const tokens = tokenizeExpr(baseFormula || "").length;
+  const windowSize = snapToFibonacci(Math.max(1, tokens / Math.E));
 
   const recent = history.slice(-windowSize);
   const padded = [...Array(Math.max(0, windowSize - recent.length)).fill(false), ...recent];
@@ -83,7 +88,6 @@ export function getDecayedMastery(eq, topic = null) {
   }
   const baseMastery = weightSum > 0 ? scoreSum / weightSum : 0;
 
-  const isCommon = isCommonEq(eq);
   const scopeKey = isCommon ? "common" : (topic?.id || "common");
   const currentTick = getTopicTick(scopeKey);
   const lastTick = h && typeof h.lastTick === "number" ? h.lastTick : currentTick;
@@ -92,63 +96,131 @@ export function getDecayedMastery(eq, topic = null) {
   const lambdaTopic = topic ? calculateTopicLambda(topic) : phi(-7);
   const decayMultiplier = Math.exp(-lambdaTopic * deltaTicks);
 
-  return baseMastery * decayMultiplier;
+  return { score: baseMastery * decayMultiplier, hasAttempts: true };
 }
 
-export function recordAttempt(eqId, success, topicId = null) {
-  const isCommon = isCommonEq({ id: eqId });
-  const scopeKey = isCommon ? "common" : (topicId || "common");
-  const currentTick = getTopicTick(scopeKey);
+/**
+ * Hierarchical Decayed Mastery lookup.
+ * Blends Instance, Application, and Principle evidence so transferable understanding
+ * gives learners prior readiness on new instances while maintaining local confirmation.
+ */
+export function getDecayedMastery(eq, topic = null, options = {}) {
+  const key = typeof eq === "string" ? eq : (eq?.masteryId || eq?.id);
+  if (!key) return 0;
 
-  if (!masteryState[eqId]) {
-    masteryState[eqId] = { attempts: [], lastTick: currentTick };
+  const isConstant = key.startsWith("const_");
+  const isCommon = isCommonEq(typeof eq === "object" ? eq : { id: key });
+  const instEval = evaluateKeyScore(key, eq?.baseFormula || "", topic, isCommon);
+
+  if (options.rawOnly || isConstant || !eq || typeof eq !== "object") {
+    return instEval.score;
   }
-  masteryState[eqId].attempts.push(!!success);
-  if (masteryState[eqId].attempts.length > MAX_HISTORY) {
-    masteryState[eqId].attempts.shift();
+
+  const tax = getRelationTaxonomy(eq, topic);
+  if (!tax) return instEval.score;
+
+  const appEval = evaluateKeyScore(tax.applicationId, "", topic, true);
+  const princEval = evaluateKeyScore(tax.principleId, "", topic, true);
+
+  if (instEval.hasAttempts) {
+    // Instance has direct practice: blend with Application & Principle context
+    const wInst = 1.0;
+    const wApp = appEval.hasAttempts ? PHI_INV : 0;
+    const wPrinc = princEval.hasAttempts ? PHI_INV2 : 0;
+    const totalW = wInst + wApp + wPrinc;
+    return (wInst * instEval.score + wApp * appEval.score + wPrinc * princEval.score) / totalW;
   }
-  masteryState[eqId].lastTick = currentTick;
+
+  // Instance has zero direct attempts: inherits prior from Application and Principle
+  if (appEval.hasAttempts || princEval.hasAttempts) {
+    const wApp = appEval.hasAttempts ? 1.0 : 0;
+    const wPrinc = princEval.hasAttempts ? PHI_INV : 0;
+    const totalW = wApp + wPrinc;
+    if (totalW > 0) {
+      const familyPrior = (wApp * appEval.score + wPrinc * princEval.score) / totalW;
+      // Scale by PHI_INV (~0.618) to provide strong prior readiness without prematurely triggering fading
+      return familyPrior * PHI_INV;
+    }
+  }
+
+  return 0;
+}
+
+function recordSingleKey(key, success, scopeKey) {
+  const currentTick = getTopicTick(scopeKey);
+  if (!masteryState[key]) {
+    masteryState[key] = { attempts: [], lastTick: currentTick };
+  }
+  masteryState[key].attempts.push(!!success);
+  if (masteryState[key].attempts.length > MAX_HISTORY) {
+    masteryState[key].attempts.shift();
+  }
+  masteryState[key].lastTick = currentTick;
+}
+
+/**
+ * Records an attempt and propagates evidence up the 3-tier hierarchy:
+ *   Instance -> Application -> Principle.
+ */
+export function recordAttempt(target, success, topicId = null) {
+  const key = typeof target === "string" ? target : (target?.masteryId || target?.eqId || target?.id);
+  if (!key) return;
+
+  const isCommon = isCommonEq({ id: key });
+  const scopeKey = isCommon ? "common" : (topicId || "common");
+  recordSingleKey(key, success, scopeKey);
+
+  // Propagate evidence upward to Application and Principle
+  const tax = getRelationTaxonomy(typeof target === "object" ? target : { id: key }, topicId ? { id: topicId } : null);
+  if (tax) {
+    recordSingleKey(tax.applicationId, success, "common");
+    recordSingleKey(tax.principleId, success, "common");
+  }
+
   saveMastery();
 }
 
 export function penalizeAncestors(ancestorEqIds = [], topicId = null) {
+  const topicObj = typeof topicId === "string" ? { id: topicId } : topicId;
   ancestorEqIds.forEach(eqId => {
     const isCommon = isCommonEq({ id: eqId });
-    const scopeKey = isCommon ? "common" : (topicId || "common");
+    const scopeKey = isCommon ? "common" : (topicObj?.id || "common");
     const currentTick = getTopicTick(scopeKey);
 
     if (!masteryState[eqId]) {
       masteryState[eqId] = { attempts: [], lastTick: currentTick };
     }
-    
-    // COMPLEXITY-WEIGHTED PENALTY:
-    // Instead of just pushing 'false', we calculate a proportional decay
-    // based on current mastery to prevent a single fail from nuking a master.
-    const current = getDecayedMastery({ id: eqId }, topicId);
-    const penalty = (1 - current) * PHI_INV2;
-    
-    // Simulate the decay by pushing a sequence of failures or adjusting history
-    // For the current implementation, we push a failure to trigger history-based decay
+
+    // Dampened ancestral penalty: failure on child DAG node reduces confidence
     masteryState[eqId].attempts.push(false);
-    
     if (masteryState[eqId].attempts.length > MAX_HISTORY) {
       masteryState[eqId].attempts.shift();
     }
     masteryState[eqId].lastTick = currentTick;
+
+    // Upward dampened penalty
+    const tax = getRelationTaxonomy({ id: eqId }, topicObj);
+    if (tax) {
+      recordSingleKey(tax.applicationId, false, "common");
+    }
   });
   saveMastery();
 }
 
 export function reinforceAncestors(ancestorEqIds = [], topicId = null) {
+  const topicObj = typeof topicId === "string" ? { id: topicId } : topicId;
   ancestorEqIds.forEach(eqId => {
     const isCommon = isCommonEq({ id: eqId });
-    const scopeKey = isCommon ? "common" : (topicId || "common");
+    const scopeKey = isCommon ? "common" : (topicObj?.id || "common");
     const currentTick = getTopicTick(scopeKey);
 
     if (masteryState[eqId]) {
       masteryState[eqId].lastTick = currentTick;
-      // Reinforcement of ancestors is handled primarily by the 
-      // successful completion of the child node in the DAG.
+      // Successful synthesis through a child node reinforces prerequisite retention
+      masteryState[eqId].attempts.push(true);
+      if (masteryState[eqId].attempts.length > MAX_HISTORY) {
+        masteryState[eqId].attempts.shift();
+      }
     }
   });
   saveMastery();

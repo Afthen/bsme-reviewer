@@ -303,10 +303,10 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     const d93 = determineGraphDistance(0.93, 10);
     const d100 = determineGraphDistance(1.0, 10);
 
-    assert.equal(d0, 0, "0% mastery -> 0 hops");
-    assert.equal(d40, 1, "40% mastery -> 1 hop");
-    assert.equal(d70, 2, "70% mastery -> 2 hops");
-    assert.equal(d80, 3, "80% mastery -> 3 hops (fib(4))");
+    assert.equal(d0, 1, "0% mastery -> 1 hop baseline floor (Option A scaffolded integration)");
+    assert.equal(d40, 2, "40% mastery -> 2 hops");
+    assert.equal(d70, 3, "70% mastery -> 3 hops (fib(4))");
+    assert.equal(d80, 5, "80% mastery -> 5 hops (fib(5))");
     assert.equal(d88, 5, "88% mastery -> 5 hops (fib(5))");
     assert.equal(d93, 8, "93% mastery -> 8 hops (fib(6))");
     assert.equal(d100, 10, "100% mastery -> maxDepth hops");
@@ -321,6 +321,33 @@ describe("Whole-Cycle Problem Synthesis & Natural Step Fading", () => {
     problem.solution.forEach(s => {
       assert.equal(s.isFaded, false, `Step ${s.targetVar} should not be faded at 0% mastery`);
     });
+  });
+
+  test("Hierarchical Mastery: Unseen instance in a mastered application inherits prior readiness", () => {
+    const topic = TOPICS.stress_shear_and_bearing;
+    const knownEqId = "eq_stress_sb_direct_shear";
+    const unseenEq = { id: "eq_stress_sb_bearing_stress", baseFormula: "sigma_br = F / (n_f * A_b)" };
+
+    // Record 12 successful attempts on direct shear (establishing application mastery)
+    for (let i = 0; i < 12; i++) {
+      recordAttempt(knownEqId, true, topic.id);
+    }
+
+    const priorMastery = getDecayedMastery(unseenEq, topic);
+    assert.ok(priorMastery > 0.35, `Unseen instance must inherit positive prior from family (got: ${priorMastery})`);
+    assert.ok(priorMastery < FADING_THRESHOLD, "Prior readiness must not prematurely exceed FADING_THRESHOLD without local confirmation");
+  });
+
+  test("Hierarchical Mastery: Upward evidence propagation updates Application and Principle", () => {
+    const topic = TOPICS.stress_shear_and_bearing;
+    const eq = { id: "eq_stress_sb_tear_stress", baseFormula: "tau_tear = F / (n_f * A_tear)" };
+
+    for (let i = 0; i < 8; i++) {
+      recordAttempt(eq, true, topic.id);
+    }
+
+    const m = getDecayedMastery(eq, topic);
+    assert.ok(m >= 0.7, `Mastery on tear stress must reflect successful practice (got: ${m})`);
   });
 
   test("Master learner (100% mastery) naturally receives the longest chain problem on the graph in Diesel Cycle", () => {
@@ -1374,9 +1401,15 @@ describe("Hierarchical & Recursive Display Floor Pipeline", () => {
       })
     });
 
-    const prob = withSeededRandom(1, () => generateProblem(tinyStepTopic, () => 0, { mode: "SI" }));
-    const ansStep = prob.solution.find(s => s.targetVar === "delta");
-    assert.ok(ansStep, "Expected delta step");
+    // Any of F, k, delta is a valid goal for a one-relation topic, so scan seeds
+    // (deterministically) for a draw where delta is the answer step.
+    let prob = null;
+    let ansStep = null;
+    for (let seed = 1; seed <= 32 && !ansStep; seed++) {
+      prob = withSeededRandom(seed, () => generateProblem(tinyStepTopic, () => 0, { mode: "SI" }));
+      ansStep = prob.solution.find(s => s.targetVar === "delta");
+    }
+    assert.ok(ansStep, "Expected a draw with delta as the answer step within 32 seeds");
     assert.ok(displayFloorOk(ansStep.expectedVal), `Tier 1 must scale delta above floor, got ${ansStep.expectedVal} ${prob.system._u.delta}`);
     assert.equal(prob.sciVars.size, 0, "Tier 1 unit scaling should resolve delta without scientific notation");
   });
