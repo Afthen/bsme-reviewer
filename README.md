@@ -46,7 +46,7 @@ You are modifying the BSME Reviewer repository.
                                   single-step derivation with 4-row tower height and oracle verification
 
    **Failure investigation:**
-   - FAILURES [topic]             clusters derivation matrix failures by root cause
+   - FAILURES [topic]             runs the real derivation matrix (same code path as npm test; all topics is slow) and clusters failures by relation and target, with a TRACE-ready minimal example and the boxed/derivation ratio
    - TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
                                   re-runs one derivation-matrix case through solveUnitAlgebra and
                                   reports non-canonical scalars with their creating stack frames.

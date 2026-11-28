@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 
 import { TOPIC_MANIFEST, loadAllTopics } from "../src/topics/index.js";
 import { validateTopic } from "./validator.js";
-import { validateDerivationLatex, assertDerivationMatchesAnswer, evalLatexMathToNumber } from "./latex_oracle.js";
+import { validateDerivationLatex, validateStatementLatex, assertDerivationMatchesAnswer, evalLatexMathToNumber } from "./latex_oracle.js";
 import { withSeededRandom, unitLevels, mulberry32 } from "./matrix_helpers.js";
 import { generateProblem, determineGraphDistance } from "../src/core/problem_gen.js";
 import { buildAlignedDerivation } from "../src/core/derivation.js";

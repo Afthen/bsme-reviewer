@@ -47,6 +47,7 @@ import { buildAlignedDerivation } from "../../src/core/derivation.js";
 import { generateProblem } from "../../src/core/problem_gen.js";
 import { withSeededRandom, mulberry32, unitLevels, coveringRows, restate, collectSteps, SEEDS } from "../../test/matrix_helpers.js";
 import { assertDerivationMatchesAnswer } from "../../test/latex_oracle.js";
+import { runMatrixForTopicIds } from "../../test/matrix_worker.js";
 
 const FENCE = "`".repeat(3);
 const fenced = (header, body) => `${header}\n${FENCE}\n${body}\n${FENCE}\n`;
@@ -456,74 +457,54 @@ export async function handleHygiene(arg, { remaining }) {
 // ============================================================================
 // 7. FAILURES: Derivation Matrix Failure Clustering
 // ============================================================================
-export async function handleFailures(arg, { remaining }) {
-  const topics = await getTopics();
-  const filterTopic = arg.trim() ? findTopic(topics, arg.trim()) : null;
-  const targetTopics = filterTopic ? [filterTopic] : topics;
-
-  const lines = [];
-  lines.push(`Scanning derivation matrix for ${targetTopics.length} topic(s)...`);
+/** Formats runMatrixForTopicIds() output: clusters by (layer, relation, target); the smallest restate is the example. */
+export function summarizeMatrixFailures(failures, cases, topicCount) {
+  const lines = [`Completed: ${cases} matrix cases checked across ${topicCount} topic(s).`];
+  if (failures.length === 0) {
+    lines.push("Matrix Status: ALL CLEAN (0 failures).");
+    return lines;
+  }
 
   const clusters = new Map();
-  let totalCases = 0;
-  let failCount = 0;
-
-  for (const topic of targetTopics) {
-    for (const sys of ["SI", "US"]) {
-      for (const seed of SEEDS) {
-        let S;
-        try { S = withSeededRandom(seed, () => topic.createSystem({ sys })); }
-        catch (e) {
-          const key = `createSystem failure in ${topic.id}`;
-          clusters.set(key, (clusters.get(key) || 0) + 1);
-          failCount++;
-          continue;
-        }
-
-        for (const step of collectSteps(topic, sys, S)) {
-          const rng = mulberry32(seed * 7919 + step.targetVar.length);
-          const tokens = [...new Set([...step.nodes, step.targetVar])].filter((k) => topic.varsDb[k]);
-          const levels = tokens.map((k) => unitLevels(S._u?.[k] || topic.varsDb[k].unit, topic.varsDb[k], rng));
-          const rows = coveringRows(levels.map((l) => l.length), rng);
-
-          for (const row of rows) {
-            totalCases++;
-            const uMap = {};
-            tokens.forEach((k, i) => { uMap[k] = levels[i][row[i]]; });
-            const S2 = restate(S, tokens, uMap, topic.varsDb, sys);
-            const tUnit = S2._u?.[step.targetVar] || topic.varsDb[step.targetVar].unit;
-
-            try {
-              const ua = solveUnitAlgebra(step.rhsExpr, S2, step.targetVar, tUnit, topic.varsDb, step.requiredUnits);
-              for (const sc of ua.conversionScalars || []) {
-                if (!isCanonicalScaleFactor(sc)) {
-                  const key = `Alien scalar [${sc}] in ${topic.id} ${step.id} -> ${step.targetVar}`;
-                  clusters.set(key, (clusters.get(key) || 0) + 1);
-                  failCount++;
-                }
-              }
-            } catch (e) {
-              const key = `solveUnitAlgebra throw: ${e.message.slice(0, 50)} in ${topic.id}`;
-              clusters.set(key, (clusters.get(key) || 0) + 1);
-              failCount++;
-            }
-          }
-        }
-      }
-    }
+  for (const f of failures) {
+    const key = `${f.layer} | ${f.where.split(" {")[0].replace(/ seed=\d+$/, "")}`;
+    const c = clusters.get(key) || { n: 0, example: f };
+    c.n++;
+    if ((f.changed ?? Infinity) < (c.example.changed ?? Infinity)) c.example = f;
+    clusters.set(key, c);
   }
 
-  lines.push(`Completed: ${totalCases} matrix cases checked across ${targetTopics.length} topic(s).`);
-  if (failCount === 0) {
-    lines.push("Matrix Status: ALL CLEAN (0 failures, all conversion scalars canonical).");
-  } else {
-    lines.push(`Matrix Status: ${failCount} failures found across ${clusters.size} cluster(s):\n`);
-    for (const [cause, count] of clusters.entries()) {
-      lines.push(`  [${count} cases] ${cause}`);
-    }
+  const byLayer = {};
+  for (const f of failures) byLayer[f.layer] = (byLayer[f.layer] || 0) + 1;
+  const ranked = [...clusters].sort((a, b) => b[1].n - a[1].n);
+  const MAX_CLUSTERS = 20;
+
+  lines.push(`Matrix Status: ${failures.length} failures found across ${clusters.size} cluster(s):`);
+  lines.push(`  By layer: ${Object.entries(byLayer).map(([k, v]) => `${k} ${v}`).join(", ")}`);
+  for (const [key, { n, example }] of ranked.slice(0, MAX_CLUSTERS)) {
+    lines.push(`  [${n} cases] ${key}`);
+    lines.push(`    e.g. ${clip(example.where, 400)}`);
+    lines.push(`    ${clip(example.msg.split(" (")[0])}`);
+    const m = /evaluates to ([-+\d.eE]+), boxed is ([-+\d.eE]+)/.exec(example.msg);
+    const ratio = m ? Number(m[2]) / Number(m[1]) : NaN;
+    if (Number.isFinite(ratio)) lines.push(`    boxed/derivation = ${fmtSigFig(ratio, 6)}`);
+  }
+  if (ranked.length > MAX_CLUSTERS) lines.push(`  ... ${ranked.length - MAX_CLUSTERS} more cluster(s)`);
+  return lines;
+}
+
+export async function handleFailures(arg, { remaining }) {
+  const topics = await getTopics();
+  const wanted = arg.trim();
+  const filterTopic = wanted ? findTopic(topics, wanted) : null;
+  if (wanted && !filterTopic) {
+    return { text: `[ERROR: Unknown topic "${wanted}". Available: ${topics.map((t) => t.id).join(", ")}]\n`, lines: 1 };
   }
 
-  return formatResult(`FAILURES: ${filterTopic ? filterTopic.id : "all"}`, lines, remaining);
+  const ids = (filterTopic ? [filterTopic] : topics).map((t) => t.id);
+  const { failures, cases } = await runMatrixForTopicIds(ids);
+  const lines = [`Scanning derivation matrix for ${ids.length} topic(s)...`, ...summarizeMatrixFailures(failures, cases, ids.length)];
+  return formatResult(`FAILURES: ${filterTopic ? filterTopic.id : "all"}`, lines, remaining, 120);
 }
 
 function splitDerivRows(deriv) {

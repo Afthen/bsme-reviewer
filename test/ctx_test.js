@@ -15,6 +15,7 @@ import { extractSymbols } from "../scripts/lib/symbols.js";
 import { fulfill, LIMITS } from "../scripts/fulfill_ctx.js";
 import { BASE_UNITS } from "../src/cas/units/index.js";
 import { COUPLED_VARIABLE_GROUPS } from "../src/core/unit_sampler.js";
+import { summarizeMatrixFailures } from "../scripts/lib/ctx_tools.js";
 
 const SAMPLE = [
   "/** header */",
@@ -315,6 +316,35 @@ describe("fulfill new context tools", () => {
     const out = await fulfill("FAILURES diesel_cycle");
     assert.match(out, /derivation matrix/);
     assert.match(out, /Matrix Status:/);
+  });
+
+  test("summarizeMatrixFailures clusters by relation and target, keeps the smallest restate, and reports the unit-frame ratio", () => {
+    const rec = (changed, units, seed) => ({
+      layer: "derivation-numeric",
+      where: `topic[SI] eq_x -> L {${units}} seed=${seed}`,
+      msg: "Derivation evaluates to 23.62204724409449, boxed is 600",
+      changed
+    });
+    const out = summarizeMatrixFailures([
+      rec(3, "a:mm, I:in^4", 1),
+      rec(2, "a:m, I:in^4", 2),
+      { layer: "generateProblem", where: "topic[gen:SI] seed=5", msg: "boom" }
+    ], 100, 1).join("\n");
+    assert.match(out, /3 failures found across 2 cluster\(s\)/);
+    assert.match(out, /\[2 cases\] derivation-numeric \| topic\[SI\] eq_x -> L/);
+    assert.match(out, /e\.g\. topic\[SI\] eq_x -> L \{a:m, I:in\^4\} seed=2/);
+    assert.match(out, /boxed\/derivation = 25\.4(\s|$)/);
+    assert.match(out, /By layer: derivation-numeric 2, generateProblem 1/);
+  });
+
+  test("summarizeMatrixFailures reports a clean matrix", () => {
+    const out = summarizeMatrixFailures([], 42, 1).join("\n");
+    assert.match(out, /42 matrix cases checked across 1 topic/);
+    assert.match(out, /ALL CLEAN/);
+  });
+
+  test("FAILURES rejects an unknown topic instead of scanning everything", async () => {
+    assert.match(await fulfill("FAILURES no_such_topic_xyz"), /Unknown topic "no_such_topic_xyz"/);
   });
 
   test("HYGIENE checks topic schema orphans and degree symbols", async () => {
