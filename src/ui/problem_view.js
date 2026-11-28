@@ -9,7 +9,7 @@
  */
 
 import { buildAlignedDerivation } from "../core/derivation.js";
-import { targetLabel, fmtSigFig } from "../core/dimensions.js";
+import { targetLabel, fmtSigFig, displayFloorOk } from "../core/dimensions.js";
 import { unitToTex } from "../cas/units/index.js";
 import { CONSTANTS_DB } from "../core/constants_registry.js";
 import {
@@ -73,8 +73,14 @@ export function renderProblemView(activeProblem, relations = [], topicId = "spur
     input.className = "step-ans-input";
     input.placeholder = "Enter value...";
 
+    const isSciStep = Boolean(
+      activeProblem.sciVars?.has(step.targetVar) ||
+      (typeof step.expectedVal === "number" && step.expectedVal !== 0 && !displayFloorOk(step.expectedVal))
+    );
     if (step.isAnswered) {
-      input.value = step.userVal !== undefined ? step.userVal : fmtSigFig(step.expectedVal, 6);
+      input.value = step.userVal !== undefined
+        ? step.userVal
+        : fmtSigFig(step.expectedVal, 6, false, { scientific: isSciStep });
       input.classList.add(step.isRevealed ? "state-revealed" : "state-correct");
       input.disabled = true;
       item.classList.add("open");
@@ -200,6 +206,8 @@ function checkStepAnswer(idx, inputEl, activeProblem, relations) {
     tol = 0.5;
   } else if (typeof meta.tolerance === "number") {
     tol = meta.tolerance;
+  } else if (expected !== 0 && !displayFloorOk(expected)) {
+    tol = phi(-10) * Math.abs(expected);
   } else {
     tol = Math.max(phi(-10) * Math.abs(expected), 1e-4);
   }
@@ -262,7 +270,11 @@ function revealStepAnswer(idx, inputEl, activeProblem, relations) {
   step.isAnswered = true;
   step.isRevealed = true;
   step.userVal = step.expectedVal;
-  inputEl.value = fmtSigFig(step.expectedVal, 6);
+  const isSciStep = Boolean(
+    activeProblem.sciVars?.has(step.targetVar) ||
+    (typeof step.expectedVal === "number" && step.expectedVal !== 0 && !displayFloorOk(step.expectedVal))
+  );
+  inputEl.value = fmtSigFig(step.expectedVal, 6, false, { scientific: isSciStep });
   inputEl.classList.add("state-revealed");
   inputEl.disabled = true;
 

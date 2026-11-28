@@ -5,11 +5,13 @@
  * count + output lines) so models plan their context needs up front.
  *
  *   READ path               full file (<= FULL_READ_MAX lines, else outline)
- *   READ path:a-b           line range (snaps to enclosing small symbols)
+ *   READ path:a-b           line range (snaps only when that adds <= SNAP_GROWTH_MAX lines)
  *   READ path:-N            last N lines
  *   READ path#sym[,sym2]    exact symbol bodies, no line numbers needed
  *   OUTLINE path            exact symbol ranges for one file
- *   GREP [-C n] [-i] term [@ path[:a-b]]   literal search, optional context/scope
+ *   GREP [-C n] [-i] [-E] term [@ path[:a-b][,path2[:c-d]...]]
+ *                           literal (or -E regex) search, optional context/scope
+ *   REGISTRY [section ...]  live unit/dim/constant/palette registries; bare = counts
  *   TRACE topic[SI|US] relation -> target {tok:unit, ...} [seed=N]
  *                           re-run one matrix case; report where non-canonical scalars are born */
 
@@ -46,7 +48,8 @@ import {
   handleStepAst,
   handleDiffStep,
   handleDiffDerive,
-  handleRoundtripStep
+  handleRoundtripStep,
+  handleRegistry
 } from "./lib/ctx_tools.js";
 
 export const LIMITS = Object.freeze({
@@ -54,6 +57,7 @@ export const LIMITS = Object.freeze({
   MAX_OUTPUT_LINES: 1024,
   FULL_READ_MAX: 512,
   SNAP_MAX: 256,
+  SNAP_GROWTH_MAX: 48,
   MAX_GREP_HITS: 64,
   MAX_GREP_CONTEXT: 16,
   MAX_OUTLINE_ENTRIES: 256,
@@ -197,6 +201,7 @@ function readSymbols(rel, f, names, remaining) {
 function snapRange(syms, a0, b0) {
   let a = a0;
   let b = b0;
+  let growth = 0;
   const notes = [];
   for (const s of syms) {
     const size = s.end - s.start + 1;
@@ -207,6 +212,12 @@ function snapRange(syms, a0, b0) {
       notes.push(`range cuts through ${s.name} (${s.start}-${s.end}, ${size} lines; too large to snap, use READ #${s.name} for all of it)`);
       continue;
     }
+    const added = (cutsStart ? a - s.start : 0) + (cutsEnd ? s.end - b : 0);
+    if (growth + added > LIMITS.SNAP_GROWTH_MAX) {
+      notes.push(`range cuts through ${s.name} (${s.start}-${s.end}, ${size} lines; snapping would add ${added} lines, over the ${LIMITS.SNAP_GROWTH_MAX}-line growth cap, so the exact range is kept; use READ #${s.name} for all of it)`);
+      continue;
+    }
+    growth += added;
     if (cutsStart) a = s.start;
     if (cutsEnd) b = s.end;
     notes.push(`snapped to ${s.name} (${s.start}-${s.end})`);
@@ -275,17 +286,20 @@ function parseGrepArgs(arg) {
   let rest = arg;
   let ctx = 0;
   let ci = false;
+  let re = false;
   for (;;) {
     let m = rest.match(/^-C\s*(\d+)\s+(.*)$/);
     if (m) { ctx = Math.min(Number(m[1]), LIMITS.MAX_GREP_CONTEXT); rest = m[2]; continue; }
     m = rest.match(/^-i\s+(.*)$/);
     if (m) { ci = true; rest = m[1]; continue; }
+    m = rest.match(/^-E\s+(.*)$/);
+    if (m) { re = true; rest = m[1]; continue; }
     break;
   }
   let scope = null;
   const at = rest.lastIndexOf(" @ ");
   if (at >= 0) { scope = rest.slice(at + 3).trim(); rest = rest.slice(0, at); }
-  return { ctx, ci, scope, term: rest.trim().replace(/^["']|["']$/g, "") };
+  return { ctx, ci, re, scope, term: rest.trim().replace(/^["']|["']$/g, "") };
 }
 
 function mergeWindows(indices, ctx, total) {
@@ -301,37 +315,57 @@ function mergeWindows(indices, ctx, total) {
 }
 
 function handleGrep(arg, { root, remaining }) {
-  const { ctx, ci, scope, term } = parseGrepArgs(arg);
+  const { ctx, ci, re, scope, term } = parseGrepArgs(arg);
   if (!term) return { text: "[ERROR: GREP needs a search term]\n", lines: 1, cacheable: false };
 
-  let range = null;
-  let files;
+  // file -> optional [a, b] line range; when scopes overlap, the first one wins
+  const targets = new Map();
   if (scope) {
-    const sm = scope.match(/^(.+?)(?::(\d+)-(\d+))?$/);
-    if (sm[2]) range = [Number(sm[2]), Number(sm[3])];
-    const abs = resolveInRoot(root, sm[1]);
-    if (!abs) return {
-      text: `[ERROR: scope ${sm[1]} escapes repository root]\n`,
-      lines: 1,
-      cacheable: false
-    };
-    files = collectFiles(abs);
+    for (const part of scope.split(",").map((p) => p.trim()).filter(Boolean)) {
+      const sm = part.match(/^(.+?)(?::(\d+)-(\d+))?$/);
+      const abs = resolveInRoot(root, sm[1]);
+      if (!abs) return {
+        text: `[ERROR: scope ${sm[1]} escapes repository root]\n`,
+        lines: 1,
+        cacheable: false
+      };
+      if (!fs.existsSync(abs)) return {
+        text: `[ERROR: scope ${sm[1]} not found]\n`,
+        lines: 1,
+        cacheable: false
+      };
+      const scopeRange = sm[2] ? [Number(sm[2]), Number(sm[3])] : null;
+      for (const file of collectFiles(abs)) if (!targets.has(file)) targets.set(file, scopeRange);
+    }
   } else {
-    files = SEARCH_ROOTS.flatMap((r) => collectFiles(path.resolve(root, r)));
+    for (const file of SEARCH_ROOTS.flatMap((r) => collectFiles(path.resolve(root, r)))) targets.set(file, null);
   }
-  files.sort();
+  const files = [...targets.keys()].sort();
 
-  const needle = ci ? term.toLowerCase() : term;
+  let matches;
+  if (re) {
+    let rx;
+    try {
+      rx = new RegExp(term, ci ? "i" : "");
+    } catch (e) {
+      return { text: `[ERROR: invalid regex /${term}/: ${e.message}]\n`, lines: 1, cacheable: false };
+    }
+    matches = (line) => rx.test(line);
+  } else {
+    const needle = ci ? term.toLowerCase() : term;
+    matches = (line) => (ci ? line.toLowerCase() : line).includes(needle);
+  }
   const byFile = new Map();
   let total = 0;
   let shown = 0;
   for (const abs of files) {
+    const range = targets.get(abs);
     const rel = path.relative(root, abs).replace(/\\/g, "/");
     const lines = fs.readFileSync(abs, "utf8").replace(/\r\n/g, "\n").split("\n");
     const lo = range ? Math.max(0, range[0] - 1) : 0;
     const hi = range ? Math.min(lines.length, range[1]) : lines.length;
     for (let i = lo; i < hi; i++) {
-      if (!(ci ? lines[i].toLowerCase() : lines[i]).includes(needle)) continue;
+      if (!matches(lines[i])) continue;
       total++;
       if (shown >= LIMITS.MAX_GREP_HITS) continue;
       shown++;
@@ -376,7 +410,7 @@ function handleGrep(arg, { root, remaining }) {
   const cap = total > shown ? `, showing first ${shown}` : "";
   const trunc = truncated ? "\n[output truncated by line budget; narrow with @ path]" : "";
   return {
-    text: fenced(`GREP: "${term}" (${total} matches${cap}${where})`, (out.join("\n") || "(no matches)") + trunc),
+    text: fenced(`GREP${re ? " -E" : ""}: "${term}" (${total} matches${cap}${where})`, (out.join("\n") || "(no matches)") + trunc),
     lines: Math.max(1, out.length),
     sourceRefs
   };
@@ -418,9 +452,13 @@ const HANDLERS = {
   "STEP-AST": handleStepAst,
   "DIFF-STEP": handleDiffStep,
   "DIFF-DERIVE": handleDiffDerive,
-  "ROUNDTRIP-STEP": handleRoundtripStep
+  "ROUNDTRIP-STEP": handleRoundtripStep,
+  REGISTRY: handleRegistry
 };
-const USAGE = "Valid: READ, OUTLINE, GREP, TRACE, GRAPH, TOPIC, UNIT, CONVERT, SOLVE, HYGIENE, FAILURES, DERIVE, AUDIT-LATEX, AUDIT-STEP, RENDER-STEP, PROBLEM-STEPS, STEP-AST, DIFF-STEP, DIFF-DERIVE, ROUNDTRIP-STEP";
+// HANDLERS is the single verb table; usage text and directive grammar derive from it.
+const VERBS = Object.keys(HANDLERS);
+const USAGE = `Valid: ${VERBS.join(", ")}`;
+const DIRECTIVE_RE = new RegExp(`^(${VERBS.join("|")})(?:\\s+(.*))?$`);
 
 export function parseDirectives(raw) {
   return raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith(FENCE));
@@ -522,7 +560,6 @@ export async function prepareFulfillment(raw, {
   const dropped = directives.slice(LIMITS.MAX_DIRECTIVES);
   const parts = [];
   let used = 0;
-  const DIRECTIVE_RE = /^(READ|OUTLINE|GREP|TRACE|GRAPH|TOPIC|UNIT|CONVERT|SOLVE|HYGIENE|FAILURES|DERIVE|AUDIT-LATEX|AUDIT-STEP|RENDER-STEP|PROBLEM-STEPS|STEP-AST|DIFF-STEP|DIFF-DERIVE|ROUNDTRIP-STEP)(?:\s+(.*))?$/;
 
   for (const line of run) {
     const remaining = Math.max(0, LIMITS.MAX_OUTPUT_LINES - used);

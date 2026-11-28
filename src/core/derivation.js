@@ -31,7 +31,7 @@ import {
   formatValueInUnit
 } from "../cas/units/index.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
-import { fmtSigFig, formatGivenValue } from "./dimensions.js";
+import { fmtSigFig, formatGivenValue, displayFloorOk } from "./dimensions.js";
 
 function countConversionItems(analysis) {
   let count = analysis.globalConversionTex ? 1 : 0;
@@ -106,6 +106,13 @@ export function buildAlignedDerivationWithAnalysis(
   const alignedTokens = new Set();
   const useScaleFmtFor = new Set();
   const factoredInfo = {};
+  const sciVars = S._sciVars instanceof Set ? S._sciVars : null;
+  const sciOptsFor = (key, val, meta = {}) => {
+    if (meta.isConstant) return {};
+    const useSci = (sciVars && sciVars.has(key)) ||
+      (typeof val === "number" && val !== 0 && (!displayFloorOk(val) || Math.abs(val) > 9.99e6));
+    return useSci ? { scientific: true } : {};
+  };
 
   const unitOfKey = k => {
     const c = resolveCanonicalKey(k, workingVarsDb);
@@ -147,17 +154,18 @@ export function buildAlignedDerivationWithAnalysis(
       const rawVal = evalState[key];
       const alignedVal = convertUnitValue(rawVal, currU, targetU, meta.dimension);
       const sym = S._displaySymbols?.[cKey] || S._displaySymbols?.[key] || toLatexSymbol(key, workingVarsDb);
-      const formattedRaw = formatGivenValue(rawVal, meta, true, currU);
+      const formattedRaw = formatGivenValue(rawVal, meta, true, currU, sciOptsFor(key, rawVal, meta));
+      const alignedFormatted = fmtSigFig(alignedVal, 6, true, sciOptsFor(key, alignedVal, meta));
 
       if (currBag.kind === "point" || targetBag.kind === "point") {
         const exprTex = buildTempConversionExpr(rawVal, currU, targetU, meta.dimension);
-        prepLines.push(`${sym} &= ${exprTex} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
+        prepLines.push(`${sym} &= ${exprTex} = ${alignedFormatted} \\, ${unitToTex(targetU, false, meta.dimension)}`);
       } else {
         const singleConv = solveUnitAlgebra(key, { ...evalState, _u: { ...activeUnitMap, [key]: currU } }, key, targetU, workingVarsDb);
         prepScalars.push(...(singleConv.conversionScalars || []));
         const unitTex = singleConv.tokenMarkup?.[key] || unitToTex(currU, false, meta.dimension);
         const convTex = (singleConv.tokenConversions?.[key]?.join("") || "") + (singleConv.globalConversionTex || "");
-        prepLines.push(`${sym} &= ${formattedRaw} \\, ${unitTex}${convTex} = ${fmtSigFig(alignedVal, 6)} \\, ${unitToTex(targetU, false, meta.dimension)}`);
+        prepLines.push(`${sym} &= ${formattedRaw} \\, ${unitTex}${convTex} = ${alignedFormatted} \\, ${unitToTex(targetU, false, meta.dimension)}`);
       }
 
       alignedTokens.add(key);
@@ -358,7 +366,7 @@ export function buildAlignedDerivationWithAnalysis(
             .map((l, i) => {
               const lMeta = workingVarsDb[l.key] || meta0;
               const lUnit = unitOfKey(l.key);
-              let valStr = formatGivenValue(evalState[l.key], lMeta, true, lUnit);
+              let valStr = formatGivenValue(evalState[l.key], lMeta, true, lUnit, sciOptsFor(l.key, evalState[l.key], lMeta));
               let effSign = l.sign;
               if (valStr.startsWith("-")) {
                 valStr = valStr.slice(1);
@@ -455,7 +463,9 @@ export function buildAlignedDerivationWithAnalysis(
     if (typeof v === "number") {
       const meta = workingVarsDb[k] || {};
       const activeUnit = activeUnitMap[k] || meta.unit || "";
-      const formattedNum = useScaleFmtFor.has(k) ? fmtScale(v, true) : formatGivenValue(v, meta, true, activeUnit);
+      const formattedNum = useScaleFmtFor.has(k)
+        ? fmtScale(v, true)
+        : formatGivenValue(v, meta, true, activeUnit, sciOptsFor(k, v, meta));
       const unitMarkup = unitAnalysis.tokenMarkup?.[k] || "";
       const inlineConv = unitAnalysis.tokenConversions?.[k] ? unitAnalysis.tokenConversions[k].join("") : "";
 
@@ -498,7 +508,9 @@ export function buildAlignedDerivationWithAnalysis(
 
   // 6. Final Boxed Answer & Post-Conversion Row
   const val = overrides[canonicalTarget] ?? step.expectedVal ?? S[canonicalTarget];
-  const formattedVal = typeof val === "number" ? fmtSigFig(val, 6, true) : val;
+  const formattedVal = typeof val === "number"
+    ? fmtSigFig(val, 6, true, sciOptsFor(canonicalTarget, val, targetMeta))
+    : val;
   const tDim = targetMeta.dimension;
   const needsPostConv = typeof val === "number"
     && rowTargetUnit && targetUnit && rowTargetUnit !== targetUnit

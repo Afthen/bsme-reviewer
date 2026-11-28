@@ -32,11 +32,14 @@ You are modifying the BSME Reviewer repository.
    **Everyday navigation (preferred):**
    - READ path#symbol[,symbol2]   exact function/const bodies; prefer this over line numbers
    - OUTLINE path                 exact symbol line ranges for one file
-   - GREP [-C n] [-i] term [@ path[:a-b]]
-                                  literal search with context lines and optional scope
+   - GREP [-C n] [-i] [-E] term [@ path[:a-b][,path2[:c-d]...]]
+                                  literal search (regex with -E) with context lines and optional comma-separated scopes;
+                                  an invalid regex or a missing scope is reported by name
 
    **Domain inspection:**
    - TOPIC topic                  one-page summary of varsDb, dimensions, relations, and contracts
+   - REGISTRY [units|prefixes|dims|constants|palettes|coupled ...]
+                                  live engine registries; bare REGISTRY returns section row counts
    - GRAPH topic [givens=A,B] [target=X] [sys=SI|US]
                                   bipartite reachability, degrees of freedom, and unrolled DAG
    - DERIVE topic rel target [{u}] [sys=SI|US]
@@ -51,7 +54,7 @@ You are modifying the BSME Reviewer repository.
                                   seeds are tried. Output is capped at 128 lines.
 
    **Specialized diagnostics (use when relevant):**
-   - READ path:a-b | path:-N      line range (snaps to enclosing symbol) | last N lines
+   - READ path:a-b | path:-N      line range (snaps to an enclosing symbol only if that adds <= 48 lines) | last N lines
    - READ path                    whole file (only if <= 512 lines; otherwise you get an outline)
    - UNIT expr                    7D dimensional vector, base scale, offset, and companion
    - CONVERT unitA -> unitB       factor-label decomposition and canonical scale verification
@@ -71,7 +74,11 @@ You are modifying the BSME Reviewer repository.
 
    **Usage strategy:**
    - Start with OUTLINE or GREP when the relevant implementation location is unknown.
+   - Note that `GREP` takes a single scope `@ path[:a-b]`; passing multiple paths fails
+     and locks out `GREP` until `OUTLINE` or `TRACE` runs.
    - Prefer READ #symbol over manually calculated line ranges.
+   - Never extrapolate or guess unseen lines in a `diff` or drop-in replacement; read the
+     exact target lines first before patching an existing file.
    - For derivation matrix failures, use FAILURES to identify patterns and TRACE to
      inspect representative failures before theorizing.
    - Use TOPIC for domain/schema understanding and DERIVE for a specific equation.
@@ -214,7 +221,7 @@ Software engineering in this repository is governed by physical/mathematical inv
   - **Cancellation Hierarchy:** Wrap the highest possible AST node with `\cancel{}`. Whole-unit cancellation ($\cancel{\cfrac{\text{kJ}}{\text{s}}}$) is canonical; component-level cancellation ($\cfrac{\cancel{\text{Btu}}}{\cancel{\text{h}}}$) is used only as fallback when components cancel in separate places.
   - **No Fused Scalars:** Every displayed conversion scalar is a decade or a single registered same-dimension atom ratio (optionally raised to an integer power as `(root)^p`). A product of different ratios (e.g. $737.562 \times 0.453592 = 334.553$, or $1000 \times 3600^3$) is never emitted as one number; it is factored per atom pair.
 - **R21. Specific Energy Notation.** Quantities per unit mass ($\text{kJ/kg}$, $\text{Btu/lb}$) strictly use lowercase symbols ($q_A, q_R, w_{net}, h$), reserving uppercase ($Q, W, P$) for total energy or power.
-- **R22. Number formatting.** Displayed values pass through `fmtSigFig` (up to 6 significant figures, max 6 decimal places); `fmtScale` delegates to it. Computation is never capped: scalars stay at 6 significant figures with no decimal cap. Every displayed non-constant value must satisfy `displayFloorOk` (`|v| >= MIN_DISPLAY_FLOOR`, derived from the 6-decimal cap and the oracle tolerance, 0.001) so display rounding stays inside the oracle tolerance. The sampler additionally prefers `MIN_DISPLAY_MAGNITUDE` (0.0995) when choosing among units. `generateProblem` redraws up to 20 times and then throws; a value that fails means its unit was chosen wrongly or the topic data is out of range.
+- **R22. Number formatting & hierarchical display floor.** Displayed values pass through `fmtSigFig` (positional up to 6 significant figures, max 6 decimal places by default); `fmtScale` delegates to it. Computation is never capped: scalars stay at 6 significant figures with no decimal cap. The sampler prefers `MIN_DISPLAY_MAGNITUDE` (0.0995) when choosing units, and non-constant displayed values target `displayFloorOk` (`|v| >= MIN_DISPLAY_FLOOR = 0.001`). When a problem value fails the display test, `generateProblem` resolves it hierarchically and recursively: (1) switch to a smaller (or larger) registered unit scale, (2) backsolve through the DAG (`isolateVariable`) and retry step 1 across all variables, then (3) collect any remaining failing numbers into `sciVars` and render them in scientific notation ($m \times 10^{k}$).
 
 ### AI Collaboration, Testing & Process
 - **R23. Never make a red test invisible.** No renaming, skipping, narrowing globs, loosening tolerances, or deleting tests. Fix the root cause.
@@ -310,6 +317,11 @@ test/
 
 Export the topic frozen: `export const myTopic = Object.freeze({...});`.
 
+#### Topic Partitioning & Registry Rules:
+- **Single-state graph consistency:** One `createSystem({ sys })` state `S` must satisfy **all** `relations` in a topic simultaneously in a connected graph. Split conflicting geometries, operating assumptions, or empirical-code vs. analytical-theory regimes into separate leaf topics under `category`.
+- **Leaf-only barrels:** Never create `index.js` files in `common/` or category folders (`test/run_hygiene_test.js` rejects non-leaf `index.js` and `export *`).
+- **No orphan spreads:** When reusing a shared base schema (`common/*_base_schema.js`), spread **only** the subset of keys actually referenced by the topic's `relations` or `system.js`.
+
 ### 4.2 `varsDb` Entry
 
 ```javascript
@@ -330,6 +342,10 @@ Export the topic frozen: `export const myTopic = Object.freeze({...});`.
 - `isConstant`: Tags fundamental physical constants (e.g. $c_{pa}$, $c_{pw}$, $g$) for recall-mode omission at high mastery.
 - `isInteger`: Answer checking uses $\pm 0.5$ tolerance and the neatness pass rounds to integer.
 - `isAbstract`: Tags category parents (e.g. `D_P`, `T`); exempt from orphan audits.
+- `typical: [lo, hi]`: Optional canonical-unit range used by `planProblemUnits` and `makeDraw` (`src/core/unit_sampler.js`) to sample clean givens directly in their planned display unit before `createSystem` runs.
+- **Reserved tokens & uniqueness:** Never use reserved math tokens (`e`, `pi`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`, `exp`, `ln`, `log`, `abs`) as `varsDb` keys. Every `meta.name` and every entry in `meta.aliases` (length $> 2$, not starting with `\`) must be unique within a topic's `varsDb`.
+- **Coupled deliverable groups:** `COUPLED_VARIABLE_GROUPS` (`src/core/unit_sampler.js`) matches globally by variable key name across all topics and forces shared deliverables (never givens) onto one unit. Register new state-point groups there, and avoid reusing an already-coupled key name unless coupling is intended.
+- **Shared base-relation naming:** Verify exact variable key contracts before importing shared `common/` relations so `varsDb` and `system.js` stay aligned.
 
 ### 4.3 Relation Object
 
@@ -377,6 +393,12 @@ The parser grammar enforces standard infix mathematical notation:
 | `x^(k - 1)` | `x^k-1` | Evaluates as $(x^k) - 1$ | Always parenthesise complex exponents. |
 | `a / (b * c)` | `a / b / c` | Left-associative: $(a/b)/c$ | Always parenthesise compound denominators. |
 | `sin(phi)` | `sin(2 * phi)` | **Silent Radian Corruption** | Trig arguments must be a bare angle variable. |
+| `ln(x)` | `log(x)` | **Oracle Base Mismatch** | `ast.js` treats `log()` as $\ln$, while `latex_oracle.js` treats `\text{log}()` as $\log_{10}$; always use `ln(...)`. |
+
+### 5.1 CAS Isolation (`isolateVariable`) & Trigonometry Rules
+- **Single-occurrence & linear-rational isolation:** `isolateVariable` inverts any single-occurrence variable through `+ - * / ^ sqrt sin cos tan asin acos atan ln exp` (except inside exponents or `abs(...)`), and solves multi-occurrence variables when linear or linear-rational. Even powers invert to positive roots (`y^(1/n)`), so keep physical sizes and magnitudes positive.
+- **Factoring for full invertibility:** Decompose repeated subexpressions into intermediate nodes (e.g., `X_eq = ...` before using `X_eq` alongside inputs; `L_tot = L + a` before products using both `a` and `L + a`; `1 / X_eq = 1 / X_1 + 1 / X_2` instead of `(X_1 * X_2) / (X_1 + X_2)`) so every graph edge remains bidirectional. Never store `0` in `createSystem` for a variable that becomes a divisor when inverted.
+- **Trigonometry & angle units:** `evaluatePhysicalAST` converts inputs to coherent SI (`rad`) before `evalAST`, while `test/latex_oracle.js` converts `°` by $\pi/180$ only inside `\sin/\cos/\tan`, treats `°` as `1` outside trig, and returns inverse trig (`asin`/`acos`/`atan`) in degrees. Use `unit: "°"` for trig angles, `unit: "rad"` (`DIMENSIONS.ANGLE`) for geometric/rotational angles, and avoid adding/subtracting bare constants (`45`, `pi/4`) to degree variables.
 
 ---
 
@@ -403,6 +425,12 @@ $$\phi_u^{-1}(y) = \frac{y}{s_u} - o_u$$
 - **AST-Driven Mismatches:** Ratios with differing unit scales (e.g. $\text{Btu/h}$ vs $\text{Btu/min}$) extract the exact differing atomic pair from the unit AST.
 - **Rate Grammar (`n/(d)`):** `splitRateParts` splits a unit at its single top-level `/` and strips one pair of wrapping parentheses per side, so `kJ/kg`, `ft-lb_f/(lb_m)` and `Btu/(h)` all decompose into a numerator ratio and a denominator ratio. `unitForSubExpr` in `analysis.js` emits sibling-term target units in this form; producer and consumer must stay in agreement. Strings with no top-level `/`, several, unbalanced parentheses, or a unit-less `1/(...)` numerator are not split.
 - **Pairwise Shortcut Gate:** Section D of `solveUnitAlgebra` converts same-dimension tokens by one pairwise `formatPairConversion` only when every resulting scalar passes `isCanonicalScaleFactor`. Otherwise (for example a `kg*m*m/(h*h^2)` atom-soup target, where kW needs $1000 \times 3600^3$) the branch routes to `buildCompoundTokenConversions`, which factors per atom pair.
+- **Registry Units, Prefixes & Percentage Contract:** `definitions.js` supports special tokens `psi`, `psf`, `ksi`, `rpm`, `cfm`, `gpm`, `%`, `°`, `deg` (there is no `Mpsi`; prefixes only attach when listed in `RAW_BASE_UNITS[k].prefixes`, so e.g. `um` and `uin` exist while `mrad` does not). `lb` resolves to `lb_m` for Mass/MassFlow/Density/SpecificEnergy and `lb_f` otherwise (`lb_f`, `lb_m`, `kip` are explicit). Compound thermal units must use `Δ` atoms (`Δ°C`, `ΔK`, `Δ°F`, `Δ°R`). Percentage variables (`unit: "%"`, scale `0.01`) use pure ratios in `baseFormula` (no `* 100`) while `system.js` stores the percentage number (`14` for `14%`).
+- **Fractional Root & Dimensional Vector Traps:**
+  - **No compound force/stress/modulus units inside fractional roots (`^(1/3)`, `^(1/4)`):** Because `DIMENSION_TOKEN_PALETTES` includes `bar` ($10^5$) and US force-based pressure units (`psi`, `ksi`), placing derived/compound units inside fractional roots causes `buildCompoundTokenConversions` to emit non-canonical fractional-power scalars (`alien-scalar`). Decouple sizing through pure geometric intermediates (e.g., `Z = M / sigma` then `Z = pi * d^3 / 32`) so only pure length powers (`L^3`, `L^4`) appear under roots.
+  - **Angle (`Ang`) & Count (`C`) separation:** `rad`/`°` carry `{ Ang: 1 }`, `rev`/`rpm` carry `{ C: 1 }`, and `Hz` carries `{ T: -1 }`. Avoid squaring angular speeds (`rad/s`) inside force/energy formulas (`Ang: 2`) or placing `rad`-carrying rates (`N-m/rad`, `Ang: -1`) inside `sqrt(...)` (`Ang: -0.5`). Express cyclic natural frequencies in `Hz` (`{ T: -1 }`) and bridge `rpm` $\leftrightarrow$ `rad/s` $\leftrightarrow$ `Hz` via $\omega = 2\pi n$.
+  - **Volume vs. length-cubed:** Do not compute `DIMENSIONS.VOLUME` (`L`, `gal`) directly from `LENGTH` products (`pi * r^2 * L` with `mm`/`in`; `in^3 -> gal` emits `231`), and do not add `SECTION_MODULUS` (`mm^3`, `in^3`) to `DIMENSION_TOKEN_PALETTES` (collides with `VOLUME` `{ L: 3 }`).
+  - **Empirical `requiredUnits`:** Relations whose `variants.SI`/`US` specify `requiredUnits` must also declare top-level `requiredUnits` matching the top-level formula for `MIXED` mode.
 
 ### 6.3 Factor-Label Derivations & The 4-Row Cap
 Derivations default to **in-situ conversions** placed directly beside the converted token.
@@ -420,6 +448,7 @@ $$\%_{ip} = \cfrac{Q_{ip}}{Q_f} = \cfrac{5{,}186{,}450 \, \cfrac{\cancel{\text{B
 - **Coupled Variable Coherence:** State deliverables of the same fluid or cycle share an identical unit when requested as outputs; boundary givens roll freely to test multi-unit fluency.
 - **Significant Figure Retention:** Conversions to alternative units must retain $\ge 3$ significant figures under the 6-decimal display cap ($|v| \ge 0.0995$, `MIN_DISPLAY_MAGNITUDE`).
 - **Compound Decomposition:** Decomposed unit options (e.g. $\text{W} \to \text{J/s} \to \text{N}\cdot\text{m/s} \to \text{kg}\cdot\text{m}^2/\text{s}^3$) are sampled with probability inversely proportional to token count: $w_i = 1/t_i$.
+- **Cross-Unit Subtractive Amplification Trap:** In `derivation_matrix_test.js` pairwise unit coverage, a small quantity converted across palette units (e.g., a sub-millimeter displacement converted to `ft` at 6 decimals) inside a subtractive expression divided by a small factor can amplify 6-decimal rounding error past `ORACLE_REL_TOLERANCE = 1e-3`. Ensure canonical `createSystem` values remain well-conditioned across all palette units when subtractive inversion occurs.
 
 ---
 
@@ -684,6 +713,15 @@ node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/ru
   test/section_d_test.js test/sibling_markup_test.js test/memo_equivalence_test.js test/unit_catalog_test.js test/xmb_model_test.js test/patch_format_test.js test/prefix_policy_test.js test/ctx_test.js test/reporter_test.js
 ```
 
+On Windows `cmd.exe` (where `npm test` POSIX shell syntax does not run directly):
+
+```cmd
+:: Fast pre-matrix check & single-topic matrix (<2s)
+npm run clean:mcqs && npm run gen:registry
+node --test test/run_hygiene_test.js test/unit_catalog_test.js test/run_test.js
+set MATRIX_TOPIC=<topic_id>&& node --test test/derivation_matrix_test.js && set MATRIX_TOPIC=
+```
+
 | Suite | Invariant Verified |
 |---|---|
 | `test/run_test.js` | **Universal Round-Trip Invariant:** $u \to \text{base} \to u$ identity across all registered units. <br>**Alien Scale Factor Detector:** Queries `scales.js` (`isCanonicalScaleFactor`) to reject any lumped or unfamiliar conversion scalars without bespoke test lists. <br>**Direction-Agnostic Synthesis:** Dynamic longest-path generation at high mastery, natural step hiding, 4-row tower cap, and encompassing cancellations. |
@@ -700,7 +738,7 @@ node --test --test-reporter=./scripts/quiet_reporter.js test/run_test.js test/ru
 | `test/patch_test.js` | Patch parser & applier: `diff`, `subst` exact counts, atomicity, N+1 fences, headers |
 | `test/reporter_test.js` | Quiet test reporter: suppresses passing tests, prints leaf failures without suite wrapper duplication |
 | `test/trace_test.js` | Matrix case-line parsing, numeric push/fill recording, `Array.prototype` restoration after a throw, and rejection of malformed `TRACE` requests. |
-| `test/ctx_test.js` | `fulfill_ctx.js` and symbol extraction: exact ranges, symbol-addressed `READ`, range snapping, budget enforcement, large-file outlining, `GREP` context. |
+| `test/ctx_test.js` | `fulfill_ctx.js` and symbol extraction: exact ranges, symbol-addressed `READ`, range snapping and its growth cap, budget enforcement, large-file outlining, `GREP` context, regex and multi-scope `GREP`, `REGISTRY` sections. |
 
 ---
 

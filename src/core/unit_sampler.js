@@ -7,9 +7,11 @@
  */
 
 import {
+  BASE_UNITS, PREFIXES, parseUnitToSemanticAST,
   getUnitAtomBag, getUnitKind, toDeltaUnit, isDimEqual,
   valueToCoherentBase, formatValueInUnit, convertUnitValue
 } from "../cas/units/definitions.js";
+import { formatPairConversion, isCanonicalScaleFactor } from "../cas/units/scales.js";
 import { CONSTANTS_DB } from "./constants_registry.js";
 import { DIMENSIONS } from "./dimensions.js";
 
@@ -310,6 +312,77 @@ export function candidateUnitsFor(sys, dimension, canonUnit) {
   });
 }
 
+const US_HINT_RE = /\b(in|ft|yd|lb|lb_f|lb_m|kip|psi|psf|ksi|hp|Btu|cfm|gpm|gal|uin)\b|°F|°R/;
+
+export function inferUnitSystem(unitStr, fallbackSys = "SI") {
+  if (fallbackSys === "SI" || fallbackSys === "US") return fallbackSys;
+  return US_HINT_RE.test(unitStr || "") ? "US" : "SI";
+}
+
+function prefixedScaleCandidates(currUnit, dimension, direction) {
+  const ast = parseUnitToSemanticAST(currUnit, dimension);
+  if (ast.length !== 1 || ast[0].power !== 1) return [];
+  const baseMeta = BASE_UNITS[ast[0].base];
+  if (!baseMeta || !baseMeta.prefixes) return [];
+  const prefixPool = direction === "smaller" ? ["d", "c", "m", "u"] : ["k", "M", "G"];
+  const out = [];
+  for (const code of prefixPool) {
+    if (!baseMeta.prefixes.includes(code)) continue;
+    const cand = `${code}${baseMeta.symbol}`;
+    if (cand === currUnit) continue;
+    const bag = getUnitAtomBag(cand, dimension);
+    if (bag.isUnknown || !PREFIXES[code]) continue;
+    out.push(cand);
+  }
+  return out;
+}
+
+function collectOrderedScaleUnits(currUnit, dimension, sysMode, direction) {
+  if (!currUnit || currUnit === "dimless" || currUnit === "ratio" || !dimension) return [];
+  const currBag = getUnitAtomBag(currUnit, dimension);
+  if (currBag.isUnknown || currBag.kind === "point" || currBag.isDimensionless) return [];
+
+  const unitSys = inferUnitSystem(currUnit, sysMode);
+  const pool = new Set(candidateUnitsFor(unitSys, dimension, currUnit).map(p => p.unit));
+
+  if (dimension === DIMENSIONS.SECTION_MODULUS && unitSys === "SI") {
+    pool.add("cm^3");
+    pool.add("mm^3");
+  } else if (dimension === DIMENSIONS.SECOND_MOMENT_OF_AREA && unitSys === "SI") {
+    pool.add("cm^4");
+    pool.add("mm^4");
+  }
+  for (const pUnit of prefixedScaleCandidates(currUnit, dimension, direction)) {
+    pool.add(pUnit);
+  }
+
+  const valid = [];
+  for (const u of pool) {
+    if (u === currUnit) continue;
+    const bag = getUnitAtomBag(u, dimension);
+    if (bag.isUnknown || bag.kind !== currBag.kind || !isDimEqual(currBag.dimMap, bag.dimMap)) continue;
+    const isMatch = direction === "smaller"
+      ? bag.scale < currBag.scale * (1 - 1e-6)
+      : bag.scale > currBag.scale * (1 + 1e-6);
+    if (!isMatch) continue;
+    const conv = formatPairConversion(currUnit, u, dimension, dimension, "whole");
+    if (conv.scalars && !conv.scalars.every(isCanonicalScaleFactor)) continue;
+    valid.push({ unit: u, scale: bag.scale });
+  }
+
+  // Prefer the minimal step from the current scale first (descending for smaller, ascending for larger).
+  valid.sort((a, b) => direction === "smaller" ? b.scale - a.scale : a.scale - b.scale);
+  return valid.map(v => v.unit);
+}
+
+export function smallerUnitsFor(currUnit, dimension, sysMode = "SI") {
+  return collectOrderedScaleUnits(currUnit, dimension, sysMode, "smaller");
+}
+
+export function largerUnitsFor(currUnit, dimension, sysMode = "SI") {
+  return collectOrderedScaleUnits(currUnit, dimension, sysMode, "larger");
+}
+
 export function planProblemUnits(varsDb = {}, forcedMode = null) {
   const mode = sampleSystemMode(forcedMode);
   const roots = Object.keys(varsDb).filter(k => {
@@ -368,7 +441,7 @@ export function sampleConstantUnit(varKey, sys = "SI") {
  * Recognizes coupled state variables that must share the same physical unit in any problem
  * IF they end up as required deliverables. Givens are completely uncoupled and free to roll.
  */
-const COUPLED_VARIABLE_GROUPS = Object.freeze([
+export const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["T_1", "T_2", "T_3", "T_4"]),
   new Set(["t_o", "t_r", "t_m", "t_s", "t_adp", "t_rh"]),
   new Set(["h_o", "h_r", "h_m", "h_s", "h_adp", "h_rh"]),
@@ -395,7 +468,15 @@ const COUPLED_VARIABLE_GROUPS = Object.freeze([
   new Set(["sigma_max", "sigma_min", "sigma_a", "sigma_m"]),
   new Set(["p_i", "p_o", "P_des", "sigma_h", "sigma_L", "sigma_s", "sigma_t_i", "sigma_t_o", "sigma_r_i", "tau_max_in", "tau_max", "tau_max_i", "S_allow"]),
   new Set(["D_i", "D_o", "D_m", "r_i", "r_o", "r_m", "t", "L", "c_a", "t_nom", "t_cyl_h", "t_cyl_L", "t_hemi", "t_ellip", "t_tori", "L_c", "t_cone", "t_flat", "d_c"]),
-  new Set(["delta_D", "delta_L", "u_o", "delta_D_o"])
+  new Set(["delta_D", "delta_L", "u_o", "delta_D_o"]),
+  new Set(["R_Av", "R_Bv", "R_Ah", "R_Bh", "R_A", "R_B"]),
+  new Set(["M_h", "M_v", "M_v1", "M_h1", "M_1", "M_v2", "M_h2", "M_2", "M_f", "T_e", "M_e"]),
+  new Set(["d_1", "d_2", "d_3", "d_eq", "d_str", "d_rig", "d_rig_T", "d_str_T", "d_o", "d_i"]),
+  new Set(["delta_v", "delta_h", "delta_tip", "delta_allow"]),
+  new Set(["theta_1", "theta_2", "theta_3", "theta_tot", "theta_A", "theta_B", "theta_tip", "theta_allow"]),
+  new Set(["sigma_vm_a", "sigma_vm_m", "tau_a", "tau_m", "sigma_comb", "sigma_nom", "tau_nom"]),
+  new Set(["f_1", "f_2", "f_D", "f_R", "f_op", "f_nt", "f_cr"]),
+  new Set(["I_m1", "I_m2", "I_eq"])
 ]);
 
 export function findCoupledGroup(varKey) {

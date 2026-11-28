@@ -100,8 +100,9 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
       const L = astToLatex(node.left, substituteMap, varsDb);
       const R = astToLatex(node.right, substituteMap, varsDb);
 
-      const leftIsSimpleNum = /^[+-]?[\d.,]+(?:°)?$/.test(L.trim());
-      const rightIsSimpleNum = /^[+-]?[\d.,]+(?:°)?$/.test(R.trim());
+      const isSimpleNumTex = s => /^[+-]?[\d.,]+(?:\s*\\times\s*10\^\{[+-]?\d+\})?(?:°)?$/.test(s.trim());
+      const leftIsSimpleNum = isSimpleNumTex(L);
+      const rightIsSimpleNum = isSimpleNumTex(R);
       // Unit-carrying substituted tokens (incl. unitToTex \cfrac compounds)
       // are numeric factors: they multiply explicitly, never juxtaposed.
       const leftHasUnit = L.includes("\\text{");
@@ -142,7 +143,7 @@ export function astToLatex(node, substituteMap = null, varsDb = {}) {
       }
 
       let leftTex = astToLatex(node.left, substituteMap, varsDb);
-      if (uL.type === "binary" && uL.op === "^") {
+      if ((uL.type === "binary" && uL.op === "^") || leftTex.includes("\\times")) {
         leftTex = `(${stripOuterParens(leftTex)})`;
       }
       const expTex = stripOuterParens(astToLatex(node.right, substituteMap, varsDb));

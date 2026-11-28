@@ -13,6 +13,8 @@ import os from "node:os";
 import path from "node:path";
 import { extractSymbols } from "../scripts/lib/symbols.js";
 import { fulfill, LIMITS } from "../scripts/fulfill_ctx.js";
+import { BASE_UNITS } from "../src/cas/units/index.js";
+import { COUPLED_VARIABLE_GROUPS } from "../src/core/unit_sampler.js";
 
 const SAMPLE = [
   "/** header */",
@@ -42,6 +44,14 @@ function bigSource() {
     for (let i = 0; i < 260; i++) out.push("  // pad");
     out.push("}");
   }
+  return out.join("\n");
+}
+
+// One 100-line symbol (below SNAP_MAX) followed by a one-line symbol.
+function midSource() {
+  const out = ["export function mid() {"];
+  for (let i = 0; i < 98; i++) out.push(`  // pad ${i}`);
+  out.push("}", "export const tail = 1;");
   return out.join("\n");
 }
 
@@ -82,6 +92,10 @@ describe("fulfill_ctx", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "ctx-"));
     fs.writeFileSync(path.join(root, "lib.js"), SAMPLE);
     fs.writeFileSync(path.join(root, "big.js"), bigSource());
+    fs.writeFileSync(path.join(root, "mid.js"), midSource());
+    fs.mkdirSync(path.join(root, "pkg"), { recursive: true });
+    fs.writeFileSync(path.join(root, "pkg", "a.js"), "export const alpha = 1;\nexport const beta2 = 22;\n");
+    fs.writeFileSync(path.join(root, "pkg", "b.js"), "export const gamma = 3;\n");
   });
   after(() => fs.rmSync(root, { recursive: true, force: true }));
 
@@ -124,6 +138,67 @@ describe("fulfill_ctx", () => {
     assert.doesNotMatch(out, /\/\/ pad/);
   });
 
+  test("small range inside a mid-size symbol snaps while growth stays within the cap", async () => {
+    const out = await run("READ mid.js:2-99");
+    assert.match(out, /lines 1-100 of 101/);
+    assert.match(out, /snapped to mid/);
+  });
+
+  test("snapping may grow a request by at most SNAP_GROWTH_MAX lines", async () => {
+    const half = LIMITS.SNAP_GROWTH_MAX / 2;
+    const atCap = await run(`READ mid.js:${1 + half}-${100 - half}`);
+    assert.match(atCap, /lines 1-100 of 101/);
+    assert.match(atCap, /snapped to mid/);
+
+    const end = 100 - half - 1;
+    const over = await run(`READ mid.js:${1 + half}-${end}`);
+    assert.match(over, new RegExp(`lines ${1 + half}-${end} of 101`));
+    assert.match(over, /growth cap/);
+    assert.match(over, /READ #mid/);
+    assert.doesNotMatch(over, /snapped to mid/);
+  });
+
+  test("GREP -E searches by regular expression", async () => {
+    const out = await run("GREP -E export (function|const) @ lib.js");
+    assert.match(out, /GREP -E: "export \(function\|const\)" \(2 matches/);
+    assert.match(out, /lib\.js:5 \[add\]/);
+  });
+
+  test("GREP -E reports an invalid pattern instead of a silent miss", async () => {
+    const out = await run("GREP -E ( @ lib.js");
+    assert.match(out, /invalid regex/);
+    assert.doesNotMatch(out, /no matches/);
+  });
+
+  test("GREP stays literal without -E", async () => {
+    assert.match(await run("GREP add|K @ lib.js"), /\(0 matches/);
+  });
+
+  test("GREP accepts comma-separated scopes with per-scope ranges", async () => {
+    const both = await run("GREP -E alpha|gamma @ pkg/a.js,pkg/b.js");
+    assert.match(both, /\(2 matches/);
+    assert.match(both, /pkg\/a\.js:1/);
+    assert.match(both, /pkg\/b\.js:1/);
+
+    assert.match(await run("GREP -E alpha|gamma @ pkg/a.js:1-1,pkg/b.js:1-1"), /\(2 matches/);
+    assert.match(await run("GREP -E alpha|gamma @ pkg/a.js:2-2,pkg/b.js:1-1"), /\(1 matches/);
+    assert.match(await run("GREP -i ALPHA @ pkg/a.js:2-2,pkg/b.js:1-1"), /\(0 matches/);
+    assert.match(await run("GREP gamma @ pkg/"), /\(1 matches/);
+  });
+
+  test("GREP names a missing scope and stays usable afterwards", async () => {
+    assert.match(await run("GREP alpha @ nope/"), /scope nope\/ not found/);
+    assert.match(await run("GREP alpha @ pkg/a.js"), /\(1 matches/);
+    assert.match(await run("GREP alpha @ pkg/a.js,nope/"), /scope nope\/ not found/);
+  });
+
+  test("unrecognized-directive usage is derived from the handler table", async () => {
+    const out = await run("FETCH lib.js");
+    assert.match(out, /UNRECOGNIZED/);
+    assert.match(out, /Valid: READ, OUTLINE, GREP/);
+    assert.match(out, /Valid: .*REGISTRY/);
+  });
+
   test("directive cap lists what was not run", async () => {
     const out = await run(Array(LIMITS.MAX_DIRECTIVES + 1).fill("OUTLINE lib.js").join("\n"));
     assert.match(out, /NOT RUN/);
@@ -155,6 +230,33 @@ describe("fulfill new context tools", () => {
     const out = await fulfill("UNIT Btu/h");
     assert.match(out, /7D Dimension Vector/);
     assert.match(out, /Base Scale Factor/);
+  });
+
+  test("REGISTRY index lists every section with live row counts", async () => {
+    const out = await fulfill("REGISTRY");
+    for (const s of ["units", "prefixes", "dims", "constants", "palettes", "coupled"]) {
+      assert.match(out, new RegExp(`${s}:\\s+\\d+ rows`));
+    }
+  });
+
+  test("REGISTRY units lists every registered base unit from the live registry", async () => {
+    const out = await fulfill("REGISTRY units");
+    for (const name of Object.keys(BASE_UNITS)) assert.ok(out.includes(name), `missing ${name}`);
+    assert.match(out, /offset=273\.15/);
+  });
+
+  test("REGISTRY dims shows alias keys, coupled shows groups, unknown section is rejected", async () => {
+    assert.match(await fulfill("REGISTRY dims"), /PRESSURE = STRESS/);
+    const coupled = await fulfill("REGISTRY coupled");
+    assert.match(coupled, new RegExp(`${COUPLED_VARIABLE_GROUPS.length} rows`));
+    assert.match(coupled, /T_1,T_2,T_3,T_4/);
+    assert.match(await fulfill("REGISTRY bogus"), /Unknown REGISTRY section "bogus"\. Valid: units/);
+  });
+
+  test("REGISTRY constants, prefixes and palettes read live data", async () => {
+    assert.match(await fulfill("REGISTRY constants"), /c_pw/);
+    assert.match(await fulfill("REGISTRY prefixes"), /kilo/);
+    assert.match(await fulfill("REGISTRY palettes"), /Length/);
   });
 
   test("CONVERT decomposes conversion and verifies canonical scale factor", async () => {

@@ -416,6 +416,17 @@ export function evalLatexMathToNumber(tex, inTrigArg = false) {
   return (res.pureUnit || !Number.isFinite(res.val)) ? NaN : res.val;
 }
 
+function parseLeadingLatexNumber(str) {
+  const clean = (str || "").replace(/\{,\}|,/g, "");
+  const m = clean.match(/^[(\s]*([+-]?[\d.]+)(?:\s*\\times\s*10\^\{([+-]?\d+)\}|([eE][+-]?\d+))?/);
+  if (!m) return NaN;
+  const base = parseFloat(m[1]);
+  if (!Number.isFinite(base)) return NaN;
+  if (m[2] !== undefined) return base * Math.pow(10, parseInt(m[2], 10));
+  if (m[3] !== undefined) return parseFloat(`${m[1]}${m[3]}`);
+  return base;
+}
+
 export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "", varsDb = {}, targetUnit = null) {
   const inner = derivLatex.trim().replace(/^\$\$\s*\\begin\{aligned\}/, "").replace(/\\end\{aligned\}\s*\$\$$/, "");
   const rows = inner.split(/\\\\(?:\[\d+pt\])?/).map(r => r.trim()).filter(Boolean);
@@ -424,9 +435,8 @@ export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "",
   const finalRow = rows[rows.length - 1];
   const boxMatch = finalRow.match(/\\boxed\{([\s\S]+)\}/);
   assert.ok(boxMatch, `Missing \\boxed{} in final row (${ctx}): ${finalRow}`);
-  const boxedNumMatch = boxMatch[1].replace(/\{,\}|,/g, "").match(/^[+-]?[\d.]+(?:[eE][+-]?\d+)?/);
-  assert.ok(boxedNumMatch, `Could not parse boxed value from ${boxMatch[1]} (${ctx})`);
-  const boxedVal = parseFloat(boxedNumMatch[0]);
+  const boxedVal = parseLeadingLatexNumber(boxMatch[1]);
+  assert.ok(Number.isFinite(boxedVal), `Could not parse boxed value from ${boxMatch[1]} (${ctx})`);
 
   const numericRow = rows[rows.length - 2];
   const ampIdx = numericRow.indexOf("&=");
@@ -451,9 +461,8 @@ export function assertDerivationMatchesAnswer(derivLatex, expectedVal, ctx = "",
     const prevTex = prevAmp >= 0 ? prevRow.slice(prevAmp + 2).trim() : prevRow;
     const prevEval = evalLatexMathToNumber(prevTex);
     if (Number.isFinite(prevEval)) {
-      const leadMatch = numTex.replace(/\{,\}|,/g, "").match(/^[(\s]*([+-]?[\d.]+(?:[eE][+-]?\d+)?)/);
-      assert.ok(leadMatch, `Expected numeric lead in conversion row (${ctx}): ${numTex}`);
-      const leadVal = parseFloat(leadMatch[1]);
+      const leadVal = parseLeadingLatexNumber(numTex);
+      assert.ok(Number.isFinite(leadVal), `Expected numeric lead in conversion row (${ctx}): ${numTex}`);
       const prevTol = Math.max(Math.abs(prevEval) * ORACLE_REL_TOLERANCE, ORACLE_ABS_TOLERANCE);
       assert.ok(
         Math.abs(prevEval - leadVal) <= prevTol,

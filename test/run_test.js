@@ -21,10 +21,10 @@ import { casToTex } from "../src/cas/latex.js";
 import { runTopicMixTests } from "./topic_mix_test.js";
 import { recordAttempt, getDecayedMastery, FADING_THRESHOLD } from "../src/mastery/index.js";
 import { pruneSolutionPath, solveDAG, canSolveTarget } from "../src/core/graph_solver.js";
-import { formatGivenValue, targetLabel, fmtSigFig, displayFloorOk, MIN_DISPLAY_FLOOR } from "../src/core/dimensions.js";
+import { formatGivenValue, formatScientific, targetLabel, fmtSigFig, displayFloorOk, MIN_DISPLAY_FLOOR } from "../src/core/dimensions.js";
 import {
   sampleSystemMode, sampleByInverseTokens, retainsSufficientSigFigs,
-  applyProblemUnitSampling, snapClean, planProblemUnits
+  applyProblemUnitSampling, snapClean, planProblemUnits, smallerUnitsFor
 } from "../src/core/unit_sampler.js";
 import {
   getUnitAtomBag,
@@ -1339,6 +1339,119 @@ describe("Linear-Rational CAS, Oracle Guards & Affine Frame Derivations", () => 
         const sampled = applyProblemUnitSampling(topic.createSystem({ sys: mode === "US" ? "US" : "SI" }), topic.varsDb, mode);
         assert.notEqual(sampled._u.delta_D, "yd", `applyProblemUnitSampling(${mode}) must not select yd for delta_D`);
       });
+    }
+  });
+});
+
+describe("Hierarchical & Recursive Display Floor Pipeline", () => {
+  test("Tier 1 switches sub-floor lengths to smaller registered scales (m -> mm, mm -> um)", () => {
+    assert.ok(smallerUnitsFor("m", "Length", "SI").includes("mm"));
+    assert.ok(smallerUnitsFor("mm", "Length", "SI").includes("um"));
+    assert.ok(smallerUnitsFor("in", "Length", "US").includes("uin"));
+
+    const tinyStepTopic = Object.freeze({
+      id: "test_tier1_unit_scale",
+      title: "Tier 1 Scale Test",
+      varsDb: {
+        F: { name: "Force", symbol: "F", dimension: "Force", unit: "N" },
+        k: { name: "Stiffness", symbol: "k", dimension: "Spring Rate / Stiffness", unit: "N/m" },
+        delta: { name: "Deflection", symbol: "\\delta", dimension: "Length", unit: "m" }
+      },
+      relations: [{
+        id: "eq_test_t1",
+        name: "Spring Deflection",
+        canonicalTex: "\\delta = \\frac{F}{k}",
+        baseFormula: "delta = F / k",
+        nodes: ["delta", "F", "k"]
+      }],
+      createSystem: () => ({
+        sys: "SI",
+        F: 500,
+        k: 1000000,
+        delta: 0.0005, // fails display floor in m, passes in cm (0.05) or mm (0.5)
+        _u: { F: "N", k: "N/m", delta: "m" },
+        _names: { F: "Force", k: "Stiffness", delta: "Deflection" }
+      })
+    });
+
+    const prob = withSeededRandom(1, () => generateProblem(tinyStepTopic, () => 0, { mode: "SI" }));
+    const ansStep = prob.solution.find(s => s.targetVar === "delta");
+    assert.ok(ansStep, "Expected delta step");
+    assert.ok(displayFloorOk(ansStep.expectedVal), `Tier 1 must scale delta above floor, got ${ansStep.expectedVal} ${prob.system._u.delta}`);
+    assert.equal(prob.sciVars.size, 0, "Tier 1 unit scaling should resolve delta without scientific notation");
+  });
+
+  test("Tier 2 backsolves through the DAG and re-runs Tier 1 when no smaller unit resolves the floor", () => {
+    const backsolveTopic = Object.freeze({
+      id: "test_tier2_backsolve",
+      title: "Tier 2 Backsolve Test",
+      varsDb: {
+        F: { name: "Applied Force", symbol: "F", dimension: "Force", unit: "N" },
+        A: { name: "Area", symbol: "A", dimension: "Area", unit: "mm^2" },
+        E: { name: "Modulus", symbol: "E", dimension: "Elastic / Shear Modulus", unit: "GPa" },
+        sigma: { name: "Stress", symbol: "\\sigma", dimension: "Pressure / Stress", unit: "MPa" },
+        eps: { name: "Strain", symbol: "\\varepsilon", dimension: "Dimensionless", unit: "dimless" }
+      },
+      relations: [
+        { id: "eq_t2_sig", name: "Stress", canonicalTex: "\\sigma = \\frac{F}{A}", baseFormula: "sigma = F / A", nodes: ["sigma", "F", "A"] },
+        { id: "eq_t2_eps", name: "Strain", canonicalTex: "\\varepsilon = \\frac{\\sigma}{E}", baseFormula: "eps = sigma / E", nodes: ["eps", "sigma", "E"] }
+      ],
+      createSystem: () => ({
+        sys: "SI",
+        F: 5000,
+        A: 100,
+        E: 200,
+        sigma: 50,
+        eps: 0.00025, // dimensionless < 0.001, no smaller unit exists
+        _u: { F: "N", A: "mm^2", E: "GPa", sigma: "MPa", eps: "dimless" },
+        _names: { F: "Applied Force", A: "Area", E: "Modulus", sigma: "Stress", eps: "Strain" }
+      })
+    });
+
+    const prob = withSeededRandom(3, () => generateProblem(backsolveTopic, () => 0.9, { mode: "SI" }));
+    for (const step of prob.solution) {
+      if (!step.isFaded) {
+        assert.ok(displayFloorOk(step.expectedVal) || prob.sciVars.has(step.targetVar), `Step ${step.targetVar} must satisfy floor or scientific fallback`);
+      }
+    }
+    validateStatementLatex(prob.statement, "tier2_backsolve");
+  });
+
+  test("Tier 3 collects unresolvable failing numbers into scientific notation and passes the LaTeX oracle", () => {
+    assert.equal(formatScientific(0.0005, 6, true), "5 \\times 10^{-4}");
+    assert.equal(formatScientific(0.000123456, 6, false), "1.23456e-4");
+
+    const sciTopic = Object.freeze({
+      id: "test_tier3_scientific",
+      title: "Tier 3 Scientific Test",
+      varsDb: {
+        theta: { name: "Slope", symbol: "\\theta", dimension: "Angle", unit: "rad" },
+        n_lim: { name: "Slope Margin", symbol: "n_{\\theta}", dimension: "Dimensionless", unit: "dimless" },
+        theta_lim: { name: "Slope Limit", symbol: "\\theta_{lim}", dimension: "Angle", unit: "rad" }
+      },
+      relations: [{
+        id: "eq_t3_margin",
+        name: "Slope Margin",
+        canonicalTex: "n_{\\theta} = \\frac{\\theta_{lim}}{\\theta}",
+        baseFormula: "n_lim = theta_lim / theta",
+        nodes: ["n_lim", "theta_lim", "theta"]
+      }],
+      createSystem: () => ({
+        sys: "SI",
+        theta: 0.0004,
+        theta_lim: 0.0008,
+        n_lim: 2.0,
+        _u: { theta: "rad", theta_lim: "rad", n_lim: "dimless" },
+        _names: { theta: "Slope", n_lim: "Slope Margin", theta_lim: "Slope Limit" }
+      })
+    });
+
+    const prob = withSeededRandom(2, () => generateProblem(sciTopic, () => 0, { mode: "SI" }));
+    validateStatementLatex(prob.statement, "tier3_sci");
+    for (const step of prob.solution) {
+      const deriv = buildAlignedDerivation(step, prob.system, prob.allSteps, prob.varsDb, prob.relations);
+      validateDerivationLatex(deriv);
+      assertDerivationMatchesAnswer(deriv, step.expectedVal, "tier3_sci", prob.varsDb, prob.system._u[step.targetVar]);
     }
   });
 });

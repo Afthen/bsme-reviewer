@@ -17,6 +17,7 @@
  *   14. DIFF-STEP      AST-level structural diff between two isolated formulas or targets
  *   15. DIFF-DERIVE    Line-by-line LaTeX derivation diff (e.g. sys=SI vs sys=US)
  *   16. ROUNDTRIP-STEP Numerical fidelity oracle: AST Physics Eval vs LaTeX Derivation
+ *   17. REGISTRY       Live unit / prefix / dimension / constant / palette / coupling registries
  */
 
 import { loadAllTopics } from "../../src/topics/index.js";
@@ -35,9 +36,12 @@ import {
   getUnitOffset,
   getAbsoluteCompanionUnit,
   evaluatePhysicalAST,
-  BASE_UNITS
+  BASE_UNITS,
+  PREFIXES
 } from "../../src/cas/units/index.js";
 import { DIMENSIONS, fmtSigFig, formatGivenValue } from "../../src/core/dimensions.js";
+import { CONSTANTS_DB } from "../../src/core/constants_registry.js";
+import { DIMENSION_TOKEN_PALETTES, COUPLED_VARIABLE_GROUPS } from "../../src/core/unit_sampler.js";
 import { solveDAG, canSolveTarget } from "../../src/core/graph_solver.js";
 import { buildAlignedDerivation } from "../../src/core/derivation.js";
 import { generateProblem } from "../../src/core/problem_gen.js";
@@ -219,6 +223,62 @@ export async function handleTopic(arg, { remaining }) {
   }
 
   return formatResult(`TOPIC: ${topic.id}`, lines, remaining);
+}
+
+// ============================================================================
+// 17. REGISTRY: Live Engine Registries (read-only projections, never hardcoded)
+// ============================================================================
+const dimVec = (dimMap) =>
+  Object.entries(dimMap || {}).filter(([, p]) => p !== 0).map(([d, p]) => `${d}${p}`).join(" ") || "-";
+
+const REGISTRY_SECTIONS = {
+  units: () => Object.entries(BASE_UNITS).map(([name, m]) => {
+    const flags = [
+      m.prefixes ? `prefixes=${m.prefixes}` : "",
+      m.offset ? `offset=${m.offset}` : "",
+      m.isDelta ? "delta" : "",
+      m.absCompanion ? `abs=${m.absCompanion}` : "",
+      m.forceCompanion ? `force=${m.forceCompanion}` : "",
+      m.massCompanion ? `mass=${m.massCompanion}` : ""
+    ].filter(Boolean).join(" ");
+    return `${name.padEnd(18)} ${String(m.symbol).padEnd(6)} scale=${m.baseScale} dim=[${dimVec(m.dimMap)}] ${flags}`.trimEnd();
+  }),
+  prefixes: () => Object.entries(PREFIXES).map(([code, p]) => `${code.padEnd(3)} ${p.name.padEnd(6)} ${p.scale}`),
+  dims: () => {
+    const byValue = new Map();
+    for (const [key, value] of Object.entries(DIMENSIONS)) byValue.set(value, [...(byValue.get(value) || []), key]);
+    return [...byValue].map(([value, keys]) => `${keys.join(" = ").padEnd(34)} "${value}"`);
+  },
+  constants: () => Object.entries(CONSTANTS_DB).map(([key, c]) =>
+    `${key.padEnd(8)} ${c.symbol} dim="${c.dimension}" SI=${c.valueSI} ${c.unitSI} US=${c.valueUS} ${c.unitUS}`),
+  palettes: () => Object.entries(DIMENSION_TOKEN_PALETTES).flatMap(([sys, dims]) =>
+    Object.entries(dims).map(([dim, entries]) => {
+      const body = Array.isArray(entries)
+        ? entries.map((e) => `${e.unit}:${e.tokens}`).join(" ")
+        : JSON.stringify(entries);
+      return clip(`${sys.padEnd(5)} ${dim}: ${body}`);
+    })),
+  coupled: () => COUPLED_VARIABLE_GROUPS.map((g, i) => clip(`#${String(i).padStart(2)} (${g.size}) ${[...g].join(",")}`))
+};
+
+export function handleRegistry(arg, { remaining }) {
+  const names = arg.split(/[\s,]+/).map((s) => s.toLowerCase()).filter(Boolean);
+  const valid = Object.keys(REGISTRY_SECTIONS);
+  if (names.length === 0) {
+    const rows = valid.map((n) => `  ${(n + ":").padEnd(12)} ${REGISTRY_SECTIONS[n]().length} rows`);
+    return formatResult("REGISTRY: index", [...rows, "Request sections, e.g. REGISTRY units,dims"], remaining);
+  }
+  const bad = names.filter((n) => !REGISTRY_SECTIONS[n]);
+  if (bad.length) {
+    return { text: `[ERROR: Unknown REGISTRY section "${bad.join(", ")}". Valid: ${valid.join(", ")}]\n`, lines: 1 };
+  }
+  const unique = [...new Set(names)];
+  const lines = [];
+  for (const n of unique) {
+    const rows = REGISTRY_SECTIONS[n]();
+    lines.push(`--- ${n} (${rows.length} rows) ---`, ...rows);
+  }
+  return formatResult(`REGISTRY: ${unique.join(",")}`, lines, remaining, Math.min(240, 90 * unique.length));
 }
 
 // ============================================================================

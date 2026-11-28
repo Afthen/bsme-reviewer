@@ -22,6 +22,7 @@ export const DIMENSIONS = Object.freeze({
   AREA: "Area",
   SECOND_MOMENT_OF_AREA: "Second Moment of Area",
   SECTION_MODULUS: "Section Modulus",
+  MASS_MOMENT_OF_INERTIA: "Mass Moment of Inertia",
   THERMAL_EXPANSION: "Thermal Expansion Coefficient",
   TORSIONAL_STIFFNESS: "Torsional Stiffness",
   COUNT: "Count",
@@ -72,10 +73,28 @@ export function addSeparators(valStr, isLatex = false) {
   return parts.join(".");
 }
 
-export function fmtSigFig(n, sigFigs = 6, isLatex = false) {
+export function formatScientific(n, sigFigs = 6, isLatex = false) {
+  if (n === undefined || n === null) return "";
+  const num = typeof n === "number" ? n : Number(n);
+  if (!Number.isFinite(num)) return "";
+  if (num === 0) return "0";
+
+  const expStr = num.toExponential(Math.max(0, sigFigs - 1));
+  const [rawMant, rawExp] = expStr.split("e");
+  const mant = rawMant.includes(".") ? rawMant.replace(/0+$/, "").replace(/\.$/, "") : rawMant;
+  const exp = parseInt(rawExp, 10);
+  if (exp === 0) return addSeparators(mant, isLatex);
+  return isLatex ? `${mant} \\times 10^{${exp}}` : `${mant}e${exp}`;
+}
+
+export function fmtSigFig(n, sigFigs = 6, isLatex = false, opts = {}) {
   if (n === undefined || n === null) return "";
   const num = typeof n === "number" ? n : Number(n);
   if (isNaN(num)) return "";
+
+  if (opts && opts.scientific && num !== 0) {
+    return formatScientific(num, sigFigs, isLatex);
+  }
 
   if (Number.isInteger(num)) return addSeparators(num.toString(), isLatex);
 
@@ -101,7 +120,7 @@ export function fmt(n) {
  * @param {number} value
  * @param {object} meta varsDb / CONSTANTS_DB entry for the variable
  */
-export function formatGivenValue(value, meta = {}, isLatex = true, activeUnit = null) {
+export function formatGivenValue(value, meta = {}, isLatex = true, activeUnit = null, opts = {}) {
   if (meta.isConstant) {
     const unitMatches = !activeUnit || !meta.unit || activeUnit === meta.unit;
     if (unitMatches) {
@@ -126,9 +145,9 @@ export function formatGivenValue(value, meta = {}, isLatex = true, activeUnit = 
         return display;
       }
     }
-    return fmtSigFig(value, 6, isLatex);
+    return fmtSigFig(value, 6, isLatex, opts);
   }
-  return fmtSigFig(value, 6, isLatex);
+  return fmtSigFig(value, 6, isLatex, opts);
 }
 
 export function targetLabel(name, token, unit, unitTex = null, unitVar = null) {
